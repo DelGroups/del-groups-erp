@@ -42,11 +42,20 @@ function LoginForm() {
     return param ? mapLoginError(param, t) : "";
   });
   const [submitting, setSubmitting] = useState(false);
+  const supabaseInfo = getSupabaseClientInfo();
+  const configError = supabaseInfo.isConfigured ? "" : t("auth.envNotConfigured");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
+
+    if (!getSupabaseClientInfo().isConfigured) {
+      console.error("[login] Supabase env missing:", getSupabaseClientInfo());
+      setError(t("auth.envNotConfigured"));
+      setSubmitting(false);
+      return;
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -124,6 +133,13 @@ function LoginForm() {
         <h1 className="pt-2 text-base font-bold text-app">DEL GROUPS MMC</h1>
         <p className="text-[11px] text-app-muted">{t("auth.loginTitle")}</p>
       </div>
+
+      {configError && (
+        <div className="badge-danger flex items-start gap-2 rounded-xl p-3 text-[11px] font-semibold">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          {configError}
+        </div>
+      )}
 
       {error && (
         <div className="badge-danger flex items-start gap-2 rounded-xl p-3 text-[11px] font-semibold">

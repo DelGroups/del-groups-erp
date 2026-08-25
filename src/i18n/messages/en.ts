@@ -142,6 +142,8 @@ export const enMessages: Messages = {
     sessionStorageFailed: "Session could not be saved. Please try again.",
     networkError:
       "Could not reach the server. Check NEXT_PUBLIC_SUPABASE_URL in your environment.",
+    envNotConfigured:
+      "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Settings → Environment Variables, then redeploy.",
     forgotPasswordTitle: "Reset password",
     sendResetLink: "Send reset link",
     updatePasswordTitle: "Set new password",

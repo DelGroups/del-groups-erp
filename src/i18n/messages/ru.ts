@@ -142,6 +142,8 @@ export const ruMessages: Messages = {
     sessionStorageFailed: "Сессия не сохранена. Попробуйте снова.",
     networkError:
       "Не удалось подключиться к серверу. Проверьте переменную NEXT_PUBLIC_SUPABASE_URL.",
+    envNotConfigured:
+      "Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в Vercel → Settings → Environment Variables и выполните redeploy.",
     forgotPasswordTitle: "Сброс пароля",
     sendResetLink: "Отправить ссылку",
     updatePasswordTitle: "Установить новый пароль",

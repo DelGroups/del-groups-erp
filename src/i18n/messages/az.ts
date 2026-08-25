@@ -140,6 +140,8 @@ export const azMessages = {
     sessionStorageFailed: "Giriş sessiyası saxlanıla bilmədi. Yenidən cəhd edin.",
     networkError:
       "Serverə qoşulmaq mümkün olmadı. NEXT_PUBLIC_SUPABASE_URL dəyişənini yoxlayın.",
+    envNotConfigured:
+      "Supabase konfiqurasiya edilməyib. Vercel → Settings → Environment Variables bölməsində NEXT_PUBLIC_SUPABASE_URL və NEXT_PUBLIC_SUPABASE_ANON_KEY əlavə edib yenidən deploy edin.",
     forgotPasswordTitle: "Şifrəni bərpa et",
     sendResetLink: "Bərpa linki göndər",
     updatePasswordTitle: "Yeni şifrə təyin et",
