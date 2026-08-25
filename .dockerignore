@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.md
+!DEPLOYMENT.md
+Dockerfile
+.dockerignore
+scripts
+.cursor
+.vscode
+terminals
+agent-tools
+agent-transcripts

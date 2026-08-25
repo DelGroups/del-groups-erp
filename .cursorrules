@@ -1,0 +1,13 @@
+# Del Groups ERP Rules
+- Tech Stack: Next.js (App Router), TypeScript, Tailwind CSS, Supabase (PostgreSQL).
+- Canonical schema reference: `types/schema.sql`
+- Database Schema reference:
+  - Table `products`: code, name, category, subcategory, unit, buy_price, sell_price, stock, min_stock, barcode, color, weight, extra_info, warehouse_id.
+  - Table `customers`: code, full_name, name, phone, company_name, address, voen, balance.
+  - Table `sales`: header fields (doc_no, doc_date, customer_id, customer_name, seller_id, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_type, delivery_address, delivery_fee, notes, note, payments JSONB).
+  - Table `sale_items`: normalized line items linked by sale_id (product_id, quantity, unit_price, discount_percent, vat_rate, line_total, etc.).
+  - Table `warehouses`: code, name, location, is_default.
+  - Table `categories`: name, parent_id.
+  - Table `inventory_writeoffs`: document_number, warehouse_id, checker_name, writeoff_date, notes, items JSONB, created_at.
+  - Table `commission_rules`: category_name, min_sales, max_sales, commission_rate.
+  - Table `consignment_orders`: customer_name, seller_name, product_name, category_name, sent_qty, sold_qty, returned_qty, remaining_qty, unit_price.
