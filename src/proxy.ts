@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { getPublicSupabaseAnonKey, getPublicSupabaseUrl } from "@/lib/env";
+import { getPublicSupabaseAnonKey, getPublicSupabaseUrl, isSupabaseConfigured } from "@/lib/env";
 
 /**
  * Next.js middleware entry (`src/proxy.ts`).
@@ -50,54 +50,65 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public auth pages — no session required (invite, forgot password, login, etc.).
-  if (isPublicPath(pathname)) {
-    if (pathname === "/login") {
-      let response = NextResponse.next({ request });
-      const supabase = createMiddlewareClient(request, response);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  if (!isSupabaseConfigured()) {
+    if (isPublicPath(pathname)) return NextResponse.next();
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-      if (user) {
-        return NextResponse.redirect(new URL("/", request.url));
+  try {
+    // Public auth pages — no session required (invite, forgot password, login, etc.).
+    if (isPublicPath(pathname)) {
+      if (pathname === "/login") {
+        let response = NextResponse.next({ request });
+        const supabase = createMiddlewareClient(request, response);
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          return NextResponse.redirect(new URL("/", request.url));
+        }
+        return response;
       }
-      return response;
+
+      return NextResponse.next();
     }
 
-    return NextResponse.next();
-  }
+    // Protected app routes — require a valid session.
+    let response = NextResponse.next({ request });
+    const supabase = createMiddlewareClient(request, response);
 
-  // Protected app routes — require a valid session.
-  let response = NextResponse.next({ request });
-  const supabase = createMiddlewareClient(request, response);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/") {
-      loginUrl.searchParams.set("next", `${pathname}${search}`);
+    if (!user) {
+      const loginUrl = new URL("/login", request.url);
+      if (pathname !== "/") {
+        loginUrl.searchParams.set("next", `${pathname}${search}`);
+      }
+      return NextResponse.redirect(loginUrl);
     }
-    return NextResponse.redirect(loginUrl);
+
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileRow?.is_active === false) {
+      await supabase.auth.signOut();
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("error", "account_inactive");
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return response;
+  } catch (error) {
+    console.error("[proxy] middleware error:", error);
+    if (isPublicPath(pathname)) return NextResponse.next();
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileRow?.is_active === false) {
-    await supabase.auth.signOut();
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("error", "account_inactive");
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return response;
 }
 
 export const config = {

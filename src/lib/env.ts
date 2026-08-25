@@ -12,25 +12,26 @@ const requiredAdminVars = ["SUPABASE_SERVICE_ROLE_KEY"] as const;
 
 const BUILD_PLACEHOLDER_URL = "https://placeholder.supabase.co";
 const BUILD_PLACEHOLDER_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.build-placeholder";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 /** True while `next build` is prerendering pages (env may be unset on CI). */
 export function isNextBuildPhase(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
 }
 
+export function isSupabaseConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  );
+}
+
 export function getPublicSupabaseUrl(): string {
-  const value = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (value) return value;
-  if (isNextBuildPhase()) return BUILD_PLACEHOLDER_URL;
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured.");
+  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || BUILD_PLACEHOLDER_URL;
 }
 
 export function getPublicSupabaseAnonKey(): string {
-  const value = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (value) return value;
-  if (isNextBuildPhase()) return BUILD_PLACEHOLDER_ANON_KEY;
-  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured.");
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || BUILD_PLACEHOLDER_ANON_KEY;
 }
 
 /** Browser-safe values — never throw during module init / prerender. */
@@ -52,11 +53,15 @@ export function getServiceRoleKey(): string {
 }
 
 export function getSiteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.VERCEL_URL?.trim()?.replace(/^/, "https://") ||
-    "http://localhost:3000"
-  );
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit;
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    return vercel.startsWith("http") ? vercel : `https://${vercel}`;
+  }
+
+  return "http://localhost:3000";
 }
 
 export function assertPublicEnv(): void {
