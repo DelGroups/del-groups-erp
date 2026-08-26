@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
 import I18nProvider from "@/i18n/I18nProvider";
@@ -5,6 +6,35 @@ import ThemeProvider from "@/theme/ThemeProvider";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"${DEFAULT_THEME}";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","${DEFAULT_THEME}");}})();`;
+
+export const metadata: Metadata = {
+  title: {
+    default: "DEL GROUPS ERP",
+    template: "%s | DEL GROUPS ERP",
+  },
+  description: "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
+  applicationName: "DEL GROUPS ERP",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "DEL GROUPS ERP",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#2563eb" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b14" },
+  ],
+};
 
 export default function RootLayout({
   children,

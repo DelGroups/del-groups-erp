@@ -1,4 +1,32 @@
 import type { NextConfig } from "next";
+// next-pwa has no ESM/types export — wrap config at build time.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const withPWA = require("next-pwa")({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  sw: "sw.js",
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "supabase-api",
+        expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "static-images",
+        expiration: { maxEntries: 64, maxAgeSeconds: 30 * 24 * 60 * 60 },
+      },
+    },
+  ],
+});
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
@@ -16,6 +44,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "worker-src 'self'",
       "frame-ancestors 'self'",
     ].join("; "),
   },
@@ -56,4 +85,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);
