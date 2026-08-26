@@ -1,98 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { getPublicSupabaseAnonKey, getPublicSupabaseUrl, isSupabaseConfigured } from "@/lib/env";
 
 /**
- * Next.js middleware entry (`src/proxy.ts`).
- * Session-only gate — RBAC is enforced client-side via PageLayout / PermissionGuard.
+ * Minimal proxy — auth/session checks run client-side on protected pages.
+ * Full Supabase Edge middleware was causing 500 on Vercel for /login.
  */
-
-/** Routes reachable without a signed-in session. Never redirect these to `/`. */
-const PUBLIC_PATHS = [
-  "/login",
-  "/forgot-password",
-  "/update-password",
-  "/auth/callback",
-  "/auth/set-password",
-] as const;
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
-  );
-}
-
-function createMiddlewareClient(request: NextRequest, response: NextResponse) {
-  return createServerClient(
-    getPublicSupabaseUrl(),
-    getPublicSupabaseAnonKey(),
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
-      },
-    }
-  );
-}
-
-export async function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
-
-  // API routes and Next internals are never auth-gated here.
-  if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
-    return NextResponse.next();
-  }
-
-  // Auth pages must always render — never call Supabase from Edge here (Vercel 500 fix).
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
-  if (!isSupabaseConfigured()) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  try {
-    let response = NextResponse.next({ request });
-    const supabase = createMiddlewareClient(request, response);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      const loginUrl = new URL("/login", request.url);
-      if (pathname !== "/") {
-        loginUrl.searchParams.set("next", `${pathname}${search}`);
-      }
-      return NextResponse.redirect(loginUrl);
-    }
-
-    const { data: profileRow } = await supabase
-      .from("profiles")
-      .select("is_active")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileRow?.is_active === false) {
-      await supabase.auth.signOut();
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("error", "account_inactive");
-      return NextResponse.redirect(loginUrl);
-    }
-
-    return response;
-  } catch (error) {
-    console.error("[proxy] middleware error:", error);
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
+export async function proxy(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
