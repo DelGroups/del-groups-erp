@@ -1,6 +1,6 @@
 {
   "name": "DEL GROUPS ERP",
-  "short_name": "DEL GROUPS",
+  "short_name": "DEL GROUPS ERP",
   "description": "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
   "start_url": "/",
   "scope": "/",
@@ -29,12 +29,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }
