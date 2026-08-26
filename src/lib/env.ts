@@ -19,33 +19,58 @@ function cleanEnv(value: string | undefined): string {
   return value.trim().replace(/^["']|["']$/g, "");
 }
 
-/** True while `next build` is prerendering pages (env may be unset on CI). */
-export function isNextBuildPhase(): boolean {
-  return process.env.NEXT_PHASE === "phase-production-build";
+export function isValidSupabaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
+
+export function isValidSupabaseAnonKey(key: string): boolean {
+  return key.startsWith("eyJ") && key.length > 40;
+}
+
+export type SupabaseConfigIssue = "missing" | "bad_url" | "bad_key" | null;
+
+export function getPublicSupabaseConfigStatus() {
+  const rawUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const rawKey = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const urlValid = isValidSupabaseUrl(rawUrl);
+  const keyValid = isValidSupabaseAnonKey(rawKey);
+  const configIssue: SupabaseConfigIssue = !rawUrl || !rawKey
+    ? "missing"
+    : !urlValid
+      ? "bad_url"
+      : !keyValid
+        ? "bad_key"
+        : null;
+
+  return {
+    url: urlValid ? rawUrl : BUILD_PLACEHOLDER_URL,
+    anonKey: keyValid ? rawKey : BUILD_PLACEHOLDER_ANON_KEY,
+    isConfigured: urlValid && keyValid,
+    configIssue,
+    rawUrlPreview: rawUrl ? rawUrl.slice(0, 32) : "",
+  };
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)) &&
-    Boolean(cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY));
+  return getPublicSupabaseConfigStatus().isConfigured;
 }
 
 export function getPublicSupabaseUrl(): string {
-  return cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || BUILD_PLACEHOLDER_URL;
+  return getPublicSupabaseConfigStatus().url;
 }
 
 export function getPublicSupabaseAnonKey(): string {
-  return cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) || BUILD_PLACEHOLDER_ANON_KEY;
+  return getPublicSupabaseConfigStatus().anonKey;
 }
 
-/** Browser-safe values — never throw during module init / prerender. */
-export function getBrowserSupabaseConfig(): { url: string; anonKey: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (url && anonKey) return { url, anonKey };
-  if (isNextBuildPhase()) {
-    return { url: BUILD_PLACEHOLDER_URL, anonKey: BUILD_PLACEHOLDER_ANON_KEY };
-  }
-  return { url: url || BUILD_PLACEHOLDER_URL, anonKey: anonKey || BUILD_PLACEHOLDER_ANON_KEY };
+/** True while `next build` is prerendering pages (env may be unset on CI). */
+export function isNextBuildPhase(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
 }
 
 export function getServiceRoleKey(): string {

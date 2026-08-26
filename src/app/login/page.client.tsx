@@ -7,7 +7,8 @@ import { Building2, Lock, LogIn, Mail, TriangleAlert } from "lucide-react";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import ThemeSwitcher from "@/components/theme/ThemeSwitcher";
 import { useI18n } from "@/i18n/I18nProvider";
-import { supabase, getSupabaseClientInfo } from "@/lib/supabase";
+import { supabase, ensureSupabaseReady, getSupabaseClientInfo } from "@/lib/supabase";
+import type { SupabaseConfigIssue } from "@/lib/env";
 
 function mapLoginError(
   message: string,
@@ -42,29 +43,44 @@ function LoginForm() {
     return param ? mapLoginError(param, t) : "";
   });
   const [submitting, setSubmitting] = useState(false);
-  const supabaseInfo = getSupabaseClientInfo();
+  const [configReady, setConfigReady] = useState(() => getSupabaseClientInfo().isConfigured);
+  const [configIssue, setConfigIssue] = useState<SupabaseConfigIssue>(
+    () => getSupabaseClientInfo().configIssue
+  );
+
+  useEffect(() => {
+    void ensureSupabaseReady().then((ready) => {
+      setConfigReady(ready);
+      setConfigIssue(getSupabaseClientInfo().configIssue);
+    });
+  }, []);
+
   const configError = (() => {
-    if (supabaseInfo.isConfigured) return "";
-    if (supabaseInfo.configIssue === "bad_url") return t("auth.envBadUrl");
-    if (supabaseInfo.configIssue === "bad_key") return t("auth.envBadKey");
+    if (configReady) return "";
+    if (configIssue === "bad_url") return t("auth.envBadUrl");
+    if (configIssue === "bad_key") return t("auth.envBadKey");
     return t("auth.envNotConfigured");
   })();
 
   useEffect(() => {
-    if (!supabaseInfo.isConfigured) return;
+    if (!configReady) return;
     void supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) router.replace(nextPath);
     });
-  }, [nextPath, router, supabaseInfo.isConfigured]);
+  }, [nextPath, router, configReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
 
-    if (!getSupabaseClientInfo().isConfigured) {
+    const ready = await ensureSupabaseReady();
+    setConfigReady(ready);
+    setConfigIssue(getSupabaseClientInfo().configIssue);
+
+    if (!ready) {
       console.error("[login] Supabase env invalid:", getSupabaseClientInfo());
-      setError(configError);
+      setError(configError || t("auth.envNotConfigured"));
       setSubmitting(false);
       return;
     }
