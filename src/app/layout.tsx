@@ -4,8 +4,6 @@ import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
 
-export const dynamic = "force-dynamic";
-
 const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"${DEFAULT_THEME}";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","${DEFAULT_THEME}");}})();`;
 
 export default function RootLayout({
