@@ -43,7 +43,12 @@ function LoginForm() {
   });
   const [submitting, setSubmitting] = useState(false);
   const supabaseInfo = getSupabaseClientInfo();
-  const configError = supabaseInfo.isConfigured ? "" : t("auth.envNotConfigured");
+  const configError = (() => {
+    if (supabaseInfo.isConfigured) return "";
+    if (supabaseInfo.configIssue === "bad_url") return t("auth.envBadUrl");
+    if (supabaseInfo.configIssue === "bad_key") return t("auth.envBadKey");
+    return t("auth.envNotConfigured");
+  })();
 
   useEffect(() => {
     if (!supabaseInfo.isConfigured) return;
@@ -58,8 +63,8 @@ function LoginForm() {
     setError("");
 
     if (!getSupabaseClientInfo().isConfigured) {
-      console.error("[login] Supabase env missing:", getSupabaseClientInfo());
-      setError(t("auth.envNotConfigured"));
+      console.error("[login] Supabase env invalid:", getSupabaseClientInfo());
+      setError(configError);
       setSubmitting(false);
       return;
     }
@@ -141,7 +146,7 @@ function LoginForm() {
         <p className="text-[11px] text-app-muted">{t("auth.loginTitle")}</p>
       </div>
 
-      {configError && (
+      {configError && !error && (
         <div className="badge-danger flex items-start gap-2 rounded-xl p-3 text-[11px] font-semibold">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           {configError}

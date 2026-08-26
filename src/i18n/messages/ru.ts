@@ -144,6 +144,10 @@ export const ruMessages: Messages = {
       "Не удалось подключиться к серверу. Проверьте переменную NEXT_PUBLIC_SUPABASE_URL.",
     envNotConfigured:
       "Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в Vercel → Settings → Environment Variables и выполните redeploy.",
+    envBadUrl:
+      "NEXT_PUBLIC_SUPABASE_URL неверный. Используйте Supabase → Settings → API → Project URL (например https://abc123.supabase.co). pk_publishable_... — это ключ Clerk, а не URL Supabase!",
+    envBadKey:
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY неверный. Используйте anon public key из Supabase → Settings → API (начинается с eyJ).",
     forgotPasswordTitle: "Сброс пароля",
     sendResetLink: "Отправить ссылку",
     updatePasswordTitle: "Установить новый пароль",

@@ -13,12 +13,29 @@ function readEnv(key: string): string {
   return process.env[key]?.trim().replace(/^["']|["']$/g, "") || "";
 }
 
+function isValidSupabaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
+
+function isValidAnonKey(key: string): boolean {
+  return key.startsWith("eyJ") && key.length > 40;
+}
+
 function getConfig() {
-  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL") || FALLBACK_SUPABASE_URL;
-  const anonKey = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") || FALLBACK_ANON_KEY;
-  const isConfigured = Boolean(readEnv("NEXT_PUBLIC_SUPABASE_URL")) &&
-    Boolean(readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"));
-  return { url, anonKey, isConfigured };
+  const rawUrl = readEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const rawKey = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const urlValid = isValidSupabaseUrl(rawUrl);
+  const keyValid = isValidAnonKey(rawKey);
+  const url = urlValid ? rawUrl : FALLBACK_SUPABASE_URL;
+  const anonKey = keyValid ? rawKey : FALLBACK_ANON_KEY;
+  const isConfigured = urlValid && keyValid;
+  const configIssue = !rawUrl || !rawKey ? "missing" : !urlValid ? "bad_url" : !keyValid ? "bad_key" : null;
+  return { url, anonKey, isConfigured, configIssue, rawUrlPreview: rawUrl ? rawUrl.slice(0, 24) : "" };
 }
 
 let browserClient: SupabaseClient<Database> | null = null;
@@ -50,8 +67,8 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
 
 /** Exposed for login/debug logging — never log the anon key. */
 export function getSupabaseClientInfo() {
-  const { url, isConfigured } = getConfig();
-  return { url, isConfigured };
+  const { url, isConfigured, configIssue, rawUrlPreview } = getConfig();
+  return { url, isConfigured, configIssue, rawUrlPreview };
 }
 
 if (typeof window !== "undefined") {

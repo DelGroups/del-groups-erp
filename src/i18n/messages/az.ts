@@ -142,6 +142,10 @@ export const azMessages = {
       "Serverə qoşulmaq mümkün olmadı. NEXT_PUBLIC_SUPABASE_URL dəyişənini yoxlayın.",
     envNotConfigured:
       "Supabase konfiqurasiya edilməyib. Vercel → Settings → Environment Variables bölməsində NEXT_PUBLIC_SUPABASE_URL və NEXT_PUBLIC_SUPABASE_ANON_KEY əlavə edib yenidən deploy edin.",
+    envBadUrl:
+      "NEXT_PUBLIC_SUPABASE_URL səhvdir. Supabase → Settings → API → Project URL daxil edin (məs: https://abc123.supabase.co). pk_publishable_... Clerk açarıdır, Supabase URL deyil!",
+    envBadKey:
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY səhvdir. Supabase → Settings → API → anon public key (eyJ... ilə başlayan) istifadə edin.",
     forgotPasswordTitle: "Şifrəni bərpa et",
     sendResetLink: "Bərpa linki göndər",
     updatePasswordTitle: "Yeni şifrə təyin et",

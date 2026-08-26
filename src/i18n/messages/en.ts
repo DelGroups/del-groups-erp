@@ -144,6 +144,10 @@ export const enMessages: Messages = {
       "Could not reach the server. Check NEXT_PUBLIC_SUPABASE_URL in your environment.",
     envNotConfigured:
       "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel → Settings → Environment Variables, then redeploy.",
+    envBadUrl:
+      "NEXT_PUBLIC_SUPABASE_URL is invalid. Use Supabase → Settings → API → Project URL (e.g. https://abc123.supabase.co). pk_publishable_... is a Clerk key, not a Supabase URL!",
+    envBadKey:
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY is invalid. Use Supabase → Settings → API → anon public key (starts with eyJ).",
     forgotPasswordTitle: "Reset password",
     sendResetLink: "Send reset link",
     updatePasswordTitle: "Set new password",
