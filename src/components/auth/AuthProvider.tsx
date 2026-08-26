@@ -8,8 +8,11 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { signOutAndRedirect } from "@/lib/auth/clientSession";
+import { isPublicAuthPath } from "@/lib/auth/publicRoutes";
 import {
   displayRoleName,
   parseJoinedRole,
@@ -22,7 +25,6 @@ import {
 } from "@/lib/auth/profile";
 import {
   isAdminRole,
-  normalizePermissions,
   type PermissionKey,
   type UserProfile,
 } from "@/types/database.types";
@@ -43,7 +45,14 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function redirectToLogin(pathname: string) {
+  if (typeof window === "undefined" || isPublicAuthPath(pathname)) return;
+  const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+  window.location.replace(`/login${next}`);
+}
+
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -51,82 +60,74 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
-  const loadProfile = useCallback(async (nextUser: User | null) => {
-    if (!nextUser) {
-      setProfile(null);
-      setDisplayName("");
-      setRoleName("");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(PROFILE_SELECT)
-      .eq("id", nextUser.id)
-      .single();
-
-    if (error) {
-      console.warn("Profile fetch failed:", error.message);
-    }
-
-    const row = data as ProfileQueryRow | null;
-
-    if (row?.is_active === false) {
-      await supabase.auth.signOut();
-      setProfile(null);
-      setDisplayName("");
-      setRoleName("");
-      setUser(null);
-      window.location.href = "/login?error=account_inactive";
-      return;
-    }
-
-    const joined = parseJoinedRole(row?.roles);
-    const resolvedFullName =
-      (typeof row?.full_name === "string" ? row.full_name.trim() : "") ||
-      (typeof nextUser.user_metadata?.full_name === "string"
-        ? nextUser.user_metadata.full_name.trim()
-        : "") ||
-      "İstifadəçi";
-
-    setRoleName(displayRoleName(joined.name));
-    setDisplayName(resolvedFullName);
-
-    if (row) {
-      setProfile(toUserProfile(row));
-    } else {
-      setProfile({
-        id: nextUser.id,
-        email: nextUser.email ?? null,
-        full_name: resolvedFullName,
-        role_id: null,
-        employee_id: null,
-        is_active: true,
-        created_at: null,
-        updated_at: null,
-        role: {
-          id: "",
-          name: joined.name,
-          description: null,
-          permissions: normalizePermissions({}),
-          is_system: joined.isAdmin,
-          created_at: "",
-        },
-      });
-    }
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    setProfile(null);
+    setDisplayName("");
+    setRoleName("");
   }, []);
+
+  const loadProfile = useCallback(
+    async (nextUser: User) => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(PROFILE_SELECT)
+        .eq("id", nextUser.id)
+        .single();
+
+      if (error || !data) {
+        console.warn("[auth] Profile missing or fetch failed:", error?.message);
+        await signOutAndRedirect("/login?error=no_profile");
+        return false;
+      }
+
+      const row = data as ProfileQueryRow;
+
+      if (row.is_active === false) {
+        await signOutAndRedirect("/login?error=account_inactive");
+        return false;
+      }
+
+      const joined = parseJoinedRole(row.roles);
+      const resolvedFullName =
+        (typeof row.full_name === "string" ? row.full_name.trim() : "") ||
+        (typeof nextUser.user_metadata?.full_name === "string"
+          ? nextUser.user_metadata.full_name.trim()
+          : "") ||
+        nextUser.email?.split("@")[0] ||
+        "";
+
+      setUser(nextUser);
+      setRoleName(displayRoleName(joined.name));
+      setDisplayName(resolvedFullName);
+      setProfile(toUserProfile(row));
+      return true;
+    },
+    []
+  );
 
   useEffect(() => {
     let active = true;
 
     void (async () => {
       setLoading(true);
+
       const {
         data: { user: currentUser },
+        error,
       } = await supabase.auth.getUser();
+
       if (!active) return;
-      setUser(currentUser ?? null);
-      await loadProfile(currentUser ?? null);
+
+      if (error || !currentUser) {
+        clearAuthState();
+        setLoading(false);
+        setReady(true);
+        return;
+      }
+
+      await loadProfile(currentUser);
+
       if (active) {
         setLoading(false);
         setReady(true);
@@ -135,34 +136,48 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       const nextUser = session?.user ?? null;
-      setUser(nextUser);
-      void loadProfile(nextUser);
+
+      if (event === "SIGNED_OUT" || !nextUser) {
+        clearAuthState();
+        return;
+      }
+
+      await loadProfile(nextUser);
     });
 
     return () => {
       active = false;
       subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [clearAuthState, loadProfile]);
+
+  useEffect(() => {
+    if (!ready || loading) return;
+    if (!user) {
+      redirectToLogin(pathname);
+    }
+  }, [ready, loading, user, pathname]);
 
   const refresh = useCallback(async () => {
     const {
       data: { user: currentUser },
+      error,
     } = await supabase.auth.getUser();
-    setUser(currentUser ?? null);
-    await loadProfile(currentUser ?? null);
-  }, [loadProfile]);
+
+    if (error || !currentUser) {
+      clearAuthState();
+      return;
+    }
+
+    await loadProfile(currentUser);
+  }, [clearAuthState, loadProfile]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setDisplayName("");
-    setRoleName("");
-    window.location.href = "/login";
-  }, []);
+    clearAuthState();
+    await signOutAndRedirect("/login");
+  }, [clearAuthState]);
 
   const value = useMemo<AuthContextValue>(() => {
     const isAdmin = isAdminRole(profile?.role);
@@ -176,7 +191,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       displayName,
       roleName,
       email: profile?.email || user?.email || "",
-      can: (permission) => userHasPermission(profile, permission),
+      can: (permission) => Boolean(user && userHasPermission(profile, permission)),
       refresh,
       signOut,
     };

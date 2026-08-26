@@ -138,6 +138,7 @@ export const enMessages: Messages = {
     emailNotConfirmed: "Your email address is not confirmed.",
     tooManyRequests: "Too many attempts. Please wait and try again.",
     accountInactive: "Your account is deactivated. Contact an administrator.",
+    noProfile: "No profile was found for your account. Contact an administrator.",
     sessionFailed: "Sign-in failed — session could not be created.",
     sessionStorageFailed: "Session could not be saved. Please try again.",
     networkError:

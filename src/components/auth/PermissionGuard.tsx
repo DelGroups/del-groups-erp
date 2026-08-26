@@ -16,7 +16,7 @@ export default function PermissionGuard({
   permission,
   children,
 }: PermissionGuardProps) {
-  const { loading, ready, can } = useAuth();
+  const { loading, ready, can, user } = useAuth();
   const { t } = useI18n();
 
   if (loading || !ready) {
@@ -25,6 +25,10 @@ export default function PermissionGuard({
         {t("permission.checking")}
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   if (!can(permission)) {

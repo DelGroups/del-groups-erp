@@ -27,6 +27,8 @@ function mapLoginError(
       return t("auth.networkError");
     case "account_inactive":
       return t("auth.accountInactive");
+    case "no_profile":
+      return t("auth.noProfile");
     default:
       return message;
   }

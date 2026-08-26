@@ -138,6 +138,7 @@ export const ruMessages: Messages = {
     emailNotConfirmed: "Ваш email не подтверждён.",
     tooManyRequests: "Слишком много попыток. Подождите и попробуйте снова.",
     accountInactive: "Ваш аккаунт деактивирован. Свяжитесь с администратором.",
+    noProfile: "Профиль для вашей учётной записи не найден. Свяжитесь с администратором.",
     sessionFailed: "Вход не удался — сессия не создана.",
     sessionStorageFailed: "Сессия не сохранена. Попробуйте снова.",
     networkError:

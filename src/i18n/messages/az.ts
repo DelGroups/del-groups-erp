@@ -136,6 +136,7 @@ export const azMessages = {
     emailNotConfirmed: "E-poçt ünvanınız təsdiqlənməyib.",
     tooManyRequests: "Çox sayda cəhd edildi. Bir az gözləyin və yenidən cəhd edin.",
     accountInactive: "Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.",
+    noProfile: "Hesabınız üçün profil tapılmadı. Administratorla əlaqə saxlayın.",
     sessionFailed: "Giriş uğursuz oldu — sessiya yaradıla bilmədi.",
     sessionStorageFailed: "Giriş sessiyası saxlanıla bilmədi. Yenidən cəhd edin.",
     networkError:
