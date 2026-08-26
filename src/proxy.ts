@@ -50,31 +50,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Auth pages must always render — never call Supabase from Edge here (Vercel 500 fix).
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
   if (!isSupabaseConfigured()) {
-    if (isPublicPath(pathname)) return NextResponse.next();
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   try {
-    // Public auth pages — no session required (invite, forgot password, login, etc.).
-    if (isPublicPath(pathname)) {
-      if (pathname === "/login") {
-        let response = NextResponse.next({ request });
-        const supabase = createMiddlewareClient(request, response);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          return NextResponse.redirect(new URL("/", request.url));
-        }
-        return response;
-      }
-
-      return NextResponse.next();
-    }
-
-    // Protected app routes — require a valid session.
     let response = NextResponse.next({ request });
     const supabase = createMiddlewareClient(request, response);
 
@@ -106,7 +91,6 @@ export async function proxy(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[proxy] middleware error:", error);
-    if (isPublicPath(pathname)) return NextResponse.next();
     return NextResponse.redirect(new URL("/login", request.url));
   }
 }

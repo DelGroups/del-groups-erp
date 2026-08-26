@@ -14,24 +14,27 @@ const BUILD_PLACEHOLDER_URL = "https://placeholder.supabase.co";
 const BUILD_PLACEHOLDER_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
+function cleanEnv(value: string | undefined): string {
+  if (!value) return "";
+  return value.trim().replace(/^["']|["']$/g, "");
+}
+
 /** True while `next build` is prerendering pages (env may be unset on CI). */
 export function isNextBuildPhase(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
-  );
+  return Boolean(cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)) &&
+    Boolean(cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY));
 }
 
 export function getPublicSupabaseUrl(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || BUILD_PLACEHOLDER_URL;
+  return cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || BUILD_PLACEHOLDER_URL;
 }
 
 export function getPublicSupabaseAnonKey(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || BUILD_PLACEHOLDER_ANON_KEY;
+  return cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) || BUILD_PLACEHOLDER_ANON_KEY;
 }
 
 /** Browser-safe values — never throw during module init / prerender. */
@@ -46,7 +49,7 @@ export function getBrowserSupabaseConfig(): { url: string; anonKey: string } {
 }
 
 export function getServiceRoleKey(): string {
-  const value = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const value = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (value) return value;
   if (isNextBuildPhase()) return "build-placeholder-service-role-key";
   throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured.");

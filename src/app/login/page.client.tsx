@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Lock, LogIn, Mail, TriangleAlert } from "lucide-react";
@@ -44,6 +44,13 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const supabaseInfo = getSupabaseClientInfo();
   const configError = supabaseInfo.isConfigured ? "" : t("auth.envNotConfigured");
+
+  useEffect(() => {
+    if (!supabaseInfo.isConfigured) return;
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) router.replace(nextPath);
+    });
+  }, [nextPath, router, supabaseInfo.isConfigured]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

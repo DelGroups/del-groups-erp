@@ -10,13 +10,15 @@ const FALLBACK_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || FALLBACK_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, "") ||
+  FALLBACK_SUPABASE_URL;
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || FALLBACK_ANON_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, "") ||
+  FALLBACK_ANON_KEY;
 
 const isSupabaseConfigured =
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, "")) &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, ""));
 
 if (typeof window !== "undefined" && !isSupabaseConfigured) {
   console.warn(
