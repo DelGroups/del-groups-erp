@@ -38,6 +38,10 @@ export const azMessages = {
     signOut: "Çıxış",
     loading: "Yüklənir...",
     language: "Dil",
+    openMenu: "Menyunu aç",
+    closeMenu: "Menyunu bağla",
+    collapseMenu: "Menyunu yığ",
+    expandMenu: "Menyunu genişlət",
   },
   theme: {
     label: "Görünüş",

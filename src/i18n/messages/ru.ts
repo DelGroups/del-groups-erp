@@ -40,6 +40,10 @@ export const ruMessages: Messages = {
     signOut: "Выход",
     loading: "Загрузка...",
     language: "Язык",
+    openMenu: "Открыть меню",
+    closeMenu: "Закрыть меню",
+    collapseMenu: "Свернуть меню",
+    expandMenu: "Развернуть меню",
   },
   theme: {
     label: "Тема",

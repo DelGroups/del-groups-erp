@@ -40,6 +40,10 @@ export const enMessages: Messages = {
     signOut: "Sign out",
     loading: "Loading...",
     language: "Language",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+    collapseMenu: "Collapse menu",
+    expandMenu: "Expand menu",
   },
   theme: {
     label: "Theme",

@@ -166,8 +166,13 @@ function initials(name: string): string {
   );
 }
 
-export default function Sidebar() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
+  const [desktopExpanded, setDesktopExpanded] = useState(true);
   const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
   const [logoUrl, setLogoUrl] = useState("");
   const pathname = usePathname();
@@ -224,11 +229,15 @@ export default function Sidebar() {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const closeMobileIfNeeded = () => {
+    onMobileClose?.();
+  };
+
   return (
     <aside
-      className={`${
-        sidebarOpen ? "w-64" : "w-20"
-      } z-20 flex h-screen shrink-0 flex-col border-r text-[color:var(--app-sidebar-text)] transition-all duration-300`}
+      className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r text-[color:var(--app-sidebar-text)] transition-transform duration-300 ease-in-out md:relative md:z-20 md:translate-x-0 md:transition-[width] ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      } ${desktopExpanded ? "md:w-64" : "md:w-20"}`}
       style={{
         backgroundColor: "var(--app-sidebar)",
         borderColor: "var(--app-sidebar-border)",
@@ -250,22 +259,30 @@ export default function Sidebar() {
               <Building2 className="h-5 w-5 text-white" />
             </div>
           )}
-          {sidebarOpen && (
-            <div className="truncate">
-              <h1 className="truncate text-xs font-bold tracking-wide text-white">{companyName}</h1>
-              <p className="text-[10px]" style={{ color: "var(--app-sidebar-muted)" }}>
-                {t("nav.erpSubtitle")}
-              </p>
-            </div>
-          )}
+          <div className={`truncate ${desktopExpanded ? "md:block" : "md:hidden"}`}>
+            <h1 className="truncate text-xs font-bold tracking-wide text-white">{companyName}</h1>
+            <p className="text-[10px]" style={{ color: "var(--app-sidebar-muted)" }}>
+              {t("nav.erpSubtitle")}
+            </p>
+          </div>
         </div>
         <button
           type="button"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="rounded-lg p-1 transition-colors hover:opacity-80"
+          onClick={() => onMobileClose?.()}
+          aria-label={t("nav.closeMenu")}
+          className="rounded-lg p-1 transition-colors hover:opacity-80 md:hidden"
           style={{ color: "var(--app-sidebar-muted)" }}
         >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <X className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setDesktopExpanded((prev) => !prev)}
+          aria-label={desktopExpanded ? t("nav.collapseMenu") : t("nav.expandMenu")}
+          className="hidden rounded-lg p-1 transition-colors hover:opacity-80 md:inline-flex"
+          style={{ color: "var(--app-sidebar-muted)" }}
+        >
+          {desktopExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
@@ -275,9 +292,68 @@ export default function Sidebar() {
           const sectionHasActive = isSectionActive(pathname, section);
           const expanded = !!openSections[section.id];
 
-          if (!sidebarOpen) {
-            return (
-              <div key={section.id} className="space-y-1">
+          return (
+            <div key={section.id} className="mb-1">
+              <div className={desktopExpanded ? "block" : "block md:hidden"}>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors duration-300 ${
+                    sectionHasActive ? "opacity-100" : "opacity-80 hover:opacity-100"
+                  }`}
+                  style={
+                    sectionHasActive
+                      ? { backgroundColor: "var(--app-card-hover)" }
+                      : { color: "var(--app-sidebar-muted)" }
+                  }
+                  aria-expanded={expanded}
+                >
+                  <span className="flex items-center gap-2">
+                    <SectionIcon className="h-4 w-4 shrink-0" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      {t(section.titleKey)}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                      expanded ? "rotate-0" : "-rotate-90"
+                    }`}
+                  />
+                </button>
+
+                <div
+                  className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ${
+                    expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="min-h-0 space-y-0.5 pt-1">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isItemActive(pathname, item.path);
+                      return (
+                        <Link
+                          key={item.path}
+                          href={item.path}
+                          onClick={closeMobileIfNeeded}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-300 ${
+                            active ? "text-white shadow-sm" : "hover:opacity-90"
+                          }`}
+                          style={
+                            active
+                              ? { backgroundColor: "var(--app-accent)" }
+                              : { color: "var(--app-sidebar-text)" }
+                          }
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t(item.titleKey)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className={desktopExpanded ? "hidden" : "hidden space-y-1 md:block"}>
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isItemActive(pathname, item.path);
@@ -301,77 +377,16 @@ export default function Sidebar() {
                   );
                 })}
               </div>
-            );
-          }
-
-          return (
-            <div key={section.id} className="mb-1">
-              <button
-                type="button"
-                onClick={() => toggleSection(section.id)}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors duration-300 ${
-                  sectionHasActive ? "opacity-100" : "opacity-80 hover:opacity-100"
-                }`}
-                style={
-                  sectionHasActive
-                    ? { backgroundColor: "var(--app-card-hover)" }
-                    : { color: "var(--app-sidebar-muted)" }
-                }
-                aria-expanded={expanded}
-              >
-                <span className="flex items-center gap-2">
-                  <SectionIcon className="h-4 w-4 shrink-0" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">
-                    {t(section.titleKey)}
-                  </span>
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                    expanded ? "rotate-0" : "-rotate-90"
-                  }`}
-                />
-              </button>
-
-              <div
-                className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ${
-                  expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                }`}
-              >
-                <div className="min-h-0 space-y-0.5 pt-1">
-                  {section.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isItemActive(pathname, item.path);
-                    return (
-                      <Link
-                        key={item.path}
-                        href={item.path}
-                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-300 ${
-                          active ? "text-white shadow-sm" : "hover:opacity-90"
-                        }`}
-                        style={
-                          active
-                            ? { backgroundColor: "var(--app-accent)" }
-                            : { color: "var(--app-sidebar-text)" }
-                        }
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t(item.titleKey)}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           );
         })}
       </nav>
 
       <div
-        className="relative z-10 mt-auto shrink-0 border-t px-3 pb-32 pt-3"
+        className="relative z-10 mt-auto shrink-0 border-t px-3 pb-8 pt-3 md:pb-32"
         style={{ borderColor: "var(--app-sidebar-border)" }}
       >
-        {sidebarOpen ? (
-          <div className="space-y-3">
+        <div className={`block space-y-3 ${desktopExpanded ? "md:block" : "md:hidden"}`}>
             <div className="flex items-center gap-2 overflow-hidden">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
@@ -404,8 +419,7 @@ export default function Sidebar() {
               <LanguageSwitcher />
             </div>
           </div>
-        ) : (
-          <div className="relative z-10 flex flex-col items-center space-y-3">
+        <div className={`hidden flex-col items-center space-y-3 ${desktopExpanded ? "md:hidden" : "md:flex"}`}>
             <div
               title={`${displayName} — ${roleName}`}
               className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold text-white"
@@ -424,8 +438,7 @@ export default function Sidebar() {
             </button>
             <ThemeSwitcher compact />
             <LanguageSwitcher compact />
-          </div>
-        )}
+        </div>
       </div>
     </aside>
   );
