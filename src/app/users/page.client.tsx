@@ -493,22 +493,12 @@ function UsersView() {
               filteredProfiles.map((profile) => (
                 <tr key={profile.id} className="hover:bg-app-card-hover">
                   <td className="px-6 py-3.5 font-semibold text-app">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span>{profile.full_name || t("common.anonymous")}</span>
-                      {profile.id === currentUser?.id && (
-                        <span className="rounded-md bg-[color:var(--app-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-app-accent">
-                          {t("common.you")}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setEditingProfile(profile)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-blue-700"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        {t("common.edit")}
-                      </button>
-                    </div>
+                    {profile.full_name || t("common.anonymous")}
+                    {profile.id === currentUser?.id && (
+                      <span className="ml-2 rounded-md bg-[color:var(--app-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-app-accent">
+                        {t("common.you")}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-3.5 text-app-muted">{profile.email || "-"}</td>
                   <td className="px-6 py-3.5">
@@ -540,19 +530,29 @@ function UsersView() {
                     {formatDate(profile.created_at)}
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => void handleToggleActive(profile)}
-                      disabled={profile.id === currentUser?.id}
-                      title={
-                        profile.id === currentUser?.id
-                          ? t("common.cannotDeactivateSelf")
-                          : undefined
-                      }
-                      className="rounded-lg border border-app px-3 py-1.5 text-[11px] font-semibold text-app-muted transition-colors hover:bg-app-card-hover disabled:opacity-40"
-                    >
-                      {profile.is_active ? t("common.deactivate") : t("common.activate")}
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProfile(profile)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleActive(profile)}
+                        disabled={profile.id === currentUser?.id}
+                        title={
+                          profile.id === currentUser?.id
+                            ? t("common.cannotDeactivateSelf")
+                            : undefined
+                        }
+                        className="rounded-lg border border-app px-3 py-1.5 text-[11px] font-semibold text-app-muted transition-colors hover:bg-app-card-hover disabled:opacity-40"
+                      >
+                        {profile.is_active ? t("common.deactivate") : t("common.activate")}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
