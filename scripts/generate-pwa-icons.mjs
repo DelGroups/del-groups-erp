@@ -10,6 +10,12 @@
  * - public/apple-touch-icon.png
  * - public/apple-touch-icon-precomposed.png
  *
+ * Browser tab favicon:
+ * - public/favicon.ico
+ * - public/favicon-16x16.png
+ * - public/favicon-32x32.png
+ * - src/app/icon.png (Next.js file-based metadata)
+ *
  * Run: npm run pwa:icons
  */
 import fs from "node:fs";
@@ -20,6 +26,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const outDir = path.join(root, "public", "icons");
 const publicDir = path.join(root, "public");
+const appDir = path.join(root, "src", "app");
 
 const SOURCE_CANDIDATES = [
   path.join(outDir, "logo-source.png"),
@@ -32,6 +39,66 @@ function resolveSource() {
     if (fs.existsSync(candidate)) return candidate;
   }
   throw new Error("No icon source found in public/icons/");
+}
+
+/** Wrap a PNG buffer in a single-size ICO container (PNG-in-ICO, Vista+). */
+function pngToIco(pngBuffer, size = 32) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(1, 4);
+
+  const entry = Buffer.alloc(16);
+  entry[0] = size >= 256 ? 0 : size;
+  entry[1] = size >= 256 ? 0 : size;
+  entry.writeUInt16LE(1, 4);
+  entry.writeUInt16LE(32, 6);
+  entry.writeUInt32LE(pngBuffer.length, 8);
+  entry.writeUInt32LE(22, 12);
+
+  return Buffer.concat([header, entry, pngBuffer]);
+}
+
+async function writeFaviconFiles(sharp, sourcePath, isRaster, input) {
+  const faviconSizes = [
+    ["favicon-16x16.png", 16],
+    ["favicon-32x32.png", 32],
+  ];
+
+  let favicon32Buffer = null;
+
+  for (const [name, size] of faviconSizes) {
+    const buffer = isRaster
+      ? await sharp(sourcePath).resize(size, size, { fit: "cover" }).png().toBuffer()
+      : await sharp(input)
+          .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 1 } })
+          .png()
+          .toBuffer();
+
+    if (size === 32) favicon32Buffer = buffer;
+
+    const outPath = path.join(publicDir, name);
+    fs.writeFileSync(outPath, buffer);
+    console.log("Wrote", path.relative(root, outPath));
+  }
+
+  if (favicon32Buffer) {
+    const icoPath = path.join(publicDir, "favicon.ico");
+    fs.writeFileSync(icoPath, pngToIco(favicon32Buffer, 32));
+    console.log("Wrote", path.relative(root, icoPath));
+  }
+
+  const appIconPath = path.join(appDir, "icon.png");
+  const appIconBuffer = isRaster
+    ? await sharp(sourcePath).resize(32, 32, { fit: "cover" }).png().toBuffer()
+    : await sharp(input)
+        .resize(32, 32, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 1 } })
+        .png()
+        .toBuffer();
+
+  fs.mkdirSync(appDir, { recursive: true });
+  fs.writeFileSync(appIconPath, appIconBuffer);
+  console.log("Wrote", path.relative(root, appIconPath));
 }
 
 async function writeAppleTouchCopies(sourcePath) {
@@ -90,6 +157,8 @@ async function main() {
 
     console.log("Wrote", name);
   }
+
+  await writeFaviconFiles(sharp, sourcePath, isRaster, input);
 
   if (isRaster) {
     await writeAppleTouchCopies(sourcePath);
