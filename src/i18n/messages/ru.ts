@@ -800,6 +800,13 @@ export const ruMessages: Messages = {
     activated: "{name} активирован",
     permissionsHint: "Наборы прав назначаются на уровне роли в разделе «Роли и права».",
     fullNamePlaceholder: "Напр. Elvin Mammadov",
+    editModalTitle: "Редактировать пользователя",
+    editModalDescription: "Обновите имя, email, роль, язык и статус активности",
+    updateFailed: "Не удалось обновить пользователя",
+    updated: "Пользователь {name} успешно обновлён",
+    localeAz: "Azərbaycan",
+    localeEn: "English",
+    localeRu: "Русский",
   },
   damagedGoods: {
     title: "Списание брака",

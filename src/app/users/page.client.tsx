@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Mail,
+  Pencil,
   Search,
   ShieldCheck,
   TriangleAlert,
@@ -165,6 +166,184 @@ function InviteUserModal({
   );
 }
 
+function EditUserModal({
+  profile,
+  roles,
+  currentUserId,
+  onClose,
+  onSaved,
+}: {
+  profile: UserProfile;
+  roles: Role[];
+  currentUserId?: string;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const { t } = useI18n();
+  const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const [email, setEmail] = useState(profile.email ?? "");
+  const [roleId, setRoleId] = useState(profile.role_id ?? "");
+  const [locale, setLocale] = useState(profile.locale ?? "az");
+  const [isActive, setIsActive] = useState(profile.is_active);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const isSelf = profile.id === currentUserId;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+
+    const response = await fetch(`/api/users/${profile.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: fullName,
+        email,
+        role_id: roleId,
+        locale,
+        is_active: isActive,
+      }),
+    });
+    const payload = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(payload.error || t("users.updateFailed"));
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
+    onSaved(t("users.updated", { name: fullName.trim() || email.trim() }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="app-modal my-10 w-full max-w-md space-y-4 p-6"
+      >
+        <div className="flex items-start justify-between border-b border-app pb-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-app">
+              <Pencil className="h-4 w-4 text-app-accent" />
+              {t("users.editModalTitle")}
+            </h2>
+            <p className="mt-0.5 text-[11px] text-app-muted">
+              {t("users.editModalDescription")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover hover:text-app"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            {error}
+          </div>
+        )}
+
+        <label className="block text-xs font-semibold text-app">
+          {t("auth.fullName")} *
+          <input
+            type="text"
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder={t("users.fullNamePlaceholder")}
+            className="mt-1 w-full rounded-lg border border-app px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
+          />
+        </label>
+
+        <label className="block text-xs font-semibold text-app">
+          {t("auth.email")} *
+          <div className="relative mt-1">
+            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-app-muted" />
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ad@delgroups.az"
+              className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
+            />
+          </div>
+        </label>
+
+        <label className="block text-xs font-semibold text-app">
+          {t("users.roleCol")} *
+          <select
+            required
+            value={roleId}
+            onChange={(e) => setRoleId(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-app app-input text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
+          >
+            <option value="">{t("common.noRole")}</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-xs font-semibold text-app">
+          {t("nav.language")}
+          <select
+            value={locale}
+            onChange={(e) => setLocale(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-app app-input text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
+          >
+            <option value="az">{t("users.localeAz")}</option>
+            <option value="en">{t("users.localeEn")}</option>
+            <option value="ru">{t("users.localeRu")}</option>
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2 text-xs font-semibold text-app">
+          <input
+            type="checkbox"
+            checked={isActive}
+            disabled={isSelf}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="h-4 w-4 rounded border-app text-app-accent focus:ring-[color:var(--app-accent-ring)] disabled:opacity-50"
+          />
+          {t("common.active")}
+          {isSelf && (
+            <span className="text-[10px] font-normal text-app-muted">
+              ({t("common.cannotDeactivateSelf")})
+            </span>
+          )}
+        </label>
+
+        <div className="flex justify-end gap-2 border-t border-app pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-app px-4 py-2.5 text-xs font-semibold text-app-muted hover:bg-app-card-hover"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="submit"
+            disabled={submitting || !roleId}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {submitting ? t("common.saving") : t("common.save")}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function UsersView() {
   const { t } = useI18n();
   const { user: currentUser, refresh: refreshAuth } = useAuth();
@@ -175,6 +354,7 @@ function UsersView() {
   const [successMsg, setSuccessMsg] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInvite, setShowInvite] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -313,12 +493,22 @@ function UsersView() {
               filteredProfiles.map((profile) => (
                 <tr key={profile.id} className="hover:bg-app-card-hover">
                   <td className="px-6 py-3.5 font-semibold text-app">
-                    {profile.full_name || t("common.anonymous")}
-                    {profile.id === currentUser?.id && (
-                      <span className="ml-2 rounded-md bg-[color:var(--app-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-app-accent">
-                        {t("common.you")}
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{profile.full_name || t("common.anonymous")}</span>
+                      {profile.id === currentUser?.id && (
+                        <span className="rounded-md bg-[color:var(--app-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-app-accent">
+                          {t("common.you")}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingProfile(profile)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-blue-700"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        {t("common.edit")}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-6 py-3.5 text-app-muted">{profile.email || "-"}</td>
                   <td className="px-6 py-3.5">
@@ -384,6 +574,22 @@ function UsersView() {
             setShowInvite(false);
             flash(message);
             void loadData();
+          }}
+        />
+      )}
+
+      {editingProfile && (
+        <EditUserModal
+          profile={editingProfile}
+          roles={roles}
+          currentUserId={currentUser?.id}
+          onClose={() => setEditingProfile(null)}
+          onSaved={async (message) => {
+            const editedId = editingProfile.id;
+            setEditingProfile(null);
+            flash(message);
+            await loadData();
+            if (editedId === currentUser?.id) await refreshAuth();
           }}
         />
       )}

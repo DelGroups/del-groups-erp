@@ -4,7 +4,7 @@ import { getSiteUrl } from "@/lib/env";
 export function corsHeaders(): HeadersInit {
   return {
     "Access-Control-Allow-Origin": getSiteUrl(),
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }

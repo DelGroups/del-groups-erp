@@ -800,6 +800,13 @@ export const enMessages: Messages = {
     activated: "{name} activated",
     permissionsHint: "Permission sets are assigned at role level in Roles & Permissions.",
     fullNamePlaceholder: "e.g. Elvin Mammadov",
+    editModalTitle: "Edit user",
+    editModalDescription: "Update name, email, role, language, and active status",
+    updateFailed: "Could not update user",
+    updated: "{name} updated successfully",
+    localeAz: "Azerbaijani",
+    localeEn: "English",
+    localeRu: "Russian",
   },
   damagedGoods: {
     title: "Damaged Goods Write-off",

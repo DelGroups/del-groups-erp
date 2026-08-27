@@ -798,6 +798,13 @@ export const azMessages = {
     activated: "{name} aktivləşdirildi",
     permissionsHint: "İcazə dəstləri “Rollar və İcazələr” bölməsində rol səviyyəsində təyin olunur.",
     fullNamePlaceholder: "Məs: Elvin Məmmədov",
+    editModalTitle: "İstifadəçini redaktə et",
+    editModalDescription: "Ad, e-poçt, rol, dil və aktivlik statusunu yeniləyin",
+    updateFailed: "İstifadəçi məlumatları yenilənmədi",
+    updated: "{name} uğurla yeniləndi",
+    localeAz: "Azərbaycan",
+    localeEn: "English",
+    localeRu: "Русский",
   },
   damagedGoods: {
     title: "Zədələnmə Çıxışı",
