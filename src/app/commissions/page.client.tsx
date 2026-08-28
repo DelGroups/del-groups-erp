@@ -56,7 +56,7 @@ export default function CommissionsPage() {
               <p className="text-[10px] font-bold uppercase text-app-muted">{t("commissions.pendingRows")}</p>
               <p className="mt-1 text-2xl font-bold text-app">{commissions.length}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="rounded-2xl alert-success rounded-xl p-4 shadow-sm">
               <p className="text-[10px] font-bold uppercase text-emerald-700">{t("commissions.pendingTotal")}</p>
               <p className="mt-1 font-mono text-2xl font-bold text-emerald-700">
                 {pendingTotal.toFixed(2)} AZN

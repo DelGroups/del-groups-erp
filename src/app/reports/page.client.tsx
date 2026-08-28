@@ -34,7 +34,7 @@ export default function ReportsHubPage() {
 
   return (
     <PageLayout>
-        <header className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="border-b border-app app-glass px-6 py-4">
           <h1 className="flex items-center gap-2 text-xl font-bold text-app">
             <BarChart3 className="h-6 w-6 text-app-accent" />
             {t("reports.title")}

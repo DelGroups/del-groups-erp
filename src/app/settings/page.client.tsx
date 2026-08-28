@@ -106,7 +106,7 @@ export default function SettingsPage() {
   return (
     <PageLayout>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h1 className="text-xl font-bold text-app flex items-center gap-2">
               <Settings className="w-6 h-6 text-app-accent" />
@@ -124,7 +124,7 @@ export default function SettingsPage() {
         <PermissionGuard permission="can_view_settings">
         <div className="p-6 max-w-5xl space-y-6">
           {successMsg && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">
+            <div className="alert-success p-4 text-xs font-bold rounded-xl flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               {successMsg}
             </div>
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                       ? undefined
                       : t("settings.noManagePermission")
                   }
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
+                  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? t("common.saving") : t("settings.saveSettings")}

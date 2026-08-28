@@ -26,7 +26,7 @@ export default function WarehouseResendModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/50 p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md">
         <div className="flex items-start justify-between border-b border-app px-5 py-4">
           <div className="flex items-start gap-3">

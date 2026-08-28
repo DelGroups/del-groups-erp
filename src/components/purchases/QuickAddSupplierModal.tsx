@@ -36,7 +36,7 @@ export default function QuickAddSupplierModal({ onClose, onCreated }: QuickAddSu
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <h3 className="text-sm font-bold text-app">Təchizatçı əlavə et</h3>

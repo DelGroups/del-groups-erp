@@ -426,7 +426,7 @@ export default function PurchaseForm({
         </div>
 
         <div className="app-table-wrap">
-          <div className="flex items-center justify-between bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">
+          <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
             <span>{t("forms.receivedProducts")}</span>
             <button
               type="button"
@@ -604,7 +604,7 @@ export default function PurchaseForm({
                   <button
                     type="button"
                     onClick={() => removePaymentRow(pay.id)}
-                    className="rounded-lg p-1.5 text-app-muted hover:bg-rose-50 hover:text-rose-600"
+                    className="rounded-lg p-1.5 text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

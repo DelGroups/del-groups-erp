@@ -63,7 +63,7 @@ export default function EmployeeFormModal({
   const set = (patch: Partial<EmployeeFormValues>) => setForm((prev) => ({ ...prev, ...patch }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
       <div className="w-full max-w-lg overflow-hidden rounded-2xl app-card shadow-xl">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <h3 className="font-bold text-app">
@@ -178,7 +178,7 @@ export default function EmployeeFormModal({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
             >
               {saving ? t("common.saving") : t("common.save")}
             </button>

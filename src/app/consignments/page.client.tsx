@@ -1,594 +1,789 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import PageLayout from "@/components/layout/PageLayout";
+import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
+import ConsignmentDeliveryPrintTemplate from "@/components/consignment/ConsignmentDeliveryPrintTemplate";
+import ConsignmentSettlementPrintTemplate from "@/components/consignment/ConsignmentSettlementPrintTemplate";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { ConsignmentOrder } from "@/types/database.types";
+import { supabase } from "@/lib/supabase";
 import {
-  Handshake, 
-  Plus, 
-  FileCheck, 
-  Building2, 
-  TrendingUp, 
-  PackageCheck, 
-  Search,
-  Filter
-} from "lucide-react";
+  createConsignmentDispatchAction,
+  createConsignmentReturnAction,
+  fetchConsignmentLookupsAction,
+  listConsignmentDispatchesAction,
+  listConsignmentInventoryAction,
+  listConsignmentReportsAction,
+  saveConsignmentMonthlyReportAction,
+  saveConsignmentPartnerAction,
+  type ConsignmentLookups,
+} from "@/lib/actions/consignment";
+import type {
+  ConsignmentDispatch,
+  ConsignmentDispatchItem,
+  ConsignmentInventoryRow,
+  ConsignmentMonthlyReport,
+} from "@/lib/consignment/types";
+import { Handshake, Printer, FileSpreadsheet, Plus } from "lucide-react";
+
+type TabId = "partners" | "dispatch" | "inventory" | "settlement" | "alerts";
+
+function downloadWorkbook(filename: string, sheetName: string, rows: (string | number)[][]) {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+}
+
+function currentPeriod() {
+  return new Date().toISOString().slice(0, 7);
+}
 
 export default function ConsignmentPage() {
   const { t } = useI18n();
-  const { displayName, isAdmin, loading: authLoading } = useAuth();
-  /** Non-admins may only send consignments under their own name. */
-  const lockSeller = !authLoading && !isAdmin;
-  const [activeTab, setActiveTab] = useState<"list" | "stock" | "reports">("list");
-  const [items, setItems] = useState<ConsignmentOrder[]>([]);
+  const { can } = useAuth();
+  const canManage = can("can_manage_consignments");
+  const [tab, setTab] = useState<TabId>("inventory");
+  const [lookups, setLookups] = useState<ConsignmentLookups | null>(null);
+  const [dispatches, setDispatches] = useState<ConsignmentDispatch[]>([]);
+  const [inventory, setInventory] = useState<ConsignmentInventoryRow[]>([]);
+  const [reports, setReports] = useState<ConsignmentMonthlyReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
 
-  // Filters
-  const [searchCustomer, setSearchCustomer] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const { printData: printDispatch, setPrintData: setPrintDispatch } =
+    useDocumentPrint<ConsignmentDispatch>();
+  const { printData: printReport, setPrintData: setPrintReport } =
+    useDocumentPrint<ConsignmentMonthlyReport>();
 
-  // Send Consignment Form Modal States
-  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
-  const [sendCustomer, setSendCustomer] = useState("");
-  const [sendSeller, setSendSeller] = useState("");
-  const [sendProduct, setSendProduct] = useState("");
-  const [sendCategory, setSendCategory] = useState("Ümumi");
-  const [sendQty, setSendQty] = useState<number>(1);
-  const [sendPrice, setSendPrice] = useState<number>(0);
-  const [savingSend, setSavingSend] = useState(false);
+  const [partnerId, setPartnerId] = useState("");
+  const [category, setCategory] = useState("all");
+  const [period, setPeriod] = useState(currentPeriod());
 
-  // Settlement Modal States
-  const [selectedItem, setSelectedItem] = useState<ConsignmentOrder | null>(null);
-  const [inputSold, setInputSold] = useState<number>(0);
-  const [inputReturned, setInputReturned] = useState<number>(0);
-  const [submitting, setSubmitting] = useState(false);
+  const [partnerName, setPartnerName] = useState("");
+  const [partnerCompany, setPartnerCompany] = useState("");
+  const [partnerPhone, setPartnerPhone] = useState("");
+  const [partnerCustomerId, setPartnerCustomerId] = useState("");
 
-  const effectiveSeller = lockSeller ? displayName : sendSeller;
+  const [warehouseId, setWarehouseId] = useState("");
+  const [dispatchDate, setDispatchDate] = useState(new Date().toISOString().slice(0, 10));
+  const [dispatchNotes, setDispatchNotes] = useState("");
+  const [dispatchLines, setDispatchLines] = useState<{ product_id: string; quantity: string }[]>([
+    { product_id: "", quantity: "1" },
+  ]);
+
+  const [returnWarehouseId, setReturnWarehouseId] = useState("");
+  const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<string, string>>({});
+
+  const [soldQtyByProduct, setSoldQtyByProduct] = useState<Record<string, string>>({});
+  const [soldPriceByProduct, setSoldPriceByProduct] = useState<Record<string, string>>({});
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [look, disp, inv, reps, settings] = await Promise.all([
+      fetchConsignmentLookupsAction(),
+      listConsignmentDispatchesAction(),
+      listConsignmentInventoryAction(),
+      listConsignmentReportsAction(),
+      supabase.from("settings").select("company_name").limit(1).maybeSingle(),
+    ]);
+    if (!look.success) setError(look.error || t("consignments.loadError"));
+    else setLookups(look.data || null);
+    if (disp.success) setDispatches(disp.data || []);
+    if (inv.success) setInventory(inv.data || []);
+    if (reps.success) setReports(reps.data || []);
+    if (settings.data?.company_name) setCompanyName(String(settings.data.company_name));
+    setLoading(false);
+  }, [t]);
 
   useEffect(() => {
-    fetchConsignments();
-  }, []);
+    load();
+  }, [load]);
 
+  const filteredInventory = useMemo(() => {
+    return inventory.filter((row) => {
+      if (partnerId && row.partner_id !== partnerId) return false;
+      if (category !== "all" && (row.category || "") !== category) return false;
+      return true;
+    });
+  }, [inventory, partnerId, category]);
 
-  const fetchConsignments = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("consignment_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+  const partnerInventory = useMemo(
+    () => inventory.filter((row) => !partnerId || row.partner_id === partnerId),
+    [inventory, partnerId]
+  );
 
-    if (!error && data) {
-      setItems(data);
-    }
-    setLoading(false);
-  };
+  const totals = useMemo(() => {
+    return filteredInventory.reduce(
+      (acc, row) => {
+        acc.delivered += row.delivered_qty;
+        acc.sold += row.sold_qty;
+        acc.returned += row.returned_qty;
+        acc.remaining += row.remaining_qty;
+        acc.value += row.remaining_qty * row.unit_price;
+        return acc;
+      },
+      { delivered: 0, sold: 0, returned: 0, remaining: 0, value: 0 }
+    );
+  }, [filteredInventory]);
 
-  // 1. Submit New Consignment Delivery
-  const handleSendConsignment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sendCustomer || !sendProduct || sendQty <= 0) return;
+  const agingRows = inventory.filter((row) => row.is_aging);
+  const categories = useMemo(() => {
+    const set = new Set(inventory.map((row) => row.category).filter(Boolean) as string[]);
+    return [...set];
+  }, [inventory]);
 
-    setSavingSend(true);
-    const payload = {
-      customer_name: sendCustomer,
-      seller_name: effectiveSeller || "Administrator",
-      product_name: sendProduct,
-      category_name: sendCategory,
-      sent_qty: sendQty,
-      sold_qty: 0,
-      returned_qty: 0,
-      remaining_qty: sendQty,
-      unit_price: sendPrice,
-    };
-
-    const { error } = await supabase.from("consignment_orders").insert([payload]);
-
-    if (!error) {
-      alert(t("consignments.sendSuccess"));
-      setIsSendModalOpen(false);
-      setSendCustomer("");
-      setSendProduct("");
-      setSendQty(1);
-      setSendPrice(0);
-      fetchConsignments();
-    } else {
-      alert(t("common.errorOccurred", { message: error.message }));
-    }
-    setSavingSend(false);
-  };
-
-  // 2. Submit Monthly Settlement & Issue Final Invoice
-  const handleProcessSettlement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedItem) return;
-
-    const currentRemaining = selectedItem.remaining_qty ?? 0;
-    if (inputSold + inputReturned > currentRemaining) {
-      alert(t("consignments.qtyExceedsRemaining"));
+  const handleSavePartner = async () => {
+    setSaving(true);
+    const result = await saveConsignmentPartnerAction({
+      name: partnerName,
+      company_name: partnerCompany,
+      phone: partnerPhone,
+      customer_id: partnerCustomerId || null,
+    });
+    setSaving(false);
+    if (!result.success) {
+      alert(result.error || t("common.error"));
       return;
     }
-
-    setSubmitting(true);
-    const unitPrice = selectedItem.unit_price || 0;
-    const totalSaleAmount = inputSold * unitPrice;
-
-    const newSold = (selectedItem.sold_qty || 0) + inputSold;
-    const newReturned = (selectedItem.returned_qty || 0) + inputReturned;
-    const newRemaining = (selectedItem.sent_qty || 0) - (newSold + newReturned);
-
-    const { error: consError } = await supabase
-      .from("consignment_orders")
-      .update({
-        sold_qty: newSold,
-        returned_qty: newReturned,
-        remaining_qty: newRemaining,
-      })
-      .eq("id", selectedItem.id);
-
-    if (!consError) {
-      if (inputSold > 0) {
-        await supabase.from("sales").insert([
-          {
-            customer_name: selectedItem.customer_name,
-            category_name: selectedItem.category_name,
-            total_amount: totalSaleAmount,
-            seller_name: selectedItem.seller_name || "Administrator",
-            sale_type: "Consignment_Settlement",
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      }
-
-      alert(t("consignments.settlementSuccess"));
-      setSelectedItem(null);
-      fetchConsignments();
-    } else {
-      alert(t("common.errorOccurred", { message: consError.message }));
-    }
-    setSubmitting(false);
+    setPartnerName("");
+    setPartnerCompany("");
+    setPartnerPhone("");
+    setPartnerCustomerId("");
+    await load();
   };
 
-  // Filtering Logic
-  const filteredItems = items.filter((item) => {
-    const matchesCustomer = item.customer_name
-      .toLowerCase()
-      .includes(searchCustomer.toLowerCase());
-    const matchesCat =
-      selectedCategory === "all" || item.category_name === selectedCategory;
-    return matchesCustomer && matchesCat;
-  });
-
-  // Calculate Company-wise aggregated stocks
-  const companyStocks = filteredItems.reduce((acc: any, item) => {
-    if (!acc[item.customer_name]) {
-      acc[item.customer_name] = {
-        sent: 0,
-        sold: 0,
-        remaining: 0,
-        value: 0,
-      };
+  const handleDispatch = async () => {
+    const warehouse = lookups?.warehouses.find((w) => w.id === warehouseId);
+    const items: ConsignmentDispatchItem[] = [];
+    for (const line of dispatchLines) {
+      const product = lookups?.products.find((p) => p.id === line.product_id);
+      if (!product) continue;
+      items.push({
+        product_id: product.id,
+        product_code: product.code,
+        product_name: product.name,
+        category: product.category,
+        unit: product.unit,
+        quantity: Number(line.quantity) || 0,
+        unit_price: Number(product.sell_price) || 0,
+      });
     }
-    acc[item.customer_name].sent += item.sent_qty || 0;
-    acc[item.customer_name].sold += item.sold_qty || 0;
-    acc[item.customer_name].remaining += item.remaining_qty || 0;
-    acc[item.customer_name].value +=
-      (item.remaining_qty || 0) * (item.unit_price || 0);
-    return acc;
-  }, {});
+    setSaving(true);
+    const result = await createConsignmentDispatchAction({
+      partner_id: partnerId,
+      warehouse_id: warehouseId,
+      warehouse_name: warehouse?.name || null,
+      dispatch_date: dispatchDate,
+      notes: dispatchNotes,
+      items,
+    });
+    setSaving(false);
+    if (!result.success) {
+      alert(result.error || t("common.error"));
+      return;
+    }
+    if (!result.data) {
+      alert(t("common.error"));
+      return;
+    }
+    setDispatchLines([{ product_id: "", quantity: "1" }]);
+    await load();
+    setPrintDispatch(result.data);
+  };
+
+  const handleReturn = async () => {
+    const warehouse = lookups?.warehouses.find((w) => w.id === (returnWarehouseId || warehouseId));
+    const items = Object.entries(returnQtyByProduct)
+      .map(([product_id, qty]) => ({ product_id, quantity: Number(qty) || 0 }))
+      .filter((item) => item.quantity > 0);
+    setSaving(true);
+    const result = await createConsignmentReturnAction({
+      partner_id: partnerId,
+      warehouse_id: warehouse?.id || warehouseId,
+      warehouse_name: warehouse?.name || null,
+      return_date: new Date().toISOString().slice(0, 10),
+      items,
+    });
+    setSaving(false);
+    if (!result.success) {
+      alert(result.error || t("common.error"));
+      return;
+    }
+    setReturnQtyByProduct({});
+    await load();
+  };
+
+  const handleSettlement = async () => {
+    const sold_items = partnerInventory
+      .map((row) => ({
+        product_id: row.product_id,
+        quantity_sold: Number(soldQtyByProduct[row.product_id] || 0),
+        unit_price: Number(soldPriceByProduct[row.product_id] || row.unit_price),
+      }))
+      .filter((item) => item.quantity_sold > 0);
+    setSaving(true);
+    const result = await saveConsignmentMonthlyReportAction({
+      partner_id: partnerId,
+      report_period: period,
+      sold_items,
+    });
+    setSaving(false);
+    if (!result.success) {
+      alert(result.error || t("common.error"));
+      return;
+    }
+    if (!result.data) {
+      alert(t("common.error"));
+      return;
+    }
+    setSoldQtyByProduct({});
+    await load();
+    setPrintReport(result.data);
+  };
+
+  const exportInventory = () => {
+    downloadWorkbook(
+      `consignment-stock_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      "Stock",
+      [
+        [
+          t("consignments.partner"),
+          t("print.product"),
+          t("consignments.sent"),
+          t("consignments.sold"),
+          t("consignments.returned"),
+          t("consignments.remaining"),
+          t("consignments.stockValue"),
+        ],
+        ...filteredInventory.map((row) => [
+          row.partner_name || "",
+          row.product_name,
+          row.delivered_qty,
+          row.sold_qty,
+          row.returned_qty,
+          row.remaining_qty,
+          Number((row.remaining_qty * row.unit_price).toFixed(2)),
+        ]),
+      ]
+    );
+  };
+
+  const exportReports = () => {
+    downloadWorkbook(
+      `consignment-settlements_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      "Settlements",
+      [
+        [
+          t("consignments.reportNo"),
+          t("consignments.partner"),
+          t("consignments.period"),
+          t("common.total"),
+        ],
+        ...reports.map((row) => [row.report_no, row.partner_name || "", row.report_period, row.total_amount]),
+      ]
+    );
+  };
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "inventory", label: t("consignments.tabStock") },
+    { id: "dispatch", label: t("consignments.tabDispatch") },
+    { id: "settlement", label: t("consignments.tabSettlement") },
+    { id: "partners", label: t("consignments.tabPartners") },
+    { id: "alerts", label: t("consignments.tabAlerts") },
+  ];
 
   return (
     <PageLayout>
-        {/* Header */}
-        <div className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-app flex items-center gap-2">
-              <Handshake className="w-6 h-6 text-app-accent" />
-              {t("consignments.pageTitle")}
-            </h1>
-            <p className="text-xs text-app-muted mt-0.5">
-              {t("consignments.pageDescription")}
-            </p>
-          </div>
+      <DocumentPageHeader
+        icon={<Handshake className="h-6 w-6 text-app-accent" />}
+        title={t("consignments.pageTitle")}
+        description={t("consignments.pageDescription")}
+        extraActions={
+          <>
+            <button type="button" className="btn-secondary text-xs" onClick={exportInventory}>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {t("consignments.exportStock")}
+            </button>
+            <button type="button" className="btn-secondary text-xs" onClick={exportReports}>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {t("consignments.exportSettlements")}
+            </button>
+          </>
+        }
+      />
 
-          <button
-            onClick={() => setIsSendModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            {t("consignments.sendConsignment")}
-          </button>
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+        {error && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {agingRows.length > 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {t("consignments.agingBanner", { count: agingRows.length, days: 90 })}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                tab === item.id ? "bg-app-accent text-white" : "border border-app text-app"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        {/* Filter Bar & Tabs */}
-        <div className="p-6 space-y-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 app-card p-3 shadow-sm">
-            {/* Tabs */}
-            <div className="flex gap-2 w-full md:w-auto">
-              <button
-                onClick={() => setActiveTab("list")}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                  activeTab === "list"
-                    ? "bg-blue-600 text-white"
-                    : "text-app-muted hover:bg-app-card-hover"
-                }`}
-              >
-                {t("consignments.tabList")}
-              </button>
-              <button
-                onClick={() => setActiveTab("stock")}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                  activeTab === "stock"
-                    ? "bg-blue-600 text-white"
-                    : "text-app-muted hover:bg-app-card-hover"
-                }`}
-              >
-                {t("consignments.tabStock")}
-              </button>
-              <button
-                onClick={() => setActiveTab("reports")}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                  activeTab === "reports"
-                    ? "bg-blue-600 text-white"
-                    : "text-app-muted hover:bg-app-card-hover"
-                }`}
-              >
-                {t("consignments.tabReports")}
-              </button>
-            </div>
+        {loading ? (
+          <p className="text-sm text-app-muted">{t("common.loading")}</p>
+        ) : (
+          <>
+            {tab === "partners" && (
+              <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+                <div className="rounded-xl border border-app bg-app-surface p-4">
+                  <h3 className="mb-3 font-semibold">{t("consignments.partners")}</h3>
+                  <div className="space-y-2">
+                    {(lookups?.partners || []).map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPartnerId(p.id)}
+                        className={`block w-full rounded-lg border p-3 text-left ${
+                          partnerId === p.id ? "border-app-accent bg-app-accent/10" : "border-app"
+                        }`}
+                      >
+                        <p className="font-semibold">{p.company_name || p.name}</p>
+                        <p className="text-xs text-app-muted">
+                          {p.code} {p.phone ? `· ${p.phone}` : ""}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {canManage && (
+                  <div className="rounded-xl border border-app bg-app-surface p-4 space-y-3">
+                    <h3 className="font-semibold">{t("consignments.newPartner")}</h3>
+                    <input
+                      className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                      placeholder={t("consignments.partnerName")}
+                      value={partnerName}
+                      onChange={(e) => setPartnerName(e.target.value)}
+                    />
+                    <input
+                      className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                      placeholder={t("common.company")}
+                      value={partnerCompany}
+                      onChange={(e) => setPartnerCompany(e.target.value)}
+                    />
+                    <input
+                      className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                      placeholder={t("common.phone")}
+                      value={partnerPhone}
+                      onChange={(e) => setPartnerPhone(e.target.value)}
+                    />
+                    <select
+                      className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                      value={partnerCustomerId}
+                      onChange={(e) => setPartnerCustomerId(e.target.value)}
+                    >
+                      <option value="">{t("consignments.linkCustomer")}</option>
+                      {(lookups?.customers || []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.full_name || c.name || c.company_name}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn-primary text-xs" disabled={saving} onClick={handleSavePartner}>
+                      <Plus className="h-3.5 w-3.5" />
+                      {t("common.save")}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
 
-            {/* Search Filters */}
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-app-muted" />
-                <input
-                  type="text"
-                  placeholder={t("consignments.searchPlaceholder")}
-                  value={searchCustomer}
-                  onChange={(e) => setSearchCustomer(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 border border-app rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                />
-              </div>
-            </div>
-          </div>
+            {tab === "inventory" && (
+              <section className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={partnerId}
+                    onChange={(e) => setPartnerId(e.target.value)}
+                  >
+                    <option value="">{t("consignments.allPartners")}</option>
+                    {(lookups?.partners || []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.company_name || p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    <option value="all">{t("common.category")}</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <StatCard label={t("consignments.sent")} value={totals.delivered} />
+                  <StatCard label={t("consignments.sold")} value={totals.sold} />
+                  <StatCard label={t("consignments.remaining")} value={totals.remaining} />
+                  <StatCard
+                    label={t("consignments.stockValue")}
+                    value={`${totals.value.toFixed(2)} ${t("common.currency")}`}
+                  />
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-app">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
+                      <tr>
+                        <th className="px-3 py-2">{t("consignments.partner")}</th>
+                        <th className="px-3 py-2">{t("print.product")}</th>
+                        <th className="px-3 py-2 text-right">{t("consignments.sent")}</th>
+                        <th className="px-3 py-2 text-right">{t("consignments.sold")}</th>
+                        <th className="px-3 py-2 text-right">{t("consignments.returned")}</th>
+                        <th className="px-3 py-2 text-right">{t("consignments.remaining")}</th>
+                        <th className="px-3 py-2">{t("consignments.aging")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredInventory.map((row) => (
+                        <tr key={row.id} className="border-t border-app">
+                          <td className="px-3 py-2">{row.partner_name}</td>
+                          <td className="px-3 py-2">
+                            {row.product_name}
+                            <span className="block text-[10px] text-app-muted">{row.category}</span>
+                          </td>
+                          <td className="px-3 py-2 text-right">{row.delivered_qty}</td>
+                          <td className="px-3 py-2 text-right text-emerald-600">{row.sold_qty}</td>
+                          <td className="px-3 py-2 text-right text-amber-600">{row.returned_qty}</td>
+                          <td className="px-3 py-2 text-right font-bold">{row.remaining_qty}</td>
+                          <td className="px-3 py-2">
+                            {row.is_aging ? (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                                {row.aging_days} {t("consignments.days")}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
-          {/* TAB 1: Main Consignment List */}
-          {activeTab === "list" && (
-            <div className="app-table-wrap">
-              <table className="app-table">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3">{t("consignments.customerCompany")}</th>
-                    <th className="px-6 py-3">{t("consignments.productCategory")}</th>
-                    <th className="px-6 py-3">{t("consignments.seller")}</th>
-                    <th className="px-6 py-3">{t("consignments.sent")}</th>
-                    <th className="px-6 py-3 text-emerald-600">{t("consignments.sold")}</th>
-                    <th className="px-6 py-3 text-amber-600">{t("consignments.returned")}</th>
-                    <th className="px-6 py-3 text-app-accent">{t("consignments.remaining")}</th>
-                    <th className="px-6 py-3">{t("consignments.price")}</th>
-                    <th className="px-6 py-3 text-right">{t("common.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-xs">
-                  {filteredItems.map((item) => (
-                    <tr key={item.id} >
-                      <td className="px-6 py-3.5 font-bold text-app">
-                        {item.customer_name}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <p className="font-semibold">{item.product_name}</p>
-                        <span className="text-[10px] text-app-muted">{item.category_name}</span>
-                      </td>
-                      <td className="px-6 py-3.5">{item.seller_name}</td>
-                      <td className="px-6 py-3.5 font-semibold">{item.sent_qty ?? 0}</td>
-                      <td className="px-6 py-3.5 text-emerald-600 font-bold">{item.sold_qty ?? 0}</td>
-                      <td className="px-6 py-3.5 text-amber-600 font-bold">{item.returned_qty ?? 0}</td>
-                      <td className="px-6 py-3.5 text-app-accent font-bold">{item.remaining_qty ?? 0}</td>
-                      <td className="px-6 py-3.5">{(item.unit_price || 0).toFixed(2)} AZN</td>
-                      <td className="px-6 py-3.5 text-right">
-                        <button
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setInputSold(0);
-                            setInputReturned(0);
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ml-auto shadow-sm"
-                        >
-                          <FileCheck className="w-3.5 h-3.5" />
-                          {t("consignments.monthlyReport")}
-                        </button>
-                      </td>
-                    </tr>
+            {tab === "dispatch" && (
+              <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <div className="rounded-xl border border-app bg-app-surface p-4 space-y-3">
+                  <h3 className="font-semibold">{t("consignments.sendModalTitle")}</h3>
+                  <select
+                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={partnerId}
+                    onChange={(e) => setPartnerId(e.target.value)}
+                  >
+                    <option value="">{t("consignments.partner")}</option>
+                    {(lookups?.partners || []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.company_name || p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={warehouseId}
+                    onChange={(e) => setWarehouseId(e.target.value)}
+                  >
+                    <option value="">{t("common.warehouse")}</option>
+                    {(lookups?.warehouses || []).map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={dispatchDate}
+                    onChange={(e) => setDispatchDate(e.target.value)}
+                  />
+                  {dispatchLines.map((line, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_90px] gap-2">
+                      <select
+                        className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                        value={line.product_id}
+                        onChange={(e) =>
+                          setDispatchLines((prev) =>
+                            prev.map((row, i) => (i === idx ? { ...row, product_id: e.target.value } : row))
+                          )
+                        }
+                      >
+                        <option value="">{t("forms.selectProduct")}</option>
+                        {(lookups?.products || []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.code} — {p.name} ({p.stock})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={0.001}
+                        className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                        value={line.quantity}
+                        onChange={(e) =>
+                          setDispatchLines((prev) =>
+                            prev.map((row, i) => (i === idx ? { ...row, quantity: e.target.value } : row))
+                          )
+                        }
+                      />
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* TAB 2: Company Stock Cards */}
-          {activeTab === "stock" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Object.keys(companyStocks).map((company) => (
-                <div
-                  key={company}
-                  className="app-card app-card-elevated p-5 space-y-3"
-                >
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <h3 className="font-bold text-app text-sm flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-app-accent" />
-                      {company}
-                    </h3>
-                    <span className="bg-[color:var(--app-accent-soft)] text-app-accent text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {t("consignments.activeCompany")}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="bg-app-card-hover p-2 rounded-lg">
-                      <p className="text-[10px] text-app-muted">{t("consignments.sent")}</p>
-                      <p className="font-bold text-app">{companyStocks[company].sent}</p>
-                    </div>
-                    <div className="bg-emerald-50 p-2 rounded-lg">
-                      <p className="text-[10px] text-emerald-600">{t("consignments.sold")}</p>
-                      <p className="font-bold text-emerald-700">{companyStocks[company].sold}</p>
-                    </div>
-                    <div className="bg-[color:var(--app-accent-soft)] p-2 rounded-lg">
-                      <p className="text-[10px] text-app-accent">{t("consignments.remaining")}</p>
-                      <p className="font-bold text-app-accent">{companyStocks[company].remaining}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t flex justify-between items-center text-xs">
-                    <span className="text-app-muted">{t("consignments.stockValue")}</span>
-                    <span className="font-bold text-app">
-                      {companyStocks[company].value.toFixed(2)} AZN
-                    </span>
+                  {canManage && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-secondary self-start text-xs"
+                        onClick={() => setDispatchLines((prev) => [...prev, { product_id: "", quantity: "1" }])}
+                      >
+                        {t("forms.addRow")}
+                      </button>
+                      <textarea
+                        className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                        rows={2}
+                        placeholder={t("common.notes")}
+                        value={dispatchNotes}
+                        onChange={(e) => setDispatchNotes(e.target.value)}
+                      />
+                      <button type="button" className="btn-primary text-xs" disabled={saving} onClick={handleDispatch}>
+                        {saving ? t("common.saving") : t("consignments.confirmSend")}
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="rounded-xl border border-app bg-app-surface p-4">
+                  <h3 className="mb-3 font-semibold">{t("consignments.recentDispatches")}</h3>
+                  <div className="space-y-2">
+                    {dispatches.slice(0, 12).map((d) => (
+                      <div key={d.id} className="flex items-center justify-between rounded-lg border border-app p-3">
+                        <div>
+                          <p className="font-semibold">{d.dispatch_no}</p>
+                          <p className="text-xs text-app-muted">
+                            {d.partner_name} · {d.dispatch_date}
+                          </p>
+                        </div>
+                        <button type="button" className="btn-secondary text-xs" onClick={() => setPrintDispatch(d)}>
+                          <Printer className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </section>
+            )}
 
-          {/* TAB 3: Growth & Sales Analytics */}
-          {activeTab === "reports" && (
-            <div className="app-card app-card-elevated p-6 space-y-4">
-              <h3 className="text-sm font-bold text-app flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-                {t("consignments.trendsTitle")}
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredItems.map((item) => {
-                  const saleRatio = item.sent_qty > 0 ? (item.sold_qty / item.sent_qty) * 100 : 0;
-                  return (
-                    <div key={item.id} className="p-4 border rounded-lg bg-app-card-hover space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-app">{item.product_name}</span>
-                        <span className="text-app-muted">{item.customer_name}</span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-emerald-500 h-full transition-all duration-500"
-                          style={{ width: `${Math.min(saleRatio, 100)}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-app-muted">
-                        <span>{t("consignments.saleRatio", { ratio: saleRatio.toFixed(1) })}</span>
-                        <span>
-                          {t("consignments.soldRemaining", {
-                            sold: item.sold_qty,
-                            remaining: item.remaining_qty,
+            {tab === "settlement" && (
+              <section className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={partnerId}
+                    onChange={(e) => setPartnerId(e.target.value)}
+                  >
+                    <option value="">{t("consignments.partner")}</option>
+                    {(lookups?.partners || []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.company_name || p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="month"
+                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value)}
+                  />
+                </div>
+                {!partnerId ? (
+                  <p className="text-sm text-app-muted">{t("consignments.selectPartnerFirst")}</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-app">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
+                        <tr>
+                          <th className="px-3 py-2">{t("print.product")}</th>
+                          <th className="px-3 py-2 text-right">{t("consignments.remaining")}</th>
+                          <th className="px-3 py-2">{t("consignments.soldThisMonth")}</th>
+                          <th className="px-3 py-2">{t("consignments.price")}</th>
+                          <th className="px-3 py-2">{t("consignments.returnQty")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {partnerInventory
+                          .filter((row) => row.remaining_qty > 0)
+                          .map((row) => {
+                            const sold = Number(soldQtyByProduct[row.product_id] || 0);
+                            const oversold = sold > row.remaining_qty;
+                            return (
+                              <tr key={row.id} className="border-t border-app">
+                                <td className="px-3 py-2">{row.product_name}</td>
+                                <td className="px-3 py-2 text-right font-bold">{row.remaining_qty}</td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={row.remaining_qty}
+                                    className={`w-24 rounded-lg border px-2 py-1 ${
+                                      oversold ? "border-red-500" : "border-app"
+                                    }`}
+                                    value={soldQtyByProduct[row.product_id] || ""}
+                                    onChange={(e) =>
+                                      setSoldQtyByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
+                                    }
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    className="w-24 rounded-lg border border-app px-2 py-1"
+                                    value={soldPriceByProduct[row.product_id] ?? String(row.unit_price)}
+                                    onChange={(e) =>
+                                      setSoldPriceByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
+                                    }
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={row.remaining_qty}
+                                    className="w-24 rounded-lg border border-app px-2 py-1"
+                                    value={returnQtyByProduct[row.product_id] || ""}
+                                    onChange={(e) =>
+                                      setReturnQtyByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
+                                    }
+                                  />
+                                </td>
+                              </tr>
+                            );
                           })}
-                        </span>
-                      </div>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {canManage && partnerId && (
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                      value={returnWarehouseId || warehouseId}
+                      onChange={(e) => setReturnWarehouseId(e.target.value)}
+                    >
+                      <option value="">{t("common.warehouse")}</option>
+                      {(lookups?.warehouses || []).map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn-secondary text-xs" disabled={saving} onClick={handleReturn}>
+                      {t("consignments.confirmReturn")}
+                    </button>
+                    <button type="button" className="btn-primary text-xs" disabled={saving} onClick={handleSettlement}>
+                      {saving ? t("consignments.confirming") : t("consignments.confirmSettlement")}
+                    </button>
+                  </div>
+                )}
+                <div className="rounded-xl border border-app bg-app-surface p-4">
+                  <h3 className="mb-3 font-semibold">{t("consignments.recentSettlements")}</h3>
+                  {reports.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between border-t border-app py-2 text-sm">
+                      <span>
+                        {r.report_no} · {r.partner_name} · {r.report_period} · {r.total_amount.toFixed(2)}{" "}
+                        {t("common.currency")}
+                      </span>
+                      <button type="button" className="btn-secondary text-xs" onClick={() => setPrintReport(r)}>
+                        <Printer className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {tab === "alerts" && (
+              <section className="rounded-xl border border-app bg-app-surface p-4">
+                <h3 className="mb-3 font-semibold">{t("consignments.agingTitle")}</h3>
+                {agingRows.length === 0 ? (
+                  <p className="text-sm text-app-muted">{t("consignments.noAging")}</p>
+                ) : (
+                  <table className="min-w-full text-sm">
+                    <thead className="text-left text-xs uppercase text-app-muted">
+                      <tr>
+                        <th className="py-2">{t("consignments.partner")}</th>
+                        <th className="py-2">{t("print.product")}</th>
+                        <th className="py-2 text-right">{t("consignments.remaining")}</th>
+                        <th className="py-2">{t("consignments.aging")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agingRows.map((row) => (
+                        <tr key={row.id} className="border-t border-app">
+                          <td className="py-2">{row.partner_name}</td>
+                          <td className="py-2">{row.product_name}</td>
+                          <td className="py-2 text-right">{row.remaining_qty}</td>
+                          <td className="py-2">
+                            {row.aging_days} {t("consignments.days")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </div>
+
+      {printDispatch && (
+        <div className="print-area">
+          <ConsignmentDeliveryPrintTemplate data={printDispatch} companyName={companyName} />
         </div>
-
-        {/* Modal 1: Send Consignment Form */}
-        {isSendModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="app-modal w-full max-w-lg space-y-4 p-6">
-              <h3 className="text-base font-bold text-app border-b pb-2">
-                {t("consignments.sendModalTitle")}
-              </h3>
-
-              <form onSubmit={handleSendConsignment} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.customerRequired")}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={t("consignments.customerPlaceholder")}
-                      value={sendCustomer}
-                      onChange={(e) => setSendCustomer(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.sellerRequired")}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      readOnly={lockSeller}
-                      placeholder={t("consignments.sellerPlaceholder")}
-                      value={effectiveSeller}
-                      onChange={(e) => setSendSeller(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)] ${
-                        lockSeller ? "bg-app-card-hover text-app-muted" : ""
-                      }`}
-                    />
-                    {lockSeller && (
-                      <p className="mt-1 text-[10px] font-semibold text-app-muted">
-                        {t("consignments.ownNameOnly")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.productRequired")}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={t("consignments.productPlaceholder")}
-                      value={sendProduct}
-                      onChange={(e) => setSendProduct(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.categoryRequired")}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={t("consignments.categoryPlaceholder")}
-                      value={sendCategory}
-                      onChange={(e) => setSendCategory(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.qtyRequired")}
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={sendQty}
-                      onChange={(e) => setSendQty(parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-app mb-1">
-                      {t("consignments.unitPriceRequired")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={sendPrice}
-                      onChange={(e) => setSendPrice(parseFloat(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setIsSendModalOpen(false)}
-                    className="px-4 py-2 border text-app-muted rounded-lg text-xs hover:bg-app-card-hover"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingSend}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
-                  >
-                    {savingSend ? t("auth.sending") : t("consignments.confirmSend")}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Modal 2: Settlement Modal */}
-        {selectedItem && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="app-modal w-full max-w-md space-y-4 p-6">
-              <h3 className="text-base font-bold text-app border-b pb-2">
-                {t("consignments.settlementTitle", { customer: selectedItem.customer_name })}
-              </h3>
-
-              <div className="text-xs text-app-muted space-y-1 bg-app-card-hover p-3 rounded-lg">
-                <p><strong>{t("consignments.productLabel")}</strong> {selectedItem.product_name}</p>
-                <p>
-                  <strong>{t("consignments.remainingAtCustomer")}</strong>{" "}
-                  <span className="text-app-accent font-bold">
-                    {selectedItem.remaining_qty ?? 0} {t("common.units")}
-                  </span>
-                </p>
-              </div>
-
-              <form onSubmit={handleProcessSettlement} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-app mb-1">
-                    {t("consignments.soldThisMonth")}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={selectedItem.remaining_qty ?? 0}
-                    value={inputSold}
-                    onChange={(e) => setInputSold(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-app rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-app mb-1">
-                    {t("consignments.returnedThisMonth")}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={(selectedItem.remaining_qty ?? 0) - inputSold}
-                    value={inputReturned}
-                    onChange={(e) => setInputReturned(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-app rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
-                  />
-                </div>
-
-                <div className="bg-[color:var(--app-accent-soft)] p-3 rounded-lg text-xs text-blue-800 flex justify-between font-bold">
-                  <span>{t("consignments.calculatedSale")}</span>
-                  <span>{(inputSold * (selectedItem.unit_price || 0)).toFixed(2)} AZN</span>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItem(null)}
-                    className="px-4 py-2 border text-app-muted rounded-lg text-xs hover:bg-app-card-hover"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
-                  >
-                    {submitting ? t("consignments.confirming") : t("consignments.confirmSettlement")}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+      )}
+      {printReport && (
+        <div className="print-area">
+          <ConsignmentSettlementPrintTemplate data={printReport} companyName={companyName} />
+        </div>
+      )}
     </PageLayout>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-app bg-app-surface p-4">
+      <p className="text-xs text-app-muted">{label}</p>
+      <p className="mt-1 text-lg font-bold">{value}</p>
+    </div>
   );
 }

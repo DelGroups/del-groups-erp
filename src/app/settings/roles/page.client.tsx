@@ -13,7 +13,7 @@ export default function RolesSettingsPage() {
 
   return (
     <PageLayout>
-        <div className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <div className="border-b border-app app-glass px-6 py-4">
           <h1 className="flex items-center gap-2 text-xl font-bold text-app">
             <ShieldCheck className="h-6 w-6 text-app-accent" />
             {t("settings.rolesTitle")}

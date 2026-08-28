@@ -52,7 +52,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
           <button
             type="button"
             aria-label={t("nav.closeMenu")}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px] md:hidden"
+            className="app-scrim fixed inset-0 z-40 md:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
         )}
@@ -63,7 +63,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex shrink-0 items-center gap-3 border-b border-app bg-app-surface px-4 py-3 md:hidden">
+          <header className="app-glass flex shrink-0 items-center gap-3 border-b border-app px-4 py-3 md:hidden">
             <button
               type="button"
               aria-label={t("nav.openMenu")}

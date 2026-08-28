@@ -21,6 +21,9 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { fetchProductByBarcode, findProductByBarcodeInList } from "@/lib/products/barcode";
+import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
+import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import {
   Building2,
   ChevronDown,
@@ -40,6 +43,7 @@ export interface InvoiceFormProps {
   onClose?: () => void;
   onSuccess?: () => void;
   defaultType?: "sale" | "purchase" | "consignment";
+  invoiceMode?: "standard" | "polywood";
 }
 
 interface Employee {
@@ -51,12 +55,7 @@ interface Employee {
 interface Warehouse {
   id: string;
   name: string;
-}
-
-interface Account {
-  id: string;
-  name: string;
-  type?: string;
+  warehouse_type?: string | null;
 }
 
 interface Product {
@@ -71,10 +70,35 @@ interface Product {
   price?: number;
   stock?: number;
   warehouse_id?: string;
+  inventory_mode?: string | null;
+  full_sheet_length_m?: number | null;
   vat_rate?: number;
   tax_rate?: number;
   discount_percent?: number;
   discount?: number;
+}
+
+function isPolywoodWarehouseRow(warehouseId: string, warehouses: Warehouse[]): boolean {
+  const wh = warehouses.find((w) => w.id === warehouseId);
+  return wh?.warehouse_type === POLYWOOD_WAREHOUSE_TYPE;
+}
+
+function isPolywoodProductRow(product: Product | null | undefined): boolean {
+  return product?.inventory_mode === POLYWOOD_INVENTORY_MODE;
+}
+
+function filterProductsForWarehouse(products: Product[], warehouseId: string, warehouses: Warehouse[]): Product[] {
+  const polywood = isPolywoodWarehouseRow(warehouseId, warehouses);
+  return products.filter((product) => {
+    const isPolywoodProduct = isPolywoodProductRow(product);
+    return polywood ? isPolywoodProduct : !isPolywoodProduct;
+  });
+}
+
+interface Account {
+  id: string;
+  name: string;
+  type?: string;
 }
 
 function customerLabel(c: Customer, t: (key: string) => string) {
@@ -87,6 +111,10 @@ function employeeLabel(e: Employee, t: (key: string) => string) {
 
 function productPrice(p: Product) {
   return Number(p.sell_price ?? p.sale_price ?? p.price) || 0;
+}
+
+function roundPrice(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function productCode(p: Product) {
@@ -290,6 +318,7 @@ export default function UniversalInvoiceForm({
   isOpen,
   onClose,
   onSuccess,
+  invoiceMode = "standard",
 }: InvoiceFormProps) {
   const [docNo, setDocNo] = useState("");
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
@@ -330,13 +359,18 @@ export default function UniversalInvoiceForm({
   const { can } = useAuth();
   const { t } = useI18n();
   const canSaveInvoice = can("can_create_invoice");
+  const polywoodOnly = invoiceMode === "polywood";
 
   const defaultWarehouse = warehouses[0];
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setDocNo(`SS-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`);
+    setDocNo(
+      `${polywoodOnly ? "SPW" : "SS"}-${new Date().getFullYear()}-${Math.floor(
+        10000 + Math.random() * 90000
+      )}`
+    );
     setDocDate(new Date().toISOString().slice(0, 10));
     setSelectedCustomerId("");
     setSelectedCustomer(null);
@@ -358,9 +392,13 @@ export default function UniversalInvoiceForm({
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
     void fetchInitialData();
-  }, [isOpen]);
+  }, [isOpen, polywoodOnly]);
 
   const fetchInitialData = async () => {
+    if (polywoodOnly) {
+      await ensurePolywoodWarehouseAction();
+    }
+
     const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }] =
       await Promise.all([
         supabase.from("customers").select("*").order("created_at", { ascending: false }),
@@ -373,7 +411,10 @@ export default function UniversalInvoiceForm({
     if (cust) setCustomers(cust as Customer[]);
     if (emp) setEmployees(emp);
 
-    const warehouseRows = (wh as Warehouse[]) || [];
+    const allWarehouses = (wh as Warehouse[]) || [];
+    const warehouseRows = polywoodOnly
+      ? allWarehouses.filter((w) => w.warehouse_type === POLYWOOD_WAREHOUSE_TYPE)
+      : allWarehouses.filter((w) => w.warehouse_type !== POLYWOOD_WAREHOUSE_TYPE);
     setWarehouses(warehouseRows);
     const firstWh = warehouseRows[0];
     setItems([createEmptySaleItem(firstWh?.id || "", firstWh?.name || "")]);
@@ -391,7 +432,14 @@ export default function UniversalInvoiceForm({
       ]);
     }
 
-    if (prod) setProductsList(prod as Product[]);
+    if (prod) {
+      const filtered = (prod as Product[]).filter((item) =>
+        polywoodOnly
+          ? item.inventory_mode === POLYWOOD_INVENTORY_MODE
+          : item.inventory_mode !== POLYWOOD_INVENTORY_MODE
+      );
+      setProductsList(filtered);
+    }
   };
 
   const handleCustomerChange = (id: string) => {
@@ -454,7 +502,7 @@ export default function UniversalInvoiceForm({
     );
   };
 
-  const handleProductSelect = (rowId: string, prod: Product | null) => {
+  const handleProductSelect = async (rowId: string, prod: Product | null) => {
     if (!prod) {
       handleItemChange(rowId, {
         product_id: "",
@@ -464,19 +512,61 @@ export default function UniversalInvoiceForm({
         discount_percent: 0,
         vat_rate: 0,
         available_stock: 0,
+        polywood_total_length_m: 0,
+        polywood_full_sheet_count: 0,
       });
       return;
+    }
+
+    const row = items.find((item) => item.id === rowId);
+    const polywoodRow = row ? isPolywoodWarehouseRow(row.warehouse_id, warehouses) : false;
+
+    if (polywoodRow && !isPolywoodProductRow(prod)) {
+      alert(t("polywood.invoice.onlyPolywoodProducts"));
+      return;
+    }
+    if (!polywoodRow && isPolywoodProductRow(prod)) {
+      alert(t("polywood.invoice.usePolywoodWarehouse"));
+      return;
+    }
+
+    const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
+    let polywoodSummary = {
+      total: Number(prod.stock) || 0,
+      fullSheets: 0,
+    };
+
+    if (polywoodRow && row?.warehouse_id) {
+      try {
+        const summary = await fetchPolywoodInventorySummary(prod.id, row.warehouse_id, fullSheetLengthM);
+        polywoodSummary = {
+          total: summary.total_length_m,
+          fullSheets: summary.full_sheet_count,
+        };
+      } catch {
+        polywoodSummary = { total: Number(prod.stock) || 0, fullSheets: 0 };
+      }
     }
 
     handleItemChange(rowId, {
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
-      unit: prod.unit || "Ədəd",
-      unit_price: productPrice(prod),
+      unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
+      unit_price: polywoodRow
+        ? roundPrice(
+            (row?.polywood_sale_mode || "linear_m") === "full_sheet"
+              ? productPrice(prod) * fullSheetLengthM
+              : productPrice(prod)
+          )
+        : productPrice(prod),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
-      available_stock: Number(prod.stock) || 0,
+      available_stock: polywoodRow ? polywoodSummary.total : Number(prod.stock) || 0,
+      polywood_sale_mode: polywoodRow ? row?.polywood_sale_mode || "linear_m" : null,
+      polywood_full_sheet_length_m: fullSheetLengthM,
+      polywood_total_length_m: polywoodSummary.total,
+      polywood_full_sheet_count: polywoodSummary.fullSheets,
     });
   };
 
@@ -486,17 +576,25 @@ export default function UniversalInvoiceForm({
   };
 
   const applyProductToSaleRow = (row: SaleItem, prod: Product, quantity?: number): SaleItem => {
+    const polywoodRow = isPolywoodWarehouseRow(row.warehouse_id, warehouses);
+    const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
+    const mode = polywoodRow ? row.polywood_sale_mode || "linear_m" : null;
+    const meterPrice = productPrice(prod);
     const updated: SaleItem = {
       ...row,
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
-      unit: prod.unit || "Ədəd",
-      unit_price: productPrice(prod),
+      unit: polywoodRow ? (mode === "full_sheet" ? "Vərəq" : "Metr") : prod.unit || "Ədəd",
+      unit_price: polywoodRow
+        ? roundPrice(mode === "full_sheet" ? meterPrice * fullSheetLengthM : meterPrice)
+        : meterPrice,
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
       available_stock: Number(prod.stock) || 0,
       quantity: quantity ?? row.quantity,
+      polywood_sale_mode: mode,
+      polywood_full_sheet_length_m: polywoodRow ? fullSheetLengthM : null,
     };
     updated.total = calcLineTotal(updated.quantity, updated.unit_price, updated.discount_percent);
     return updated;
@@ -541,10 +639,22 @@ export default function UniversalInvoiceForm({
   };
 
   const handleWarehouseSelect = (rowId: string, warehouseId: string) => {
+    if (polywoodOnly) return;
     const wh = warehouses.find((w) => w.id === warehouseId);
+    const polywood = isPolywoodWarehouseRow(warehouseId, warehouses);
     handleItemChange(rowId, {
       warehouse_id: warehouseId,
       warehouse_name: wh?.name || "",
+      product_id: "",
+      product_code: "",
+      product_name: "",
+      unit: polywood ? "Metr" : "Ədəd",
+      quantity: 1,
+      available_stock: 0,
+      polywood_sale_mode: polywood ? "linear_m" : null,
+      polywood_full_sheet_length_m: 4,
+      polywood_total_length_m: 0,
+      polywood_full_sheet_count: 0,
     });
   };
 
@@ -677,7 +787,7 @@ export default function UniversalInvoiceForm({
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
       <div className="my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm">
         <div className="app-card flex items-center justify-between px-4 py-3">
           <div>
@@ -796,7 +906,7 @@ export default function UniversalInvoiceForm({
                     type="button"
                     disabled={savingCustomer}
                     onClick={handleSaveQuickCustomer}
-                    className="rounded bg-blue-600 px-3 py-1 font-bold text-white disabled:opacity-50"
+                    className="rounded bg-[image:var(--app-gradient)] px-3 py-1 font-bold text-white disabled:opacity-50"
                   >
                     {savingCustomer ? t("common.saving") : t("common.save")}
                   </button>
@@ -832,12 +942,12 @@ export default function UniversalInvoiceForm({
         </div>
 
         <div className="app-table-wrap overflow-visible">
-          <div className="flex items-center justify-between bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">
+          <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
             <span>{t("invoice.invoiceItems")}</span>
             <button
               type="button"
               onClick={addRow}
-              className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[11px] hover:bg-blue-700"
+              className="flex items-center gap-1 rounded bg-[image:var(--app-gradient)] px-2.5 py-1 text-[11px] hover:brightness-110"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("forms.addRow")}
@@ -871,10 +981,14 @@ export default function UniversalInvoiceForm({
                       <div className="flex min-w-[220px] gap-1">
                         <div className="min-w-0 flex-1">
                           <ProductCombobox
-                            products={productsList}
+                            products={
+                              polywoodOnly
+                                ? productsList
+                                : filterProductsForWarehouse(productsList, row.warehouse_id, warehouses)
+                            }
                             selectedId={row.product_id}
                             selectedName={row.product_name}
-                            onSelect={(prod) => handleProductSelect(row.id, prod)}
+                            onSelect={(prod) => void handleProductSelect(row.id, prod)}
                           />
                         </div>
                         <button
@@ -892,6 +1006,7 @@ export default function UniversalInvoiceForm({
                         value={row.warehouse_id}
                         onChange={(e) => handleWarehouseSelect(row.id, e.target.value)}
                         className="w-full rounded border border-app p-1"
+                        disabled={polywoodOnly}
                       >
                         <option value="">{t("invoice.warehouseOption")}</option>
                         {warehouses.map((w) => (
@@ -901,21 +1016,69 @@ export default function UniversalInvoiceForm({
                         ))}
                       </select>
                       {row.product_id ? (
-                        <p className="mt-0.5 text-[10px] text-app-muted">
-                          {t("products.stock")}: {row.available_stock} {row.unit}
-                        </p>
+                        <div className="mt-1 space-y-1 text-[10px] text-app-muted">
+                          {row.polywood_sale_mode ? (
+                            <>
+                              <p>
+                                {t("polywood.invoice.totalLength")}: {row.polywood_total_length_m ?? row.available_stock} m
+                              </p>
+                              <p>
+                                {t("polywood.invoice.fullSheets")}: {row.polywood_full_sheet_count ?? 0} ×{" "}
+                                {row.polywood_full_sheet_length_m ?? 4}m
+                              </p>
+                              <select
+                                value={row.polywood_sale_mode}
+                                onChange={(e) =>
+                                  (() => {
+                                    const nextMode = e.target.value as "linear_m" | "full_sheet";
+                                    const sheetLen = row.polywood_full_sheet_length_m || 4;
+                                    const perMeterPrice =
+                                      row.polywood_sale_mode === "full_sheet"
+                                        ? row.unit_price / sheetLen
+                                        : row.unit_price;
+                                    handleItemChange(row.id, {
+                                      polywood_sale_mode: nextMode,
+                                      unit: nextMode === "full_sheet" ? "Vərəq" : "Metr",
+                                      unit_price: roundPrice(
+                                        nextMode === "full_sheet"
+                                          ? perMeterPrice * sheetLen
+                                          : perMeterPrice
+                                      ),
+                                    });
+                                  })()
+                                }
+                                className="mt-1 w-full rounded border border-app p-1 text-[10px]"
+                              >
+                                <option value="linear_m">{t("polywood.invoice.modeLinear")}</option>
+                                <option value="full_sheet">{t("polywood.invoice.modeFullSheet")}</option>
+                              </select>
+                            </>
+                          ) : (
+                            <p>
+                              {t("products.stock")}: {row.available_stock} {row.unit}
+                            </p>
+                          )}
+                        </div>
                       ) : null}
                     </td>
                     <td className="p-2.5">
                       <input
                         type="number"
                         min="0"
+                        step={row.polywood_sale_mode === "linear_m" ? "0.001" : "1"}
                         value={row.quantity}
                         onChange={(e) =>
                           handleItemChange(row.id, { quantity: Number(e.target.value) || 0 })
                         }
                         className="w-full rounded border border-app p-1 text-center"
                       />
+                      {row.polywood_sale_mode ? (
+                        <p className="mt-0.5 text-center text-[10px] text-app-muted">
+                          {row.polywood_sale_mode === "full_sheet"
+                            ? t("polywood.invoice.qtySheets")
+                            : t("polywood.invoice.qtyMeters")}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="p-2.5">
                       <input
@@ -1079,7 +1242,7 @@ export default function UniversalInvoiceForm({
             </div>
           </div>
 
-          <div className="flex flex-col justify-between space-y-3 rounded-xl bg-slate-900 p-4 text-xs text-white">
+          <div className="flex flex-col justify-between space-y-3 rounded-xl app-toolbar p-4 text-xs">
             <div className="space-y-1.5">
               <div className="flex justify-between text-slate-300">
                 <span>{t("invoice.subtotal")}</span>
@@ -1095,7 +1258,7 @@ export default function UniversalInvoiceForm({
                   <span className="font-mono">+{totals.delivery_cost.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between border-t border-slate-700 pt-2 text-sm font-bold">
+              <div className="flex items-center justify-between border-t border-white/20 pt-2 text-sm font-bold">
                 <span>{t("invoice.grandTotal")}</span>
                 <span className="font-mono text-lg text-emerald-400">
                   {totals.grand_total.toFixed(2)} {t("common.currency")}
@@ -1106,7 +1269,7 @@ export default function UniversalInvoiceForm({
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-lg bg-slate-800 px-4 py-2 hover:bg-slate-700"
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
               >
                 {t("common.cancel")}
               </button>
@@ -1114,7 +1277,7 @@ export default function UniversalInvoiceForm({
                 type="button"
                 disabled={saving || !canSaveInvoice}
                 onClick={handleSubmit}
-                className="flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 font-bold hover:bg-blue-700 disabled:opacity-50"
+                className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2 font-bold hover:brightness-110 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {saving ? t("common.saving") : t("invoice.confirmSave")}

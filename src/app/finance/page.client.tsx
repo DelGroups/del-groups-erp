@@ -131,8 +131,8 @@ export default function FinancePage() {
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
                                 isIncome
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-rose-50 text-rose-700"
+                                  ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]"
+                                  : "bg-rose-500/10 text-rose-400"
                               }`}
                             >
                               {isIncome ? (

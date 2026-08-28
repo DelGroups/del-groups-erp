@@ -272,7 +272,7 @@ export default function InitialSetupPage() {
                     onChange={(e) =>
                       setNewAccount((p) => ({ ...p, balance: e.target.value }))
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-white"
+                    className="app-input px-3 py-2 text-xs"
                   />
                   <button
                     type="submit"

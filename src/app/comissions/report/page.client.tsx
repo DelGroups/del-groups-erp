@@ -123,7 +123,7 @@ export default function MonthlyCommissionReportPage() {
 
   return (
     <PageLayout>
-        <div className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="border-b border-app app-glass px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/comissions"
@@ -172,9 +172,9 @@ export default function MonthlyCommissionReportPage() {
                   key={summary.seller_name}
                   className="app-table-wrap"
                 >
-                  <div className="p-5 bg-slate-900 text-white flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div className="app-toolbar p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-blue-600/30 rounded-xl border border-blue-500/30">
+                      <div className="p-2.5 bg-white/15 rounded-xl border border-blue-500/30">
                         <UserCheck className="w-6 h-6 text-blue-400" />
                       </div>
                       <div>
@@ -194,7 +194,7 @@ export default function MonthlyCommissionReportPage() {
                           {summary.total_sales.toFixed(2)} AZN
                         </p>
                       </div>
-                      <div className="text-right bg-blue-600 px-4 py-2 rounded-xl">
+                      <div className="text-right bg-[image:var(--app-gradient)] px-4 py-2 rounded-xl">
                         <p className="text-[10px] uppercase text-blue-100 font-semibold">
                           {t("commissions.calculatedCommission")}
                         </p>

@@ -107,7 +107,7 @@ export default function DocumentPaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div className="flex items-center gap-2">

@@ -27,7 +27,7 @@ export default function NewProductPage() {
 
   return (
     <PageLayout>
-        <header className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="border-b border-app app-glass px-6 py-4">
           <Link
             href="/products"
             className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-app-accent hover:underline"

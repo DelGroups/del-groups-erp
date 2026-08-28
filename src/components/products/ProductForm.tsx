@@ -2,14 +2,15 @@
 
 import React, { useState } from "react";
 import { Save } from "lucide-react";
-import type { Category, ProductInsert, Warehouse } from "@/types/database.types";
+import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
-import { createProduct, getCategoryFullName } from "@/lib/products/api";
+import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface ProductFormProps {
   categories: Category[];
   warehouses: Warehouse[];
+  initialProduct?: Product | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -19,29 +20,48 @@ const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu"];
 export default function ProductForm({
   categories,
   warehouses,
+  initialProduct,
   onSuccess,
   onCancel,
 }: ProductFormProps) {
   const { t } = useI18n();
+  const isEditMode = Boolean(initialProduct);
+
+  const categoryByName = (name?: string | null) =>
+    categories.find((cat) => cat.name === (name || "").trim()) || null;
+  const initialCategory = categoryByName(initialProduct?.category) || null;
+  const resolvedParent = initialCategory?.parent_id
+    ? categories.find((cat) => cat.id === initialCategory.parent_id) || null
+    : initialCategory;
+
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    code: "",
-    name: "",
-    category: categories[0]?.name || "",
-    subcategory: "",
-    unit: "Ədəd",
-    buy_price: "0",
-    sell_price: "0",
-    stock: "0",
-    min_stock: "5",
-    barcode: "",
-    color: "",
-    weight: "0",
-    extra_info: "",
+    code: initialProduct?.code || "",
+    name: initialProduct?.name || "",
+    category: resolvedParent?.name || categories.find((cat) => !cat.parent_id)?.name || "",
+    subcategory:
+      initialCategory && initialCategory.parent_id
+        ? initialCategory.name
+        : initialProduct?.subcategory || "",
+    unit: initialProduct?.unit || "Ədəd",
+    buy_price: String(initialProduct?.buy_price ?? 0),
+    sell_price: String(initialProduct?.sell_price ?? 0),
+    stock: String(initialProduct?.stock ?? 0),
+    min_stock: String(initialProduct?.min_stock ?? 5),
+    barcode: initialProduct?.barcode || "",
+    color: initialProduct?.color || "",
+    weight: String(initialProduct?.weight ?? 0),
+    extra_info: initialProduct?.extra_info || "",
     warehouse_id: warehouses[0]?.id || "",
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const parentCategories = categories.filter((cat) => !cat.parent_id);
+  const selectedParent = categories.find((cat) => cat.name === form.category && !cat.parent_id);
+  const availableSubcategories = selectedParent
+    ? categories.filter((cat) => cat.parent_id === selectedParent.id)
+    : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +87,9 @@ export default function ProductForm({
       extra_info: form.extra_info || null,
     };
 
-    const result = await createProduct(payload);
+    const result = isEditMode && initialProduct
+      ? await updateProduct(initialProduct.id, payload)
+      : await createProduct(payload);
     setSaving(false);
 
     if (!result.ok) {
@@ -75,7 +97,7 @@ export default function ProductForm({
       return;
     }
 
-    alert(t("forms.productCreated"));
+    alert(isEditMode ? t("common.success") : t("forms.productCreated"));
     onSuccess?.();
   };
 
@@ -109,13 +131,13 @@ export default function ProductForm({
           <select
             required
             value={form.category}
-            onChange={(e) => set({ category: e.target.value })}
+            onChange={(e) => set({ category: e.target.value, subcategory: "" })}
             className="app-input mt-1 text-sm"
           >
             <option value="">{t("common.select")}</option>
-            {categories.map((c) => (
+            {parentCategories.map((c) => (
               <option key={c.id} value={c.name}>
-                {getCategoryFullName(categories, c)}
+                {c.name}
               </option>
             ))}
           </select>
@@ -123,12 +145,18 @@ export default function ProductForm({
 
         <label className="block text-xs font-semibold text-app">
           {t("forms.subcategory")}
-          <input
-            type="text"
+          <select
             value={form.subcategory}
             onChange={(e) => set({ subcategory: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
+            className="app-input mt-1 text-sm"
+          >
+            <option value="">{t("forms.notSelected")}</option>
+            {availableSubcategories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {getCategoryFullName(categories, c)}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="block text-xs font-semibold text-app">
@@ -269,10 +297,10 @@ export default function ProductForm({
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2 text-xs font-bold text-white disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
-          {saving ? t("common.saving") : t("forms.saveProduct")}
+          {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
         </button>
       </div>
     </form>

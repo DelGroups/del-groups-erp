@@ -210,14 +210,14 @@ export default function RolesPermissionsTab() {
   return (
     <div className="space-y-4 p-6">
       {successMsg && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800">
+        <div className="flex items-center gap-2 rounded-xl alert-success rounded-xl p-4 text-xs font-bold">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           {successMsg}
         </div>
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800">
+        <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-4 text-xs font-bold">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
           {error}
         </div>
@@ -244,7 +244,7 @@ export default function RolesPermissionsTab() {
                   onClick={() => selectRole(role)}
                   className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
                     role.id === selectedRoleId
-                      ? "bg-blue-600 text-white"
+                      ? "bg-[image:var(--app-gradient)] text-white"
                       : "text-app hover:bg-app-card-hover"
                   }`}
                 >
@@ -387,7 +387,7 @@ export default function RolesPermissionsTab() {
                   <button
                     type="button"
                     onClick={() => void handleDelete()}
-                    className="mr-auto flex items-center gap-1.5 rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50"
+                    className="mr-auto flex items-center gap-1.5 rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-500/10"
                   >
                     <Trash2 className="h-4 w-4" />
                     {t("settings.deleteRole")}
@@ -397,7 +397,7 @@ export default function RolesPermissionsTab() {
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={saving}
-                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                  className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-6 py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" />
                   {saving

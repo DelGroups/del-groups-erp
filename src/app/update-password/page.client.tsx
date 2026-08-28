@@ -92,7 +92,7 @@ export default function UpdatePasswordPage() {
           <p className="text-[11px] text-app-muted">{t("auth.invalidResetLinkBody")}</p>
           <Link
             href="/forgot-password"
-            className="inline-block rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            className="inline-block rounded-xl bg-[image:var(--app-gradient)] px-5 py-2 text-xs font-semibold text-white hover:brightness-110"
           >
             {t("auth.requestNewLink")}
           </Link>
@@ -108,7 +108,7 @@ export default function UpdatePasswordPage() {
         className="w-full max-w-sm space-y-4 rounded-2xl app-card p-7 shadow-sm"
       >
         <div className="space-y-1 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[image:var(--app-gradient)]">
             <KeyRound className="h-5 w-5 text-white" />
           </div>
           <h1 className="pt-2 text-base font-bold text-app">{t("auth.updatePasswordTitle")}</h1>
@@ -116,7 +116,7 @@ export default function UpdatePasswordPage() {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+          <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-3 text-[11px] font-semibold">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             {error}
           </div>
@@ -169,7 +169,7 @@ export default function UpdatePasswordPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--app-gradient)] py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-60"
         >
           <CheckCircle2 className="h-4 w-4" />
           {submitting ? t("auth.saving") : t("auth.updatePasswordAndContinue")}

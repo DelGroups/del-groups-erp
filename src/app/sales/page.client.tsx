@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import Link from "next/link";
 import UniversalInvoiceForm from "@/components/InvoiceForm";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
@@ -115,14 +116,22 @@ export default function SalesListPage() {
           onCreate={() => setIsFormOpen(true)}
           createDisabled={!canCreateInvoice}
           extraActions={
-            <button
-              type="button"
-              onClick={handleDownloadCSV}
-              className="flex items-center gap-2 rounded-xl border border-app bg-app-card-hover px-4 py-2.5 text-xs font-semibold text-app hover:bg-slate-200"
-            >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-              {t("common.csvDownload")}
-            </button>
+            <>
+              <Link
+                href="/sales/polywood/new"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700"
+              >
+                {t("sales.polywoodInvoice")}
+              </Link>
+              <button
+                type="button"
+                onClick={handleDownloadCSV}
+                className="flex items-center gap-2 rounded-xl border border-app bg-app-card-hover px-4 py-2.5 text-xs font-semibold text-app hover:bg-app-card-hover"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {t("common.csvDownload")}
+              </button>
+            </>
           }
         />
 

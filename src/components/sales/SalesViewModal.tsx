@@ -15,7 +15,7 @@ export default function SalesViewModal({ sale, onClose, onPayment }: SalesViewMo
   const { t } = useI18n();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
       <div className="app-modal flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>

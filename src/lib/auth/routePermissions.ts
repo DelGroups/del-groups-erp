@@ -19,10 +19,14 @@ const ROUTE_RULES: { prefix: string; permission: PermissionKey; exact?: boolean 
   { prefix: "/reports/financial", permission: "can_view_financial_reports" },
   { prefix: "/reports/sales", permission: "can_view_reports" },
   { prefix: "/reports", permission: "can_view_reports" },
+  { prefix: "/sales/polywood/new", permission: "can_create_invoice" },
   { prefix: "/sales/new", permission: "can_create_invoice" },
   { prefix: "/sales", permission: "can_view_sales" },
   { prefix: "/purchases", permission: "can_view_purchases" },
   { prefix: "/consignments", permission: "can_view_consignments" },
+  { prefix: "/polywood", permission: "can_view_products" },
+  { prefix: "/production", permission: "can_view_production" },
+  { prefix: "/inventory-audit", permission: "can_writeoff_inventory" },
   { prefix: "/products/damaged-goods", permission: "can_writeoff_inventory" },
   { prefix: "/dashboard/warehouse/slips", permission: "can_view_warehouse_slips" },
   { prefix: "/products/new", permission: "can_manage_products" },
@@ -44,9 +48,14 @@ const ROUTE_RULES: { prefix: string; permission: PermissionKey; exact?: boolean 
 export const NAV_PATH_PERMISSIONS: Record<string, PermissionKey> = {
   "/": "can_view_dashboard",
   "/sales": "can_view_sales",
+  "/sales/polywood/new": "can_create_invoice",
   "/purchases": "can_view_purchases",
   "/consignments": "can_view_consignments",
   "/products": "can_view_products",
+  "/polywood": "can_view_products",
+  "/production": "can_view_production",
+  "/production/bom": "can_view_production",
+  "/inventory-audit": "can_writeoff_inventory",
   "/products/damaged-goods": "can_writeoff_inventory",
   "/dashboard/warehouse/slips": "can_view_warehouse_slips",
   "/warehouses": "can_manage_warehouses",
@@ -91,7 +100,23 @@ export function userHasPermission(
 ): boolean {
   if (isAdminRole(profile?.role)) return true;
   const map = permissions ?? profile?.role?.permissions;
-  return hasPermission(map, permission);
+  if (hasPermission(map, permission)) return true;
+
+  // Roles saved before these modules existed have no JSON keys for them.
+  if (permission === "can_view_production") {
+    return hasPermission(map, "can_view_products");
+  }
+  if (permission === "can_manage_production") {
+    return hasPermission(map, "can_manage_products");
+  }
+  if (permission === "can_view_consignments") {
+    return hasPermission(map, "can_view_sales");
+  }
+  if (permission === "can_manage_consignments") {
+    return hasPermission(map, "can_create_invoice");
+  }
+
+  return false;
 }
 
 export function userCanAccessPath(

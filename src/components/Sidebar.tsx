@@ -25,6 +25,7 @@ import {
   UserCheck,
   FileText,
   Settings,
+  Layers,
   Menu,
   X,
   Trash2,
@@ -41,7 +42,9 @@ import {
   ShieldCheck,
   LogOut,
   ClipboardList,
+  ClipboardCheck,
   Database,
+  Factory,
 } from "lucide-react";
 
 interface NavItem {
@@ -80,9 +83,20 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Boxes,
     items: [
       { titleKey: "nav.items.products", path: "/products", icon: Package },
+      { titleKey: "nav.items.polywood", path: "/polywood", icon: Layers },
+      { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
       { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
       { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },
       { titleKey: "nav.items.damagedGoods", path: "/products/damaged-goods", icon: Trash2 },
+    ],
+  },
+  {
+    id: "production",
+    titleKey: "nav.sections.production",
+    icon: Factory,
+    items: [
+      { titleKey: "nav.items.production", path: "/production", icon: Factory },
+      { titleKey: "nav.items.productionBom", path: "/production/bom", icon: Layers },
     ],
   },
   {
@@ -144,6 +158,12 @@ function isItemActive(pathname: string, path: string): boolean {
     );
   }
   if (path === "/settings") return pathname === "/settings";
+  if (path === "/production") {
+    return (
+      pathname === "/production" ||
+      (pathname.startsWith("/production/") && !pathname.startsWith("/production/bom"))
+    );
+  }
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
@@ -235,7 +255,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r text-[color:var(--app-sidebar-text)] transition-transform duration-300 ease-in-out md:relative md:z-20 md:translate-x-0 md:transition-[width] ${
+      className={`app-glass fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r text-[color:var(--app-sidebar-text)] transition-transform duration-300 ease-in-out md:relative md:z-20 md:translate-x-0 md:transition-[width] ${
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       } ${desktopExpanded ? "md:w-64" : "md:w-20"}`}
       style={{
@@ -255,12 +275,12 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
               className="h-8 w-8 flex-shrink-0 rounded-lg border border-app bg-app-surface object-contain p-0.5 shadow-sm"
             />
           ) : (
-            <div className="flex-shrink-0 rounded-lg bg-blue-600 p-2">
+            <div className="flex-shrink-0 rounded-lg bg-[image:var(--app-gradient)] p-2 shadow-md shadow-indigo-500/20">
               <Building2 className="h-5 w-5 text-white" />
             </div>
           )}
           <div className={`truncate ${desktopExpanded ? "md:block" : "md:hidden"}`}>
-            <h1 className="truncate text-xs font-bold tracking-wide text-white">{companyName}</h1>
+            <h1 className="truncate text-xs font-bold tracking-wide text-app">{companyName}</h1>
             <p className="text-[10px]" style={{ color: "var(--app-sidebar-muted)" }}>
               {t("nav.erpSubtitle")}
             </p>
@@ -335,14 +355,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                           key={item.path}
                           href={item.path}
                           onClick={closeMobileIfNeeded}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-300 ${
-                            active ? "text-white shadow-sm" : "hover:opacity-90"
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${
+                            active ? "nav-link-active" : "hover:bg-[color:var(--app-card-hover)]"
                           }`}
-                          style={
-                            active
-                              ? { backgroundColor: "var(--app-accent)" }
-                              : { color: "var(--app-sidebar-text)" }
-                          }
+                          style={active ? undefined : { color: "var(--app-sidebar-text)" }}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t(item.titleKey)}</span>
@@ -363,14 +379,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                       key={item.path}
                       href={item.path}
                       title={title}
-                      className={`flex items-center justify-center rounded-lg px-2 py-2.5 transition-colors duration-300 ${
-                        active ? "text-white shadow-sm" : "hover:opacity-90"
+                      className={`flex items-center justify-center rounded-lg px-2 py-2.5 transition-all duration-300 ${
+                        active ? "nav-link-active" : "hover:bg-[color:var(--app-card-hover)]"
                       }`}
-                      style={
-                        active
-                          ? { backgroundColor: "var(--app-accent)" }
-                          : { color: "var(--app-sidebar-text)" }
-                      }
+                      style={active ? undefined : { color: "var(--app-sidebar-text)" }}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
                     </Link>
@@ -389,8 +401,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
         <div className={`block space-y-3 ${desktopExpanded ? "md:block" : "md:hidden"}`}>
             <div className="flex items-center gap-2 overflow-hidden">
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                style={{ backgroundColor: "var(--app-accent)" }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[image:var(--app-gradient)] text-[10px] font-bold text-white shadow-sm shadow-indigo-500/30"
               >
                 {loading ? "…" : initials(displayName)}
               </div>
@@ -422,8 +433,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
         <div className={`hidden flex-col items-center space-y-3 ${desktopExpanded ? "md:hidden" : "md:flex"}`}>
             <div
               title={`${displayName} — ${roleName}`}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: "var(--app-accent)" }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[image:var(--app-gradient)] text-[10px] font-bold text-white shadow-sm shadow-indigo-500/30"
             >
               {loading ? "…" : initials(displayName)}
             </div>

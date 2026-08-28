@@ -1,12 +1,13 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { Customer } from "@/types/database.types";
 import {
   Plus,
+  Pencil,
   Search,
   RefreshCw,
   X,
@@ -15,10 +16,13 @@ import {
 
 export default function CustomersPage() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManageCustomers = can("can_manage_customers");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form State
@@ -29,10 +33,6 @@ export default function CustomersPage() {
     company_name: "",
     balance: "0.00",
   });
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -48,6 +48,10 @@ export default function CustomersPage() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    void fetchCustomers();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -65,12 +69,25 @@ export default function CustomersPage() {
       balance: parseFloat(formData.balance) || 0,
     };
 
-    const { error } = await supabase.from("customers").insert([newCustomer]);
+    const isEdit = Boolean(editingCustomerId);
+    const { data, error } = isEdit
+      ? await supabase
+          .from("customers")
+          .update(newCustomer)
+          .eq("id", editingCustomerId)
+          .select("*")
+          .single()
+      : await supabase.from("customers").insert([newCustomer]).select("*").single();
 
     if (error) {
       alert(t("common.errorOccurred", { message: error.message }));
     } else {
+      const row = data as Customer;
+      setCustomers((prev) =>
+        isEdit ? prev.map((item) => (item.id === row.id ? row : item)) : [row, ...prev]
+      );
       setIsModalOpen(false);
+      setEditingCustomerId(null);
       setFormData({
         code: "",
         full_name: "",
@@ -78,9 +95,34 @@ export default function CustomersPage() {
         company_name: "",
         balance: "0.00",
       });
-      fetchCustomers();
     }
     setSaving(false);
+  };
+
+  const openCreateModal = () => {
+    if (!canManageCustomers) return;
+    setEditingCustomerId(null);
+    setFormData({
+      code: "",
+      full_name: "",
+      phone: "",
+      company_name: "",
+      balance: "0.00",
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (customer: Customer) => {
+    if (!canManageCustomers) return;
+    setEditingCustomerId(customer.id);
+    setFormData({
+      code: customer.code || "",
+      full_name: customer.full_name || "",
+      phone: customer.phone || "",
+      company_name: customer.company_name || "",
+      balance: String(customer.balance ?? 0),
+    });
+    setIsModalOpen(true);
   };
 
   const filteredCustomers = customers.filter(
@@ -92,14 +134,15 @@ export default function CustomersPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-app">{t("customers.title")}</h2>
             <p className="text-sm text-app-muted">{t("customers.pageDescription")}</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn-primary"
+            onClick={openCreateModal}
+            className="btn-primary disabled:opacity-50"
+            disabled={!canManageCustomers}
           >
             <Plus className="w-4 h-4" />
             <span>{t("customers.createButton")}</span>
@@ -143,6 +186,7 @@ export default function CustomersPage() {
                       <th className="px-6 py-3">{t("customers.customerCompany")}</th>
                       <th className="px-6 py-3">{t("common.phone")}</th>
                       <th className="px-6 py-3">{t("customers.balanceDebt")}</th>
+                      {canManageCustomers ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -176,6 +220,18 @@ export default function CustomersPage() {
                               <span className="text-emerald-600">{(c.balance ?? 0).toFixed(2)} AZN</span>
                             )}
                           </td>
+                          {canManageCustomers ? (
+                            <td className="px-6 py-4">
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(c)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                {t("common.edit")}
+                              </button>
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}
@@ -191,7 +247,9 @@ export default function CustomersPage() {
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex justify-between items-center">
-              <h3 className="font-bold text-app">{t("customers.addModalTitle")}</h3>
+              <h3 className="font-bold text-app">
+                {editingCustomerId ? t("common.edit") : t("customers.addModalTitle")}
+              </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-app-muted hover:text-app-muted">
                 <X className="w-5 h-5" />
               </button>

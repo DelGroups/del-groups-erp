@@ -64,7 +64,7 @@ export default function ManagementDashboardPage() {
 
   return (
     <PageLayout>
-        <header className="flex flex-col justify-between gap-4 border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md md:flex-row md:items-center">
+        <header className="app-glass flex flex-col justify-between gap-4 border-b border-app px-6 py-4 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
             {logoUrl && (
               <img
@@ -104,7 +104,7 @@ export default function ManagementDashboardPage() {
             </button>
             <Link
               href="/settings"
-              className="flex items-center gap-1.5 rounded-lg bg-app-card-hover px-3 py-2 text-xs font-semibold text-app hover:bg-slate-200"
+              className="flex items-center gap-1.5 rounded-lg bg-app-card-hover px-3 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
             >
               <Settings className="h-4 w-4" />
               {t("dashboard.settingsLink")}

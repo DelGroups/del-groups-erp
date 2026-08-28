@@ -26,7 +26,7 @@ export default function DocumentPageHeader({
   backLink,
 }: DocumentPageHeaderProps) {
   return (
-    <header className="flex flex-col justify-between gap-4 border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md md:flex-row md:items-center">
+    <header className="app-glass flex flex-col justify-between gap-4 border-b border-app px-6 py-4 md:flex-row md:items-center">
       <div>
         {backLink && (
           <Link

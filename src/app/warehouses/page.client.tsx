@@ -7,6 +7,7 @@ import type { Warehouse, Product } from "@/types/database.types";
 import {
   RefreshCw,
   Plus,
+  Pencil,
   X,
 } from "lucide-react";
 
@@ -16,16 +17,13 @@ export default function WarehousesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     code: "",
     name: "",
     location: "",
   });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -37,6 +35,10 @@ export default function WarehousesPage() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    void fetchData();
+  }, []);
+
   const handleCreateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
     const newWh = {
@@ -46,14 +48,47 @@ export default function WarehousesPage() {
       is_default: false,
     };
 
-    const { error } = await supabase.from("warehouses").insert([newWh]);
+    const isEdit = Boolean(editingWarehouseId);
+    const { data, error } = isEdit
+      ? await supabase
+          .from("warehouses")
+          .update({
+            code: newWh.code,
+            name: newWh.name,
+            location: newWh.location,
+          })
+          .eq("id", editingWarehouseId)
+          .select("*")
+          .single()
+      : await supabase.from("warehouses").insert([newWh]).select("*").single();
+
     if (error) {
       alert(t("common.errorOccurred", { message: error.message }));
     } else {
+      const row = data as Warehouse;
+      setWarehouses((prev) =>
+        isEdit ? prev.map((item) => (item.id === row.id ? row : item)) : [...prev, row]
+      );
       setIsModalOpen(false);
+      setEditingWarehouseId(null);
       setFormData({ code: "", name: "", location: "" });
-      fetchData();
     }
+  };
+
+  const openCreateModal = () => {
+    setEditingWarehouseId(null);
+    setFormData({ code: "", name: "", location: "" });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (warehouse: Warehouse) => {
+    setEditingWarehouseId(warehouse.id);
+    setFormData({
+      code: warehouse.code || "",
+      name: warehouse.name || "",
+      location: warehouse.location || "",
+    });
+    setIsModalOpen(true);
   };
 
   const totalStockValuation = products.reduce(
@@ -63,13 +98,13 @@ export default function WarehousesPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-app">{t("warehouses.pageTitle")}</h2>
             <p className="text-sm text-app-muted">{t("warehouses.pageDescription")}</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="btn-primary"
           >
             <Plus className="w-4 h-4" />
@@ -96,7 +131,7 @@ export default function WarehousesPage() {
           <div className="app-table-wrap">
             <div className="p-4 border-b border-app flex justify-between items-center bg-app-card-hover">
               <h3 className="font-bold text-app">{t("warehouses.listTitle")}</h3>
-              <button onClick={fetchData} className="p-1.5 hover:bg-slate-200 rounded-lg text-app-muted">
+              <button onClick={fetchData} className="p-1.5 hover:bg-app-card-hover rounded-lg text-app-muted">
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
@@ -112,6 +147,7 @@ export default function WarehousesPage() {
                     <th className="px-6 py-3">{t("warehouses.warehouseName")}</th>
                     <th className="px-6 py-3">{t("common.location")}</th>
                     <th className="px-6 py-3">{t("common.status")}</th>
+                    <th className="px-6 py-3">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -131,6 +167,16 @@ export default function WarehousesPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(w)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          {t("common.edit")}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -144,7 +190,9 @@ export default function WarehousesPage() {
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex justify-between items-center">
-              <h3 className="font-bold text-app">{t("warehouses.addModalTitle")}</h3>
+              <h3 className="font-bold text-app">
+                {editingWarehouseId ? t("common.edit") : t("warehouses.addModalTitle")}
+              </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-app-muted hover:text-app-muted">
                 <X className="w-5 h-5" />
               </button>
@@ -191,7 +239,7 @@ export default function WarehousesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
+                  className="px-4 py-2 bg-[image:var(--app-gradient)] text-white rounded-lg text-xs font-semibold hover:brightness-110"
                 >
                   {t("common.save")}
                 </button>

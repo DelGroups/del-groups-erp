@@ -98,7 +98,7 @@ export default function CashBankPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-app">{t("cashBank.pageTitle")}</h2>
             <p className="text-sm text-app-muted">{t("cashBank.pageDescription")}</p>
@@ -132,7 +132,7 @@ export default function CashBankPage() {
           <div className="app-table-wrap">
             <div className="p-4 border-b border-app flex justify-between items-center bg-app-card-hover">
               <h3 className="font-bold text-app">{t("cashBank.listTitle")}</h3>
-              <button onClick={fetchData} className="p-1.5 hover:bg-slate-200 rounded-lg text-app-muted">
+              <button onClick={fetchData} className="p-1.5 hover:bg-app-card-hover rounded-lg text-app-muted">
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
@@ -236,7 +236,7 @@ export default function CashBankPage() {
                 <button
                   type="submit"
                   disabled={!canManageFinance}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-[image:var(--app-gradient)] text-white rounded-lg text-xs font-semibold hover:brightness-110 disabled:opacity-50"
                 >
                   {t("common.save")}
                 </button>

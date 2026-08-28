@@ -1,12 +1,13 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { Supplier } from "@/types/database.types";
 import {
   Plus,
+  Pencil,
   Search,
   RefreshCw,
   X,
@@ -15,10 +16,13 @@ import {
 
 export default function SuppliersPage() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManageSuppliers = can("can_manage_suppliers");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -28,10 +32,6 @@ export default function SuppliersPage() {
     company_name: "",
     balance: "0.00",
   });
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -47,6 +47,10 @@ export default function SuppliersPage() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    void fetchSuppliers();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -64,12 +68,25 @@ export default function SuppliersPage() {
       balance: parseFloat(formData.balance) || 0,
     };
 
-    const { error } = await supabase.from("suppliers").insert([newSupplier]);
+    const isEdit = Boolean(editingSupplierId);
+    const { data, error } = isEdit
+      ? await supabase
+          .from("suppliers")
+          .update(newSupplier)
+          .eq("id", editingSupplierId)
+          .select("*")
+          .single()
+      : await supabase.from("suppliers").insert([newSupplier]).select("*").single();
 
     if (error) {
       alert(t("common.errorOccurred", { message: error.message }));
     } else {
+      const row = data as Supplier;
+      setSuppliers((prev) =>
+        isEdit ? prev.map((item) => (item.id === row.id ? row : item)) : [row, ...prev]
+      );
       setIsModalOpen(false);
+      setEditingSupplierId(null);
       setFormData({
         code: "",
         full_name: "",
@@ -77,9 +94,34 @@ export default function SuppliersPage() {
         company_name: "",
         balance: "0.00",
       });
-      fetchSuppliers();
     }
     setSaving(false);
+  };
+
+  const openCreateModal = () => {
+    if (!canManageSuppliers) return;
+    setEditingSupplierId(null);
+    setFormData({
+      code: "",
+      full_name: "",
+      phone: "",
+      company_name: "",
+      balance: "0.00",
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (supplier: Supplier) => {
+    if (!canManageSuppliers) return;
+    setEditingSupplierId(supplier.id);
+    setFormData({
+      code: supplier.code || "",
+      full_name: supplier.full_name || "",
+      phone: supplier.phone || "",
+      company_name: supplier.company_name || "",
+      balance: String(supplier.balance ?? 0),
+    });
+    setIsModalOpen(true);
   };
 
   const filteredSuppliers = suppliers.filter(
@@ -91,14 +133,15 @@ export default function SuppliersPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-app">{t("suppliers.pageTitle")}</h2>
             <p className="text-sm text-app-muted">{t("suppliers.pageDescription")}</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn-primary"
+            onClick={openCreateModal}
+            className="btn-primary disabled:opacity-50"
+            disabled={!canManageSuppliers}
           >
             <Plus className="w-4 h-4" />
             <span>{t("suppliers.createButton")}</span>
@@ -142,6 +185,7 @@ export default function SuppliersPage() {
                       <th className="px-6 py-3">{t("suppliers.supplierCompany")}</th>
                       <th className="px-6 py-3">{t("common.phone")}</th>
                       <th className="px-6 py-3">{t("suppliers.ourDebt")}</th>
+                      {canManageSuppliers ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -173,6 +217,18 @@ export default function SuppliersPage() {
                             <span className="text-emerald-600">{(s.balance ?? 0).toFixed(2)} AZN</span>
                           )}
                         </td>
+                        {canManageSuppliers ? (
+                          <td className="px-6 py-4">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(s)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("common.edit")}
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -187,7 +243,9 @@ export default function SuppliersPage() {
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex justify-between items-center">
-              <h3 className="font-bold text-app">{t("suppliers.addModalTitle")}</h3>
+              <h3 className="font-bold text-app">
+                {editingSupplierId ? t("common.edit") : t("suppliers.addModalTitle")}
+              </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-app-muted hover:text-app-muted">
                 <X className="w-5 h-5" />
               </button>

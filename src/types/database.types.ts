@@ -27,6 +27,11 @@ export interface SaleItem {
   available_stock?: number;
   total: number;
   extra_info: string;
+  /** Polywood: sell by linear meters or full sheets */
+  polywood_sale_mode?: "linear_m" | "full_sheet" | null;
+  polywood_full_sheet_length_m?: number;
+  polywood_total_length_m?: number;
+  polywood_full_sheet_count?: number;
 }
 
 /** Payment row stored in sales.payments JSONB */
@@ -196,6 +201,7 @@ export interface Warehouse {
   name: string;
   location?: string | null;
   is_default?: boolean | null;
+  warehouse_type?: "general" | "polywood" | string | null;
   created_at?: string | null;
 }
 
@@ -215,6 +221,8 @@ export interface Product {
   weight?: number | null;
   extra_info?: string | null;
   warehouse_id?: string | null;
+  inventory_mode?: "standard" | "polywood" | string | null;
+  full_sheet_length_m?: number | null;
   created_at?: string | null;
 }
 
@@ -406,6 +414,9 @@ export interface SaleItemRow {
   vat_rate: number;
   line_total: number;
   extra_info: string | null;
+  polywood_sale_mode?: string | null;
+  polywood_length_m?: number | null;
+  polywood_cut_details?: Json | null;
   created_at?: string | null;
 }
 
@@ -521,6 +532,13 @@ export function saleLineItemsToRows(saleId: string, items: SaleItem[]): SaleItem
     vat_rate: item.vat_rate,
     line_total: item.total,
     extra_info: item.extra_info || null,
+    polywood_sale_mode: item.polywood_sale_mode || null,
+    polywood_length_m:
+      item.polywood_sale_mode === "linear_m"
+        ? item.quantity
+        : item.polywood_sale_mode === "full_sheet"
+          ? (item.polywood_full_sheet_length_m || 4) * item.quantity
+          : null,
   }));
 }
 
@@ -659,6 +677,14 @@ export const PERMISSION_MODULES = [
       { key: "can_view_warehouse_slips", label: "Anbar qaimələrini görmək" },
       { key: "can_approve_warehouse_slips", label: "Anbar qaimələrini təsdiqləmək" },
       { key: "can_send_to_warehouse", label: "Fakturanı anbara göndərmək" },
+    ],
+  },
+  {
+    id: "production",
+    title: "İstehsalat",
+    permissions: [
+      { key: "can_view_production", label: "İstehsalatı görmək" },
+      { key: "can_manage_production", label: "İstehsalatı idarə etmək" },
     ],
   },
   {
@@ -989,6 +1015,36 @@ export interface Database {
         Update: Partial<ConsignmentOrderInsert>;
         Relationships: [];
       };
+      consignment_partners: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      consignment_dispatches: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      consignment_inventory: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      consignment_monthly_reports: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      consignment_returns: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       purchases: {
         Row: DbRow<Purchase>;
         Insert: PurchaseInsert & { id?: string; created_at?: string | null };
@@ -1085,6 +1141,48 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      production_boms: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_bom_items: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_orders: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_materials: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_outsourcing: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_contractors: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_contracts: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
       };
       roles: {
         Row: RoleDbRow;

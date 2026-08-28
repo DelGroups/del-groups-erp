@@ -15,19 +15,19 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="rounded-xl alert-success rounded-xl p-4">
           <p className="text-[10px] font-bold uppercase text-emerald-700">Ümumi mədaxil</p>
           <p className="mt-1 font-mono text-xl font-bold text-emerald-700">
             {loading ? "..." : `${summary.totalIncome.toFixed(2)} AZN`}
           </p>
         </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+        <div className="rounded-xl alert-danger rounded-xl p-4">
           <p className="text-[10px] font-bold uppercase text-rose-700">Ümumi məxaric</p>
           <p className="mt-1 font-mono text-xl font-bold text-rose-700">
             {loading ? "..." : `${summary.totalExpense.toFixed(2)} AZN`}
           </p>
         </div>
-        <div className="rounded-xl border border-app bg-slate-900 p-4 text-white">
+        <div className="rounded-xl border border-app app-toolbar p-4">
           <p className="text-[10px] font-bold uppercase opacity-70">Net axın</p>
           <p className="mt-1 font-mono text-xl font-bold">
             {loading ? "..." : `${summary.netFlow.toFixed(2)} AZN`}
@@ -58,8 +58,8 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
                             isIncome
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-rose-50 text-rose-700"
+                              ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]"
+                              : "bg-rose-500/10 text-rose-400"
                           }`}
                         >
                           {isIncome ? (
@@ -119,7 +119,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
-                            isIn ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                            isIn ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]" : "bg-rose-500/10 text-rose-400"
                           }`}
                         >
                           {row.type}

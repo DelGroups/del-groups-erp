@@ -61,8 +61,8 @@ export default function ReportFiltersPanel({
                 onClick={() => setPreset(preset)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   filters.datePreset === preset
-                    ? "bg-blue-600 text-white"
-                    : "bg-app-card-hover text-app-muted hover:bg-slate-200"
+                    ? "bg-[image:var(--app-gradient)] text-white"
+                    : "bg-app-card-hover text-app-muted hover:bg-app-card-hover"
                 }`}
               >
                 {DATE_PRESET_LABELS[preset]}
@@ -159,7 +159,7 @@ export default function ReportFiltersPanel({
             type="button"
             onClick={onApply}
             disabled={loading}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-xl bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Hesabatı yenilə

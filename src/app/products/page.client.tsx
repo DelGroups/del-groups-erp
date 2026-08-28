@@ -8,6 +8,7 @@ import ColumnVisibilityPanel from "@/components/products/ColumnVisibilityPanel";
 import ProductTable from "@/components/products/ProductTable";
 import ProductBarcodePrintTemplate from "@/components/products/ProductBarcodePrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
+import ProductForm from "@/components/products/ProductForm";
 import { fetchProductsCatalog } from "@/lib/products/api";
 import { filterProducts } from "@/lib/products/filters";
 import {
@@ -32,9 +33,12 @@ import {
 } from "lucide-react";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function ProductsPage() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManageProducts = can("can_manage_products");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -44,6 +48,7 @@ export default function ProductsPage() {
     loadColumnVisibility
   );
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { printData: printBarcodes, setPrintData: setPrintBarcodes } =
     useDocumentPrint<Product[]>();
 
@@ -71,7 +76,7 @@ export default function ProductsPage() {
 
   return (
     <PageLayout>
-        <header className="flex flex-col justify-between gap-4 border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md md:flex-row md:items-center">
+        <header className="flex flex-col justify-between gap-4 border-b border-app app-glass px-6 py-4 md:flex-row md:items-center">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-bold text-app">
               <Package className="h-6 w-6 text-app-accent" />
@@ -81,14 +86,16 @@ export default function ProductsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCategoryModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900"
-            >
-              <FolderPlus className="h-4 w-4" />
-              {t("products.categories")}
-            </button>
+            {canManageProducts ? (
+              <button
+                type="button"
+                onClick={() => setCategoryModalOpen(true)}
+                className="flex items-center gap-2 rounded-lg btn-secondary px-4 py-2 text-sm"
+              >
+                <FolderPlus className="h-4 w-4" />
+                {t("products.categories")}
+              </button>
+            ) : null}
 
             <button
               type="button"
@@ -108,13 +115,15 @@ export default function ProductsPage() {
               {t("products.damagedGoodsLink")}
             </Link>
 
-            <Link
-              href="/products/new"
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" />
-              {t("products.createLabel")}
-            </Link>
+            {canManageProducts ? (
+              <Link
+                href="/products/new"
+                className="flex items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
+              >
+                <Plus className="h-4 w-4" />
+                {t("products.createLabel")}
+              </Link>
+            ) : null}
           </div>
         </header>
 
@@ -158,6 +167,8 @@ export default function ProductsPage() {
             warehouses={warehouses}
             visibleColumns={columnVisibility}
             loading={loading}
+            canEdit={canManageProducts}
+            onEdit={setEditingProduct}
           />
         </main>
 
@@ -167,6 +178,35 @@ export default function ProductsPage() {
         onClose={() => setCategoryModalOpen(false)}
         onUpdated={() => void loadData()}
       />
+
+      {editingProduct ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
+          <div className="my-6 w-full max-w-5xl">
+            <div className="mb-3 flex items-center justify-between rounded-xl border border-app bg-app-card px-4 py-3">
+              <h3 className="text-sm font-bold text-app">
+                {t("common.edit")}: {editingProduct.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="rounded-lg border border-app px-2 py-1 text-xs font-semibold text-app"
+              >
+                {t("common.close")}
+              </button>
+            </div>
+            <ProductForm
+              categories={categories}
+              warehouses={warehouses}
+              initialProduct={editingProduct}
+              onCancel={() => setEditingProduct(null)}
+              onSuccess={() => {
+                setEditingProduct(null);
+                void loadData();
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {printBarcodes && (
         <div className="print-area">

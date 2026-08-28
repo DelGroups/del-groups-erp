@@ -28,12 +28,20 @@ export async function fetchProductsCatalog(): Promise<{
   categories: Category[];
   warehouses: Warehouse[];
 }> {
-  const [{ data: products }, { data: categories }, { data: warehouses }] =
+  const [
+    { data: products, error: productsError },
+    { data: categories, error: categoriesError },
+    { data: warehouses, error: warehousesError },
+  ] =
     await Promise.all([
       supabase.from("products").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("name", { ascending: true }),
       supabase.from("warehouses").select("*").order("created_at", { ascending: true }),
     ]);
+
+  if (productsError) throw new Error(productsError.message);
+  if (categoriesError) throw new Error(categoriesError.message);
+  if (warehousesError) throw new Error(warehousesError.message);
 
   return {
     products: (products as Product[]) || [],
@@ -55,18 +63,52 @@ export async function createProduct(
 export async function createCategory(
   name: string,
   parentId: string | null
-): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from("categories").insert([
-    { name: name.trim(), parent_id: parentId || null },
-  ]);
+): Promise<{ ok: boolean; error?: string; category?: Category }> {
+  const { data, error } = await supabase
+    .from("categories")
+    .insert([{ name: name.trim(), parent_id: parentId || null }])
+    .select("*")
+    .single();
   if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return { ok: true, category: data as Category };
+}
+
+export async function updateCategory(
+  id: string,
+  patch: { name: string; parent_id: string | null }
+): Promise<{ ok: boolean; error?: string; category?: Category }> {
+  const { data, error } = await supabase
+    .from("categories")
+    .update({
+      name: patch.name.trim(),
+      parent_id: patch.parent_id || null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, category: data as Category };
 }
 
 export async function deleteCategory(id: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+export async function updateProduct(
+  id: string,
+  input: Partial<ProductInsert> & Pick<ProductInsert, "name">
+): Promise<{ ok: boolean; error?: string; product?: Product }> {
+  const payload = buildProductInsert(input);
+  const { data, error } = await supabase
+    .from("products")
+    .update(payload)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, product: data as Product };
 }
 
 export function getCategoryFullName(categories: Category[], cat: Category): string {

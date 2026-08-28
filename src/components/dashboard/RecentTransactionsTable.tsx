@@ -42,7 +42,7 @@ export default function RecentTransactionsTable({ rows }: RecentTransactionsTabl
                     <td className="px-4 py-2.5">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
-                          isIn ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                          isIn ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]" : "bg-rose-500/10 text-rose-400"
                         }`}
                       >
                         {isIn ? (

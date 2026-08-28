@@ -1,8 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { recordSaleCommissions } from "@/lib/commissions/recordSaleCommissions";
+import { executePolywoodCut, rollbackPolywoodCut } from "@/lib/polywood/executeCut";
+import { DEFAULT_FULL_SHEET_LENGTH_M } from "@/lib/polywood/constants";
 import type {
   SaleInsert,
   SaleItem,
+  SaleItemRow,
   SalePayment,
   SaleTotals,
 } from "@/types/database.types";
@@ -23,10 +26,14 @@ export interface SubmitSaleResult {
   saleId?: string;
 }
 
+function isPolywoodSaleItem(item: SaleItem): boolean {
+  return item.polywood_sale_mode === "linear_m" || item.polywood_sale_mode === "full_sheet";
+}
+
 async function fetchProductStock(productId: string): Promise<number | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("stock")
+    .select("stock, inventory_mode, full_sheet_length_m")
     .eq("id", productId)
     .single();
   if (error || !data) return null;
@@ -80,19 +87,68 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
   const saleId = saleRow.id as string;
   const lineRows = saleLineItemsToRows(saleId, validItems);
 
-  const { error: itemsError } = await supabase.from("sale_items").insert(lineRows);
-  if (itemsError) {
+  const { data: insertedItems, error: itemsError } = await supabase
+    .from("sale_items")
+    .insert(lineRows)
+    .select("*");
+
+  if (itemsError || !insertedItems) {
     await deleteSaleCascade(saleId);
-    return { success: false, error: itemsError.message };
+    return { success: false, error: itemsError?.message || "Satış sətirləri yazılmadı" };
   }
 
   const stockRollbacks: { productId: string; previous: number }[] = [];
+  const polywoodRollbacks: { saleItemId: string; cutDetails: SaleItemRow["polywood_cut_details"] }[] = [];
 
   if (payload.decrementStock !== false) {
-    for (const item of validItems) {
+    for (let index = 0; index < validItems.length; index += 1) {
+      const item = validItems[index];
+      const inserted = insertedItems[index] as SaleItemRow & { id: string };
       if (!item.product_id || item.quantity <= 0) continue;
+
+      if (isPolywoodSaleItem(item)) {
+        const fullSheetLengthM = item.polywood_full_sheet_length_m || DEFAULT_FULL_SHEET_LENGTH_M;
+        const cutResult = await executePolywoodCut({
+          productId: item.product_id,
+          warehouseId: item.warehouse_id,
+          saleItemId: inserted.id,
+          mode: item.polywood_sale_mode!,
+          quantity: item.quantity,
+          fullSheetLengthM,
+        });
+
+        if (!cutResult.ok) {
+          for (const rb of polywoodRollbacks.reverse()) {
+            await rollbackPolywoodCut(rb.saleItemId, rb.cutDetails as never);
+          }
+          for (const rb of stockRollbacks.reverse()) {
+            await restoreStock(rb.productId, rb.previous);
+          }
+          await deleteSaleCascade(saleId);
+          return {
+            success: false,
+            error: `${item.product_name}: ${cutResult.error}`,
+          };
+        }
+
+        const { data: cutRow } = await supabase
+          .from("sale_items")
+          .select("polywood_cut_details")
+          .eq("id", inserted.id)
+          .single();
+
+        polywoodRollbacks.push({
+          saleItemId: inserted.id,
+          cutDetails: cutRow?.polywood_cut_details ?? null,
+        });
+        continue;
+      }
+
       const result = await decrementStock(item.product_id, item.quantity);
       if (!result.ok) {
+        for (const rb of polywoodRollbacks.reverse()) {
+          await rollbackPolywoodCut(rb.saleItemId, rb.cutDetails as never);
+        }
         for (const rb of stockRollbacks.reverse()) {
           await restoreStock(rb.productId, rb.previous);
         }
@@ -118,6 +174,9 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
       },
     ]);
     if (txError) {
+      for (const rb of polywoodRollbacks.reverse()) {
+        await rollbackPolywoodCut(rb.saleItemId, rb.cutDetails as never);
+      }
       for (const rb of stockRollbacks.reverse()) {
         await restoreStock(rb.productId, rb.previous);
       }

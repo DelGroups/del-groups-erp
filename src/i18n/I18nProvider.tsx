@@ -46,9 +46,7 @@ function writeCookieLocale(locale: Locale) {
 
 export default function I18nProvider({ children }: { children: React.ReactNode }) {
   const { profile, ready, user } = useAuth();
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    return readCookieLocale() ?? DEFAULT_LOCALE;
-  });
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
   useEffect(() => {
     if (!ready) return;

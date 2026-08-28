@@ -70,7 +70,7 @@ function InviteUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
       <form
         onSubmit={handleSubmit}
         className="app-modal my-10 w-full max-w-md space-y-4 p-6"
@@ -95,7 +95,7 @@ function InviteUserModal({
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+          <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-3 text-[11px] font-semibold">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             {error}
           </div>
@@ -155,7 +155,7 @@ function InviteUserModal({
           <button
             type="submit"
             disabled={submitting || !roleId}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-60"
           >
             <UserPlus className="h-4 w-4" />
             {submitting ? t("auth.sending") : t("users.sendInvite")}
@@ -218,7 +218,7 @@ function EditUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
       <form
         onSubmit={handleSubmit}
         className="app-modal my-10 w-full max-w-md space-y-4 p-6"
@@ -243,7 +243,7 @@ function EditUserModal({
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+          <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-3 text-[11px] font-semibold">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             {error}
           </div>
@@ -333,7 +333,7 @@ function EditUserModal({
           <button
             type="submit"
             disabled={submitting || !roleId}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-60"
           >
             <CheckCircle2 className="h-4 w-4" />
             {submitting ? t("common.saving") : t("common.save")}
@@ -430,14 +430,14 @@ function UsersView() {
   return (
     <div className="space-y-4 p-6">
       {successMsg && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800">
+        <div className="flex items-center gap-2 rounded-xl alert-success rounded-xl p-4 text-xs font-bold">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           {successMsg}
         </div>
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800">
+        <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-4 text-xs font-bold">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
           {error}
         </div>
@@ -457,7 +457,7 @@ function UsersView() {
         <button
           type="button"
           onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+          className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-110"
         >
           <UserPlus className="h-4 w-4" />
           {t("users.inviteUser")}
@@ -519,7 +519,7 @@ function UsersView() {
                     <span
                       className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
                         profile.is_active
-                          ? "bg-emerald-50 text-emerald-700"
+                          ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]"
                           : "bg-app-card-hover text-app-muted"
                       }`}
                     >
@@ -534,7 +534,7 @@ function UsersView() {
                       <button
                         type="button"
                         onClick={() => setEditingProfile(profile)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700"
+                        className="inline-flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:brightness-110"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         {t("common.edit")}
@@ -602,7 +602,7 @@ export default function UsersPage() {
 
   return (
     <PageLayout>
-        <div className="border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <div className="border-b border-app app-glass px-6 py-4">
           <h1 className="flex items-center gap-2 text-xl font-bold text-app">
             <UsersIcon className="h-6 w-6 text-app-accent" />
             {t("users.pageTitle")}

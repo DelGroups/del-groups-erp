@@ -83,6 +83,79 @@ CREATE TABLE IF NOT EXISTS consignment_orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS consignment_partners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  company_name TEXT,
+  phone TEXT,
+  address TEXT,
+  voen TEXT,
+  customer_id UUID REFERENCES customers(id),
+  notes TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consignment_dispatches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dispatch_no TEXT NOT NULL UNIQUE,
+  partner_id UUID NOT NULL REFERENCES consignment_partners(id),
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  dispatch_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  status TEXT NOT NULL DEFAULT 'delivered' CHECK (status IN ('pending', 'delivered', 'returned')),
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consignment_inventory (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES consignment_partners(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id),
+  product_code TEXT,
+  product_name TEXT NOT NULL,
+  category TEXT,
+  unit TEXT DEFAULT 'Ədəd',
+  delivered_qty NUMERIC NOT NULL DEFAULT 0,
+  sold_qty NUMERIC NOT NULL DEFAULT 0,
+  returned_qty NUMERIC NOT NULL DEFAULT 0,
+  remaining_qty NUMERIC NOT NULL DEFAULT 0,
+  unit_price NUMERIC NOT NULL DEFAULT 0,
+  last_dispatch_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (partner_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS consignment_monthly_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_no TEXT NOT NULL UNIQUE,
+  partner_id UUID NOT NULL REFERENCES consignment_partners(id),
+  report_period TEXT NOT NULL,
+  sold_items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  total_amount NUMERIC NOT NULL DEFAULT 0,
+  invoice_id UUID,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (partner_id, report_period)
+);
+
+CREATE TABLE IF NOT EXISTS consignment_returns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  return_no TEXT NOT NULL UNIQUE,
+  partner_id UUID NOT NULL REFERENCES consignment_partners(id),
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  return_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Commission rules
 CREATE TABLE IF NOT EXISTS commission_rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -365,3 +438,208 @@ CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles (email);
 -- Responsible person recorded on purchase documents
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS responsible_id UUID;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS responsible_name TEXT;
+
+-- ─── Polywood module (see types/polywood-migration.sql) ─────────────────────
+ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS warehouse_type TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS inventory_mode TEXT NOT NULL DEFAULT 'standard';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS full_sheet_length_m NUMERIC NOT NULL DEFAULT 4;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_sale_mode TEXT;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_length_m NUMERIC;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_cut_details JSONB;
+
+CREATE TABLE IF NOT EXISTS polywood_pieces (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+  length_m NUMERIC NOT NULL CHECK (length_m > 0),
+  piece_type TEXT NOT NULL DEFAULT 'full' CHECK (piece_type IN ('full', 'cut')),
+  status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'sold', 'consumed')),
+  sale_item_id UUID,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_polywood_pieces_product_available
+  ON polywood_pieces (product_id, warehouse_id)
+  WHERE status = 'available';
+
+-- ─── Inventory audit (stock count / انبارگردانی) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS inventory_audits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_number TEXT NOT NULL UNIQUE,
+  audit_type TEXT NOT NULL CHECK (audit_type IN ('standard', 'polywood')),
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  audit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  auditor_name TEXT NOT NULL,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'applied')),
+  created_by UUID REFERENCES auth.users(id),
+  applied_by UUID REFERENCES auth.users(id),
+  applied_at TIMESTAMPTZ,
+  voucher_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_audits_date ON inventory_audits (audit_date DESC);
+CREATE INDEX IF NOT EXISTS idx_inventory_audits_status ON inventory_audits (status);
+
+CREATE TABLE IF NOT EXISTS inventory_audit_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  audit_id UUID NOT NULL REFERENCES inventory_audits(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id),
+  product_code TEXT,
+  product_name TEXT NOT NULL,
+  unit TEXT,
+  system_qty NUMERIC NOT NULL DEFAULT 0,
+  actual_qty NUMERIC NOT NULL DEFAULT 0,
+  variance_qty NUMERIC NOT NULL DEFAULT 0,
+  full_sheet_length_m NUMERIC,
+  system_full_sheet_count INTEGER,
+  system_cut_pieces JSONB,
+  actual_full_sheet_count INTEGER,
+  actual_cut_pieces JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_audit_items_audit_id
+  ON inventory_audit_items (audit_id);
+
+CREATE TABLE IF NOT EXISTS inventory_adjustment_vouchers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  voucher_number TEXT NOT NULL UNIQUE,
+  audit_id UUID NOT NULL REFERENCES inventory_audits(id) ON DELETE CASCADE,
+  audit_type TEXT NOT NULL CHECK (audit_type IN ('standard', 'polywood')),
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  audit_date DATE,
+  auditor_name TEXT,
+  notes TEXT,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  applied_by UUID REFERENCES auth.users(id),
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_adjustment_vouchers_applied_at
+  ON inventory_adjustment_vouchers (applied_at DESC);
+
+-- ─── Manufacturing & Production ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS production_boms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  finished_product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_production_boms_finished_product
+  ON production_boms (finished_product_id);
+
+CREATE TABLE IF NOT EXISTS production_bom_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bom_id UUID NOT NULL REFERENCES production_boms(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id),
+  product_code TEXT,
+  product_name TEXT NOT NULL,
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  quantity NUMERIC NOT NULL DEFAULT 0 CHECK (quantity > 0),
+  unit TEXT DEFAULT 'Ədəd',
+  unit_cost NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS production_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_no TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL CHECK (type IN ('series', 'custom')),
+  custom_workflow TEXT CHECK (custom_workflow IN ('in_house', 'outsourced_cut', 'subcontractor')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'ready', 'delivered')),
+  project_name TEXT NOT NULL,
+  customer_id UUID REFERENCES customers(id),
+  customer_name TEXT,
+  finished_product_id UUID REFERENCES products(id),
+  finished_product_name TEXT,
+  quantity NUMERIC NOT NULL DEFAULT 1,
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  total_project_price NUMERIC NOT NULL DEFAULT 0,
+  installation_fee NUMERIC NOT NULL DEFAULT 0,
+  advance_payment NUMERIC NOT NULL DEFAULT 0,
+  remaining_balance NUMERIC NOT NULL DEFAULT 0,
+  expected_delivery_date DATE,
+  project_scope TEXT,
+  terms TEXT,
+  notes TEXT,
+  materials_allocated BOOLEAN NOT NULL DEFAULT FALSE,
+  finished_goods_posted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS production_materials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id),
+  product_code TEXT,
+  product_name TEXT NOT NULL,
+  warehouse_id UUID REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  unit TEXT DEFAULT 'Ədəd',
+  unit_cost NUMERIC NOT NULL DEFAULT 0,
+  line_cost NUMERIC NOT NULL DEFAULT 0,
+  inventory_mode TEXT DEFAULT 'standard',
+  polywood_sale_mode TEXT,
+  polywood_length_m NUMERIC,
+  polywood_cut_details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS production_outsourcing (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  supplier_id UUID REFERENCES suppliers(id),
+  supplier_name TEXT,
+  material_description TEXT NOT NULL,
+  sqm_quantity NUMERIC NOT NULL DEFAULT 0,
+  price_per_sqm NUMERIC NOT NULL DEFAULT 0,
+  total_cost NUMERIC NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS production_contractors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  contractor_id UUID,
+  contractor_name TEXT NOT NULL,
+  commission_percentage NUMERIC NOT NULL DEFAULT 20,
+  calculated_fee NUMERIC NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS production_contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL UNIQUE REFERENCES production_orders(id) ON DELETE CASCADE,
+  contract_no TEXT NOT NULL UNIQUE,
+  contract_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  customer_id UUID REFERENCES customers(id),
+  customer_name TEXT,
+  project_name TEXT,
+  project_scope TEXT,
+  expected_delivery_date DATE,
+  total_project_price NUMERIC NOT NULL DEFAULT 0,
+  installation_fee NUMERIC NOT NULL DEFAULT 0,
+  advance_payment NUMERIC NOT NULL DEFAULT 0,
+  remaining_balance NUMERIC NOT NULL DEFAULT 0,
+  terms TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

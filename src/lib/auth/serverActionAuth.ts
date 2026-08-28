@@ -1,11 +1,7 @@
-import {
-  hasPermission,
-  isAdminRole,
-  type PermissionKey,
-  type UserProfile,
-} from "@/types/database.types";
+import type { PermissionKey, UserProfile } from "@/types/database.types";
 import type { User } from "@supabase/supabase-js";
 import { getServerAuthContext } from "@/lib/supabaseServer";
+import { userHasPermission } from "@/lib/auth/routePermissions";
 
 export class ActionAuthError extends Error {
   constructor(message: string) {
@@ -32,9 +28,7 @@ export async function requirePermissionAction(
     throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
   }
 
-  const allowed =
-    isAdminRole(profile?.role) ||
-    hasPermission(profile?.role?.permissions, permission);
+  const allowed = userHasPermission(profile, permission);
 
   if (!allowed) {
     throw new ActionAuthError("İcazəniz yoxdur");

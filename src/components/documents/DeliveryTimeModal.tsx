@@ -66,7 +66,7 @@ export default function DeliveryTimeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-900/50 p-4">
+    <div className="fixed inset-0 z-[10001] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md">
         <div className="flex items-start justify-between border-b border-app px-5 py-4">
           <div className="flex items-start gap-3">
@@ -116,7 +116,7 @@ export default function DeliveryTimeModal({
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
             >
               {loading ? t("common.sending") : t("warehouseSend.send")}
             </button>

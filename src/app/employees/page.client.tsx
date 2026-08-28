@@ -218,7 +218,7 @@ export default function EmployeesPage() {
                               type="button"
                               title={t("employees.calculatePayroll")}
                               onClick={() => setPayrollEmployee(emp)}
-                              className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                              className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/10"
                             >
                               <DollarSign className="h-4 w-4" />
                             </button>
@@ -234,7 +234,7 @@ export default function EmployeesPage() {
                               type="button"
                               title={t("common.delete")}
                               onClick={() => void handleDelete(emp)}
-                              className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                              className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/10"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>

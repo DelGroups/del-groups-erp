@@ -80,7 +80,7 @@ export default function DocumentListActions({
           type="button"
           onClick={onPayment}
           disabled={paymentDisabled}
-          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
           title={paymentDisabled ? t("common.noDebt") : resolvedPaymentTitle}
           aria-label={resolvedPaymentTitle}
         >

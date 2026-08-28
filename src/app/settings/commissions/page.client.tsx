@@ -74,7 +74,7 @@ export default function CommissionsSettingsPage() {
   return (
     <PageLayout>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div className="flex items-center space-x-4">
             <Link
               href="/settings"
@@ -94,7 +94,7 @@ export default function CommissionsSettingsPage() {
 
           <Link
   href="/commissions"
-  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
 >
   <Calculator className="w-4 h-4" />
   {t("commissions.pendingCommissions")}
@@ -176,7 +176,7 @@ export default function CommissionsSettingsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
                   {saving ? t("common.saving") : t("commissions.saveRule")}
@@ -229,7 +229,7 @@ export default function CommissionsSettingsPage() {
                       <td className="px-6 py-3.5 text-right">
                         <button
                           onClick={() => handleDelete(rule.id)}
-                          className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-rose-500/10 text-rose-600 rounded-lg transition-colors"
                           title={t("common.delete")}
                         >
                           <Trash2 className="w-4 h-4" />

@@ -101,7 +101,7 @@ export default function ExpensesPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app bg-app-surface px-6 py-4 backdrop-blur-md">
+        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
           <div>
             <h2 className="text-xl font-bold text-app">{t("expenses.pageTitle")}</h2>
             <p className="text-sm text-app-muted">{t("expenses.pageDescription")}</p>

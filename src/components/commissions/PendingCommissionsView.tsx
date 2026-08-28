@@ -82,7 +82,7 @@ export default function PendingCommissionsView({
           key={summary.employee_id}
           className="app-table-wrap"
         >
-          <div className="flex flex-col justify-between gap-3 border-b border-app bg-slate-900 px-5 py-4 text-white md:flex-row md:items-center">
+          <div className="flex flex-col justify-between gap-3 border-b border-app app-toolbar px-5 py-4 md:flex-row md:items-center">
             <div>
               <h3 className="font-bold">{summary.employee_name}</h3>
               <p className="text-[11px] text-app-muted">

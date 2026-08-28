@@ -230,7 +230,7 @@ export default function UniversalInvoiceForm({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 app-scrim z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-app-card-hover rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border border-app p-6 space-y-4">
         
         {/* Header Modal */}
@@ -272,7 +272,7 @@ export default function UniversalInvoiceForm({
                 <input type="text" placeholder="Ad / Şirkət *" value={newCustomerData.full_name} onChange={(e) => setNewCustomerData({ ...newCustomerData, full_name: e.target.value })} className="w-full p-1.5 border rounded text-xs" />
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setShowAddCustomer(false)} className="px-2 py-1 text-app-muted bg-app-card border rounded">Ləğv et</button>
-                  <button type="button" onClick={handleSaveQuickCustomer} className="px-3 py-1 bg-blue-600 text-white rounded font-bold">Yadda Saxla</button>
+                  <button type="button" onClick={handleSaveQuickCustomer} className="px-3 py-1 bg-[image:var(--app-gradient)] text-white rounded font-bold">Yadda Saxla</button>
                 </div>
               </div>
             )}
@@ -286,9 +286,9 @@ export default function UniversalInvoiceForm({
 
         {/* Product Table */}
         <div className="bg-app-card rounded-xl shadow-sm border border-app overflow-hidden">
-          <div className="bg-slate-900 text-white px-4 py-2.5 flex justify-between items-center text-xs font-bold">
+          <div className="app-toolbar px-4 py-2.5 flex justify-between items-center text-xs font-bold">
             <span>FAKTURA QALIBI VƏ MƏHSUL SİYAHISI</span>
-            <button onClick={addRow} className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1">
+            <button onClick={addRow} className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1">
               <Plus className="w-3.5 h-3.5" /> Sətir Əlavə Et
             </button>
           </div>
@@ -354,14 +354,14 @@ export default function UniversalInvoiceForm({
             ))}
           </div>
 
-          <div className="bg-slate-900 text-white p-4 rounded-xl shadow-sm text-xs space-y-3 flex flex-col justify-between">
-            <div className="flex justify-between items-center text-sm font-bold border-b border-slate-800 pb-2">
+          <div className="app-toolbar p-4 rounded-xl shadow-sm text-xs space-y-3 flex flex-col justify-between">
+            <div className="flex justify-between items-center text-sm font-bold border-b border-white/20 pb-2">
               <span>YEKUN MƏBLƏĞ:</span>
               <span className="text-lg text-emerald-400 font-mono">{grandTotal.toFixed(2)} AZN</span>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Ləğv et</button>
-              <button type="button" onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg flex items-center gap-1">
+              <button type="button" onClick={onClose} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20">Ləğv et</button>
+              <button type="button" onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-[image:var(--app-gradient)] hover:brightness-110 text-white font-bold rounded-lg flex items-center gap-1">
                 <Save className="w-4 h-4" /> {saving ? "Yadda saxlanılır..." : "Təsdiqlə və Yadda Saxla"}
               </button>
             </div>

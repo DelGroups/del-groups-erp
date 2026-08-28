@@ -126,7 +126,7 @@ export default function WarehouseSlipsPage() {
               onClick={() => setTab(t.id)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 tab === t.id
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-[image:var(--app-gradient)] text-white"
                   : "app-card text-app-muted hover:bg-app-card-hover"
               }`}
             >
@@ -144,7 +144,7 @@ export default function WarehouseSlipsPage() {
         />
 
         {loadError && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+          <div className="rounded-xl alert-danger rounded-xl px-4 py-3 text-xs">
             {loadError}
           </div>
         )}
@@ -212,7 +212,7 @@ export default function WarehouseSlipsPage() {
                                 title={t("warehouseSlips.reject")}
                                 disabled={processingId === slip.id}
                                 onClick={() => void handleReject(slip)}
-                                className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/10 disabled:opacity-50"
                               >
                                 <XCircle className="h-4 w-4" />
                               </button>

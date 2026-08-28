@@ -212,12 +212,12 @@ export default function DamagedGoodsForm({
       </div>
 
       <div className="app-table-wrap">
-        <div className="flex items-center justify-between bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">
+        <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
           <span>{t("forms.damagedProducts")}</span>
           <button
             type="button"
             onClick={addRow}
-            className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[11px] hover:bg-blue-700"
+            className="flex items-center gap-1 rounded bg-[image:var(--app-gradient)] px-2.5 py-1 text-[11px] hover:brightness-110"
           >
             <Plus className="h-3.5 w-3.5" />
             {t("forms.addRow")}
@@ -324,7 +324,7 @@ export default function DamagedGoodsForm({
           type="button"
           disabled={saving}
           onClick={handleSubmit}
-          className="flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {saving ? t("common.saving") : isEdit ? t("forms.saveChanges") : t("forms.confirmAndSave")}

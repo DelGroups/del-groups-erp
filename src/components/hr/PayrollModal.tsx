@@ -80,7 +80,7 @@ export default function PayrollModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
       <div className="app-modal my-6 w-full max-w-2xl overflow-hidden">
         <div className="flex items-center justify-between border-b border-app bg-app-card-hover px-5 py-4">
           <div>
@@ -107,13 +107,13 @@ export default function PayrollModal({
                 +{commissionTotal.toFixed(2)} {t("common.currency")}
               </p>
             </div>
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+            <div className="rounded-xl alert-danger rounded-xl p-3">
               <p className="text-[10px] font-bold uppercase text-rose-700">{t("employees.deduction")}</p>
               <p className="font-mono text-sm font-bold text-rose-700">
                 −{deductionNum.toFixed(2)} {t("common.currency")}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-white">
+            <div className="rounded-xl border border-app app-toolbar p-3">
               <p className="text-[10px] font-bold uppercase opacity-70">{t("modals.payroll.netPay")}</p>
               <p className="font-mono text-sm font-bold">{netPay.toFixed(2)} {t("common.currency")}</p>
             </div>

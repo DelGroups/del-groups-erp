@@ -67,7 +67,7 @@ export default function SettingsTabs({ activeTab }: { activeTab: string }) {
   const tabs = SETTINGS_TABS.filter((tab) => can(tab.permission));
 
   return (
-    <div className="flex flex-wrap gap-1 border-b border-app bg-app-surface px-6 backdrop-blur-md">
+    <div className="app-glass flex flex-wrap gap-1 border-b border-app px-6">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const active = tab.id === activeTab;

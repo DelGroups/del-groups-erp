@@ -212,7 +212,7 @@ export default function PurchasesPage() {
         </main>
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
           <div className="my-6 w-full max-w-5xl">
             <PurchaseForm
               key={editingPurchase?.id || "new"}

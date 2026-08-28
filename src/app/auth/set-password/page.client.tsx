@@ -113,7 +113,7 @@ export default function SetPasswordPage() {
           <p className="text-[11px] text-app-muted">{t("auth.invalidInviteLinkBody")}</p>
           <Link
             href="/login"
-            className="inline-block rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            className="inline-block rounded-xl bg-[image:var(--app-gradient)] px-5 py-2 text-xs font-semibold text-white hover:brightness-110"
           >
             {t("auth.loginPage")}
           </Link>
@@ -137,7 +137,7 @@ export default function SetPasswordPage() {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+          <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-3 text-[11px] font-semibold">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             {error}
           </div>

@@ -23,6 +23,18 @@ export const BACKUP_TABLES = [
   "warehouse_slips",
   "inventory_writeoffs",
   "consignment_orders",
+  "consignment_partners",
+  "consignment_dispatches",
+  "consignment_inventory",
+  "consignment_monthly_reports",
+  "consignment_returns",
+  "production_boms",
+  "production_bom_items",
+  "production_orders",
+  "production_materials",
+  "production_outsourcing",
+  "production_contractors",
+  "production_contracts",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLES)[number];

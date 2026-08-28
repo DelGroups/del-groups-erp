@@ -32,8 +32,11 @@ function readStoredTheme(): ThemeId {
 }
 
 function applyThemeToDocument(theme: ThemeId) {
-  document.documentElement.setAttribute("data-theme", theme);
-  document.documentElement.classList.add("theme-transition");
+  const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
+  root.style.colorScheme = theme === "light" ? "light" : "dark";
+  root.classList.add("theme-transition");
+  window.setTimeout(() => root.classList.remove("theme-transition"), 320);
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {

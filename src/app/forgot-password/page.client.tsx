@@ -48,7 +48,7 @@ function ForgotPasswordForm() {
       className="w-full max-w-sm space-y-4 rounded-2xl app-card p-7 shadow-sm"
     >
       <div className="space-y-1 text-center">
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[image:var(--app-gradient)]">
           <Mail className="h-5 w-5 text-white" />
         </div>
         <h1 className="pt-2 text-base font-bold text-app">{t("auth.forgotPassword")}</h1>
@@ -56,14 +56,14 @@ function ForgotPasswordForm() {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] font-semibold text-rose-800">
+        <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-3 text-[11px] font-semibold">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] font-semibold text-emerald-800">
+        <div className="flex items-start gap-2 rounded-xl alert-success rounded-xl p-3 text-[11px] font-semibold">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           {t("auth.resetLinkSent")}
         </div>
@@ -89,7 +89,7 @@ function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={submitting || success}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--app-gradient)] py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-60"
       >
         {submitting ? t("auth.sending") : t("auth.sendResetLink")}
       </button>
