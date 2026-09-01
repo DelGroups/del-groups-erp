@@ -28,6 +28,9 @@ import type {
   ConsignmentMonthlyReport,
 } from "@/lib/consignment/types";
 import { Handshake, Printer, FileSpreadsheet, Plus } from "lucide-react";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 type TabId = "partners" | "dispatch" | "inventory" | "settlement" | "alerts";
 
@@ -46,6 +49,7 @@ export default function ConsignmentPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_consignments");
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [tab, setTab] = useState<TabId>("inventory");
   const [lookups, setLookups] = useState<ConsignmentLookups | null>(null);
   const [dispatches, setDispatches] = useState<ConsignmentDispatch[]>([]);
@@ -149,7 +153,7 @@ export default function ConsignmentPage() {
     });
     setSaving(false);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
     setPartnerName("");
@@ -186,11 +190,11 @@ export default function ConsignmentPage() {
     });
     setSaving(false);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
     if (!result.data) {
-      alert(t("common.error"));
+      showError(t("common.error"));
       return;
     }
     setDispatchLines([{ product_id: "", quantity: "1" }]);
@@ -213,7 +217,7 @@ export default function ConsignmentPage() {
     });
     setSaving(false);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
     setReturnQtyByProduct({});
@@ -236,11 +240,11 @@ export default function ConsignmentPage() {
     });
     setSaving(false);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
     if (!result.data) {
-      alert(t("common.error"));
+      showError(t("common.error"));
       return;
     }
     setSoldQtyByProduct({});
@@ -775,6 +779,7 @@ export default function ConsignmentPage() {
           <ConsignmentSettlementPrintTemplate data={printReport} companyName={companyName} />
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

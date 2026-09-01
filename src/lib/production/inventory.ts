@@ -13,25 +13,7 @@ export async function fetchProductById(admin: DbClient, productId: string): Prom
   return data as Product;
 }
 
-export async function decrementStandardStock(
-  admin: DbClient,
-  productId: string,
-  quantity: number
-): Promise<{ ok: boolean; error?: string }> {
-  const product = await fetchProductById(admin, productId);
-  if (!product) return { ok: false, error: "Məhsul tapılmadı" };
-  const current = Number(product.stock) || 0;
-  if (current + 1e-9 < quantity) {
-    return { ok: false, error: `${product.name}: stok kifayət etmir (mövcud: ${current})` };
-  }
-  const { error } = await admin
-    .from("products")
-    .update({ stock: current - quantity })
-    .eq("id", productId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
-}
-
+/** Used by consignment returns — not production workflow (production uses event RPCs). */
 export async function incrementStandardStock(
   admin: DbClient,
   productId: string,
@@ -175,7 +157,8 @@ export async function allocatePolywoodForProduction(
   }
 }
 
-export async function allocateProductionMaterial(
+/** Polywood piece allocation only — standard stock moves via production event RPCs. */
+export async function allocateProductionMaterialPolywood(
   admin: DbClient,
   input: {
     productId: string;
@@ -187,42 +170,37 @@ export async function allocateProductionMaterial(
 ): Promise<{
   ok: boolean;
   error?: string;
-  inventoryMode: string;
   polywoodLengthM?: number;
   cutDetails?: PolywoodCutResult;
 }> {
   const product = await fetchProductById(admin, input.productId);
-  if (!product) return { ok: false, error: "Məhsul tapılmadı", inventoryMode: "standard" };
+  if (!product) return { ok: false, error: "Məhsul tapılmadı" };
 
-  if (product.inventory_mode === POLYWOOD_INVENTORY_MODE) {
-    if (!input.warehouseId) {
-      return { ok: false, error: "Polywood üçün anbar seçin", inventoryMode: POLYWOOD_INVENTORY_MODE };
-    }
-    const mode = input.polywoodMode || "linear_m";
-    const cut = await allocatePolywoodForProduction(admin, {
-      productId: input.productId,
-      warehouseId: input.warehouseId,
-      referenceId: input.referenceId,
-      mode,
-      quantity: input.quantity,
-      fullSheetLengthM: Number(product.full_sheet_length_m) || DEFAULT_FULL_SHEET_LENGTH_M,
-    });
-    if (!cut.ok) {
-      return {
-        ok: false,
-        error: cut.error || "Polywood kəsimi alınmadı",
-        inventoryMode: POLYWOOD_INVENTORY_MODE,
-      };
-    }
-    return {
-      ok: true,
-      inventoryMode: POLYWOOD_INVENTORY_MODE,
-      polywoodLengthM: cut.usedLengthM,
-      cutDetails: cut.cutResult,
-    };
+  if (product.inventory_mode !== POLYWOOD_INVENTORY_MODE) {
+    return { ok: false, error: "Polywood material deyil" };
   }
 
-  const result = await decrementStandardStock(admin, input.productId, input.quantity);
-  if (!result.ok) return { ok: false, error: result.error, inventoryMode: "standard" };
-  return { ok: true, inventoryMode: "standard" };
+  if (!input.warehouseId) {
+    return { ok: false, error: "Polywood üçün anbar seçin" };
+  }
+
+  const mode = input.polywoodMode || "linear_m";
+  const cut = await allocatePolywoodForProduction(admin, {
+    productId: input.productId,
+    warehouseId: input.warehouseId,
+    referenceId: input.referenceId,
+    mode,
+    quantity: input.quantity,
+    fullSheetLengthM: Number(product.full_sheet_length_m) || DEFAULT_FULL_SHEET_LENGTH_M,
+  });
+
+  if (!cut.ok) {
+    return { ok: false, error: cut.error || "Polywood kəsimi alınmadı" };
+  }
+
+  return {
+    ok: true,
+    polywoodLengthM: cut.usedLengthM,
+    cutDetails: cut.cutResult,
+  };
 }

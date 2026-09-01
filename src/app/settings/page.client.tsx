@@ -7,6 +7,8 @@ import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import {
   Settings, 
   Building2, 
@@ -26,6 +28,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [recordId, setRecordId] = useState<string | null>(null);
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   const [companyName, setCompanyName] = useState("Del Groups MMC");
   const [voen, setVoen] = useState("");
@@ -98,7 +101,7 @@ export default function SettingsPage() {
       setTimeout(() => setSuccessMsg(""), 4000);
       fetchSettings();
     } else {
-      alert(t("common.errorOccurred", { message: error.message }));
+      showError(t("common.errorOccurred", { message: error.message }));
     }
     setSaving(false);
   };
@@ -307,6 +310,7 @@ export default function SettingsPage() {
           )}
         </div>
         </PermissionGuard>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

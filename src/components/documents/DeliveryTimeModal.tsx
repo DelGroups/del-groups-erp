@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { CalendarClock, X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 interface DeliveryTimeModalProps {
   isOpen: boolean;
@@ -44,6 +46,7 @@ export default function DeliveryTimeModal({
   loading = false,
 }: DeliveryTimeModalProps) {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const [localValue, setLocalValue] = useState(getDefaultDeliveryDueLocal);
 
   useEffect(() => {
@@ -59,13 +62,14 @@ export default function DeliveryTimeModal({
     if (!localValue) return;
     const parsed = new Date(localValue);
     if (Number.isNaN(parsed.getTime())) {
-      alert(t("modals.deliveryTime.invalidDateTime"));
+      showToastError(t("modals.deliveryTime.invalidDateTime"));
       return;
     }
     onConfirm(parsed.toISOString());
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[10001] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md">
         <div className="flex items-start justify-between border-b border-app px-5 py-4">
@@ -124,5 +128,7 @@ export default function DeliveryTimeModal({
         </form>
       </div>
     </div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

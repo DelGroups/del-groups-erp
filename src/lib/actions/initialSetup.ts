@@ -59,7 +59,7 @@ export async function saveInitialBalancesAction(
 ): Promise<SetupActionResult<{ updated: number }>> {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const client = await createSupabaseServerClient();
     let updated = 0;
 
     for (const item of balances) {
@@ -71,10 +71,10 @@ export async function saveInitialBalancesAction(
         return { success: false, error: "Balance must be zero or positive" };
       }
 
-      const { error } = await admin
-        .from("accounts")
-        .update({ balance })
-        .eq("id", item.accountId);
+      const { error } = await client.rpc("set_account_opening_balance_atomic", {
+        p_account_id: item.accountId,
+        p_target_balance: balance,
+      });
 
       if (error) return { success: false, error: error.message };
       updated += 1;
@@ -108,18 +108,19 @@ export async function createInitialAccountAction(
       return { success: false, error: "Balance must be zero or positive" };
     }
 
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin
-      .from("accounts")
-      .insert([{ code, name, type, balance }])
-      .select("id")
-      .single();
+    const client = await createSupabaseServerClient();
+    const { data, error } = await client.rpc("create_account_atomic", {
+      p_code: code,
+      p_name: name,
+      p_type: type,
+      p_opening_balance: balance,
+    });
 
     if (error || !data) {
       return { success: false, error: error?.message || "Account not created" };
     }
 
-    return { success: true, data: { accountId: data.id as string } };
+    return { success: true, data: { accountId: data as string } };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };

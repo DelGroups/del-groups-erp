@@ -20,7 +20,7 @@ export interface CreateWarehouseSlipPayload {
   type: WarehouseSlipType;
   sourceDocumentId: string;
   sourceDocumentNo: string;
-  sourceType: "purchase" | "sale" | "writeoff";
+  sourceType: "purchase" | "sale" | "writeoff" | "production";
   warehouseId?: string | null;
   warehouseName?: string | null;
   items: WarehouseSlipItem[];

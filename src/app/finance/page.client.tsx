@@ -14,8 +14,21 @@ interface FinanceTransaction {
   amount: number;
   category: string;
   notes: string | null;
+  source_type: string | null;
+  source_id: string | null;
   created_at: string;
   accounts: { name: string } | null;
+}
+
+function formatFinanceSourceLabel(sourceType: string | null, t: (key: string) => string): string {
+  if (!sourceType) return "-";
+  const map: Record<string, string> = {
+    sale: t("finance.sourceSale"),
+    purchase: t("finance.sourcePurchase"),
+    production: t("finance.sourceProduction"),
+    cash_transaction: t("finance.sourceCash"),
+  };
+  return map[sourceType] || sourceType;
 }
 
 export default function FinancePage() {
@@ -28,7 +41,7 @@ export default function FinancePage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("transactions")
-      .select("id, type, amount, category, notes, created_at, accounts(name)")
+      .select("id, type, amount, category, notes, source_type, source_id, created_at, accounts(name)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -48,6 +61,7 @@ export default function FinancePage() {
     (tx) =>
       (tx.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (tx.notes || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tx.source_type || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (tx.accounts?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (tx.type || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -115,6 +129,7 @@ export default function FinancePage() {
                       <th className="px-4 py-3">{t("common.type")}</th>
                       <th className="px-4 py-3">{t("common.category")}</th>
                       <th className="px-4 py-3">{t("common.account")}</th>
+                      <th className="px-4 py-3">Mənbə</th>
                       <th className="px-4 py-3">{t("finance.note")}</th>
                       <th className="px-4 py-3 text-right">{t("common.amount")}</th>
                     </tr>
@@ -145,6 +160,14 @@ export default function FinancePage() {
                           </td>
                           <td className="px-4 py-3 font-semibold">{tx.category || "-"}</td>
                           <td className="px-4 py-3">{tx.accounts?.name || "-"}</td>
+                          <td className="px-4 py-3 font-mono text-[10px] text-app-muted">
+                            {formatFinanceSourceLabel(tx.source_type, t)}
+                            {tx.source_id ? (
+                              <span className="block truncate max-w-[8rem]" title={tx.source_id}>
+                                {tx.source_id.slice(0, 8)}…
+                              </span>
+                            ) : null}
+                          </td>
                           <td className="max-w-xs truncate px-4 py-3 text-app-muted">
                             {tx.notes || "-"}
                           </td>

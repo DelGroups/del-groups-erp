@@ -11,7 +11,7 @@ import SalesViewModal from "@/components/sales/SalesViewModal";
 import SalesPrintTemplate from "@/components/sales/SalesPrintTemplate";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { fetchSaleById, fetchSalesList, type SaleRecord } from "@/lib/sales/fetchSales";
-import { recordSalePayment } from "@/lib/sales/recordSalePayment";
+import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -21,7 +21,8 @@ import WarehouseSendBadge from "@/components/documents/WarehouseSendBadge";
 import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
-import { FileSpreadsheet, ShoppingCart } from "lucide-react";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 
 function getSaleRemaining(sale: SaleRecord): number {
   const stored = Number(sale.remaining_balance || 0);
@@ -119,9 +120,10 @@ export default function SalesListPage() {
             <>
               <Link
                 href="/sales/polywood/new"
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md ring-2 ring-emerald-500/30 hover:bg-emerald-700"
               >
-                {t("sales.polywoodInvoice")}
+                <Plus className="h-4 w-4" />
+                {t("sales.polywoodCreateButton")}
               </Link>
               <button
                 type="button"
@@ -263,7 +265,7 @@ export default function SalesListPage() {
           paidAmount={Number(paymentSale.paid_amount || 0)}
           remainingAmount={getSaleRemaining(paymentSale)}
           onSubmit={async (payload) => {
-            const result = await recordSalePayment({
+            const result = await recordSalePaymentAction({
               saleId: paymentSale.id,
               docNo: paymentSale.doc_no || "",
               customerId: paymentSale.customer_id,
@@ -310,6 +312,7 @@ export default function SalesListPage() {
         onConfirm={(iso) => void warehouseSend.confirmDelivery(iso)}
         loading={!!warehouseSend.sendingId}
       />
+      <ToastMessage message={warehouseSend.toastMessage} variant={warehouseSend.toastVariant} />
     </PageLayout>
   );
 }

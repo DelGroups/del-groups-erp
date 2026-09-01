@@ -1,3 +1,9 @@
+import { postCashTransaction, validateCashPaymentsRequireAccount } from "@/lib/finance/accountLedger";
+import { purchaseReceiptIdempotencyKey } from "@/lib/finance/erpEvents";
+import {
+  documentExpensesToRpcPayload,
+  type DocumentAdditionalExpense,
+} from "@/lib/forms/documentExpenses";
 import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
@@ -7,12 +13,58 @@ export interface SubmitPurchasePayload {
   items: PurchaseLineItem[];
   invoiceNumber: string;
   payments?: PurchasePaymentRow[];
+  additionalExpenses?: DocumentAdditionalExpense[];
 }
 
 export interface SubmitPurchaseResult {
   success: boolean;
   error?: string;
   purchaseId?: string;
+}
+
+type ProcessPurchaseReceiptEventResponse = {
+  purchase_id?: string;
+  invoice_number?: string;
+  journal_entry_id?: string;
+  event_id?: string;
+  success?: boolean;
+  error?: string;
+};
+
+function buildCreatePurchasePayload(payload: SubmitPurchasePayload, validItems: PurchaseLineItem[]) {
+  return {
+    idempotency_key: purchaseReceiptIdempotencyKey(payload.invoiceNumber),
+    invoice_number: payload.invoiceNumber,
+    header: {
+      invoice_number: payload.header.invoice_number || payload.invoiceNumber,
+      supplier_id: payload.header.supplier_id,
+      warehouse_id: payload.header.warehouse_id ?? null,
+      doc_date: payload.header.doc_date ?? null,
+      responsible_id: payload.header.responsible_id ?? null,
+      responsible_name: payload.header.responsible_name ?? null,
+      total_amount: payload.header.total_amount,
+      paid_amount: payload.header.paid_amount,
+      debt_amount: payload.header.debt_amount,
+      status: payload.header.status ?? null,
+      notes: payload.header.notes ?? null,
+    },
+    items: validItems.map((item) => ({
+      product_id: item.product_id,
+      product_code: item.product_code || null,
+      product_name: item.product_name || null,
+      quantity: item.quantity,
+      unit: item.unit || "Ədəd",
+      unit_price: item.unit_price,
+      total_price: item.total,
+    })),
+    payments: (payload.payments || []).map((pay) => ({
+      account_id: pay.account_id || null,
+      amount: pay.amount,
+      payment_date: pay.payment_date || null,
+      note: pay.note || "",
+    })),
+    additional_expenses: documentExpensesToRpcPayload(payload.additionalExpenses || []),
+  };
 }
 
 async function fetchProductStock(productId: string): Promise<number | null> {
@@ -59,54 +111,36 @@ async function decreaseProductStock(
   return { ok: true };
 }
 
-async function deletePurchaseCascade(purchaseId: string): Promise<void> {
-  await supabase.from("purchase_items").delete().eq("purchase_id", purchaseId);
-  await supabase.from("purchases").delete().eq("id", purchaseId);
-}
-
-async function processPurchasePayments(
+async function processPurchasePaymentsOnEdit(
   payments: PurchasePaymentRow[],
-  invoiceNumber: string
+  invoiceNumber: string,
+  purchaseId: string
 ): Promise<{ ok: boolean; error?: string }> {
   const validPayments = payments.filter((p) => p.account_id && p.amount > 0);
+  const accountCheck = validateCashPaymentsRequireAccount(validPayments);
+  if (!accountCheck.ok) return accountCheck;
 
   for (const pay of validPayments) {
-    const { data: account, error: accErr } = await supabase
-      .from("accounts")
-      .select("id, name, balance")
-      .eq("id", pay.account_id)
-      .single();
-
-    if (accErr || !account) {
-      return { ok: false, error: "Hesab tapılmadı" };
-    }
-
     const noteText = [
       pay.payment_date,
       pay.note.trim() || `Alış fakturası ${invoiceNumber}`,
-      account.name,
     ]
       .filter(Boolean)
       .join(" — ");
 
-    const { error: txError } = await supabase.from("transactions").insert([
-      {
-        account_id: pay.account_id,
-        type: "Məxaric",
-        amount: pay.amount,
-        category: "Alış Ödənişi",
-        notes: noteText,
-      },
-    ]);
+    const posted = await postCashTransaction({
+      accountId: pay.account_id,
+      type: "Məxaric",
+      amount: pay.amount,
+      category: "Alış Ödənişi",
+      notes: noteText,
+      sourceType: "purchase",
+      sourceId: purchaseId,
+    });
 
-    if (txError) return { ok: false, error: txError.message };
-
-    const { error: balErr } = await supabase
-      .from("accounts")
-      .update({ balance: (Number(account.balance) || 0) - pay.amount })
-      .eq("id", pay.account_id);
-
-    if (balErr) return { ok: false, error: balErr.message };
+    if (!posted.success) {
+      return { ok: false, error: posted.error || "Ödəniş qeydə alınmadı" };
+    }
   }
 
   return { ok: true };
@@ -139,86 +173,33 @@ export async function submitPurchase(
     return { success: false, error: "Ən azı bir məhsul tələb olunur" };
   }
 
-  const { data: purchaseRow, error: purchaseError } = await supabase
-    .from("purchases")
-    .insert([payload.header])
-    .select("id")
-    .single();
-
-  if (purchaseError || !purchaseRow) {
-    return { success: false, error: purchaseError?.message || "Alış qeydə alınmadı" };
+  const paymentCheck = validateCashPaymentsRequireAccount(payload.payments || []);
+  if (!paymentCheck.ok) {
+    return { success: false, error: paymentCheck.error };
   }
 
-  const purchaseId = purchaseRow.id as string;
-  const lineRows = purchaseLineItemsToRows(purchaseId, validItems);
+  const { data, error } = await supabase.rpc("process_purchase_receipt_event", {
+    p_payload: buildCreatePurchasePayload(payload, validItems),
+  });
 
-  const { error: itemsError } = await supabase.from("purchase_items").insert(lineRows);
-  if (itemsError) {
-    await deletePurchaseCascade(purchaseId);
-    return { success: false, error: itemsError.message };
+  if (error) {
+    return { success: false, error: error.message };
   }
 
-  const stockRollbacks: {
-    productId: string;
-    quantity: number;
-    previousStock: number;
-    previousBuyPrice: number;
-  }[] = [];
-
-  for (const item of validItems) {
-    const result = await increaseProductStock(
-      item.product_id,
-      item.quantity,
-      item.unit_price
-    );
-    if (!result.ok) {
-      for (const rb of stockRollbacks.reverse()) {
-        await supabase
-          .from("products")
-          .update({ stock: rb.previousStock, buy_price: rb.previousBuyPrice })
-          .eq("id", rb.productId);
-      }
-      await deletePurchaseCascade(purchaseId);
-      return { success: false, error: `${item.product_name}: ${result.error}` };
-    }
-    stockRollbacks.push({
-      productId: item.product_id,
-      quantity: item.quantity,
-      previousStock: result.previous!,
-      previousBuyPrice: item.unit_price,
-    });
+  const result = (data ?? null) as ProcessPurchaseReceiptEventResponse | null;
+  if (result && result.success === false && result.error) {
+    return { success: false, error: String(result.error) };
   }
 
-  if (payload.header.debt_amount > 0) {
-    const balResult = await adjustSupplierBalance(
-      payload.header.supplier_id,
-      payload.header.debt_amount
-    );
-    if (!balResult.ok) {
-      for (const rb of stockRollbacks.reverse()) {
-        await supabase
-          .from("products")
-          .update({ stock: rb.previousStock })
-          .eq("id", rb.productId);
-      }
-      await deletePurchaseCascade(purchaseId);
-      return { success: false, error: balResult.error };
-    }
-  }
-
-  if (payload.payments?.length) {
-    const payResult = await processPurchasePayments(
-      payload.payments,
-      payload.invoiceNumber
-    );
-    if (!payResult.ok) {
-      return { success: false, error: payResult.error };
-    }
+  const purchaseId = result?.purchase_id ? String(result.purchase_id) : "";
+  if (!purchaseId) {
+    return { success: false, error: "Alış RPC cavab vermədi (purchase_id yoxdur)" };
   }
 
   return { success: true, purchaseId };
 }
 
+/** Edit flow — still multi-step until update_purchase_atomic is implemented. */
 export async function updatePurchase(
   purchaseId: string,
   payload: SubmitPurchasePayload,
@@ -290,15 +271,21 @@ export async function updatePurchase(
       debt_amount: payload.header.debt_amount,
       status: payload.header.status,
       notes: payload.header.notes,
+      additional_expenses: documentExpensesToRpcPayload(payload.additionalExpenses || []),
+      additional_expenses_total: (payload.additionalExpenses || []).reduce(
+        (sum, row) => sum + (Number(row.amount) || 0),
+        0
+      ),
     })
     .eq("id", purchaseId);
 
   if (updErr) return { success: false, error: updErr.message };
 
   if (payload.payments?.length) {
-    const payResult = await processPurchasePayments(
+    const payResult = await processPurchasePaymentsOnEdit(
       payload.payments,
-      payload.invoiceNumber
+      payload.invoiceNumber,
+      purchaseId
     );
     if (!payResult.ok) return { success: false, error: payResult.error };
   }

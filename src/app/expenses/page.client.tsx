@@ -6,6 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { createExpenseAction } from "@/lib/actions/finance";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import {
   RefreshCw,
   Plus,
@@ -43,6 +46,7 @@ export default function ExpensesPage() {
   });
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   useEffect(() => {
     fetchExpensesAndAccounts();
@@ -65,17 +69,17 @@ export default function ExpensesPage() {
   const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canManageExpenses) {
-      alert(t("expenses.noPermission"));
+      showError(t("expenses.noPermission"));
       return;
     }
     if (!formData.account_id) {
-      alert(t("expenses.selectAccountAlert"));
+      showError(t("expenses.selectAccountAlert"));
       return;
     }
 
     const numericAmount = parseFloat(formData.amount) || 0;
     if (numericAmount <= 0) {
-      alert(t("expenses.invalidAmount"));
+      showError(t("expenses.invalidAmount"));
       return;
     }
 
@@ -87,11 +91,11 @@ export default function ExpensesPage() {
     });
 
     if (!result.success) {
-      alert(t("common.error") + ": " + result.error);
+      showError(t("common.error") + ": " + formatRpcError(result.error, t));
       return;
     }
 
-    alert(t("expenses.successRecorded"));
+    showSuccess(t("expenses.successRecorded"));
     setIsModalOpen(false);
     setFormData({ category: "İcarə", amount: "0.00", account_id: "", notes: "" });
     fetchExpensesAndAccounts();
@@ -253,6 +257,7 @@ export default function ExpensesPage() {
           </div>
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

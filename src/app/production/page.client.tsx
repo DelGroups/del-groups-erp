@@ -1,32 +1,34 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Factory, LayoutGrid, List, RefreshCw } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
+import ProductionOrderModal from "@/components/production/ProductionOrderModal";
+import ProductionProfitabilityCard, {
+  ProductionHealthChip,
+  ProductionStatusChip,
+} from "@/components/production/ProductionProfitabilityCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
-  createProductionOrderAction,
   fetchProductionLookupsAction,
   listProductionOrdersAction,
   type ProductionLookups,
 } from "@/lib/actions/production";
+import { productionModelLabel } from "@/lib/production/models";
 import {
+  PRODUCTION_STATUSES,
   calcProductionCosting,
-  type CustomWorkflow,
+  isMissingProductionSchema,
+  normalizeProductionStatus,
   type ProductionOrder,
-  type ProductionOrderType,
   type ProductionStatus,
 } from "@/lib/production/types";
-import { Factory, LayoutGrid, List, RefreshCw } from "lucide-react";
 
-const STATUSES: ProductionStatus[] = ["draft", "in_progress", "ready", "delivered"];
-
-function customerLabel(c: { full_name?: string | null; name?: string | null; company_name?: string | null }) {
-  return c.full_name || c.name || c.company_name || "";
-}
+const STATUSES: ProductionStatus[] = [...PRODUCTION_STATUSES];
 
 export default function ProductionBoardPage() {
   const { t } = useI18n();
@@ -39,104 +41,70 @@ export default function ProductionBoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [showCreate, setShowCreate] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [type, setType] = useState<ProductionOrderType>("custom");
-  const [workflow, setWorkflow] = useState<CustomWorkflow>("in_house");
-  const [projectName, setProjectName] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [finishedProductId, setFinishedProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [warehouseId, setWarehouseId] = useState("");
-  const [totalPrice, setTotalPrice] = useState("0");
-  const [installFee, setInstallFee] = useState("0");
-  const [advance, setAdvance] = useState("0");
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [scope, setScope] = useState("");
-  const [notes, setNotes] = useState("");
+  const [loadingLookups, setLoadingLookups] = useState(false);
+  const initialLoadStarted = useRef(false);
+  const loadErrorLabel = t("production.loadError");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [ordersRes, lookupsRes] = await Promise.all([
-      listProductionOrdersAction(),
-      fetchProductionLookupsAction(),
-    ]);
-    if (!ordersRes.success) setError(ordersRes.error || t("production.loadError"));
-    else setOrders(ordersRes.data || []);
-    if (lookupsRes.success && lookupsRes.data) setLookups(lookupsRes.data);
+    const ordersResult = await listProductionOrdersAction();
+    if (!ordersResult.success) setError(ordersResult.error || loadErrorLabel);
+    else setOrders(ordersResult.data || []);
     setLoading(false);
-  }, [t]);
+  }, [loadErrorLabel]);
+
+  const loadRef = useRef(load);
 
   useEffect(() => {
-    load();
+    loadRef.current = load;
   }, [load]);
 
-  const bomProductIds = useMemo(
-    () => new Set((lookups?.boms || []).map((bom) => bom.finished_product_id)),
-    [lookups]
+  useEffect(() => {
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    queueMicrotask(() => void loadRef.current());
+  }, []);
+
+  const handleOpenCreate = useCallback(async () => {
+    setShowCreate(true);
+    if (lookups || loadingLookups) return;
+    setLoadingLookups(true);
+    const result = await fetchProductionLookupsAction();
+    if (!result.success) setError(result.error || loadErrorLabel);
+    else if (result.data) setLookups(result.data);
+    setLoadingLookups(false);
+  }, [loadingLookups, loadErrorLabel, lookups]);
+
+  const costings = useMemo(
+    () => new Map(orders.map((order) => [order.id, calcProductionCosting(order)])),
+    [orders]
   );
-
-  const resetCreate = () => {
-    setType("custom");
-    setWorkflow("in_house");
-    setProjectName("");
-    setCustomerId("");
-    setFinishedProductId("");
-    setQuantity("1");
-    setWarehouseId("");
-    setTotalPrice("0");
-    setInstallFee("0");
-    setAdvance("0");
-    setDeliveryDate("");
-    setScope("");
-    setNotes("");
-  };
-
-  const handleCreate = async () => {
-    const customer = lookups?.customers.find((c) => c.id === customerId);
-    const warehouse = lookups?.warehouses.find((w) => w.id === warehouseId);
-    const product = lookups?.products.find((p) => p.id === finishedProductId);
-    setSaving(true);
-    const result = await createProductionOrderAction({
-      type,
-      custom_workflow: type === "custom" ? workflow : null,
-      project_name:
-        type === "series"
-          ? projectName.trim() || `${product?.name || t("production.series")} × ${quantity}`
-          : projectName.trim(),
-      customer_id: customerId || null,
-      customer_name: customer ? customerLabel(customer) : null,
-      finished_product_id: type === "series" ? finishedProductId : null,
-      quantity: Number(quantity) || 1,
-      warehouse_id: warehouseId || null,
-      warehouse_name: warehouse?.name || null,
-      total_project_price: Number(totalPrice) || 0,
-      installation_fee: Number(installFee) || 0,
-      advance_payment: Number(advance) || 0,
-      expected_delivery_date: deliveryDate || null,
-      project_scope: scope || null,
-      notes: notes || null,
-    });
-    setSaving(false);
-    if (!result.success) {
-      alert(result.error || t("common.error"));
-      return;
+  const dashboard = useMemo(
+    () =>
+      [...costings.values()].reduce(
+        (totals, order) => {
+          totals.revenue += order.revenue;
+          totals.cost += order.totalCost;
+          totals.profit += order.profit;
+          return totals;
+        },
+        { revenue: 0, cost: 0, profit: 0 }
+      ),
+    [costings]
+  );
+  const ordersByStatus = useMemo(() => {
+    const grouped = new Map<ProductionStatus, ProductionOrder[]>(
+      STATUSES.map((status) => [status, []])
+    );
+    for (const order of orders) {
+      grouped.get(normalizeProductionStatus(order.status))?.push(order);
     }
-    if (!result.data) {
-      alert(t("common.error"));
-      return;
-    }
-    setShowCreate(false);
-    resetCreate();
-    router.push(`/production/${result.data.id}`);
-  };
-
-  const statusLabel = (status: ProductionStatus) => t(`production.status.${status}`);
-  const typeLabel = (order: ProductionOrder) =>
-    order.type === "series"
-      ? t("production.series")
-      : t(`production.workflow.${order.custom_workflow || "in_house"}`);
+    return grouped;
+  }, [orders]);
+  const dashboardMargin =
+    dashboard.revenue > 0 ? (dashboard.profit / dashboard.revenue) * 100 : 0;
+  const typeLabel = (order: ProductionOrder) => productionModelLabel(order.production_model);
 
   return (
     <PageLayout>
@@ -145,7 +113,7 @@ export default function ProductionBoardPage() {
         title={t("production.boardTitle")}
         description={t("production.boardDescription")}
         createLabel={canManage ? t("production.newOrder") : undefined}
-        onCreate={canManage ? () => setShowCreate(true) : undefined}
+        onCreate={canManage ? handleOpenCreate : undefined}
         extraActions={
           <>
             <Link href="/production/bom" className="btn-secondary text-xs">
@@ -158,14 +126,16 @@ export default function ProductionBoardPage() {
             <div className="flex overflow-hidden rounded-lg border border-app">
               <button
                 type="button"
-                className={`px-3 py-2 text-xs ${view === "kanban" ? "bg-app-accent text-white" : "text-app"}`}
+                aria-label="Kanban"
+                className={`px-3 py-2 ${view === "kanban" ? "bg-app-accent text-white" : "text-app"}`}
                 onClick={() => setView("kanban")}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
-                className={`px-3 py-2 text-xs ${view === "list" ? "bg-app-accent text-white" : "text-app"}`}
+                aria-label="Siyahı"
+                className={`px-3 py-2 ${view === "list" ? "bg-app-accent text-white" : "text-app"}`}
                 onClick={() => setView("list")}
               >
                 <List className="h-3.5 w-3.5" />
@@ -179,45 +149,85 @@ export default function ProductionBoardPage() {
         {error && (
           <div className="mb-4 rounded-lg alert-danger px-4 py-3 text-sm">
             {error}
+            {isMissingProductionSchema(error) && (
+              <p className="mt-2 text-xs">{t("production.missingTablesHint")}</p>
+            )}
           </div>
         )}
+
+        {!loading && orders.length > 0 && (
+          <section className="mb-6">
+            <h3 className="mb-3 text-sm font-bold text-app">{t("production.dashboardSummary")}</h3>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                [t("production.revenue"), dashboard.revenue, ""],
+                [t("production.totalCost"), dashboard.cost, ""],
+                [t("production.profit"), dashboard.profit, dashboard.profit < 0 ? "text-rose-400" : "text-emerald-400"],
+              ].map(([label, value, className]) => (
+                <div key={String(label)} className="app-card p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{label}</p>
+                  <p className={`mt-1 font-mono text-xl font-bold text-app ${className}`}>
+                    {Number(value).toFixed(2)} {t("common.currency")}
+                  </p>
+                </div>
+              ))}
+              <div className="app-card p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("production.margin")}</p>
+                <p className={`mt-1 font-mono text-xl font-bold ${
+                  dashboardMargin >= 15 ? "text-emerald-400" : "text-rose-400"
+                }`}>
+                  {dashboardMargin.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+        {!loading && orders.length === 0 && (
+          <section className="app-card mb-6 flex flex-col items-center justify-center px-6 py-14 text-center">
+            <Factory className="h-10 w-10 text-app-accent" />
+            <h3 className="mt-3 font-bold text-app">{t("production.boardTitle")}</h3>
+            <p className="mt-1 max-w-md text-sm text-app-muted">{t("common.noData")}</p>
+            {canManage && (
+              <button type="button" className="btn-primary mt-4" onClick={handleOpenCreate}>
+                {t("production.newOrder")}
+              </button>
+            )}
+          </section>
+        )}
+
         {loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
-        ) : view === "kanban" ? (
+        ) : orders.length === 0 ? null : view === "kanban" ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {STATUSES.map((status) => {
-              const column = orders.filter((order) => order.status === status);
+              const column = ordersByStatus.get(status) || [];
               return (
                 <section key={status} className="app-card p-3">
                   <h3 className="mb-3 flex items-center justify-between text-sm font-bold text-app">
-                    {statusLabel(status)}
+                    {t(`production.status.${status}`)}
                     <span className="rounded-full bg-app-card-hover px-2 py-0.5 text-xs">{column.length}</span>
                   </h3>
                   <div className="space-y-2">
-                    {column.length === 0 && (
+                    {!column.length && (
                       <p className="px-2 py-6 text-center text-xs text-app-muted">{t("common.noData")}</p>
                     )}
-                    {column.map((order) => {
-                      const costing = calcProductionCosting(order);
-                      return (
-                        <Link
-                          key={order.id}
-                          href={`/production/${order.id}`}
-                          className="app-card app-card-interactive block p-3"
-                        >
-                          <p className="text-xs text-app-muted">{order.order_no}</p>
-                          <p className="font-semibold text-app">{order.project_name}</p>
-                          <p className="mt-1 text-xs text-app-muted">{typeLabel(order)}</p>
-                          <p className="text-xs">{order.customer_name || t("common.anonymousCustomer")}</p>
-                          {order.type === "custom" && (
-                            <p className="mt-2 text-xs font-semibold">
-                              {costing.projectPrice.toFixed(2)} {t("common.currency")} ·{" "}
-                              {t("production.margin")}: {costing.marginPercent.toFixed(1)}%
-                            </p>
-                          )}
-                        </Link>
-                      );
-                    })}
+                    {column.map((order) => (
+                      <Link
+                        key={order.id}
+                        href={`/production/${order.id}`}
+                        className="app-card app-card-interactive block p-3"
+                      >
+                        <p className="text-xs text-app-muted">{order.order_no}</p>
+                        <p className="font-semibold text-app">{order.project_name}</p>
+                        <p className="mt-1 text-xs text-app-muted">{typeLabel(order)}</p>
+                        <p className="text-xs">{order.customer_name || t("common.anonymousCustomer")}</p>
+                        <ProductionProfitabilityCard
+                          order={order}
+                          costing={costings.get(order.id)}
+                          compact
+                        />
+                      </Link>
+                    ))}
                   </div>
                 </section>
               );
@@ -233,212 +243,54 @@ export default function ProductionBoardPage() {
                   <th className="px-3 py-2">{t("common.type")}</th>
                   <th className="px-3 py-2">{t("common.status")}</th>
                   <th className="px-3 py-2">{t("sales.customer")}</th>
-                  <th className="px-3 py-2 text-right">{t("production.totalProjectPrice")}</th>
+                  <th className="px-3 py-2 text-right">{t("production.revenue")}</th>
+                  <th className="px-3 py-2 text-right">{t("production.totalCost")}</th>
+                  <th className="px-3 py-2 text-right">{t("production.profit")}</th>
+                  <th className="px-3 py-2">{t("production.margin")}</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t border-app">
-                    <td className="px-3 py-2">
-                      <Link className="text-app-accent hover:underline" href={`/production/${order.id}`}>
-                        {order.order_no}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">{order.project_name}</td>
-                    <td className="px-3 py-2">{typeLabel(order)}</td>
-                    <td className="px-3 py-2">{statusLabel(order.status)}</td>
-                    <td className="px-3 py-2">{order.customer_name || "-"}</td>
-                    <td className="px-3 py-2 text-right">
-                      {order.total_project_price.toFixed(2)} {t("common.currency")}
-                    </td>
-                  </tr>
-                ))}
+                {orders.map((order) => {
+                  const costing = costings.get(order.id) || calcProductionCosting(order);
+                  return (
+                    <tr key={order.id} className="border-t border-app">
+                      <td className="px-3 py-2"><Link className="text-app-accent hover:underline" href={`/production/${order.id}`}>{order.order_no}</Link></td>
+                      <td className="px-3 py-2">{order.project_name}</td>
+                      <td className="px-3 py-2">{typeLabel(order)}</td>
+                      <td className="px-3 py-2"><div className="flex flex-wrap gap-1"><ProductionStatusChip status={order.status} /><ProductionHealthChip health={costing.health} /></div></td>
+                      <td className="px-3 py-2">{order.customer_name || "-"}</td>
+                      <td className="px-3 py-2 text-right">{costing.revenue.toFixed(2)}</td>
+                      <td className="px-3 py-2 text-right">{costing.totalCost.toFixed(2)}</td>
+                      <td className={`px-3 py-2 text-right ${costing.profit < 0 ? "text-rose-400" : ""}`}>{costing.profit.toFixed(2)}</td>
+                      <td className="px-3 py-2">{costing.marginPercent.toFixed(1)}%</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-app-surface p-6 shadow-xl">
-            <h3 className="mb-4 text-lg font-bold">{t("production.newOrder")}</h3>
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-2 text-sm ${type === "series" ? "border-app-accent bg-app-accent/10" : "border-app"}`}
-                onClick={() => setType("series")}
-              >
-                {t("production.series")}
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-2 text-sm ${type === "custom" ? "border-app-accent bg-app-accent/10" : "border-app"}`}
-                onClick={() => setType("custom")}
-              >
-                {t("production.custom")}
-              </button>
-            </div>
-
-            {type === "custom" && (
-              <div className="mb-4 grid gap-2 md:grid-cols-3">
-                {(["in_house", "outsourced_cut", "subcontractor"] as CustomWorkflow[]).map((wf) => (
-                  <button
-                    key={wf}
-                    type="button"
-                    className={`rounded-lg border px-3 py-2 text-left text-xs ${workflow === wf ? "border-app-accent bg-app-accent/10" : "border-app"}`}
-                    onClick={() => setWorkflow(wf)}
-                  >
-                    {t(`production.workflow.${wf}`)}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {type === "series" ? (
-              <div className="grid gap-3">
-                <label className="text-xs">
-                  {t("production.finishedProduct")}
-                  <select
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={finishedProductId}
-                    onChange={(e) => setFinishedProductId(e.target.value)}
-                  >
-                    <option value="">{t("common.select")}</option>
-                    {(lookups?.products || [])
-                      .filter((p) => bomProductIds.has(p.id))
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} — {p.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label className="text-xs">
-                  {t("forms.quantity")}
-                  <input
-                    type="number"
-                    min={1}
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("production.projectName")}
-                  <input
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="text-xs md:col-span-2">
-                  {t("production.projectName")}
-                  <input
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("sales.customer")}
-                  <select
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                  >
-                    <option value="">{t("common.select")}</option>
-                    {(lookups?.customers || []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {customerLabel(c)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs">
-                  {t("production.expectedDelivery")}
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("production.totalProjectPrice")}
-                  <input
-                    type="number"
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={totalPrice}
-                    onChange={(e) => setTotalPrice(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("production.installationFee")}
-                  <input
-                    type="number"
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={installFee}
-                    onChange={(e) => setInstallFee(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("production.advancePayment")}
-                  <input
-                    type="number"
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={advance}
-                    onChange={(e) => setAdvance(e.target.value)}
-                  />
-                </label>
-                <label className="text-xs">
-                  {t("common.warehouse")}
-                  <select
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    value={warehouseId}
-                    onChange={(e) => setWarehouseId(e.target.value)}
-                  >
-                    <option value="">{t("common.select")}</option>
-                    {(lookups?.warehouses || []).map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs md:col-span-2">
-                  {t("production.projectScope")}
-                  <textarea
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                    rows={3}
-                    value={scope}
-                    onChange={(e) => setScope(e.target.value)}
-                  />
-                </label>
-              </div>
-            )}
-
-            <label className="mt-3 block text-xs">
-              {t("common.notes")}
-              <textarea
-                className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </label>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
-                {t("common.cancel")}
-              </button>
-              <button type="button" className="btn-primary" disabled={saving} onClick={handleCreate}>
-                {saving ? t("common.saving") : t("common.create")}
-              </button>
-            </div>
+      {showCreate && lookups && !loadingLookups && (
+        <ProductionOrderModal
+          open
+          lookups={lookups}
+          onClose={() => setShowCreate(false)}
+          onCreated={(order) => {
+            setShowCreate(false);
+            router.push(`/production/${order.id}`);
+          }}
+        />
+      )}
+      {showCreate && (!lookups || loadingLookups) && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center app-scrim p-4">
+          <div className="app-modal w-full max-w-sm p-6 text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-app-accent border-t-transparent" />
+            <p className="mt-4 text-sm font-semibold text-app">{t("common.loading")}</p>
+            <button type="button" className="btn-secondary mt-4" onClick={() => setShowCreate(false)}>
+              {t("common.cancel")}
+            </button>
           </div>
         </div>
       )}

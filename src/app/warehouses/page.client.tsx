@@ -3,6 +3,8 @@ import PageLayout from "@/components/layout/PageLayout";
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import type { Warehouse, Product } from "@/types/database.types";
 import {
   RefreshCw,
@@ -13,6 +15,7 @@ import {
 
 export default function WarehousesPage() {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,7 @@ export default function WarehousesPage() {
       : await supabase.from("warehouses").insert([newWh]).select("*").single();
 
     if (error) {
-      alert(t("common.errorOccurred", { message: error.message }));
+      showError(t("common.errorOccurred", { message: error.message }));
     } else {
       const row = data as Warehouse;
       setWarehouses((prev) =>
@@ -248,6 +251,7 @@ export default function WarehousesPage() {
           </div>
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

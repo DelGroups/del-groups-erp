@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, FolderPlus, Layers, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { Category } from "@/types/database.types";
 import { createCategory, deleteCategory, updateCategory } from "@/lib/products/api";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ export default function CategoryManagerModal({
     parent_id: "",
   });
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   useEffect(() => {
     setList(categories);
@@ -46,7 +49,7 @@ export default function CategoryManagerModal({
     setSaving(false);
 
     if (!result.ok) {
-      alert("Xəta: " + result.error);
+      showError("Xəta: " + result.error);
       return;
     }
 
@@ -65,7 +68,7 @@ export default function CategoryManagerModal({
     if (!confirm("Bu kateqoriyanı silməyə əminsiniz?")) return;
     const result = await deleteCategory(id);
     if (!result.ok) {
-      alert("Xəta: " + result.error);
+      showError("Xəta: " + result.error);
       return;
     }
     setList((prev) => prev.filter((cat) => cat.id !== id && cat.parent_id !== id));
@@ -86,7 +89,7 @@ export default function CategoryManagerModal({
   const handleSaveEdit = async () => {
     if (!editing.id || !editing.name.trim()) return;
     if (editing.id === editing.parent_id) {
-      alert("Kateqoriya özünə parent ola bilməz.");
+      showError("Kateqoriya özünə parent ola bilməz.");
       return;
     }
     const result = await updateCategory(editing.id, {
@@ -94,7 +97,7 @@ export default function CategoryManagerModal({
       parent_id: editing.parent_id || null,
     });
     if (!result.ok || !result.category) {
-      alert("Xəta: " + result.error);
+      showError("Xəta: " + result.error);
       return;
     }
     setList((prev) => prev.map((cat) => (cat.id === editing.id ? result.category! : cat)));
@@ -130,6 +133,7 @@ export default function CategoryManagerModal({
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
       <div className="app-modal flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden">
         <div className="app-modal-header">
@@ -314,5 +318,7 @@ export default function CategoryManagerModal({
         </div>
       </div>
     </div>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

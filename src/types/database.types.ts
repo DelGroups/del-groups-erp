@@ -29,9 +29,16 @@ export interface SaleItem {
   extra_info: string;
   /** Polywood: sell by linear meters or full sheets */
   polywood_sale_mode?: "linear_m" | "full_sheet" | null;
+  polywood_length_m?: number | null;
   polywood_full_sheet_length_m?: number;
   polywood_total_length_m?: number;
   polywood_full_sheet_count?: number;
+  /** Polywood custom dimensions (polywood invoice only) */
+  polywood_width_m?: number | null;
+  polywood_pieces?: number | null;
+  polywood_total_area_m2?: number | null;
+  polywood_cutting_option?: string | null;
+  polywood_edge_option?: string | null;
 }
 
 /** Payment row stored in sales.payments JSONB */
@@ -115,13 +122,15 @@ export function calcSaleTotals(
   items: SaleItem[],
   payments: SalePayment[],
   deliveryType: "paid" | "free",
-  deliveryFee: number
+  deliveryFee: number,
+  additionalExpensesTotal = 0
 ): SaleTotals {
   const subtotal = calcSubtotal(items);
   const discount_total = calcDiscountTotal(items);
   const vat_total = calcVatTotal(items);
   const delivery_cost = calcDeliveryCost(deliveryType, deliveryFee);
-  const grand_total = calcGrandTotal(subtotal, discount_total, delivery_cost);
+  const addExp = Number(additionalExpensesTotal) || 0;
+  const grand_total = calcGrandTotal(subtotal, discount_total, delivery_cost) + addExp;
   const paid_amount = calcTotalPaid(payments);
   const remaining_balance = calcRemainingBalance(grand_total, paid_amount);
 
@@ -332,7 +341,7 @@ export const generateWriteoffDocNo = generateWriteoffDocumentNumber;
 
 export type WarehouseSlipType = "inbound" | "outbound" | "waste";
 export type WarehouseSlipStatus = "pending" | "approved" | "rejected";
-export type WarehouseSlipSourceType = "purchase" | "sale" | "writeoff";
+export type WarehouseSlipSourceType = "purchase" | "sale" | "writeoff" | "production";
 
 export interface WarehouseSlipItem {
   product_id: string;
@@ -460,6 +469,107 @@ export interface ExpenseRow {
   account_id: string | null;
   notes: string | null;
   created_at: string | null;
+}
+
+export type ChartOfAccountType =
+  | "asset"
+  | "liability"
+  | "equity"
+  | "income"
+  | "expense"
+  | "contra";
+
+export interface ChartOfAccount {
+  id: string;
+  code: string;
+  name: string;
+  account_type: ChartOfAccountType;
+  parent_id: string | null;
+  is_active: boolean;
+  created_at?: string | null;
+}
+
+export interface JournalEntry {
+  id: string;
+  entry_no: string;
+  entry_date: string;
+  source_type: string;
+  source_id: string | null;
+  idempotency_key: string | null;
+  memo: string | null;
+  posted_at: string | null;
+  created_by: string | null;
+}
+
+export interface JournalEntryLine {
+  id: string;
+  journal_entry_id: string;
+  coa_id: string;
+  debit: number;
+  credit: number;
+  partner_type: string | null;
+  partner_id: string | null;
+  account_id: string | null;
+  line_memo: string | null;
+  chart_of_accounts?: ChartOfAccount | null;
+}
+
+/** Audit log row for Phase 2 atomic ERP event processors. */
+export interface ErpEvent {
+  id: string;
+  event_type: string;
+  source_table: string | null;
+  source_id: string | null;
+  idempotency_key: string | null;
+  payload: Json;
+  result: Json | null;
+  journal_entry_id: string | null;
+  created_at: string;
+}
+
+export interface ProductionMaterialIssueEventResult {
+  success: boolean;
+  event_type: "production_material_issue";
+  order_id: string;
+  issued_count?: number;
+  issue_cost?: number;
+  journal_entry_id?: string | null;
+  materials_allocated?: boolean;
+  status?: string;
+  event_id?: string;
+  error?: string;
+}
+
+export interface ProductionReadyEventResult {
+  success: boolean;
+  event_type: "production_ready";
+  order_id: string;
+  finished_product_id?: string;
+  quantity?: number;
+  wip_cost?: number;
+  journal_entry_id?: string | null;
+  finished_goods_posted?: boolean;
+  status?: string;
+  already_completed?: boolean;
+  event_id?: string;
+  error?: string;
+}
+
+export interface ProductionDeliveryEventResult {
+  success: boolean;
+  event_type: "production_delivery";
+  order_type: "Custom" | "Series";
+  order_id: string;
+  sale_id?: string | null;
+  doc_no?: string;
+  product_id?: string;
+  invoice_created?: boolean;
+  revenue_journal_entry_id?: string | null;
+  cogs_journal_entry_id?: string | null;
+  transaction_id?: string | null;
+  already_completed?: boolean;
+  event_id?: string;
+  error?: string;
 }
 
 export interface CommissionRule {
@@ -1166,6 +1276,12 @@ export interface Database {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      production_stock_reservations: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       production_outsourcing: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
@@ -1173,6 +1289,12 @@ export interface Database {
         Relationships: [];
       };
       production_contractors: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      production_expenses: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
@@ -1208,6 +1330,21 @@ export interface Database {
           p_amount: number;
           p_account_id: string;
           p_notes?: string | null;
+        };
+        Returns: string;
+      };
+      create_production_expense_atomic: {
+        Args: {
+          p_production_order_id: string;
+          p_code: string;
+          p_category: string;
+          p_description: string;
+          p_amount: number;
+          p_expense_date: string;
+          p_account_id: string;
+          p_account_name?: string | null;
+          p_notes?: string | null;
+          p_actor_name?: string | null;
         };
         Returns: string;
       };
@@ -1253,6 +1390,7 @@ export interface DashboardKpis {
   netProfit: number;
   customerDebts: number;
   supplierDebts: number;
+  salesOpenAr?: number;
 }
 
 export interface LowStockProduct {
@@ -1281,11 +1419,20 @@ export interface MonthlyTrendPoint {
   expenses: number;
 }
 
+export interface CustomerArDiscrepancyRow {
+  customer_id: string;
+  customer_name: string;
+  stored_balance: number;
+  ledger_balance: number;
+  delta: number;
+}
+
 export interface DashboardData {
   kpis: DashboardKpis;
   lowStockAlerts: LowStockProduct[];
   recentActivities: RecentActivityRow[];
   monthlyTrend: MonthlyTrendPoint[];
+  arDiscrepancies?: CustomerArDiscrepancyRow[];
 }
 
 export interface TopSellingProduct {

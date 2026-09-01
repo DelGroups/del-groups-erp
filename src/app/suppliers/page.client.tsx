@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import type { Supplier } from "@/types/database.types";
 import {
   Plus,
@@ -18,6 +20,7 @@ export default function SuppliersPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageSuppliers = can("can_manage_suppliers");
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,7 +82,7 @@ export default function SuppliersPage() {
       : await supabase.from("suppliers").insert([newSupplier]).select("*").single();
 
     if (error) {
-      alert(t("common.errorOccurred", { message: error.message }));
+      showError(t("common.errorOccurred", { message: error.message }));
     } else {
       const row = data as Supplier;
       setSuppliers((prev) =>
@@ -333,6 +336,7 @@ export default function SuppliersPage() {
           </div>
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

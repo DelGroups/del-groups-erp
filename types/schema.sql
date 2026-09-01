@@ -555,9 +555,9 @@ CREATE TABLE IF NOT EXISTS production_bom_items (
 CREATE TABLE IF NOT EXISTS production_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_no TEXT NOT NULL UNIQUE,
-  type TEXT NOT NULL CHECK (type IN ('series', 'custom')),
+  type TEXT NOT NULL CHECK (type IN ('Custom', 'Series')),
   custom_workflow TEXT CHECK (custom_workflow IN ('in_house', 'outsourced_cut', 'subcontractor')),
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'ready', 'delivered')),
+  status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'In-Progress', 'Ready', 'Delivered')),
   project_name TEXT NOT NULL,
   customer_id UUID REFERENCES customers(id),
   customer_name TEXT,
@@ -576,6 +576,8 @@ CREATE TABLE IF NOT EXISTS production_orders (
   notes TEXT,
   materials_allocated BOOLEAN NOT NULL DEFAULT FALSE,
   finished_goods_posted BOOLEAN NOT NULL DEFAULT FALSE,
+  sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
+  delivered_at TIMESTAMPTZ,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -597,8 +599,39 @@ CREATE TABLE IF NOT EXISTS production_materials (
   polywood_sale_mode TEXT,
   polywood_length_m NUMERIC,
   polywood_cut_details JSONB,
+  stage_no INTEGER NOT NULL DEFAULT 1,
+  stage_label TEXT,
+  notes TEXT,
+  issued BOOLEAN NOT NULL DEFAULT FALSE,
+  issued_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  created_by_name TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS production_stock_reservations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  production_material_id UUID NOT NULL UNIQUE REFERENCES production_materials(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id),
+  warehouse_id UUID REFERENCES warehouses(id),
+  quantity NUMERIC NOT NULL CHECK (quantity > 0),
+  status TEXT NOT NULL DEFAULT 'reserved'
+    CHECK (status IN ('reserved', 'consumed', 'released')),
+  reserved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  consumed_at TIMESTAMPTZ,
+  released_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_production_reservations_product
+  ON production_stock_reservations (product_id, warehouse_id, status);
+CREATE INDEX IF NOT EXISTS idx_production_reservations_order
+  ON production_stock_reservations (production_order_id);
+
+ALTER TABLE sales
+  ADD COLUMN IF NOT EXISTS production_order_id UUID REFERENCES production_orders(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_sales_production_order ON sales (production_order_id);
+CREATE INDEX IF NOT EXISTS idx_production_orders_sale ON production_orders (sale_id);
 
 CREATE TABLE IF NOT EXISTS production_outsourcing (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -606,12 +639,27 @@ CREATE TABLE IF NOT EXISTS production_outsourcing (
   supplier_id UUID REFERENCES suppliers(id),
   supplier_name TEXT,
   material_description TEXT NOT NULL,
+  description TEXT,
   sqm_quantity NUMERIC NOT NULL DEFAULT 0,
   price_per_sqm NUMERIC NOT NULL DEFAULT 0,
   total_cost NUMERIC NOT NULL DEFAULT 0,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers(id);
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS material_description TEXT;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS sqm_quantity NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS price_per_sqm NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS total_cost NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE production_outsourcing ADD COLUMN IF NOT EXISTS notes TEXT;
+UPDATE production_outsourcing
+SET
+  material_description = COALESCE(NULLIF(btrim(material_description), ''), NULLIF(btrim(description), ''), 'Xarici xidmət'),
+  description = COALESCE(NULLIF(btrim(description), ''), NULLIF(btrim(material_description), ''), 'Xarici xidmət');
+ALTER TABLE production_outsourcing ALTER COLUMN material_description SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS production_contractors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -643,3 +691,152 @@ CREATE TABLE IF NOT EXISTS production_contracts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS production_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_order_id UUID NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'other'
+    CHECK (category IN ('transport', 'delivery', 'installation', 'tools', 'other')),
+  description TEXT NOT NULL,
+  amount NUMERIC NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  account_id UUID REFERENCES accounts(id),
+  account_name TEXT,
+  finance_expense_id UUID REFERENCES expenses(id) ON DELETE SET NULL,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_by_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE expenses
+  ADD COLUMN IF NOT EXISTS production_order_id UUID
+  REFERENCES production_orders(id) ON DELETE SET NULL;
+ALTER TABLE transactions
+  ADD COLUMN IF NOT EXISTS production_order_id UUID
+  REFERENCES production_orders(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_expenses_production_order
+  ON expenses (production_order_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_production_order
+  ON transactions (production_order_id);
+
+CREATE OR REPLACE FUNCTION public.create_production_expense_atomic(
+  p_production_order_id UUID,
+  p_code TEXT,
+  p_category TEXT,
+  p_description TEXT,
+  p_amount NUMERIC,
+  p_expense_date DATE,
+  p_account_id UUID,
+  p_account_name TEXT DEFAULT NULL,
+  p_notes TEXT DEFAULT NULL,
+  p_actor_name TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_tx_id UUID;
+  v_finance_expense_id UUID;
+  v_production_expense_id UUID;
+  v_memo TEXT;
+BEGIN
+  IF NOT public.user_has_permission('can_manage_production') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_amount' USING ERRCODE = '22023';
+  END IF;
+  IF p_category NOT IN ('transport', 'delivery', 'installation', 'tools', 'other') THEN
+    RAISE EXCEPTION 'invalid_category' USING ERRCODE = '22023';
+  END IF;
+  IF p_account_id IS NULL THEN
+    RAISE EXCEPTION 'account_required' USING ERRCODE = '22023';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM production_orders WHERE id = p_production_order_id) THEN
+    RAISE EXCEPTION 'production_order_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  v_memo := COALESCE(
+    NULLIF(trim(p_notes), ''),
+    format('İstehsalat: %s', trim(p_description))
+  );
+
+  v_tx_id := public.post_cash_transaction(
+    p_account_id,
+    'Məxaric',
+    p_amount,
+    'Digər',
+    v_memo,
+    p_production_order_id,
+    'production',
+    p_production_order_id
+  );
+
+  INSERT INTO expenses (code, category, amount, account_id, production_order_id, notes)
+  VALUES (trim(p_code), 'Digər', p_amount, p_account_id, p_production_order_id, NULLIF(trim(p_notes), ''))
+  RETURNING id INTO v_finance_expense_id;
+
+  INSERT INTO production_expenses (
+    production_order_id, category, description, amount, expense_date,
+    account_id, account_name, finance_expense_id, notes, created_by, created_by_name
+  )
+  VALUES (
+    p_production_order_id, p_category, trim(p_description), p_amount,
+    COALESCE(p_expense_date, CURRENT_DATE), p_account_id, NULLIF(trim(p_account_name), ''),
+    v_finance_expense_id, NULLIF(trim(p_notes), ''), auth.uid(), NULLIF(trim(p_actor_name), '')
+  )
+  RETURNING id INTO v_production_expense_id;
+
+  RETURN v_production_expense_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.create_production_expense_atomic(
+  UUID, TEXT, TEXT, TEXT, NUMERIC, DATE, UUID, TEXT, TEXT, TEXT
+) TO authenticated;
+
+ALTER TABLE production_orders DROP CONSTRAINT IF EXISTS production_orders_status_check;
+UPDATE production_orders
+SET status = CASE
+  WHEN status IN ('Draft', 'In-Progress', 'Ready', 'Delivered') THEN status
+  WHEN lower(regexp_replace(replace(btrim(status), '_', '-'), '\s+', '-', 'g'))
+    IN ('in-progress', 'inprogress') THEN 'In-Progress'
+  WHEN lower(btrim(status)) IN ('ready', 'hazir') THEN 'Ready'
+  WHEN lower(btrim(status)) IN ('delivered') THEN 'Delivered'
+  ELSE 'Draft'
+END;
+ALTER TABLE production_orders ALTER COLUMN status SET DEFAULT 'Draft';
+ALTER TABLE production_orders
+  ADD CONSTRAINT production_orders_status_check
+  CHECK (status IN ('Draft', 'In-Progress', 'Ready', 'Delivered'));
+
+ALTER TABLE production_orders DROP CONSTRAINT IF EXISTS production_orders_type_check;
+UPDATE production_orders
+SET type = CASE
+  WHEN type IN ('Custom', 'Series') THEN type
+  WHEN lower(btrim(type)) IN ('series', 'seriya', 'seria', 'serial', 'stock') THEN 'Series'
+  ELSE 'Custom'
+END;
+ALTER TABLE production_orders
+  ADD CONSTRAINT production_orders_type_check
+  CHECK (type IN ('Custom', 'Series'));
+
+-- Atomic sale creation RPC: see types/sale-mutations.sql
+-- Atomic purchase creation RPC: see types/purchase-mutations.sql
+-- Atomic payment recording RPC: see types/payment-mutations.sql
+-- Account ledger helpers (post_cash_transaction, opening balance, reconcile): types/account-mutations.sql
+-- Chart of accounts (COA seed 1100–6190): types/chart-of-accounts-migration.sql
+-- Double-entry journal (journal_entries, journal_entry_lines, post_journal_entry): types/journal-engine-migration.sql
+-- Customer AR sync (refresh_customer_ar_balance, reconcile, void): types/customer-ar-mutations.sql
+-- Phase 2 atomic event processors (erp_events, process_*_event RPCs): types/erp-events-migration.sql
+-- Phase 3 production event processors (material issue, ready, delivery): types/production-events-migration.sql
+-- Series production delivery RPC: types/production-series-delivery-migration.sql
+-- production_materials schema drift (issued, line_cost, stage_no, dual price cols): types/fix-production-materials-schema.sql
+
+-- ─── Chart of Accounts & Journal (canonical DDL in migration files) ───────────
+-- chart_of_accounts: id, code, name, account_type, parent_id, is_active
+-- journal_entries: id, entry_no, entry_date, source_type, source_id, idempotency_key, memo, posted_at
+-- journal_entry_lines: id, journal_entry_id, coa_id, debit, credit, partner_type, partner_id, account_id
+-- transactions.journal_entry_id links operational cash rows to journal_entries

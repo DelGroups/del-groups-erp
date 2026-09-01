@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -49,6 +53,8 @@ export default function UniversalInvoiceForm({
   onClose,
   onSuccess,
 }: InvoiceFormProps) {
+  const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [docNo] = useState("SS-2026-77154");
   const [docDate, setDocDate] = useState(new Date().toISOString().split("T")[0]);
 
@@ -137,7 +143,10 @@ export default function UniversalInvoiceForm({
   };
 
   const handleSaveQuickCustomer = async () => {
-    if (!newCustomerData.full_name) return alert("Zəhmət olmasa müştəri adını daxil edin!");
+    if (!newCustomerData.full_name) {
+      showError("Zəhmət olmasa müştəri adını daxil edin!");
+      return;
+    }
 
     const { data, error } = await supabase
       .from("customers")
@@ -201,7 +210,10 @@ export default function UniversalInvoiceForm({
   };
 
   const handleSubmit = async () => {
-    if (!selectedCustomerId) return alert("Zəhmət olmasa müştəri seçin!");
+    if (!selectedCustomerId) {
+      showError("Zəhmət olmasa müştəri seçin!");
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.rpc("post_sale", {
@@ -218,11 +230,11 @@ export default function UniversalInvoiceForm({
 
       if (error) throw error;
 
-      alert("Faktura uğurla yadda saxlanıldı!");
+      showSuccess("Faktura uğurla yadda saxlanıldı!");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
-      alert("Xəta: " + err.message);
+      showError(formatRpcError(err.message, t));
     }
     setSaving(false);
   };
@@ -230,6 +242,7 @@ export default function UniversalInvoiceForm({
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 app-scrim z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-app-card-hover rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border border-app p-6 space-y-4">
         
@@ -370,5 +383,7 @@ export default function UniversalInvoiceForm({
 
       </div>
     </div>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

@@ -111,17 +111,19 @@ export async function createAccountAction(
     }
 
     const client = await createSupabaseServerClient();
-    const { data, error } = await client
-      .from("accounts")
-      .insert([{ code, name, type, balance }])
-      .select("id")
-      .single();
+
+    const { data, error } = await client.rpc("create_account_atomic", {
+      p_code: code,
+      p_name: name,
+      p_type: type,
+      p_opening_balance: balance,
+    });
 
     if (error || !data) {
       return { success: false, error: error?.message || "Hesab yaradılmadı" };
     }
 
-    return { success: true, data: { accountId: data.id as string } };
+    return { success: true, data: { accountId: data as string } };
   } catch (err) {
     if (err instanceof ActionAuthError) {
       return { success: false, error: err.message };

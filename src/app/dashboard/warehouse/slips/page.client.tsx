@@ -16,6 +16,9 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import type { WarehouseSlip, WarehouseSlipStatus } from "@/types/database.types";
 import { CheckCircle2, ClipboardList, Printer, XCircle } from "lucide-react";
 
@@ -33,6 +36,7 @@ export default function WarehouseSlipsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const { printData, setPrintData } = useDocumentPrint<WarehouseSlipPrintData>();
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   const loadSlips = useCallback(async (currentTab: TabFilter) => {
     setLoading(true);
@@ -71,7 +75,7 @@ export default function WarehouseSlipsPage() {
 
   const handleApproveAndPrint = async (slip: WarehouseSlip) => {
     if (!canApprove) {
-      alert(t("warehouseSlips.noApprovePermission"));
+      showError(t("warehouseSlips.noApprovePermission"));
       return;
     }
     setProcessingId(slip.id);
@@ -79,7 +83,7 @@ export default function WarehouseSlipsPage() {
     setProcessingId(null);
 
     if (!result.success) {
-      alert(t("common.error") + ": " + result.error);
+      showError(`${t("common.error")}: ${formatRpcError(result.error, t)}`);
       return;
     }
 
@@ -96,7 +100,7 @@ export default function WarehouseSlipsPage() {
     setProcessingId(null);
 
     if (!result.success) {
-      alert(t("common.error") + ": " + result.error);
+      showError(`${t("common.error")}: ${formatRpcError(result.error, t)}`);
       return;
     }
     await loadSlips(tab);
@@ -244,6 +248,7 @@ export default function WarehouseSlipsPage() {
           <WarehouseSlipPrintTemplate slip={printData} />
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

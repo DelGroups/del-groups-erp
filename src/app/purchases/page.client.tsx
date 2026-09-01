@@ -14,7 +14,7 @@ import {
   fetchPurchaseFormData,
   fetchPurchaseList,
 } from "@/lib/purchases/fetchPurchases";
-import { recordPurchasePayment } from "@/lib/purchases/recordPurchasePayment";
+import { recordPurchasePaymentAction } from "@/lib/actions/payments";
 import { sendPurchaseToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import type { Product, PurchaseRecord, Supplier, Warehouse } from "@/types/database.types";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -25,6 +25,8 @@ import WarehouseSendBadge from "@/components/documents/WarehouseSendBadge";
 import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import { ShoppingBag } from "lucide-react";
 
 export default function PurchasesPage() {
@@ -43,6 +45,7 @@ export default function PurchasesPage() {
   const { can } = useAuth();
   const { t } = useI18n();
   const canCreatePurchase = can("can_create_purchase");
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -75,7 +78,7 @@ export default function PurchasesPage() {
   const openEdit = async (row: PurchaseRecord) => {
     const full = await fetchPurchaseById(row.id);
     if (!full) {
-      alert(t("common.notFound"));
+      showError(t("common.notFound"));
       return;
     }
     setEditingPurchase(full);
@@ -244,7 +247,7 @@ export default function PurchasesPage() {
           paidAmount={paymentPurchase.paid_amount}
           remainingAmount={paymentPurchase.debt_amount}
           onSubmit={async (payload) => {
-            const result = await recordPurchasePayment({
+            const result = await recordPurchasePaymentAction({
               purchaseId: paymentPurchase.id,
               invoiceNumber: paymentPurchase.invoice_number,
               supplierId: paymentPurchase.supplier_id,
@@ -291,6 +294,7 @@ export default function PurchasesPage() {
         onConfirm={(iso) => void warehouseSend.confirmDelivery(iso)}
         loading={!!warehouseSend.sendingId}
       />
+      <ToastMessage message={warehouseSend.toastMessage ?? toastMessage} variant={warehouseSend.toastMessage ? warehouseSend.toastVariant : toastVariant} />
     </PageLayout>
   );
 }

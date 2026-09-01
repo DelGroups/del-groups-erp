@@ -6,6 +6,9 @@ import type { Category, Product, ProductInsert, Warehouse } from "@/types/databa
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
 import { useI18n } from "@/i18n/I18nProvider";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 interface ProductFormProps {
   categories: Category[];
@@ -25,6 +28,7 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const isEditMode = Boolean(initialProduct);
 
   const categoryByName = (name?: string | null) =>
@@ -66,7 +70,7 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      alert(t("forms.enterProductName"));
+      showError(t("forms.enterProductName"));
       return;
     }
 
@@ -93,15 +97,16 @@ export default function ProductForm({
     setSaving(false);
 
     if (!result.ok) {
-      alert(t("common.errorOccurred", { message: result.error ?? t("common.error") }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) ?? t("common.error") }));
       return;
     }
 
-    alert(isEditMode ? t("common.success") : t("forms.productCreated"));
+    showSuccess(isEditMode ? t("common.success") : t("forms.productCreated"));
     onSuccess?.();
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-5 app-card app-card-elevated p-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="block text-xs font-semibold text-app">
@@ -304,5 +309,7 @@ export default function ProductForm({
         </button>
       </div>
     </form>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

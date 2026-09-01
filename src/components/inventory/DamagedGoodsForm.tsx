@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Save, Trash2, X } from "lucide-react";
 import type { DamagedGoodsItem, Product, Warehouse } from "@/types/database.types";
 import {
@@ -15,6 +15,9 @@ import {
 } from "@/lib/inventory/writeoff";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
 
 interface DamagedGoodsFormProps {
   warehouses: Warehouse[];
@@ -34,6 +37,7 @@ export default function DamagedGoodsForm({
   const isEdit = mode === "edit" && !!initialWriteoff;
   const { displayName, isAdmin, loading: authLoading } = useAuth();
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const lockChecker = !authLoading && !isAdmin;
 
   const [documentNumber] = useState(
@@ -100,13 +104,18 @@ export default function DamagedGoodsForm({
     setItems((prev) => prev.filter((row) => row.id !== id));
   };
 
+  const submitPreflightIssue = useMemo(() => {
+    if (!warehouseId) return "forms.selectWarehouse";
+    if (!effectiveCheckerName.trim()) return "forms.enterCheckerName";
+    const validLines = items.filter((row) => row.product_id && row.quantity > 0);
+    if (validLines.length === 0) return "forms.selectProduct";
+    return null;
+  }, [effectiveCheckerName, items, warehouseId]);
+  const submitPreflightHint = submitPreflightIssue ? t(submitPreflightIssue) : undefined;
+
   const handleSubmit = async () => {
-    if (!warehouseId) {
-      alert(t("forms.selectWarehouse"));
-      return;
-    }
-    if (!effectiveCheckerName.trim()) {
-      alert(t("forms.enterCheckerName"));
+    if (submitPreflightIssue) {
+      showToastError(submitPreflightHint || t("common.error"));
       return;
     }
 
@@ -132,7 +141,7 @@ export default function DamagedGoodsForm({
     setSaving(false);
 
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error ?? t("common.error") }));
+      showToastError(formatRpcError(result.error ?? t("common.error"), t));
       return;
     }
 
@@ -322,7 +331,8 @@ export default function DamagedGoodsForm({
         )}
         <button
           type="button"
-          disabled={saving}
+          disabled={saving || Boolean(submitPreflightIssue)}
+          title={submitPreflightHint}
           onClick={handleSubmit}
           className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
         >
@@ -330,6 +340,7 @@ export default function DamagedGoodsForm({
           {saving ? t("common.saving") : isEdit ? t("forms.saveChanges") : t("forms.confirmAndSave")}
         </button>
       </div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </div>
   );
 }

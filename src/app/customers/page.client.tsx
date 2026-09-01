@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { Customer } from "@/types/database.types";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import {
   Plus,
   Pencil,
@@ -24,6 +26,7 @@ export default function CustomersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   // Form State
   const [formData, setFormData] = useState({
@@ -31,8 +34,8 @@ export default function CustomersPage() {
     full_name: "",
     phone: "",
     company_name: "",
-    balance: "0.00",
   });
+  const [viewBalance, setViewBalance] = useState(0);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -66,7 +69,6 @@ export default function CustomersPage() {
       full_name: formData.full_name,
       phone: formData.phone,
       company_name: formData.company_name,
-      balance: parseFloat(formData.balance) || 0,
     };
 
     const isEdit = Boolean(editingCustomerId);
@@ -77,10 +79,14 @@ export default function CustomersPage() {
           .eq("id", editingCustomerId)
           .select("*")
           .single()
-      : await supabase.from("customers").insert([newCustomer]).select("*").single();
+      : await supabase
+          .from("customers")
+          .insert([{ ...newCustomer, balance: 0 }])
+          .select("*")
+          .single();
 
     if (error) {
-      alert(t("common.errorOccurred", { message: error.message }));
+      showError(t("common.errorOccurred", { message: error.message }));
     } else {
       const row = data as Customer;
       setCustomers((prev) =>
@@ -93,8 +99,8 @@ export default function CustomersPage() {
         full_name: "",
         phone: "",
         company_name: "",
-        balance: "0.00",
       });
+      setViewBalance(0);
     }
     setSaving(false);
   };
@@ -102,12 +108,12 @@ export default function CustomersPage() {
   const openCreateModal = () => {
     if (!canManageCustomers) return;
     setEditingCustomerId(null);
+    setViewBalance(0);
     setFormData({
       code: "",
       full_name: "",
       phone: "",
       company_name: "",
-      balance: "0.00",
     });
     setIsModalOpen(true);
   };
@@ -115,12 +121,12 @@ export default function CustomersPage() {
   const openEditModal = (customer: Customer) => {
     if (!canManageCustomers) return;
     setEditingCustomerId(customer.id);
+    setViewBalance(customer.balance ?? 0);
     setFormData({
       code: customer.code || "",
       full_name: customer.full_name || "",
       phone: customer.phone || "",
       company_name: customer.company_name || "",
-      balance: String(customer.balance ?? 0),
     });
     setIsModalOpen(true);
   };
@@ -306,15 +312,15 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-app mb-1">{t("common.initialBalance")}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="balance"
-                  value={formData.balance}
-                  onChange={handleInputChange}
-                  className="app-input"
-                />
+                <label className="block text-xs font-medium text-app mb-1">
+                  {t("customers.balanceDebt")}
+                </label>
+                <div className="app-input bg-app-card-hover text-app-muted cursor-not-allowed">
+                  {editingCustomerId
+                    ? `${viewBalance.toFixed(2)} AZN`
+                    : t("customers.balanceComputedHint")}
+                </div>
+                <p className="mt-1 text-[11px] text-app-muted">{t("customers.balanceReadOnlyHint")}</p>
               </div>
 
               <div className="pt-3 flex justify-end space-x-2">
@@ -337,6 +343,7 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

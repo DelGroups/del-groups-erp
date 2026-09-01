@@ -5,6 +5,8 @@ import { Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
 import type { Category, Product } from "@/types/database.types";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu"];
 
@@ -30,6 +32,7 @@ export default function QuickAddProductModal({
   const [weight, setWeight] = useState("0");
   const [extraInfo, setExtraInfo] = useState("");
   const [saving, setSaving] = useState(false);
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   useEffect(() => {
     void supabase
@@ -46,7 +49,7 @@ export default function QuickAddProductModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("Məhsul adını daxil edin");
+      showError("Məhsul adını daxil edin");
       return;
     }
 
@@ -71,7 +74,7 @@ export default function QuickAddProductModal({
     setSaving(false);
 
     if (!result.ok || !result.product) {
-      alert("Xəta: " + (result.error || "Məhsul yaradılmadı"));
+      showError("Xəta: " + (result.error || "Məhsul yaradılmadı"));
       return;
     }
 
@@ -80,6 +83,7 @@ export default function QuickAddProductModal({
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
       <div className="app-modal max-h-[90vh] w-full max-w-lg overflow-y-auto">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
@@ -228,5 +232,7 @@ export default function QuickAddProductModal({
         </form>
       </div>
     </div>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

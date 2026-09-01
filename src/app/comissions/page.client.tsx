@@ -8,9 +8,12 @@ import { ArrowLeft, Plus, Trash2, Layers } from "lucide-react";
 import type { CommissionRule } from "@/types/database.types";
 import { normalizeCommissionRule, parseNullableMaxSales } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 export default function CommissionsSettingsPage() {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [rules, setRules] = useState<CommissionRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,7 +62,7 @@ export default function CommissionsSettingsPage() {
       setCommissionPercentage("");
       fetchRules();
     } else {
-      alert(t("common.errorOccurred", { message: error.message }));
+      showError(t("common.errorOccurred", { message: error.message }));
     }
     setSaving(false);
   };
@@ -235,6 +238,7 @@ export default function CommissionsSettingsPage() {
             )}
           </div>
         </div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

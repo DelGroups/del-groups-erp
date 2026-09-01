@@ -1,9 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CreditCard, Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
+import {
+  preflightMessage,
+  validateDocumentPaymentPreflight,
+} from "@/lib/forms/documentPreflight";
+import {
+  assertPaymentAccountId,
+  PAYMENT_ACCOUNT_REQUIRED_MESSAGE,
+} from "@/lib/forms/paymentValidation";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 interface Account {
   id: string;
@@ -46,6 +57,7 @@ export default function DocumentPaymentModal({
   onSubmit,
 }: DocumentPaymentModalProps) {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const resolvedTitle = title ?? t("modals.payment.title");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState("");
@@ -64,6 +76,9 @@ export default function DocumentPaymentModal({
       if (rows[0]) {
         setAccountId(rows[0].id);
         setMethod(rows[0].name);
+      } else {
+        setAccountId("");
+        setMethod("");
       }
     })();
 
@@ -71,35 +86,46 @@ export default function DocumentPaymentModal({
     setNotes("");
   }, [isOpen, remainingAmount]);
 
+  const numericAmount = parseFloat(amount) || 0;
+  const paymentPreflightIssue = useMemo(
+    () =>
+      validateDocumentPaymentPreflight({
+        amount: numericAmount,
+        remainingAmount,
+        accountId,
+      }),
+    [accountId, numericAmount, remainingAmount]
+  );
+  const paymentPreflightHint = paymentPreflightIssue
+    ? preflightMessage(t, paymentPreflightIssue)
+    : undefined;
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const numericAmount = parseFloat(amount) || 0;
-    if (numericAmount <= 0) {
-      alert(t("modals.payment.invalidAmount"));
+    if (paymentPreflightIssue) {
+      showToastError(paymentPreflightHint || t("common.error"));
       return;
     }
-    if (numericAmount > remainingAmount + 0.001) {
-      alert(t("modals.payment.maxAmount", { amount: remainingAmount.toFixed(2) }));
-      return;
-    }
-    if (!accountId) {
-      alert(t("modals.payment.selectAccount"));
+
+    const accountError = assertPaymentAccountId(accountId);
+    if (accountError) {
+      showToastError(PAYMENT_ACCOUNT_REQUIRED_MESSAGE);
       return;
     }
 
     setSaving(true);
     const result = await onSubmit({
       amount: numericAmount,
-      accountId,
+      accountId: accountId.trim(),
       method,
       notes: notes.trim() || undefined,
     });
     setSaving(false);
 
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error || t("modals.payment.paymentFailed") }));
+      showToastError(formatRpcError(result.error || t("modals.payment.paymentFailed"), t));
       return;
     }
 
@@ -107,6 +133,7 @@ export default function DocumentPaymentModal({
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[60] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
@@ -119,93 +146,106 @@ export default function DocumentPaymentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-5 text-xs">
-          <div className="rounded-xl bg-app-card-hover p-4 space-y-2">
-            <div className="flex justify-between">
+        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+          <div className="rounded-lg border border-app bg-app-card px-4 py-3 text-xs">
+            <div className="flex justify-between gap-2">
               <span className="text-app-muted">{documentLabel}</span>
-              <span className="font-mono font-bold text-app-accent">{documentNumber}</span>
+              <span className="font-mono font-semibold">{documentNumber}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="mt-1 flex justify-between gap-2">
               <span className="text-app-muted">{counterpartyLabel}</span>
-              <span className="font-semibold text-app">{counterpartyName || "-"}</span>
+              <span className="font-semibold">{counterpartyName}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("modals.payment.total")}</span>
-              <span className="font-mono font-bold">{totalAmount.toFixed(2)} {t("common.currency")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("modals.payment.paid")}</span>
-              <span className="font-mono text-emerald-600">{paidAmount.toFixed(2)} {t("common.currency")}</span>
-            </div>
-            <div className="flex justify-between border-t border-app pt-2">
-              <span className="font-semibold text-app">{t("modals.payment.remainingDebt")}</span>
-              <span className="font-mono font-bold text-rose-600">{remainingAmount.toFixed(2)} {t("common.currency")}</span>
+            <div className="mt-2 grid grid-cols-3 gap-2 border-t border-app pt-2 text-center">
+              <div>
+                <p className="text-[10px] text-app-muted">{t("modals.payment.total")}</p>
+                <p className="font-mono font-bold">{totalAmount.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-app-muted">{t("modals.payment.paid")}</p>
+                <p className="font-mono font-bold text-emerald-600">{paidAmount.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-app-muted">{t("modals.payment.remaining")}</p>
+                <p className="font-mono font-bold text-rose-600">{remainingAmount.toFixed(2)}</p>
+              </div>
             </div>
           </div>
 
-          <label className="block font-semibold text-app">
-            {t("modals.payment.accountLabel")}
+          <label className="block space-y-1 text-xs">
+            <span className="font-semibold text-app">{t("modals.payment.amount")}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="app-input w-full"
+            />
+          </label>
+
+          <label className="block space-y-1 text-xs">
+            <span className="font-semibold text-app">{t("modals.payment.account")}</span>
             <select
               value={accountId}
               onChange={(e) => {
-                const id = e.target.value;
-                setAccountId(id);
-                const acc = accounts.find((a) => a.id === id);
+                const nextId = e.target.value;
+                setAccountId(nextId);
+                const acc = accounts.find((a) => a.id === nextId);
                 if (acc) setMethod(acc.name);
               }}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              className="app-input w-full"
+              required
             >
-              <option value="">{t("common.select")}</option>
+              {accounts.length === 0 && (
+                <option value="">{t("forms.paymentAccountRequiredSelect")}</option>
+              )}
               {accounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.type})
+                  {acc.name}
                 </option>
               ))}
             </select>
           </label>
 
-          <label className="block font-semibold text-app">
-            {t("modals.payment.amountLabel")}
+          <label className="block space-y-1 text-xs">
+            <span className="font-semibold text-app">{t("modals.payment.method")}</span>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              max={remainingAmount}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm text-emerald-600"
+              type="text"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              className="app-input w-full"
             />
           </label>
 
-          <label className="block font-semibold text-app">
-            {t("common.notes")}
+          <label className="block space-y-1 text-xs">
+            <span className="font-semibold text-app">{t("common.notes")}</span>
             <textarea
-              rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-normal"
+              rows={2}
+              className="app-input w-full resize-none"
             />
           </label>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-app px-4 py-2.5 font-semibold text-app"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary text-xs">
               {t("common.cancel")}
             </button>
             <button
               type="submit"
-              disabled={saving || remainingAmount <= 0}
-              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2.5 font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+              disabled={saving || Boolean(paymentPreflightIssue)}
+              title={paymentPreflightHint}
+              className="btn-primary flex items-center gap-1 text-xs disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              {saving ? t("common.saving") : t("modals.payment.confirmPayment")}
+              {saving ? t("common.saving") : t("modals.payment.submit")}
             </button>
           </div>
         </form>
       </div>
     </div>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

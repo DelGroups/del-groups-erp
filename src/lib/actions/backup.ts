@@ -14,6 +14,9 @@ import {
   type BackupTableName,
   type SystemBackupPayload,
 } from "@/lib/backup/manifest";
+import { insertProductionOrders } from "@/lib/production/ordersClient";
+import { insertProductionMaterials } from "@/lib/production/materialsClient";
+import { PRODUCTION_MATERIAL_LIVE_COLUMNS } from "@/lib/production/payloads";
 
 export type BackupActionResult<T = void> =
   | { success: true; data: T }
@@ -21,7 +24,9 @@ export type BackupActionResult<T = void> =
 
 async function fetchTableRows(table: BackupTableName): Promise<Record<string, unknown>[]> {
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.from(table).select("*");
+  const select =
+    table === "production_materials" ? PRODUCTION_MATERIAL_LIVE_COLUMNS.join(",") : "*";
+  const { data, error } = await admin.from(table).select(select);
   if (error) {
     throw new Error(`${table}: ${error.message}`);
   }
@@ -95,7 +100,29 @@ export async function restoreFullBackupAction(
       const rows = payload.tables[table];
       if (!rows?.length) continue;
 
-      const { error } = await admin.from(table).insert(rows as never);
+      const { error } =
+        table === "production_orders"
+          ? await insertProductionOrders(
+              admin,
+              rows.map((row) => ({ ...(row as Record<string, unknown>) }))
+            )
+          : table === "production_materials"
+            ? await insertProductionMaterials(
+                admin,
+                (rows as Record<string, unknown>[]).map((row) => ({
+                  production_order_id: String(row.production_order_id),
+                  product_id: String(row.product_id),
+                  warehouse_id: (row.warehouse_id as string | null | undefined) ?? null,
+                  quantity: row.quantity,
+                  unit: (row.unit as string | null | undefined) ?? null,
+                  unit_price: row.unit_price,
+                  unit_cost: row.unit_cost,
+                  total_price: row.total_price,
+                  line_cost: row.line_cost,
+                  notes: (row.notes as string | null | undefined) ?? null,
+                }))
+              )
+            : await admin.from(table).insert(rows as never);
       if (error) {
         warnings.push(`Insert ${table}: ${error.message}`);
       } else {

@@ -24,9 +24,13 @@ import {
 } from "@/types/database.types";
 import { DollarSign, Pencil, Trash2, UserCheck } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 export default function EmployeesPage() {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; name: string; balance: number }[]>([]);
   const [payrollHistory, setPayrollHistory] = useState<PayrollRecord[]>([]);
@@ -100,7 +104,7 @@ export default function EmployeesPage() {
 
     setSaving(false);
     if (!result.ok) {
-      alert(t("employees.errorPrefix") + result.error);
+      showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
       return;
     }
     setFormOpen(false);
@@ -110,7 +114,7 @@ export default function EmployeesPage() {
   const handleDelete = async (emp: Employee) => {
     if (!confirm(t("common.confirmDelete", { name: emp.full_name }))) return;
     const result = await deleteEmployee(emp.id);
-    if (!result.ok) alert(t("employees.errorPrefix") + result.error);
+    if (!result.ok) showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
     else void loadData();
   };
 
@@ -138,11 +142,11 @@ export default function EmployeesPage() {
     setPayrollSaving(false);
 
     if (!result.success) {
-      alert(t("employees.errorPrefix") + result.error);
+      showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
       return;
     }
 
-    alert(t("employees.payrollSuccess"));
+    showSuccess(t("employees.payrollSuccess"));
     setPayrollEmployee(null);
     void loadData();
   };
@@ -311,6 +315,7 @@ export default function EmployeesPage() {
         onClose={() => setPayrollEmployee(null)}
         onSubmit={handlePayroll}
       />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

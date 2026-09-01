@@ -714,16 +714,12 @@ export async function saveConsignmentMonthlyReportAction(input: {
     if (itemsError) return { success: false, error: itemsError.message };
 
     if (partnerRow.customer_id) {
-      const { data: customer } = await admin
-        .from("customers")
-        .select("balance")
-        .eq("id", String(partnerRow.customer_id))
-        .maybeSingle();
-      const currentBalance = num((customer as { balance?: number } | null)?.balance);
-      await admin
-        .from("customers")
-        .update({ balance: currentBalance + totalAmount })
-        .eq("id", String(partnerRow.customer_id));
+      const { error: arError } = await admin.rpc("refresh_customer_ar_balance", {
+        p_customer_id: String(partnerRow.customer_id),
+      });
+      if (arError) {
+        return { success: false, error: arError.message };
+      }
     }
 
     const reportNo = createDocNo("CM");

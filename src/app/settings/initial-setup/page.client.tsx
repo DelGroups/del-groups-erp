@@ -22,6 +22,9 @@ import {
 } from "@/lib/initial-setup/productImport";
 import type { ProductImportRow } from "@/lib/initial-setup/types";
 import { downloadTextFile, readSpreadsheetRows } from "@/lib/csv/csvUtils";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import {
   Download,
   FileSpreadsheet,
@@ -52,6 +55,7 @@ export default function InitialSetupPage() {
     balance: "0",
   });
   const [creatingAccount, setCreatingAccount] = useState(false);
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const totalBalance = useMemo(
     () =>
@@ -118,10 +122,10 @@ export default function InitialSetupPage() {
     const result = await saveInitialBalancesAction(payload);
     setSavingBalances(false);
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
       return;
     }
-    alert(t("initialSetup.balancesSaved", { count: result.data?.updated ?? 0 }));
+    showSuccess(t("initialSetup.balancesSaved", { count: result.data?.updated ?? 0 }));
     void loadAccounts();
   };
 
@@ -136,7 +140,7 @@ export default function InitialSetupPage() {
     });
     setCreatingAccount(false);
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
       return;
     }
     setNewAccount({ name: "", type: "Kassa", balance: "0" });
@@ -149,7 +153,7 @@ export default function InitialSetupPage() {
     const result = await importProductsAction(importPreview);
     setImporting(false);
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
       return;
     }
     const { inserted, skipped, errors } = result.data!;
@@ -370,6 +374,7 @@ export default function InitialSetupPage() {
           </div>
         </div>
       </PermissionGuard>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

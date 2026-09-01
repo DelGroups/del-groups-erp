@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { Save, X } from "lucide-react";
 import { createSupplier } from "@/lib/suppliers/api";
 import type { Supplier } from "@/types/database.types";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 interface QuickAddSupplierModalProps {
   onClose: () => void;
@@ -15,6 +17,7 @@ export default function QuickAddSupplierModal({ onClose, onCreated }: QuickAddSu
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function QuickAddSupplierModal({ onClose, onCreated }: QuickAddSu
     setSaving(false);
 
     if (!result.ok || !result.supplier) {
-      alert("Xəta: " + (result.error || "Təchizatçı yaradılmadı"));
+      showError("Xəta: " + (result.error || "Təchizatçı yaradılmadı"));
       return;
     }
 
@@ -36,6 +39,7 @@ export default function QuickAddSupplierModal({ onClose, onCreated }: QuickAddSu
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-md">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
@@ -90,5 +94,7 @@ export default function QuickAddSupplierModal({ onClose, onCreated }: QuickAddSu
         </form>
       </div>
     </div>
+    <ToastMessage message={toastMessage} variant={toastVariant} />
+    </>
   );
 }

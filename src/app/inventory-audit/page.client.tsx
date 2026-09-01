@@ -21,6 +21,9 @@ import InventoryAuditVoucherPrintTemplate, {
   type InventoryAuditVoucherPrintData,
 } from "@/components/inventory/InventoryAuditVoucherPrintTemplate";
 import { ClipboardCheck, Printer, Save, Send } from "lucide-react";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 
 type AuditMode = "standard" | "polywood";
 
@@ -71,6 +74,7 @@ function fmtCutPieces(lengths: number[]): string {
 
 export default function InventoryAuditPageClient() {
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [mode, setMode] = useState<AuditMode>("standard");
   const [warehouses, setWarehouses] = useState<WarehouseOpt[]>([]);
   const [warehouseId, setWarehouseId] = useState("");
@@ -242,7 +246,7 @@ export default function InventoryAuditPageClient() {
   const handleSaveAudit = async () => {
     if (!selectedWarehouse) return;
     if (!auditorName.trim()) {
-      alert(t("inventoryAudit.auditorRequired"));
+      showError(t("inventoryAudit.auditorRequired"));
       return;
     }
 
@@ -285,7 +289,7 @@ export default function InventoryAuditPageClient() {
     setSaving(false);
 
     if (!result.success || !result.data) {
-      alert(t("common.errorOccurred", { message: result.error || t("common.error") }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) || t("common.error") }));
       return;
     }
 
@@ -299,7 +303,7 @@ export default function InventoryAuditPageClient() {
     setSaving(false);
 
     if (!result.success || !result.data) {
-      alert(t("common.errorOccurred", { message: result.error || t("common.error") }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) || t("common.error") }));
       return;
     }
 
@@ -338,7 +342,7 @@ export default function InventoryAuditPageClient() {
       }
     }
 
-    alert(t("inventoryAudit.applySuccess"));
+    showSuccess(t("inventoryAudit.applySuccess"));
   };
 
   return (
@@ -682,6 +686,7 @@ export default function InventoryAuditPageClient() {
           {t("inventoryAudit.saveAudit")}
         </button>
       </div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

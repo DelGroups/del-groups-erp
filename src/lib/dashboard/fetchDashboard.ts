@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { checkCustomerArDiscrepancies } from "@/lib/finance/customerAr";
 import {
   getDateRangeBounds,
   getRecordDate,
@@ -24,7 +25,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStart = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [salesRes, purchasesRes, transactionsRes, trendTxRes, productsRes] = await Promise.all([
+  const [salesRes, purchasesRes, transactionsRes, trendTxRes, productsRes, customersRes, arCheck] =
+    await Promise.all([
     supabase
       .from("sales")
       .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance"),
@@ -43,6 +45,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     supabase
       .from("products")
       .select("id, code, name, stock, min_stock, unit, category, buy_price, sell_price"),
+    supabase.from("customers").select("balance"),
+    checkCustomerArDiscrepancies(),
   ]);
 
   const sales = salesRes.data || [];
@@ -50,17 +54,23 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const transactions = transactionsRes.data || [];
   const trendTransactions = trendTxRes.data || [];
   const products = productsRes.data || [];
+  const customers = customersRes.data || [];
 
   let monthlyRevenue = 0;
-  let customerDebts = 0;
+  let salesOpenAr = 0;
 
   for (const sale of sales) {
     const date = getRecordDate(sale.doc_date, sale.created_at);
     if (isDateInRange(date, monthRange.startDate, monthRange.endDate)) {
       monthlyRevenue += Number(sale.total_amount) || 0;
     }
-    customerDebts += Math.max(0, Number(sale.remaining_balance) || 0);
+    salesOpenAr += Math.max(0, Number(sale.remaining_balance) || 0);
   }
+
+  const customerDebts = customers.reduce(
+    (sum, row) => sum + Math.max(0, Number(row.balance) || 0),
+    0
+  );
 
   let supplierDebts = 0;
   for (const purchase of purchases) {
@@ -174,9 +184,11 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       netProfit,
       customerDebts,
       supplierDebts,
+      salesOpenAr,
     },
     lowStockAlerts,
     recentActivities: recentActivities.slice(0, 12),
     monthlyTrend,
+    arDiscrepancies: arCheck.success ? arCheck.discrepancies || [] : [],
   };
 }

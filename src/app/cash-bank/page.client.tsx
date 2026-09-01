@@ -6,6 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { createAccountAction } from "@/lib/actions/finance";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import {
   RefreshCw,
   Plus,
@@ -46,6 +49,7 @@ export default function CashBankPage() {
   });
   const { can } = useAuth();
   const canManageFinance = can("can_manage_finance");
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -68,7 +72,7 @@ export default function CashBankPage() {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canManageFinance) {
-      alert(t("cashBank.noPermission"));
+      showError(t("cashBank.noPermission"));
       return;
     }
     const result = await createAccountAction({
@@ -79,7 +83,7 @@ export default function CashBankPage() {
     });
 
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error }));
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
       return;
     }
 
@@ -245,6 +249,7 @@ export default function CashBankPage() {
           </div>
         </div>
       )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

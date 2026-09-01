@@ -29,7 +29,9 @@ export function isValidSupabaseUrl(url: string): boolean {
 }
 
 export function isValidSupabaseAnonKey(key: string): boolean {
-  return key.startsWith("eyJ") && key.length > 40;
+  if (key.startsWith("eyJ") && key.length > 40) return true;
+  if (key.startsWith("sb_publishable_") && key.length > 24) return true;
+  return false;
 }
 
 export type SupabaseConfigIssue = "missing" | "bad_url" | "bad_key" | null;

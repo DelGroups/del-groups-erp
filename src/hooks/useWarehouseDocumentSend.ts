@@ -8,6 +8,7 @@ import {
   type WarehouseSlipPrintData,
 } from "@/components/warehouse/WarehouseSlipPrintTemplate";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
+import { useToast } from "@/hooks/useToast";
 import type { SendToWarehouseResult } from "@/lib/actions/sendToWarehouse";
 
 export interface WarehouseDocumentRow {
@@ -32,6 +33,7 @@ export function useWarehouseDocumentSend(
 ) {
   const { can, isAdmin } = useAuth();
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
   const canSend = can("can_send_to_warehouse");
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [resendTarget, setResendTarget] = useState<WarehouseSendTarget | null>(null);
@@ -58,7 +60,7 @@ export function useWarehouseDocumentSend(
         if (result.error === "RESEND_CONFIRM_REQUIRED") {
           return false;
         }
-        alert(t("common.error") + ": " + result.error);
+        showToastError(`${t("common.error")}: ${result.error || ""}`);
         return false;
       }
 
@@ -67,12 +69,12 @@ export function useWarehouseDocumentSend(
       if (result.autoApproved) {
         setPrintSlip(warehouseSlipToPrintData(result.slip));
       } else {
-        alert(t("warehouseSend.sentPending"));
+        showToastSuccess(t("warehouseSend.sentPending"));
       }
 
       return true;
     },
-    [onReload, sendAction, setPrintSlip, t]
+    [onReload, sendAction, setPrintSlip, showToastError, showToastSuccess, t]
   );
 
   const handleSendClick = useCallback(
@@ -161,5 +163,7 @@ export function useWarehouseDocumentSend(
     confirmResend,
     getSendButtonProps,
     printSlip,
+    toastMessage,
+    toastVariant,
   };
 }

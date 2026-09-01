@@ -8,10 +8,16 @@ import LowStockAlerts from "@/components/dashboard/LowStockAlerts";
 import RecentTransactionsTable from "@/components/dashboard/RecentTransactionsTable";
 import MonthlyTrendChart from "@/components/dashboard/MonthlyTrendChart";
 import { fetchDashboardData } from "@/lib/dashboard/fetchDashboard";
+import { reconcileCustomerArBalancesAction } from "@/lib/actions/customerAr";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { DashboardData } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   BarChart3,
@@ -38,10 +44,15 @@ const emptyDashboard: DashboardData = {
 
 export default function ManagementDashboardPage() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canReconcileAr =
+    can("can_manage_finance") || can("can_edit_sales") || can("can_manage_settings");
   const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
   const [logoUrl, setLogoUrl] = useState("");
   const [loading, setLoading] = useState(true);
+  const [reconcilingAr, setReconcilingAr] = useState(false);
   const [data, setData] = useState<DashboardData>(emptyDashboard);
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -60,7 +71,20 @@ export default function ManagementDashboardPage() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  const handleReconcileAr = async () => {
+    setReconcilingAr(true);
+    const result = await reconcileCustomerArBalancesAction();
+    if (!result.success) {
+      showError(formatRpcError(result.error, t) || t("dashboard.arReconcileFailed"));
+    } else {
+      await loadDashboard();
+    }
+    setReconcilingAr(false);
+  };
+
   const { kpis } = data;
+  const arDiscrepancies = data.arDiscrepancies || [];
+  const hasArDiscrepancies = arDiscrepancies.length > 0;
 
   return (
     <PageLayout>
@@ -113,6 +137,47 @@ export default function ManagementDashboardPage() {
         </header>
 
         <main className="flex-1 space-y-6 overflow-y-auto p-6">
+          {hasArDiscrepancies ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="font-semibold">{t("dashboard.arDiscrepancyTitle")}</p>
+                    <p className="mt-1 text-sm text-amber-900">
+                      {t("dashboard.arDiscrepancySummary", { count: arDiscrepancies.length })}
+                    </p>
+                    <ul className="mt-2 space-y-1 text-xs text-amber-900">
+                      {arDiscrepancies.slice(0, 5).map((row) => (
+                        <li key={row.customer_id}>
+                          {row.customer_name}: {t("dashboard.arDiscrepancyRow", {
+                            stored: row.stored_balance.toFixed(2),
+                            ledger: row.ledger_balance.toFixed(2),
+                            delta: row.delta.toFixed(2),
+                          })}
+                        </li>
+                      ))}
+                      {arDiscrepancies.length > 5 ? (
+                        <li>{t("dashboard.arDiscrepancyMore", { count: arDiscrepancies.length - 5 })}</li>
+                      ) : null}
+                    </ul>
+                  </div>
+                </div>
+                {canReconcileAr ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleReconcileAr()}
+                    disabled={reconcilingAr || loading}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${reconcilingAr ? "animate-spin" : ""}`} />
+                    {t("dashboard.arReconcileButton")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             <KpiCard
               label={t("dashboard.kpiRevenue")}
@@ -144,7 +209,7 @@ export default function ManagementDashboardPage() {
             <KpiCard
               label={t("dashboard.kpiCustomerDebt")}
               value={loading ? "..." : `${kpis.customerDebts.toFixed(2)} ${t("common.currency")}`}
-              sublabel="Ödənilməmiş satışlar"
+              sublabel={t("dashboard.kpiCustomerDebtHint")}
               icon={<ArrowUpRight className="h-5 w-5" />}
               accent="amber"
             />
@@ -164,6 +229,7 @@ export default function ManagementDashboardPage() {
             <RecentTransactionsTable rows={data.recentActivities} />
           </div>
         </main>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
       </PageLayout>
   );
 }

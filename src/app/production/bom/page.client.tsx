@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -12,6 +12,9 @@ import {
   type ProductionLookups,
 } from "@/lib/actions/production";
 import type { ProductionBom } from "@/lib/production/types";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import { Layers, Trash2 } from "lucide-react";
 
 interface DraftItem {
@@ -31,6 +34,8 @@ export default function ProductionBomPage() {
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<DraftItem[]>([{ product_id: "", quantity: "1", warehouse_id: "" }]);
+  const initialLoadStarted = useRef(false);
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,7 +45,9 @@ export default function ProductionBomPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    queueMicrotask(() => void load());
   }, [load]);
 
   const editBom = (bom: ProductionBom) => {
@@ -61,7 +68,7 @@ export default function ProductionBomPage() {
   const handleSave = async () => {
     const product = lookups?.products.find((p) => p.id === finishedProductId);
     if (!product) {
-      alert(t("production.selectFinishedProduct"));
+      showError(t("production.selectFinishedProduct"));
       return;
     }
     const mapped = items
@@ -91,9 +98,10 @@ export default function ProductionBomPage() {
     });
     setSaving(false);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
+    showSuccess(t("common.success"));
     await load();
   };
 
@@ -101,7 +109,7 @@ export default function ProductionBomPage() {
     if (!confirm(t("common.confirmDelete", { name: t("production.bomTitle") }))) return;
     const result = await deleteProductionBomAction(bomId);
     if (!result.success) {
-      alert(result.error || t("common.error"));
+      showError(formatRpcError(result.error, t));
       return;
     }
     await load();
@@ -266,6 +274,7 @@ export default function ProductionBomPage() {
           </div>
         )}
       </div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

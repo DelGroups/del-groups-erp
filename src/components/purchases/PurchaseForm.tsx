@@ -22,6 +22,19 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { submitPurchase, updatePurchase } from "@/lib/purchases/submitPurchase";
+import {
+  collectPurchaseSubmitPreflightIssues,
+  preflightMessage,
+  validatePaymentRowsRequireAccount,
+  validatePaymentsNotExceedTotal,
+  validatePurchaseInvoiceLines,
+} from "@/lib/forms/documentPreflight";
+import DocumentAdditionalExpensesSection from "@/components/documents/DocumentAdditionalExpensesSection";
+import {
+  sumDocumentAdditionalExpenses,
+  validateDocumentAdditionalExpenses,
+  type DocumentAdditionalExpense,
+} from "@/lib/forms/documentExpenses";
 import QuickAddSupplierModal from "@/components/purchases/QuickAddSupplierModal";
 import QuickAddProductModal from "@/components/purchases/QuickAddProductModal";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
@@ -90,6 +103,7 @@ export default function PurchaseForm({
     initialPurchase?.responsible_name || ""
   );
   const [notes, setNotes] = useState(initialPurchase?.notes || "");
+  const [additionalExpenses, setAdditionalExpenses] = useState<DocumentAdditionalExpense[]>([]);
   const [items, setItems] = useState<PurchaseLineItem[]>(
     initialPurchase?.items?.length
       ? initialPurchase.items
@@ -99,7 +113,7 @@ export default function PurchaseForm({
     createEmptyPurchasePayment(),
   ]);
   const [saving, setSaving] = useState(false);
-  const { message: toastMessage, showError: showToastError } = useToast();
+  const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
   const canSavePurchase = isEdit ? can("can_edit_purchases") : can("can_create_purchase");
@@ -152,10 +166,33 @@ export default function PurchaseForm({
     setResponsibleName(displayName);
   };
 
-  const grandTotal = useMemo(() => calcPurchaseGrandTotal(items), [items]);
+  const additionalExpensesTotal = useMemo(
+    () => sumDocumentAdditionalExpenses(additionalExpenses),
+    [additionalExpenses]
+  );
+  const grandTotal = useMemo(
+    () => calcPurchaseGrandTotal(items) + additionalExpensesTotal,
+    [items, additionalExpensesTotal]
+  );
   const newPaymentsTotal = useMemo(() => calcPurchasePaymentsTotal(payments), [payments]);
   const totalPaid = existingPaid + newPaymentsTotal;
   const debt = Math.max(0, grandTotal - totalPaid);
+  const purchasePreflightIssue = useMemo(
+    () =>
+      collectPurchaseSubmitPreflightIssues({
+        canSave: canSavePurchase,
+        supplierId,
+        warehouseId,
+        items,
+        payments,
+        totalPaid,
+        grandTotal,
+      }),
+    [canSavePurchase, grandTotal, items, payments, supplierId, totalPaid, warehouseId]
+  );
+  const purchasePreflightHint = purchasePreflightIssue
+    ? preflightMessage(t, purchasePreflightIssue)
+    : undefined;
   const status = debt > 0 ? t("forms.statusDebtor") : t("forms.statusPaid");
 
   const updateItem = (id: string, patch: Partial<PurchaseLineItem>) => {
@@ -283,19 +320,39 @@ export default function PurchaseForm({
 
   const handleSubmit = async () => {
     if (!canSavePurchase) {
-      alert(t("forms.noPurchasePermission"));
+      showToastError(t("forms.noPurchasePermission"));
       return;
     }
     if (!supplierId) {
-      alert(t("forms.selectSupplier"));
+      showToastError(t("forms.selectSupplier"));
       return;
     }
     if (!warehouseId) {
-      alert(t("forms.selectWarehouse"));
+      showToastError(t("forms.selectWarehouse"));
       return;
     }
-    if (totalPaid > grandTotal + 0.001) {
-      alert(t("forms.paymentsExceedTotal"));
+
+    const lineIssue = validatePurchaseInvoiceLines(items);
+    if (lineIssue) {
+      showToastError(preflightMessage(t, lineIssue));
+      return;
+    }
+
+    const paymentAccountIssue = validatePaymentRowsRequireAccount(payments);
+    if (paymentAccountIssue) {
+      showToastError(preflightMessage(t, paymentAccountIssue));
+      return;
+    }
+
+    const paymentTotalIssue = validatePaymentsNotExceedTotal(totalPaid, grandTotal);
+    if (paymentTotalIssue) {
+      showToastError(preflightMessage(t, paymentTotalIssue));
+      return;
+    }
+
+    const additionalExpenseError = validateDocumentAdditionalExpenses(additionalExpenses);
+    if (additionalExpenseError) {
+      showToastError(additionalExpenseError);
       return;
     }
 
@@ -324,11 +381,17 @@ export default function PurchaseForm({
           initialPurchase!.debt_amount,
           initialPurchase!.supplier_id || ""
         )
-      : await submitPurchase({ header, items, invoiceNumber, payments: paymentsToProcess });
+      : await submitPurchase({
+          header,
+          items,
+          invoiceNumber,
+          payments: paymentsToProcess,
+          additionalExpenses,
+        });
 
     setSaving(false);
     if (!result.success) {
-      alert(t("common.errorOccurred", { message: result.error ?? t("common.error") }));
+      showToastError(formatRpcError(result.error ?? t("common.error"), t));
       return;
     }
     onSuccess?.();
@@ -529,6 +592,13 @@ export default function PurchaseForm({
           </div>
         </div>
 
+        <DocumentAdditionalExpensesSection
+          expenses={additionalExpenses}
+          onChange={setAdditionalExpenses}
+          accounts={accounts}
+          disabled={saving}
+        />
+
         <div className="app-table-wrap">
           <div className="flex items-center justify-between border-b border-app bg-app-card-hover px-4 py-2.5">
             <h4 className="flex items-center gap-1.5 text-xs font-bold text-app">
@@ -657,7 +727,8 @@ export default function PurchaseForm({
           )}
           <button
             type="button"
-            disabled={saving || !canSavePurchase}
+            disabled={saving || Boolean(purchasePreflightIssue)}
+            title={purchasePreflightHint}
             onClick={handleSubmit}
             className="flex items-center gap-1 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
@@ -688,7 +759,7 @@ export default function PurchaseForm({
         />
       )}
 
-      <ToastMessage message={toastMessage} />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </>
   );
 }

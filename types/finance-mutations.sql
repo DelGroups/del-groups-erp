@@ -1,5 +1,5 @@
 -- Del Groups ERP — Atomic finance & payroll mutations
--- Run in Supabase SQL Editor AFTER types/rbac-migration.sql.
+-- Run in Supabase SQL Editor AFTER types/rbac-migration.sql AND types/account-mutations.sql.
 -- Called via supabase.rpc() from server actions (authenticated session required).
 
 -- ─── Expense: expense + transaction + account balance (single transaction) ───
@@ -49,18 +49,13 @@ BEGIN
   VALUES (trim(p_code), trim(p_category), p_amount, p_account_id, NULLIF(trim(p_notes), ''))
   RETURNING id INTO v_expense_id;
 
-  INSERT INTO transactions (account_id, type, amount, category, notes)
-  VALUES (
+  PERFORM public.post_cash_transaction(
     p_account_id,
     'Məxaric',
     p_amount,
     trim(p_category),
     'Xərc: ' || trim(p_category) || COALESCE(' - ' || NULLIF(trim(p_notes), ''), '')
   );
-
-  UPDATE accounts
-     SET balance = balance - p_amount
-   WHERE id = p_account_id;
 
   RETURN v_expense_id;
 END;
@@ -186,8 +181,7 @@ BEGIN
        AND status = 'pending';
   END IF;
 
-  INSERT INTO transactions (account_id, type, amount, category, notes)
-  VALUES (
+  PERFORM public.post_cash_transaction(
     p_account_id,
     'Məxaric',
     v_net_amount,
@@ -201,10 +195,6 @@ BEGIN
       to_char(p_deductions, 'FM999999990.00')
     )
   );
-
-  UPDATE accounts
-     SET balance = balance - v_net_amount
-   WHERE id = p_account_id;
 
   RETURN v_payroll_id;
 END;
