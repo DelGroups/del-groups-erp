@@ -1169,9 +1169,7 @@ export async function createProductionOrderAction(
 
     const inserted = await mutateOmittingMissingColumns<Record<string, unknown>>(
       async (payload) => {
-        const { data, error } = await insertProductionOrders(admin, payload)
-          .select("id,order_no,type,status,project_name,customer_id,customer_name,finished_product_id,finished_product_name,quantity,warehouse_id,warehouse_name,total_project_price,installation_fee,advance_payment,expected_delivery_date,materials_allocated,finished_goods_posted,created_at")
-          .single();
+        const { data, error } = await insertProductionOrders(admin, payload).select("id,order_no").single();
         return { data: (data as Record<string, unknown>) || null, error };
       },
       insertPayload,

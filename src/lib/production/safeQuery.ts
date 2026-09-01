@@ -59,8 +59,10 @@ type QueryError = { message?: string; code?: string } | null | undefined;
 
 export function missingColumnFromError(error?: QueryError): string | null {
   const message = error?.message || "";
-  const match = message.match(/Could not find the '([^']+)' column/i);
-  if (match?.[1]) return match[1];
+  const cacheMatch = message.match(/Could not find the '([^']+)' column/i);
+  if (cacheMatch?.[1]) return cacheMatch[1];
+  const pgMatch = message.match(/column (?:[\w]+\.)?"?(\w+)"? does not exist/i);
+  if (pgMatch?.[1]) return pgMatch[1];
   if (error?.code === "PGRST204") return "";
   return null;
 }
