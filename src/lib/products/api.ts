@@ -1,5 +1,6 @@
 import { insertPolywoodPieces } from "@/lib/polywood/inventory";
 import type { PolywoodPieceInsert } from "@/lib/polywood/types";
+import { resolveServicesCategoryId } from "@/lib/products/serviceCategory";
 import { supabase } from "@/lib/supabase";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import { generateProductCode } from "@/types/database.types";
@@ -77,6 +78,7 @@ export function buildProductInsert(
   input: Partial<ProductInsert> & Pick<ProductInsert, "name">
 ): ProductInsert {
   const isDimensional = Boolean(input.is_dimensional);
+  const isService = Boolean(input.is_service);
   return {
     code: input.code?.trim() || generateProductCode(),
     name: input.name.trim(),
@@ -85,17 +87,51 @@ export function buildProductInsert(
     unit: input.unit || "Ədəd",
     buy_price: Number(input.buy_price) || 0,
     sell_price: Number(input.sell_price) || 0,
-    stock: Number(input.stock) || 0,
-    min_stock: Number(input.min_stock) || 0,
+    stock: isService ? 0 : Number(input.stock) || 0,
+    min_stock: isService ? 0 : Number(input.min_stock) || 0,
     barcode: input.barcode?.trim() || null,
     color: input.color?.trim() || null,
     weight: Number(input.weight) || 0,
     extra_info: input.extra_info?.trim() || null,
     category_id: input.category_id?.trim() || null,
     is_dimensional: isDimensional,
+    is_service: isService,
     base_length: isDimensional && input.base_length ? Number(input.base_length) || null : null,
     base_width: isDimensional && input.base_width ? Number(input.base_width) || null : null,
   };
+}
+
+export async function findOrCreateServiceProduct(
+  name: string,
+  sellPrice = 0,
+  categories: Category[] = []
+): Promise<{ ok: boolean; error?: string; product?: Product }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Service name is required" };
+
+  const { data: existing, error: lookupError } = await supabase
+    .from("products")
+    .select("*")
+    .ilike("name", trimmed)
+    .maybeSingle();
+
+  if (lookupError) return { ok: false, error: lookupError.message };
+  if (existing) return { ok: true, product: existing as Product };
+
+  const categoryId = resolveServicesCategoryId(categories);
+  return createProduct({
+    name: trimmed,
+    category: "Services",
+    subcategory: "Services",
+    category_id: categoryId,
+    unit: "Xidmət",
+    buy_price: 0,
+    sell_price: sellPrice,
+    stock: 0,
+    min_stock: 0,
+    is_service: true,
+    is_dimensional: false,
+  });
 }
 
 export async function fetchProductsCatalog(): Promise<{

@@ -33,7 +33,15 @@ import {
   type Warehouse,
 } from "@/types/database.types";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
+import { ensureDefaultServiceProductsAction } from "@/lib/actions/serviceProducts";
+import { findOrCreateServiceProduct } from "@/lib/products/api";
+import {
+  isServiceProduct,
+  matchesServiceCategoryName,
+} from "@/lib/products/serviceCategory";
 import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+
+export const ADHOC_SERVICE_PRODUCT_ID = "__custom_service__";
 
 interface Employee {
   id: string;
@@ -56,6 +64,8 @@ interface GridRow {
   unitPrice: number;
   discountPercent: number;
   vatRate: number;
+  /** Free-text service name when no catalog service is selected */
+  customServiceName: string;
 }
 
 function createEmptyRow(): GridRow {
@@ -69,6 +79,7 @@ function createEmptyRow(): GridRow {
     unitPrice: 0,
     discountPercent: 0,
     vatRate: 0,
+    customServiceName: "",
   };
 }
 
@@ -107,37 +118,12 @@ function isServiceLineType(itemType: GridItemType): boolean {
   return itemType === "service";
 }
 
-const SERVICE_CATEGORY_KEYS = new Set([
-  "services",
-  "service",
-  "xidmət",
-  "xidmet",
-]);
-
-function matchesServiceCategoryName(value: string | null | undefined): boolean {
-  return SERVICE_CATEGORY_KEYS.has(normalizeCategory(value));
-}
-
-function isServiceProduct(product: Product, categoryById: Map<string, Category>): boolean {
-  if (
-    matchesServiceCategoryName(product.category) ||
-    matchesServiceCategoryName(product.subcategory)
-  ) {
-    return true;
+function rowHasProductSelection(row: GridRow): boolean {
+  if (row.itemType === "service") {
+    if (row.productId && row.productId !== ADHOC_SERVICE_PRODUCT_ID) return true;
+    return Boolean(row.customServiceName.trim());
   }
-
-  if (!product.category_id) return false;
-
-  const category = categoryById.get(product.category_id);
-  if (!category) return false;
-  if (matchesServiceCategoryName(category.name)) return true;
-
-  if (category.parent_id) {
-    const parent = categoryById.get(category.parent_id);
-    return parent ? matchesServiceCategoryName(parent.name) : false;
-  }
-
-  return false;
+  return Boolean(row.productId);
 }
 
 interface MixedDimensionalInvoiceFormProps {
@@ -179,7 +165,7 @@ export default function MixedDimensionalInvoiceForm({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: cats }, whResult] =
+      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: cats }, whResult, seedResult] =
         await Promise.all([
           supabase.from("customers").select("*").order("created_at", { ascending: false }),
           supabase.from("employees").select("*"),
@@ -188,13 +174,23 @@ export default function MixedDimensionalInvoiceForm({
           supabase.from("products").select("*").order("name", { ascending: true }),
           supabase.from("categories").select("*").order("name", { ascending: true }),
           ensurePolywoodWarehouseAction(),
+          ensureDefaultServiceProductsAction(),
         ]);
+
+      let productList = (prod as Product[]) || [];
+      if (seedResult.success && seedResult.data?.products?.length) {
+        const byId = new Map(productList.map((product) => [product.id, product]));
+        for (const product of seedResult.data.products) {
+          byId.set(product.id, product);
+        }
+        productList = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+      }
 
       setCustomers((cust as Customer[]) || []);
       setEmployees((emp as Employee[]) || []);
       setWarehouses((wh as Warehouse[]) || []);
       setAccounts(acc ?? []);
-      setProducts((prod as Product[]) || []);
+      setProducts(productList);
       setCategories((cats as Category[]) || []);
 
       const polywoodWarehouseId =
@@ -270,13 +266,20 @@ export default function MixedDimensionalInvoiceForm({
       amount: itemType === "service" || itemType === "accessory" ? 1 : 0,
       pieceCount: 1,
       unitPrice: 0,
+      customServiceName: "",
     });
   };
 
   const handleProductChange = (id: string, productId: string) => {
+    if (productId === ADHOC_SERVICE_PRODUCT_ID) {
+      updateRow(id, { productId, unitPrice: 0 });
+      return;
+    }
+
     const product = products.find((p) => p.id === productId) || null;
     updateRow(id, {
       productId,
+      customServiceName: "",
       unitPrice: product ? Number(product.sell_price) || 0 : 0,
     });
   };
@@ -284,47 +287,59 @@ export default function MixedDimensionalInvoiceForm({
   const addRow = () => setRows((prev) => [...prev, createEmptyRow()]);
   const removeRow = (id: string) => setRows((prev) => prev.filter((row) => row.id !== id));
 
-  const saleItems = useMemo<SaleItem[]>(() => {
-    const warehouse = warehouses.find((w) => w.id === warehouseId);
-    return rows
-      .filter((row) => row.productId)
-      .map((row) => {
-        const product = products.find((p) => p.id === row.productId);
-        const quantity = rowQuantity(row);
-        const isDimensionalMeter = isDimensionalLineType(row.itemType) && row.saleMode === "meter";
-        const saleItemType = isDimensionalLineType(row.itemType)
-          ? "dimensional"
-          : row.itemType === "service"
-            ? "service"
-            : "accessory";
-        return {
-          id: row.id,
-          product_id: row.productId,
-          product_code: product?.code || "",
-          product_name: product?.name || "",
-          warehouse_id: warehouseId,
-          warehouse_name: warehouse?.name || "",
-          quantity,
-          unit:
-            isDimensionalLineType(row.itemType)
-              ? row.saleMode === "full_sheet"
-                ? t("polywood.unit.sheet")
-                : t("polywood.unit.meter")
-              : isServiceLineType(row.itemType)
-                ? product?.unit || t("polywood.unit.service")
-                : product?.unit || t("polywood.unit.qty"),
-          unit_price: row.unitPrice,
-          discount_percent: row.discountPercent,
-          vat_rate: row.vatRate,
-          total: rowTotal(row),
-          extra_info: "",
-          sale_item_type: saleItemType,
-          polywood_sale_mode: isDimensionalLineType(row.itemType) ? row.saleMode : null,
-          polywood_length_m: isDimensionalMeter ? row.amount : null,
-          piece_count: isDimensionalMeter ? row.pieceCount : 1,
-        } as SaleItem;
-      });
-  }, [rows, products, warehouses, warehouseId, t]);
+  const buildSaleItems = useCallback(
+    (sourceRows: GridRow[]): SaleItem[] => {
+      const warehouse = warehouses.find((w) => w.id === warehouseId);
+      return sourceRows
+        .filter((row) => rowHasProductSelection(row))
+        .map((row) => {
+          const product =
+            row.productId && row.productId !== ADHOC_SERVICE_PRODUCT_ID
+              ? products.find((p) => p.id === row.productId)
+              : undefined;
+          const serviceName =
+            row.itemType === "service" && row.productId === ADHOC_SERVICE_PRODUCT_ID
+              ? row.customServiceName.trim()
+              : "";
+          const quantity = rowQuantity(row);
+          const isDimensionalMeter = isDimensionalLineType(row.itemType) && row.saleMode === "meter";
+          const saleItemType = isDimensionalLineType(row.itemType)
+            ? "dimensional"
+            : row.itemType === "service"
+              ? "service"
+              : "accessory";
+          return {
+            id: row.id,
+            product_id: product?.id || "",
+            product_code: product?.code || "",
+            product_name: product?.name || serviceName,
+            warehouse_id: warehouseId,
+            warehouse_name: warehouse?.name || "",
+            quantity,
+            unit:
+              isDimensionalLineType(row.itemType)
+                ? row.saleMode === "full_sheet"
+                  ? t("polywood.unit.sheet")
+                  : t("polywood.unit.meter")
+                : isServiceLineType(row.itemType)
+                  ? product?.unit || t("polywood.unit.service")
+                  : product?.unit || t("polywood.unit.qty"),
+            unit_price: row.unitPrice,
+            discount_percent: row.discountPercent,
+            vat_rate: row.vatRate,
+            total: rowTotal(row),
+            extra_info: "",
+            sale_item_type: saleItemType,
+            polywood_sale_mode: isDimensionalLineType(row.itemType) ? row.saleMode : null,
+            polywood_length_m: isDimensionalMeter ? row.amount : null,
+            piece_count: isDimensionalMeter ? row.pieceCount : 1,
+          } as SaleItem;
+        });
+    },
+    [products, warehouses, warehouseId, t]
+  );
+
+  const saleItems = useMemo(() => buildSaleItems(rows), [buildSaleItems, rows]);
 
   const additionalExpensesTotal = useMemo(
     () => sumDocumentAdditionalExpenses(additionalExpenses),
@@ -355,12 +370,64 @@ export default function MixedDimensionalInvoiceForm({
       return;
     }
     for (const row of rows) {
-      if (!row.productId) continue;
+      if (!rowHasProductSelection(row)) continue;
       if (rowQuantity(row) <= 0) {
         showError(t("invoice.insufficientStock", { product: "-", available: "0", requested: "0" }));
         return;
       }
+      if (
+        row.itemType === "service" &&
+        row.productId === ADHOC_SERVICE_PRODUCT_ID &&
+        !row.customServiceName.trim()
+      ) {
+        showError(t("polywood.service.nameRequired"));
+        return;
+      }
     }
+
+    const preparedRows: GridRow[] = [];
+    for (const row of rows) {
+      if (
+        row.itemType === "service" &&
+        (!row.productId || row.productId === ADHOC_SERVICE_PRODUCT_ID)
+      ) {
+        const serviceName = row.customServiceName.trim();
+        if (!serviceName) continue;
+
+        const created = await findOrCreateServiceProduct(serviceName, row.unitPrice, categories);
+        if (!created.ok || !created.product) {
+          showError(
+            formatRpcError(created.error, t) ??
+              created.error ??
+              t("polywood.service.createFailed")
+          );
+          return;
+        }
+
+        preparedRows.push({
+          ...row,
+          productId: created.product.id,
+          customServiceName: "",
+        });
+        continue;
+      }
+
+      preparedRows.push(row);
+    }
+
+    const itemsToSubmit = buildSaleItems(preparedRows);
+    if (itemsToSubmit.length === 0) {
+      showError(t("invoice.addProductAlert"));
+      return;
+    }
+
+    const totalsForSubmit = calcSaleTotals(
+      itemsToSubmit,
+      payments,
+      "free",
+      0,
+      additionalExpensesTotal
+    );
 
     const expenseError = validateDocumentAdditionalExpenses(additionalExpenses);
     if (expenseError) {
@@ -372,7 +439,10 @@ export default function MixedDimensionalInvoiceForm({
       showError(t(paymentAccountIssue.key, paymentAccountIssue.params));
       return;
     }
-    const paymentsExceedIssue = validatePaymentsNotExceedTotal(totals.paid_amount, totals.grand_total);
+    const paymentsExceedIssue = validatePaymentsNotExceedTotal(
+      totalsForSubmit.paid_amount,
+      totalsForSubmit.grand_total
+    );
     if (paymentsExceedIssue) {
       showError(t(paymentsExceedIssue.key, paymentsExceedIssue.params));
       return;
@@ -387,18 +457,18 @@ export default function MixedDimensionalInvoiceForm({
       seller_id: sellerId || null,
       seller_name: sellerName || null,
       warehouse_name: warehouses.find((w) => w.id === warehouseId)?.name || null,
-      subtotal: totals.subtotal,
-      discount_total: totals.discount_total,
-      vat_total: totals.vat_total,
-      total_amount: totals.grand_total,
-      paid_amount: totals.paid_amount,
-      remaining_balance: totals.remaining_balance,
+      subtotal: totalsForSubmit.subtotal,
+      discount_total: totalsForSubmit.discount_total,
+      vat_total: totalsForSubmit.vat_total,
+      total_amount: totalsForSubmit.grand_total,
+      paid_amount: totalsForSubmit.paid_amount,
+      remaining_balance: totalsForSubmit.remaining_balance,
       notes: notes || null,
     } as SaleInsert;
 
     const result = await submitSale({
       header,
-      items: saleItems,
+      items: itemsToSubmit,
       payments,
       docNo,
       additionalExpenses,
@@ -541,18 +611,49 @@ export default function MixedDimensionalInvoiceForm({
                         </select>
                       </td>
                       <td className="p-2">
-                        <select
-                          value={row.productId}
-                          onChange={(e) => handleProductChange(row.id, e.target.value)}
-                          className="app-input min-w-[180px] text-xs"
-                        >
-                          <option value="">{t("common.select")}</option>
-                          {options.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} {p.code ? `(${p.code})` : ""}
-                            </option>
-                          ))}
-                        </select>
+                        {isService ? (
+                          <div className="space-y-1">
+                            <select
+                              value={row.productId}
+                              onChange={(e) => handleProductChange(row.id, e.target.value)}
+                              className="app-input min-w-[180px] text-xs"
+                            >
+                              <option value="">{t("common.select")}</option>
+                              <option value={ADHOC_SERVICE_PRODUCT_ID}>
+                                {t("polywood.service.customService")}
+                              </option>
+                              {options.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} {p.code ? `(${p.code})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                            {row.productId === ADHOC_SERVICE_PRODUCT_ID ? (
+                              <input
+                                type="text"
+                                value={row.customServiceName}
+                                onChange={(e) =>
+                                  updateRow(row.id, { customServiceName: e.target.value })
+                                }
+                                placeholder={t("polywood.service.customServicePlaceholder")}
+                                className="app-input w-full text-xs"
+                              />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <select
+                            value={row.productId}
+                            onChange={(e) => handleProductChange(row.id, e.target.value)}
+                            className="app-input min-w-[180px] text-xs"
+                          >
+                            <option value="">{t("common.select")}</option>
+                            {options.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} {p.code ? `(${p.code})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="p-2">
                         {isDimensionalLineType(row.itemType) ? (

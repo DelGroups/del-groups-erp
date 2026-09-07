@@ -11,6 +11,7 @@ import {
   updateProduct,
 } from "@/lib/products/api";
 import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -30,7 +31,7 @@ interface OffCutRow {
   count: string;
 }
 
-const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu"];
+const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu", "Xidmət"];
 
 function createOffCutRow(): OffCutRow {
   return {
@@ -136,6 +137,39 @@ export default function ProductForm({
   const availableSubcategories = selectedParent
     ? categories.filter((cat) => cat.parent_id === selectedParent.id)
     : [];
+  const isServiceCategorySelected =
+    matchesServiceCategoryName(form.category) || matchesServiceCategoryName(form.subcategory);
+
+  const handleCategoryChange = (category: string) => {
+    const serviceCategory = matchesServiceCategoryName(category);
+    set({
+      category,
+      subcategory: "",
+      is_dimensional: serviceCategory ? false : form.is_dimensional,
+      unit: serviceCategory ? "Xidmət" : form.unit,
+      stock: serviceCategory ? "0" : form.stock,
+      min_stock: serviceCategory ? "0" : form.min_stock,
+    });
+    if (serviceCategory) {
+      setFullSheetCount("0");
+      setOffCutRows([]);
+    }
+  };
+
+  const handleSubcategoryChange = (subcategory: string) => {
+    const serviceCategory = matchesServiceCategoryName(subcategory);
+    set({
+      subcategory,
+      is_dimensional: serviceCategory ? false : form.is_dimensional,
+      unit: serviceCategory ? "Xidmət" : form.unit,
+      stock: serviceCategory ? "0" : form.stock,
+      min_stock: serviceCategory ? "0" : form.min_stock,
+    });
+    if (serviceCategory) {
+      setFullSheetCount("0");
+      setOffCutRows([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +178,7 @@ export default function ProductForm({
       return;
     }
 
-    if (form.is_dimensional && !isEditMode) {
+    if (form.is_dimensional && !isEditMode && !isServiceCategorySelected) {
       const baseLength = parseFloat(form.base_length) || 0;
       if (baseLength <= 0 && (parseFloat(fullSheetCount) > 0 || parsedOffCuts.length > 0)) {
         showError(t("forms.baseLengthRequiredForInitialStock"));
@@ -172,24 +206,27 @@ export default function ProductForm({
       buy_price: parseFloat(form.buy_price) || 0,
       sell_price: parseFloat(form.sell_price) || 0,
       stock:
-        form.is_dimensional && !isEditMode
-          ? dimensionalInitialMeters
-          : parseFloat(form.stock) || 0,
-      min_stock: parseFloat(form.min_stock) || 0,
+        isServiceCategorySelected
+          ? 0
+          : form.is_dimensional && !isEditMode
+            ? dimensionalInitialMeters
+            : parseFloat(form.stock) || 0,
+      min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
       barcode: form.barcode || null,
       color: form.color || null,
       weight: parseFloat(form.weight) || 0,
       extra_info: form.extra_info || null,
-      is_dimensional: form.is_dimensional,
-      base_length: form.is_dimensional ? parseFloat(form.base_length) || null : null,
-      base_width: form.is_dimensional ? parseFloat(form.base_width) || null : null,
+      is_dimensional: isServiceCategorySelected ? false : form.is_dimensional,
+      is_service: isServiceCategorySelected,
+      base_length: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_length) || null : null,
+      base_width: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_width) || null : null,
     };
 
     const result = isEditMode && initialProduct
       ? await updateProduct(initialProduct.id, payload)
       : await createProduct(
           payload,
-          form.is_dimensional
+          form.is_dimensional && !isServiceCategorySelected
             ? {
                 warehouseId: form.warehouse_id,
                 fullSheetCount: Math.max(0, Math.floor(parseFloat(fullSheetCount) || 0)),
@@ -239,7 +276,7 @@ export default function ProductForm({
           <select
             required
             value={form.category}
-            onChange={(e) => set({ category: e.target.value, subcategory: "" })}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className="app-input mt-1 text-sm"
           >
             <option value="">{t("common.select")}</option>
@@ -255,7 +292,7 @@ export default function ProductForm({
           {t("forms.subcategory")}
           <select
             value={form.subcategory}
-            onChange={(e) => set({ subcategory: e.target.value })}
+            onChange={(e) => handleSubcategoryChange(e.target.value)}
             className="app-input mt-1 text-sm"
           >
             <option value="">{t("forms.notSelected")}</option>
@@ -267,18 +304,24 @@ export default function ProductForm({
           </select>
         </label>
 
-        <div className="flex items-end gap-2 md:col-span-2">
-          <label className="flex items-center gap-2 text-xs font-semibold text-app">
-            <input
-              type="checkbox"
-              checked={form.is_dimensional}
-              onChange={(e) => handleDimensionalToggle(e.target.checked)}
-            />
-            {t("forms.isDimensionalProduct")}
-          </label>
-        </div>
+        {!isServiceCategorySelected ? (
+          <div className="flex items-end gap-2 md:col-span-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-app">
+              <input
+                type="checkbox"
+                checked={form.is_dimensional}
+                onChange={(e) => handleDimensionalToggle(e.target.checked)}
+              />
+              {t("forms.isDimensionalProduct")}
+            </label>
+          </div>
+        ) : (
+          <p className="md:col-span-2 rounded-lg border border-app bg-app-card-hover px-3 py-2 text-xs text-app-muted">
+            {t("forms.serviceProductHint")}
+          </p>
+        )}
 
-        {form.is_dimensional ? (
+        {form.is_dimensional && !isServiceCategorySelected ? (
           <>
             <label className="block text-xs font-semibold text-app">
               {t("forms.baseLength")} (m)
@@ -308,21 +351,23 @@ export default function ProductForm({
           </>
         ) : null}
 
-        <label className="block text-xs font-semibold text-app">
-          {t("common.warehouse")}
-          <select
-            value={form.warehouse_id}
-            onChange={(e) => set({ warehouse_id: e.target.value })}
-            className="app-input mt-1 text-sm"
-          >
-            <option value="">{t("forms.notSelected")}</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!isServiceCategorySelected ? (
+          <label className="block text-xs font-semibold text-app">
+            {t("common.warehouse")}
+            <select
+              value={form.warehouse_id}
+              onChange={(e) => set({ warehouse_id: e.target.value })}
+              className="app-input mt-1 text-sm"
+            >
+              <option value="">{t("forms.notSelected")}</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         <label className="block text-xs font-semibold text-app">
           {t("forms.unitMeasure")}
@@ -402,7 +447,7 @@ export default function ProductForm({
           />
         </label>
 
-        {!form.is_dimensional || isEditMode ? (
+        {!isServiceCategorySelected && (!form.is_dimensional || isEditMode) ? (
           <label className="block text-xs font-semibold text-app">
             {t("forms.initialStock")}
             <input
@@ -412,7 +457,7 @@ export default function ProductForm({
               className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
           </label>
-        ) : (
+        ) : !isServiceCategorySelected && form.is_dimensional && !isEditMode ? (
           <div className="md:col-span-2 space-y-4 rounded-xl border border-app bg-app-card-hover p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2">
               <h3 className="text-sm font-bold text-app">{t("forms.initialStockComposition")}</h3>
@@ -493,17 +538,19 @@ export default function ProductForm({
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <label className="block text-xs font-semibold text-app">
-          {t("forms.minStockThreshold")}
-          <input
-            type="number"
-            value={form.min_stock}
-            onChange={(e) => set({ min_stock: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
+        {!isServiceCategorySelected ? (
+          <label className="block text-xs font-semibold text-app">
+            {t("forms.minStockThreshold")}
+            <input
+              type="number"
+              value={form.min_stock}
+              onChange={(e) => set({ min_stock: e.target.value })}
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+        ) : null}
       </div>
 
       <label className="block text-xs font-semibold text-app">

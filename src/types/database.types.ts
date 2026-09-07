@@ -248,6 +248,8 @@ export interface Product {
   base_width?: number | null;
   /** True for sheet/roll products tracked as full sheets + off-cuts (Polywood, Sinelik, ...) */
   is_dimensional?: boolean | null;
+  /** True for billable services (cutting fee, edge banding, etc.) — no physical stock */
+  is_service?: boolean | null;
   created_at?: string | null;
 }
 
