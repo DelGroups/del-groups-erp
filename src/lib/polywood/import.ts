@@ -93,8 +93,7 @@ function createEmptyRow(rowNumber: number): PolywoodImportRow {
 }
 
 export function buildPolywoodImportTemplateCsv(): string {
-  return rowsToCsv([
-    POLYWOOD_IMPORT_COLUMNS,
+  return rowsToCsv([...POLYWOOD_IMPORT_COLUMNS], [
     [
       "PW-001",
       "Polywood White 18mm",

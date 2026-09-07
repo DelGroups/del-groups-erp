@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
-import UniversalInvoiceForm from "@/components/InvoiceForm";
+import MixedDimensionalInvoiceForm from "@/components/polywood/MixedDimensionalInvoiceForm";
 
 export default function PolywoodSalePageClient() {
   const router = useRouter();
@@ -10,13 +10,7 @@ export default function PolywoodSalePageClient() {
 
   return (
     <PageLayout>
-      <UniversalInvoiceForm
-        isOpen
-        defaultType="sale"
-        invoiceMode="polywood"
-        onClose={goToSales}
-        onSuccess={goToSales}
-      />
+      <MixedDimensionalInvoiceForm onClose={goToSales} onSuccess={goToSales} />
     </PageLayout>
   );
 }

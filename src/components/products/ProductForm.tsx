@@ -57,6 +57,9 @@ export default function ProductForm({
     weight: String(initialProduct?.weight ?? 0),
     extra_info: initialProduct?.extra_info || "",
     warehouse_id: warehouses[0]?.id || "",
+    is_dimensional: Boolean(initialProduct?.is_dimensional),
+    base_length: String(initialProduct?.base_length ?? ""),
+    base_width: String(initialProduct?.base_width ?? ""),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
@@ -75,11 +78,17 @@ export default function ProductForm({
     }
 
     setSaving(true);
+    const selectedCategoryEntity =
+      categories.find((cat) => cat.name === form.subcategory && cat.parent_id) ||
+      categories.find((cat) => cat.name === form.category && !cat.parent_id) ||
+      null;
+
     const payload: ProductInsert = {
       code: form.code,
       name: form.name,
       category: form.category || "Ümumi",
       subcategory: form.subcategory || null,
+      category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
       sell_price: parseFloat(form.sell_price) || 0,
@@ -89,6 +98,9 @@ export default function ProductForm({
       color: form.color || null,
       weight: parseFloat(form.weight) || 0,
       extra_info: form.extra_info || null,
+      is_dimensional: form.is_dimensional,
+      base_length: form.is_dimensional ? parseFloat(form.base_length) || null : null,
+      base_width: form.is_dimensional ? parseFloat(form.base_width) || null : null,
     };
 
     const result = isEditMode && initialProduct
@@ -163,6 +175,47 @@ export default function ProductForm({
             ))}
           </select>
         </label>
+
+        <div className="flex items-end gap-2 md:col-span-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-app">
+            <input
+              type="checkbox"
+              checked={form.is_dimensional}
+              onChange={(e) => set({ is_dimensional: e.target.checked })}
+            />
+            {t("forms.isDimensionalProduct")}
+          </label>
+        </div>
+
+        {form.is_dimensional ? (
+          <>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.baseLength")} (m)
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.base_length}
+                onChange={(e) => set({ base_length: e.target.value })}
+                placeholder="4.10"
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.baseWidth")} (m)
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.base_width}
+                onChange={(e) => set({ base_width: e.target.value })}
+                placeholder="0.60"
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+          </>
+        ) : null}
 
         <label className="block text-xs font-semibold text-app">
           {t("common.warehouse")}

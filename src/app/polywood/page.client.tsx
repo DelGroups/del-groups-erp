@@ -21,14 +21,21 @@ export default function PolywoodPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"inventory" | "import">("inventory");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const whResult = await ensurePolywoodWarehouseAction();
-      if (!whResult.success || !whResult.data?.warehouse) {
+      if (!whResult.success) {
         setError(whResult.error || t("polywood.loadError"));
+        setLoading(false);
+        return;
+      }
+      if (!whResult.data?.warehouse) {
+        setError(t("polywood.loadError"));
         setLoading(false);
         return;
       }
@@ -60,6 +67,26 @@ export default function PolywoodPageClient() {
       { products: 0, totalLength: 0, fullSheets: 0, cutPieces: 0 }
     );
   }, [rows]);
+
+  const categoryOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const { product } of rows) {
+      if (product.category) names.add(product.category);
+    }
+    return Array.from(names).sort();
+  }, [rows]);
+
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return rows.filter(({ product }) => {
+      if (categoryFilter && product.category !== categoryFilter) return false;
+      if (!query) return true;
+      return (
+        product.name.toLowerCase().includes(query) ||
+        (product.code || "").toLowerCase().includes(query)
+      );
+    });
+  }, [rows, search, categoryFilter]);
 
   return (
     <PageLayout>
@@ -153,6 +180,31 @@ export default function PolywoodPageClient() {
             {t("polywood.emptyInventory")}
           </div>
         ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("common.search")}
+                className="app-input w-full max-w-xs text-sm"
+              />
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="app-input w-full max-w-xs text-sm"
+              >
+                <option value="">{t("common.all")}</option>
+                {categoryOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-app-muted">
+                {visibleRows.length} / {rows.length}
+              </span>
+            </div>
           <div className="app-table-wrap">
             <table className="w-full text-left text-sm">
               <thead className="border-b bg-app-card-hover text-xs font-bold uppercase text-app">
@@ -166,7 +218,14 @@ export default function PolywoodPageClient() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-app">
-                {rows.map(({ product, summary }) => {
+                {visibleRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-sm text-app-muted">
+                      {t("common.noData")}
+                    </td>
+                  </tr>
+                ) : null}
+                {visibleRows.map(({ product, summary }) => {
                   const isExpanded = expandedProductId === product.id;
                   return (
                     <React.Fragment key={product.id}>
@@ -228,6 +287,7 @@ export default function PolywoodPageClient() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </main>
     </PageLayout>

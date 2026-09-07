@@ -1,10 +1,14 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type {
+  CompositeTypes,
+  Database,
+  Enums,
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "./supabase.generated";
+
+import type { Database, Json, Tables, TablesInsert, TablesUpdate } from "./supabase.generated";
 
 /** Strict table row — required keys so Supabase `GenericTable` accepts the schema. */
 type DbRow<T> = {
@@ -39,6 +43,10 @@ export interface SaleItem {
   polywood_total_area_m2?: number | null;
   polywood_cutting_option?: string | null;
   polywood_edge_option?: string | null;
+  /** Mixed dimensional-sale grid: which engine should process this line */
+  sale_item_type?: "standard" | "dimensional" | "accessory" | "service";
+  /** Number of identical cuts/pieces requested (meter-mode dimensional lines) */
+  piece_count?: number;
 }
 
 /** Payment row stored in sales.payments JSONB */
@@ -218,12 +226,12 @@ export interface Product {
   id: string;
   code: string;
   name: string;
-  category: string;
+  category: string | null;
   subcategory?: string | null;
-  unit: string;
-  buy_price: number;
-  sell_price: number;
-  stock: number;
+  unit: string | null;
+  buy_price: number | null;
+  sell_price: number | null;
+  stock: number | null;
   min_stock?: number | null;
   barcode?: string | null;
   color?: string | null;
@@ -232,6 +240,14 @@ export interface Product {
   warehouse_id?: string | null;
   inventory_mode?: "standard" | "polywood" | string | null;
   full_sheet_length_m?: number | null;
+  /** FK to categories.id — resolved alongside the legacy free-text category/subcategory */
+  category_id?: string | null;
+  /** Full sheet/roll length in metres (e.g. 4.10 for Polywood, 3.60 for Sinelik). Null for accessories. */
+  base_length?: number | null;
+  /** Full sheet/roll width in metres (e.g. 0.60). Null for accessories. */
+  base_width?: number | null;
+  /** True for sheet/roll products tracked as full sheets + off-cuts (Polywood, Sinelik, ...) */
+  is_dimensional?: boolean | null;
   created_at?: string | null;
 }
 
@@ -426,6 +442,8 @@ export interface SaleItemRow {
   polywood_sale_mode?: string | null;
   polywood_length_m?: number | null;
   polywood_cut_details?: Json | null;
+  sale_item_type?: "standard" | "dimensional" | "accessory" | "service" | null;
+  piece_count?: number | null;
   created_at?: string | null;
 }
 
@@ -966,408 +984,21 @@ export function isAdminRole(role: Role | null | undefined): boolean {
   return role?.name === ADMIN_ROLE_NAME;
 }
 
-export interface Database {
-  public: {
-    Tables: {
-      sales: {
-        Row: {
-          id: string;
-          doc_no: string | null;
-          doc_date: string | null;
-          customer_id: string | null;
-          customer_name: string | null;
-          seller_id: string | null;
-          seller_name: string | null;
-          warehouse_name: string | null;
-          subtotal: number | null;
-          discount_total: number | null;
-          vat_total: number | null;
-          total_amount: number | null;
-          paid_amount: number | null;
-          remaining_balance: number | null;
-          delivery_address: string | null;
-          delivery_type: string | null;
-          delivery_fee: number | null;
-          note: string | null;
-          notes: string | null;
-          payments: Json | null;
-          invoice_number: string | null;
-          created_at: string | null;
-          warehouse_sent: boolean | null;
-          warehouse_slip_status: string | null;
-        };
-        Insert: {
-          id?: string;
-          doc_no?: string | null;
-          doc_date?: string | null;
-          customer_id?: string | null;
-          customer_name?: string | null;
-          seller_id?: string | null;
-          seller_name?: string | null;
-          warehouse_name?: string | null;
-          subtotal?: number | null;
-          discount_total?: number | null;
-          vat_total?: number | null;
-          total_amount?: number | null;
-          paid_amount?: number | null;
-          remaining_balance?: number | null;
-          delivery_address?: string | null;
-          delivery_type?: string | null;
-          delivery_fee?: number | null;
-          note?: string | null;
-          notes?: string | null;
-          payments?: Json | null;
-          invoice_number?: string | null;
-          created_at?: string | null;
-          warehouse_sent?: boolean | null;
-          warehouse_slip_status?: string | null;
-        };
-        Update: {
-          id?: string;
-          doc_no?: string | null;
-          doc_date?: string | null;
-          customer_id?: string | null;
-          customer_name?: string | null;
-          seller_id?: string | null;
-          seller_name?: string | null;
-          warehouse_name?: string | null;
-          subtotal?: number | null;
-          discount_total?: number | null;
-          vat_total?: number | null;
-          total_amount?: number | null;
-          paid_amount?: number | null;
-          remaining_balance?: number | null;
-          delivery_address?: string | null;
-          delivery_type?: string | null;
-          delivery_fee?: number | null;
-          note?: string | null;
-          notes?: string | null;
-          payments?: Json | null;
-          invoice_number?: string | null;
-          created_at?: string | null;
-          warehouse_sent?: boolean | null;
-          warehouse_slip_status?: string | null;
-        };
-        Relationships: [];
-      };
-      sale_items: {
-        Row: DbRow<SaleItemRow & { id: string; sale_id: string }>;
-        Insert: SaleItemInsert;
-        Update: Partial<SaleItemInsert>;
-        Relationships: [];
-      };
-      customers: {
-        Row: DbRow<Customer>;
-        Insert: Partial<Customer>;
-        Update: Partial<Customer>;
-        Relationships: [];
-      };
-      employees: {
-        Row: DbRow<Employee>;
-        Insert: EmployeeDbInsert & { id?: string; created_at?: string | null };
-        Update: Partial<EmployeeDbInsert>;
-        Relationships: [];
-      };
-      warehouses: {
-        Row: DbRow<Warehouse>;
-        Insert: Omit<Warehouse, "id" | "created_at"> & { id?: string; created_at?: string | null };
-        Update: Partial<Warehouse>;
-        Relationships: [];
-      };
-      accounts: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      products: {
-        Row: DbRow<Product>;
-        Insert: Partial<Product> & Pick<Product, "name">;
-        Update: Partial<Product>;
-        Relationships: [];
-      };
-      categories: {
-        Row: DbRow<Category>;
-        Insert: Omit<Category, "id" | "created_at"> & { id?: string; created_at?: string | null };
-        Update: Partial<Category>;
-        Relationships: [];
-      };
-      inventory_writeoffs: {
-        Row: {
-          id: string;
-          document_number: string;
-          warehouse_id: string | null;
-          checker_name: string;
-          writeoff_date: string | null;
-          notes: string | null;
-          items: Json | null;
-          created_at: string | null;
-        };
-        Insert: InventoryWriteoffInsert & { id?: string; created_at?: string | null };
-        Update: Partial<InventoryWriteoffInsert>;
-        Relationships: [];
-      };
-      warehouse_slips: {
-        Row: DbRow<WarehouseSlip>;
-        Insert: WarehouseSlipInsert & { id?: string };
-        Update: Partial<WarehouseSlipInsert>;
-        Relationships: [];
-      };
-      commission_rules: {
-        Row: DbRow<CommissionRule>;
-        Insert: Omit<CommissionRule, "id" | "created_at"> & { id?: string; created_at?: string | null };
-        Update: Partial<CommissionRule>;
-        Relationships: [];
-      };
-      consignment_orders: {
-        Row: DbRow<ConsignmentOrder>;
-        Insert: ConsignmentOrderInsert;
-        Update: Partial<ConsignmentOrderInsert>;
-        Relationships: [];
-      };
-      consignment_partners: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      consignment_dispatches: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      consignment_inventory: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      consignment_monthly_reports: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      consignment_returns: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      purchases: {
-        Row: DbRow<Purchase>;
-        Insert: PurchaseInsert & { id?: string; created_at?: string | null };
-        Update: Partial<Purchase>;
-        Relationships: [
-          {
-            foreignKeyName: "purchases_supplier_id_fkey";
-            columns: ["supplier_id"];
-            isOneToOne: false;
-            referencedRelation: "suppliers";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      purchase_items: {
-        Row: DbRow<PurchaseItemRow & { id: string; purchase_id: string }>;
-        Insert: PurchaseItemInsert;
-        Update: Partial<PurchaseItemInsert>;
-        Relationships: [];
-      };
-      suppliers: {
-        Row: DbRow<Supplier>;
-        Insert: Partial<Supplier>;
-        Update: Partial<Supplier>;
-        Relationships: [];
-      };
-      transactions: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [
-          {
-            foreignKeyName: "transactions_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      company_settings: {
-        Row: DbRow<CompanySettings>;
-        Insert: Partial<CompanySettings> & Pick<CompanySettings, "company_name">;
-        Update: Partial<CompanySettings>;
-        Relationships: [];
-      };
-      settings: {
-        Row: {
-          id: string;
-          company_name: string | null;
-          logo_url: string | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          company_name?: string | null;
-          logo_url?: string | null;
-          created_at?: string | null;
-        };
-        Update: {
-          company_name?: string | null;
-          logo_url?: string | null;
-        };
-        Relationships: [];
-      };
-      sales_commissions: {
-        Row: DbRow<SalesCommission>;
-        Insert: SalesCommissionInsert;
-        Update: Partial<SalesCommissionInsert>;
-        Relationships: [];
-      };
-      employee_commission_rules: {
-        Row: DbRow<EmployeeCommissionRule>;
-        Insert: EmployeeCommissionRuleInsert;
-        Update: Partial<EmployeeCommissionRuleInsert>;
-        Relationships: [];
-      };
-      salary_payments: {
-        Row: DbRow<PayrollRecord>;
-        Insert: Partial<PayrollRecord> & Pick<PayrollRecord, "employee_id" | "account_id">;
-        Update: Partial<PayrollRecord>;
-        Relationships: [];
-      };
-      expenses: {
-        Row: DbRow<ExpenseRow>;
-        Insert: Partial<ExpenseRow>;
-        Update: Partial<ExpenseRow>;
-        Relationships: [
-          {
-            foreignKeyName: "expenses_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      production_boms: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_bom_items: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_orders: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_materials: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_stock_reservations: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_outsourcing: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_contractors: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_expenses: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      production_contracts: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
-        Relationships: [];
-      };
-      roles: {
-        Row: RoleDbRow;
-        Insert: RoleDbInsert;
-        Update: RoleDbUpdate;
-        Relationships: [];
-      },
-      profiles: {
-        Row: DbRow<ProfileRow>;
-        Insert: ProfileInsert;
-        Update: ProfileUpdate;
-        Relationships: [];
-      },
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      create_expense_atomic: {
-        Args: {
-          p_code: string;
-          p_category: string;
-          p_amount: number;
-          p_account_id: string;
-          p_notes?: string | null;
-        };
-        Returns: string;
-      };
-      create_production_expense_atomic: {
-        Args: {
-          p_production_order_id: string;
-          p_code: string;
-          p_category: string;
-          p_description: string;
-          p_amount: number;
-          p_expense_date: string;
-          p_account_id: string;
-          p_account_name?: string | null;
-          p_notes?: string | null;
-          p_actor_name?: string | null;
-        };
-        Returns: string;
-      };
-      process_payroll_atomic: {
-        Args: {
-          p_employee_id: string;
-          p_account_id: string;
-          p_base_salary: number;
-          p_deductions: number;
-          p_month_year: string;
-          p_notes?: string | null;
-          p_commission_ids?: string[];
-        };
-        Returns: string;
-      };
-      post_sale: {
-        Args: Record<string, unknown>;
-        Returns: unknown;
-      };
-    };
-  };
-}
 
+// --- Generated schema aliases (from linked Supabase project) ----------------
+
+export type AccountRow = Tables<"accounts">;
+export type PolywoodPieceRow = Tables<"polywood_pieces">;
+export type PolywoodPieceInsert = TablesInsert<"polywood_pieces">;
+export type ProductRow = Tables<"products">;
+export type SaleItemDbRow = Tables<"sale_items">;
+
+export type ProcessMixedDimensionalSaleRpcArgs =
+  Database["public"]["Functions"]["process_mixed_dimensional_sale"]["Args"];
+export type ProcessMixedDimensionalSaleRpcReturns =
+  Database["public"]["Functions"]["process_mixed_dimensional_sale"]["Returns"];
+export type RollbackMixedDimensionalSaleRpcArgs =
+  Database["public"]["Functions"]["rollback_mixed_dimensional_sale"]["Args"];
 export type SaleInsert = Database["public"]["Tables"]["sales"]["Insert"];
 export type PurchaseInsertType = Database["public"]["Tables"]["purchases"]["Insert"];
 

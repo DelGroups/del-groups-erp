@@ -6,6 +6,7 @@ import { generateProductCode } from "@/types/database.types";
 export function buildProductInsert(
   input: Partial<ProductInsert> & Pick<ProductInsert, "name">
 ): ProductInsert {
+  const isDimensional = Boolean(input.is_dimensional);
   return {
     code: input.code?.trim() || generateProductCode(),
     name: input.name.trim(),
@@ -20,6 +21,10 @@ export function buildProductInsert(
     color: input.color?.trim() || null,
     weight: Number(input.weight) || 0,
     extra_info: input.extra_info?.trim() || null,
+    category_id: input.category_id?.trim() || null,
+    is_dimensional: isDimensional,
+    base_length: isDimensional && input.base_length ? Number(input.base_length) || null : null,
+    base_width: isDimensional && input.base_width ? Number(input.base_width) || null : null,
   };
 }
 

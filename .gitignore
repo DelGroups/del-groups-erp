@@ -42,6 +42,9 @@ deploy.zip
 # vercel
 .vercel
 
+# supabase local CLI cache
+/supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

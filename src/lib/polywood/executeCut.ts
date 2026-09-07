@@ -5,7 +5,25 @@ import {
   fetchAvailablePolywoodPieces,
   syncPolywoodProductStock,
 } from "@/lib/polywood/inventory";
+import type { Json } from "@/types/database.types";
 import type { PolywoodCutResult } from "@/lib/polywood/types";
+
+function toPolywoodCutDetailsJson(
+  cutResult: PolywoodCutResult,
+  scrapPieceIds: string[]
+): Json {
+  return {
+    steps: cutResult.steps.map((step) => ({
+      pieceId: step.pieceId,
+      usedLength: step.usedLength,
+      action: step.action,
+      remainingOnPiece: step.remainingOnPiece ?? null,
+      scrapLength: step.scrapLength ?? null,
+    })),
+    scrap_created: cutResult.scrapCreated,
+    scrap_piece_ids: scrapPieceIds,
+  };
+}
 
 export interface ExecutePolywoodCutInput {
   productId: string;
@@ -108,11 +126,7 @@ export async function executePolywoodCut(
     const { error: detailError } = await supabase
       .from("sale_items")
       .update({
-        polywood_cut_details: {
-          steps: cutResult.steps,
-          scrap_created: cutResult.scrapCreated,
-          scrap_piece_ids: scrapPieceIds,
-        },
+        polywood_cut_details: toPolywoodCutDetailsJson(cutResult, scrapPieceIds),
       })
       .eq("id", input.saleItemId);
 

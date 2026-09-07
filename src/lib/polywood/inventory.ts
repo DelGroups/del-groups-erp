@@ -132,11 +132,16 @@ export async function addPolywoodStockFromLengths(
   return rows.length;
 }
 
+/**
+ * Any sheet/roll product tracked via full sheets + off-cuts — Polywood (4m),
+ * Sinelik (3.6m), or any future dimensional category. `is_dimensional` is the
+ * generic flag; `inventory_mode='polywood'` is kept in sync for legacy code.
+ */
 export async function fetchPolywoodProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
     .select("*")
-    .eq("inventory_mode", POLYWOOD_INVENTORY_MODE)
+    .or(`is_dimensional.eq.true,inventory_mode.eq.${POLYWOOD_INVENTORY_MODE}`)
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);

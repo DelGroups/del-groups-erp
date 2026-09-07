@@ -2,36 +2,17 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "DEL GROUPS ERP",
-    short_name: "DEL GROUPS ERP",
-    description: "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
+    name: "Del Groups ERP",
+    short_name: "Del ERP",
     start_url: "/",
-    scope: "/",
     display: "standalone",
-    orientation: "portrait-primary",
-    background_color: "#070b14",
+    background_color: "#ffffff",
     theme_color: "#2563eb",
-    lang: "az",
-    dir: "ltr",
-    categories: ["business", "productivity"],
     icons: [
       {
-        src: "/icons/icon-192x192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icons/icon-512x512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
-      {
-        src: "/icons/icon-maskable-512x512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
+        src: "/favicon.ico",
+        sizes: "any",
+        type: "image/x-icon",
       },
     ],
   };

@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   },
   description: "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
   applicationName: "DEL GROUPS ERP",
-  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "DEL GROUPS ERP",
@@ -56,11 +55,6 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap"
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen bg-app text-app antialiased">
