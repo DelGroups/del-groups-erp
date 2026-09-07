@@ -345,7 +345,7 @@ export default function UniversalInvoiceForm({
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [productsList, setProductsList] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -462,7 +462,7 @@ export default function UniversalInvoiceForm({
           ? item.inventory_mode === POLYWOOD_INVENTORY_MODE
           : item.inventory_mode !== POLYWOOD_INVENTORY_MODE
       );
-      setProductsList(filtered);
+      setProducts(filtered);
     }
   };
 
@@ -595,7 +595,7 @@ export default function UniversalInvoiceForm({
   };
 
   const handleQuickProductCreated = (product: Product, rowId: string) => {
-    setProductsList((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
+    setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
     handleProductSelect(rowId, product);
   };
 
@@ -625,12 +625,12 @@ export default function UniversalInvoiceForm({
   };
 
   const handleBarcodeScan = async (barcode: string) => {
-    let product = findProductByBarcodeInList(productsList, barcode) as Product | null;
+    let product = findProductByBarcodeInList(products, barcode) as Product | null;
     if (!product) {
       const fetched = await fetchProductByBarcode(barcode);
       if (fetched) {
         product = fetched as Product;
-        setProductsList((prev) => [product!, ...prev.filter((p) => p.id !== product!.id)]);
+        setProducts((prev) => [product!, ...prev.filter((p) => p.id !== product!.id)]);
       }
     }
     if (!product) {
@@ -742,33 +742,34 @@ export default function UniversalInvoiceForm({
     () => calcSaleTotals(items, payments, deliveryType, deliveryFee, additionalExpensesTotal),
     [items, payments, deliveryType, deliveryFee, additionalExpensesTotal]
   );
-  const salePreflightIssue = useMemo(
-    () =>
-      collectSaleSubmitPreflightIssues({
-        canSave: canSaveInvoice,
-        customerId: selectedCustomerId,
-        items,
-        payments,
-        paidAmount: totals.paid_amount,
-        grandTotal: totals.grand_total,
-        resolveAvailableStock: (item) => {
-          if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
-            return Number(item.available_stock);
-          }
-          const product = productsList.find((p) => p.id === item.product_id);
-          return Number(product?.stock) || 0;
-        },
-      }),
-    [
-      canSaveInvoice,
+  const salePreflightIssue = useMemo(() => {
+    if (!isOpen) return null;
+
+    return collectSaleSubmitPreflightIssues({
+      canSave: canSaveInvoice,
+      customerId: selectedCustomerId,
       items,
       payments,
-      productsList,
-      selectedCustomerId,
-      totals.grand_total,
-      totals.paid_amount,
-    ]
-  );
+      paidAmount: totals.paid_amount,
+      grandTotal: totals.grand_total,
+      resolveAvailableStock: (item) => {
+        if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
+          return Number(item.available_stock);
+        }
+        const product = (products ?? []).find((p) => p.id === item.product_id);
+        return Number(product?.stock) || 0;
+      },
+    });
+  }, [
+    isOpen,
+    canSaveInvoice,
+    items,
+    payments,
+    products,
+    selectedCustomerId,
+    totals.grand_total,
+    totals.paid_amount,
+  ]);
   const salePreflightHint = salePreflightIssue ? preflightMessage(t, salePreflightIssue) : undefined;
   const { locked: sellerLocked, lockedEmployeeId, lockedName } =
     useResponsiblePerson(employees);
@@ -801,9 +802,9 @@ export default function UniversalInvoiceForm({
 
     const saleItems = items
       .filter((i) => i.product_id || i.product_name.trim())
-      .map((item) => normalizeSaleItemProductId(item, productsList));
+      .map((item) => normalizeSaleItemProductId(item, products ?? []));
 
-    const productIdError = validateSaleItemsHaveProductIds(saleItems, productsList);
+    const productIdError = validateSaleItemsHaveProductIds(saleItems, products ?? []);
     if (productIdError) {
       showToastError(productIdError);
       return;
@@ -813,7 +814,7 @@ export default function UniversalInvoiceForm({
       if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
         return Number(item.available_stock);
       }
-      const product = productsList.find((p) => p.id === item.product_id);
+      const product = (products ?? []).find((p) => p.id === item.product_id);
       return Number(product?.stock) || 0;
     });
     if (lineIssue) {
@@ -1098,8 +1099,8 @@ export default function UniversalInvoiceForm({
                           <ProductCombobox
                             products={
                               polywoodOnly
-                                ? productsList
-                                : filterProductsForWarehouse(productsList, row.warehouse_id, warehouses)
+                                ? products
+                                : filterProductsForWarehouse(products, row.warehouse_id, warehouses)
                             }
                             selectedId={row.product_id}
                             selectedName={row.product_name}

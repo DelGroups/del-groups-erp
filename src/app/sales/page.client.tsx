@@ -257,15 +257,17 @@ export default function SalesListPage() {
           </div>
         </main>
 
-      <UniversalInvoiceForm
-        isOpen={isFormOpen}
-        defaultType="sale"
-        onClose={() => setIsFormOpen(false)}
-        onSuccess={() => {
-          setIsFormOpen(false);
-          void loadData();
-        }}
-      />
+      {isFormOpen ? (
+        <UniversalInvoiceForm
+          isOpen
+          defaultType="sale"
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={() => {
+            setIsFormOpen(false);
+            void loadData();
+          }}
+        />
+      ) : null}
 
       {viewingSale && (
         <SalesViewModal
