@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { Customer } from "@/types/database.types";
+import type { EntityType } from "@/lib/customers/entityType";
+import { entityTypeLabel } from "@/lib/customers/entityType";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -34,6 +36,9 @@ export default function CustomersPage() {
     full_name: "",
     phone: "",
     company_name: "",
+    address: "",
+    voen: "",
+    entity_type: "physical" as EntityType,
   });
   const [viewBalance, setViewBalance] = useState(0);
 
@@ -69,7 +74,16 @@ export default function CustomersPage() {
       full_name: formData.full_name,
       phone: formData.phone,
       company_name: formData.company_name,
+      address: formData.address,
+      voen: formData.entity_type === "legal" ? formData.voen.trim() : formData.voen.trim() || null,
+      entity_type: formData.entity_type,
     };
+
+    if (formData.entity_type === "legal" && !formData.voen.trim()) {
+      showError(t("customers.voenRequiredForLegal"));
+      setSaving(false);
+      return;
+    }
 
     const isEdit = Boolean(editingCustomerId);
     const { data, error } = isEdit
@@ -99,6 +113,9 @@ export default function CustomersPage() {
         full_name: "",
         phone: "",
         company_name: "",
+        address: "",
+        voen: "",
+        entity_type: "physical",
       });
       setViewBalance(0);
     }
@@ -114,6 +131,9 @@ export default function CustomersPage() {
       full_name: "",
       phone: "",
       company_name: "",
+      address: "",
+      voen: "",
+      entity_type: "physical",
     });
     setIsModalOpen(true);
   };
@@ -127,6 +147,9 @@ export default function CustomersPage() {
       full_name: customer.full_name || "",
       phone: customer.phone || "",
       company_name: customer.company_name || "",
+      address: customer.address || "",
+      voen: customer.voen || "",
+      entity_type: customer.entity_type === "legal" ? "legal" : "physical",
     });
     setIsModalOpen(true);
   };
@@ -191,6 +214,7 @@ export default function CustomersPage() {
                       <th className="px-6 py-3">{t("common.code")}</th>
                       <th className="px-6 py-3">{t("customers.customerCompany")}</th>
                       <th className="px-6 py-3">{t("common.phone")}</th>
+                      <th className="px-6 py-3">{t("customers.entityType")}</th>
                       <th className="px-6 py-3">{t("customers.balanceDebt")}</th>
                       {canManageCustomers ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
                     </tr>
@@ -218,6 +242,12 @@ export default function CustomersPage() {
                             ) : (
                               "-"
                             )}
+                          </td>
+                          <td className="px-6 py-4 text-app-muted">
+                            {entityTypeLabel(c.entity_type === "legal" ? "legal" : "physical", t)}
+                            {c.voen ? (
+                              <div className="text-[11px]">VÖEN: {c.voen}</div>
+                            ) : null}
                           </td>
                           <td className="px-6 py-4 font-bold">
                             {isDebtor ? (
@@ -263,6 +293,36 @@ export default function CustomersPage() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
+                <label className="block text-xs font-medium text-app mb-2">
+                  {t("customers.entityType")}
+                </label>
+                <div className="inline-flex overflow-hidden rounded-lg border border-app">
+                  <button
+                    type="button"
+                    onClick={() => setFormData((f) => ({ ...f, entity_type: "physical" }))}
+                    className={`px-3 py-1.5 text-xs font-semibold ${
+                      formData.entity_type === "physical"
+                        ? "bg-slate-600 text-white"
+                        : "bg-app-card text-app-muted"
+                    }`}
+                  >
+                    {t("customers.entityPhysical")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((f) => ({ ...f, entity_type: "legal" }))}
+                    className={`px-3 py-1.5 text-xs font-semibold ${
+                      formData.entity_type === "legal"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-app-card text-app-muted"
+                    }`}
+                  >
+                    {t("customers.entityLegal")}
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-app mb-1">{t("customers.customerCode")}</label>
                 <input
                   type="text"
@@ -288,16 +348,50 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-app mb-1">{t("common.companyName")}</label>
+                <label className="block text-xs font-medium text-app mb-1">
+                  {t("common.companyName")}
+                  {formData.entity_type === "legal" ? " *" : ""}
+                </label>
                 <input
                   type="text"
                   name="company_name"
+                  required={formData.entity_type === "legal"}
                   placeholder={t("customers.companyPlaceholder")}
                   value={formData.company_name}
                   onChange={handleInputChange}
                   className="app-input"
                 />
               </div>
+
+              {formData.entity_type === "legal" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-app mb-1">
+                      {t("invoice.voen")} *
+                    </label>
+                    <input
+                      type="text"
+                      name="voen"
+                      required
+                      value={formData.voen}
+                      onChange={handleInputChange}
+                      className="app-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-app mb-1">
+                      {t("invoice.addressLabel")}
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="app-input"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-app mb-1">{t("common.contactPhone")}</label>

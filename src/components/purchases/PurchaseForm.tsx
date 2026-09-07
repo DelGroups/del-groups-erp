@@ -50,6 +50,10 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import {
+  filterLegalSuppliers,
+  isLegalEntityWithVoen,
+} from "@/lib/customers/entityType";
 
 interface Account {
   id: string;
@@ -220,6 +224,20 @@ export default function PurchaseForm({
     () => supplierList.find((s) => s.id === supplierId),
     [supplierList, supplierId]
   );
+  const supplierOptions = useMemo(
+    () => (isOfficial ? filterLegalSuppliers(supplierList) : supplierList),
+    [supplierList, isOfficial]
+  );
+
+  useEffect(() => {
+    if (!isOfficial || !supplierId) return;
+    const current = supplierList.find((s) => s.id === supplierId);
+    if (current && !isLegalEntityWithVoen(current)) {
+      setSupplierId("");
+      setContractId(null);
+      setVoenVerification("");
+    }
+  }, [isOfficial, supplierId, supplierList]);
   const status = debt > 0 ? t("forms.statusDebtor") : t("forms.statusPaid");
 
   const updateItem = (id: string, patch: Partial<PurchaseLineItem>) => {
@@ -362,6 +380,10 @@ export default function PurchaseForm({
       showToastError(t("official.contractRequired"));
       return;
     }
+    if (isOfficial && selectedSupplier && !isLegalEntityWithVoen(selectedSupplier)) {
+      showToastError(t("official.noLegalSuppliers"));
+      return;
+    }
 
     const lineIssue = validatePurchaseInvoiceLines(items);
     if (lineIssue) {
@@ -475,17 +497,29 @@ export default function PurchaseForm({
             <div className="mt-1 flex gap-1">
               <select
                 value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSupplierId(id);
+                  const supplier = supplierList.find((s) => s.id === id);
+                  if (isOfficial && supplier?.voen) setVoenVerification(supplier.voen);
+                  if (!id) {
+                    setContractId(null);
+                    setVoenVerification("");
+                  }
+                }}
                 className="min-w-0 flex-1 app-input text-sm"
               >
                 <option value="">{t("common.select")}</option>
-                {supplierList.map((s) => (
+                {supplierOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.full_name}
                     {s.company_name ? ` (${s.company_name})` : ""}
                   </option>
                 ))}
               </select>
+              {isOfficial && supplierOptions.length === 0 && (
+                <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalSuppliers")}</p>
+              )}
               <button
                 type="button"
                 onClick={() => setShowSupplierModal(true)}

@@ -47,6 +47,10 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import {
+  filterLegalCustomers,
+  isLegalEntityWithVoen,
+} from "@/lib/customers/entityType";
 import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import {
@@ -391,6 +395,22 @@ export default function UniversalInvoiceForm({
   const canSaveInvoice = can("can_create_invoice");
   const polywoodOnly = invoiceMode === "polywood";
 
+  const customerOptions = useMemo(
+    () => (isOfficial ? filterLegalCustomers(customers) : customers),
+    [customers, isOfficial]
+  );
+
+  useEffect(() => {
+    if (!isOfficial || !selectedCustomerId) return;
+    const current = customers.find((c) => c.id === selectedCustomerId);
+    if (current && !isLegalEntityWithVoen(current)) {
+      setSelectedCustomerId("");
+      setSelectedCustomer(null);
+      setContractId(null);
+      setVoenVerification("");
+    }
+  }, [isOfficial, selectedCustomerId, customers]);
+
   const defaultWarehouse = warehouses[0];
 
   useEffect(() => {
@@ -482,6 +502,11 @@ export default function UniversalInvoiceForm({
     const found = customers.find((c) => c.id === id) || null;
     setSelectedCustomer(found);
     if (found?.address) setDeliveryAddress(found.address);
+    if (isOfficial && found?.voen) setVoenVerification(found.voen);
+    if (!id) {
+      setContractId(null);
+      setVoenVerification("");
+    }
   };
 
   const handleSaveQuickCustomer = async () => {
@@ -870,6 +895,10 @@ export default function UniversalInvoiceForm({
       showToastError(t("official.contractRequired"));
       return;
     }
+    if (isOfficial && selectedCustomer && !isLegalEntityWithVoen(selectedCustomer)) {
+      showToastError(t("official.noLegalCustomers"));
+      return;
+    }
 
     const paymentTotalIssue = validatePaymentsNotExceedTotal(
       totals.paid_amount,
@@ -1079,13 +1108,16 @@ export default function UniversalInvoiceForm({
               className="w-full rounded-lg border border-app bg-app-card-hover p-2 font-semibold"
             >
               <option value="">{t("invoice.selectCustomer")}</option>
-              {customers.map((c) => (
+              {customerOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {customerLabel(c, t)}
                   {c.company_name ? ` (${c.company_name})` : ""}
                 </option>
               ))}
             </select>
+            {isOfficial && customerOptions.length === 0 && (
+              <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalCustomers")}</p>
+            )}
 
             {selectedCustomer && (
               <div className="space-y-0.5 border-t border-app pt-2 text-[11px] text-app-muted">

@@ -5,14 +5,15 @@ import { FileText, Plus } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { VatMode } from "@/lib/finance/vatEngine";
 import {
+  contractTypesForTransaction,
   fetchContracts,
+  formatContractOptionLabel,
   type Contract,
-  type ContractType,
 } from "@/lib/contracts/api";
 import ContractQuickCreateModal from "@/components/contracts/ContractQuickCreateModal";
 
 export interface OfficialTransactionSectionProps {
-  transactionType: ContractType;
+  transactionType: "sale" | "purchase";
   partyId: string | null;
   partyName?: string;
   partyVoen?: string | null;
@@ -46,29 +47,41 @@ export default function OfficialTransactionSection({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const contractTypes = contractTypesForTransaction(transactionType);
 
   useEffect(() => {
-    if (!partyId) {
+    if (!partyId || !isOfficial) {
       setContracts([]);
-      onContractIdChange(null);
+      if (!partyId) onContractIdChange(null);
       return;
     }
 
     setLoadingContracts(true);
-    void fetchContracts({ type: transactionType, partyId, status: "active" }).then((rows) => {
+    void fetchContracts({ types: contractTypes, partyId, status: "active" }).then((rows) => {
       setContracts(rows);
       setLoadingContracts(false);
       if (contractId && !rows.some((c) => c.id === contractId)) {
         onContractIdChange(null);
       }
     });
-  }, [partyId, transactionType, contractId, onContractIdChange]);
+  }, [partyId, isOfficial, contractTypes, contractId, onContractIdChange]);
 
   useEffect(() => {
-    if (isOfficial && partyVoen && !voenVerification) {
+    if (isOfficial && partyVoen) {
       onVoenVerificationChange(partyVoen);
     }
-  }, [isOfficial, partyVoen, voenVerification, onVoenVerificationChange]);
+  }, [isOfficial, partyVoen, onVoenVerificationChange]);
+
+  const handleContractChange = (nextId: string | null) => {
+    onContractIdChange(nextId);
+    if (!nextId) return;
+    const contract = contracts.find((c) => c.id === nextId);
+    if (contract?.voen) {
+      onVoenVerificationChange(contract.voen);
+    } else if (partyVoen) {
+      onVoenVerificationChange(partyVoen);
+    }
+  };
 
   const handleOfficialChange = (official: boolean) => {
     onIsOfficialChange(official);
@@ -123,7 +136,7 @@ export default function OfficialTransactionSection({
               <div className="flex gap-2">
                 <select
                   value={contractId || ""}
-                  onChange={(e) => onContractIdChange(e.target.value || null)}
+                  onChange={(e) => handleContractChange(e.target.value || null)}
                   className="app-input flex-1"
                   required
                   disabled={!partyId || loadingContracts}
@@ -133,11 +146,13 @@ export default function OfficialTransactionSection({
                       ? t("official.selectPartyFirst")
                       : loadingContracts
                         ? t("common.loading")
-                        : t("official.selectContract")}
+                        : contracts.length === 0
+                          ? t("official.noContractsForParty")
+                          : t("official.selectContract")}
                   </option>
                   {contracts.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.contract_number} — {c.title}
+                      {formatContractOptionLabel(c, t)}
                     </option>
                   ))}
                 </select>
@@ -159,9 +174,9 @@ export default function OfficialTransactionSection({
               <input
                 type="text"
                 value={voenVerification}
-                onChange={(e) => onVoenVerificationChange(e.target.value)}
+                readOnly
                 placeholder={t("official.voenPlaceholder")}
-                className="app-input w-full"
+                className="app-input w-full bg-app-card-hover"
               />
             </label>
 
@@ -170,7 +185,7 @@ export default function OfficialTransactionSection({
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-app p-2 hover:bg-app-card-hover">
                 <input
                   type="radio"
-                  name="vatMode"
+                  name={`vatMode-${transactionType}`}
                   checked={vatMode === "exclusive"}
                   onChange={() => onVatModeChange("exclusive")}
                 />
@@ -179,7 +194,7 @@ export default function OfficialTransactionSection({
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-app p-2 hover:bg-app-card-hover">
                 <input
                   type="radio"
-                  name="vatMode"
+                  name={`vatMode-${transactionType}`}
                   checked={vatMode === "inclusive"}
                   onChange={() => onVatModeChange("inclusive")}
                 />
@@ -192,14 +207,14 @@ export default function OfficialTransactionSection({
 
       {showQuickCreate && partyId && (
         <ContractQuickCreateModal
-          type={transactionType}
+          transactionType={transactionType}
           partyId={partyId}
           partyName={partyName}
           partyVoen={partyVoen}
           onClose={() => setShowQuickCreate(false)}
           onCreated={(contract) => {
             setContracts((prev) => [contract, ...prev]);
-            onContractIdChange(contract.id);
+            handleContractChange(contract.id);
             onContractCreated?.(contract);
             setShowQuickCreate(false);
           }}

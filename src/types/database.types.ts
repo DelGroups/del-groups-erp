@@ -463,6 +463,7 @@ export interface Customer {
   company_name?: string | null;
   address?: string | null;
   voen?: string | null;
+  entity_type?: "physical" | "legal" | null;
   balance?: number | null;
   created_at?: string | null;
 }
@@ -681,6 +682,8 @@ export interface Supplier {
   company_name?: string | null;
   phone?: string | null;
   voen?: string | null;
+  address?: string | null;
+  entity_type?: "physical" | "legal" | null;
   balance?: number | null;
   created_at?: string | null;
 }

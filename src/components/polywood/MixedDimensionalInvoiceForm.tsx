@@ -48,6 +48,10 @@ import {
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals } from "@/lib/finance/vatEngine";
 import type { VatMode } from "@/lib/finance/vatEngine";
+import {
+  filterLegalCustomers,
+  isLegalEntityWithVoen,
+} from "@/lib/customers/entityType";
 
 export const ADHOC_SERVICE_PRODUCT_ID = "__custom_service__";
 
@@ -388,6 +392,21 @@ export default function MixedDimensionalInvoiceForm({
   );
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
+  const customerOptions = useMemo(
+    () => (isOfficial ? filterLegalCustomers(customers) : customers),
+    [customers, isOfficial]
+  );
+
+  useEffect(() => {
+    if (!isOfficial || !customerId) return;
+    const current = customers.find((c) => c.id === customerId);
+    if (current && !isLegalEntityWithVoen(current)) {
+      setCustomerId("");
+      setCustomerName("");
+      setContractId(null);
+      setVoenVerification("");
+    }
+  }, [isOfficial, customerId, customers]);
 
   const addPaymentRow = () =>
     setPayments((prev) => [
@@ -476,6 +495,10 @@ export default function MixedDimensionalInvoiceForm({
 
     if (isOfficial && !contractId) {
       showError(t("official.contractRequired"));
+      return;
+    }
+    if (isOfficial && selectedCustomer && !isLegalEntityWithVoen(selectedCustomer)) {
+      showError(t("official.noLegalCustomers"));
       return;
     }
 
@@ -586,16 +609,24 @@ export default function MixedDimensionalInvoiceForm({
                 setCustomerId(id);
                 const c = customers.find((x) => x.id === id);
                 setCustomerName(c ? customerLabel(c) : "");
+                if (isOfficial && c?.voen) setVoenVerification(c.voen);
+                if (!id) {
+                  setContractId(null);
+                  setVoenVerification("");
+                }
               }}
               className="app-input mt-1 w-full text-sm"
             >
               <option value="">{t("invoice.anonymousCustomer")}</option>
-              {customers.map((c) => (
+              {customerOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {customerLabel(c)}
                 </option>
               ))}
             </select>
+            {isOfficial && customerOptions.length === 0 && (
+              <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalCustomers")}</p>
+            )}
           </label>
 
           <label className="text-xs font-semibold text-app">

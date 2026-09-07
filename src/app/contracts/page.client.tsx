@@ -10,19 +10,17 @@ import { useToast } from "@/hooks/useToast";
 import {
   createContract,
   fetchContracts,
+  formatContractOptionLabel,
   generateContractNumber,
+  getContractTypeLabel,
   updateContract,
   type Contract,
   type ContractStatus,
   type ContractType,
 } from "@/lib/contracts/api";
+import { filterLegalCustomers, filterLegalSuppliers } from "@/lib/customers/entityType";
 import { supabase } from "@/lib/supabase";
-
-interface PartyOption {
-  id: string;
-  name: string;
-  voen?: string | null;
-}
+import type { Customer, Supplier } from "@/types/database.types";
 
 export default function ContractsPageClient() {
   const { t } = useI18n();
@@ -31,8 +29,8 @@ export default function ContractsPageClient() {
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [customers, setCustomers] = useState<PartyOption[]>([]);
-  const [suppliers, setSuppliers] = useState<PartyOption[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | ContractType>("all");
@@ -47,32 +45,24 @@ export default function ContractsPageClient() {
     title: "",
     total_amount: "",
     status: "active" as ContractStatus,
-    voen: "",
+    advance_percentage: "",
+    payment_stages: "",
+    payment_terms_notes: "",
+    contract_date: new Date().toISOString().slice(0, 10),
+    expiry_date: "",
   });
 
   const loadData = async () => {
     setLoading(true);
     const [contractRows, customerRes, supplierRes] = await Promise.all([
       fetchContracts(),
-      supabase.from("customers").select("id, full_name, name, voen").order("full_name"),
-      supabase.from("suppliers").select("id, name, voen").order("name"),
+      supabase.from("customers").select("*").order("full_name"),
+      supabase.from("suppliers").select("*").order("full_name"),
     ]);
 
     setContracts(contractRows);
-    setCustomers(
-      (customerRes.data || []).map((c) => ({
-        id: c.id,
-        name: c.full_name || c.name || "-",
-        voen: c.voen,
-      }))
-    );
-    setSuppliers(
-      (supplierRes.data || []).map((s) => ({
-        id: s.id,
-        name: s.name || "-",
-        voen: s.voen,
-      }))
-    );
+    setCustomers((customerRes.data as Customer[]) || []);
+    setSuppliers((supplierRes.data as Supplier[]) || []);
     setLoading(false);
   };
 
@@ -80,7 +70,23 @@ export default function ContractsPageClient() {
     void loadData();
   }, []);
 
-  const partyOptions = form.type === "sale" ? customers : suppliers;
+  const legalCustomers = useMemo(() => filterLegalCustomers(customers), [customers]);
+  const legalSuppliers = useMemo(() => filterLegalSuppliers(suppliers), [suppliers]);
+
+  const partyOptions = useMemo(() => {
+    if (form.type === "purchase") {
+      return legalSuppliers.map((s) => ({
+        id: s.id,
+        name: s.full_name || s.company_name || "-",
+        voen: s.voen,
+      }));
+    }
+    return legalCustomers.map((c) => ({
+      id: c.id,
+      name: c.full_name || c.company_name || c.name || "-",
+      voen: c.voen,
+    }));
+  }, [form.type, legalCustomers, legalSuppliers]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -95,17 +101,23 @@ export default function ContractsPageClient() {
     });
   }, [contracts, search, filterType]);
 
+  const resetForm = (type: ContractType = "sale") => ({
+    contract_number: generateContractNumber(type),
+    type,
+    party_id: "",
+    title: "",
+    total_amount: "",
+    status: "active" as ContractStatus,
+    advance_percentage: "",
+    payment_stages: "",
+    payment_terms_notes: "",
+    contract_date: new Date().toISOString().slice(0, 10),
+    expiry_date: "",
+  });
+
   const openCreate = () => {
     setEditingId(null);
-    setForm({
-      contract_number: generateContractNumber("sale"),
-      type: "sale",
-      party_id: "",
-      title: "",
-      total_amount: "",
-      status: "active",
-      voen: "",
-    });
+    setForm(resetForm("sale"));
     setModalOpen(true);
   };
 
@@ -116,9 +128,14 @@ export default function ContractsPageClient() {
       type: contract.type,
       party_id: contract.party_id,
       title: contract.title,
-      total_amount: String(contract.total_amount || 0),
+      total_amount: contract.total_amount != null ? String(contract.total_amount) : "",
       status: contract.status,
-      voen: contract.voen || "",
+      advance_percentage:
+        contract.advance_percentage != null ? String(contract.advance_percentage) : "",
+      payment_stages: contract.payment_stages != null ? String(contract.payment_stages) : "",
+      payment_terms_notes: contract.payment_terms_notes || "",
+      contract_date: contract.contract_date || new Date().toISOString().slice(0, 10),
+      expiry_date: contract.expiry_date || "",
     });
     setModalOpen(true);
   };
@@ -135,6 +152,11 @@ export default function ContractsPageClient() {
     }
 
     const party = partyOptions.find((p) => p.id === form.party_id);
+    if (!party?.voen?.trim()) {
+      showError(t("official.legalPartyVoenRequired"));
+      return;
+    }
+
     setSaving(true);
     const payload = {
       contract_number: form.contract_number.trim(),
@@ -142,9 +164,14 @@ export default function ContractsPageClient() {
       party_name: party?.name ?? null,
       type: form.type,
       title: form.title.trim(),
-      total_amount: Number(form.total_amount) || 0,
+      total_amount: form.total_amount.trim() ? Number(form.total_amount) : null,
       status: form.status,
-      voen: form.voen.trim() || null,
+      voen: party.voen.trim(),
+      advance_percentage: form.advance_percentage.trim() ? Number(form.advance_percentage) : null,
+      payment_stages: form.payment_stages.trim() ? Number(form.payment_stages) : null,
+      payment_terms_notes: form.payment_terms_notes.trim() || null,
+      contract_date: form.contract_date || null,
+      expiry_date: form.expiry_date || null,
     };
 
     const result = editingId
@@ -185,6 +212,7 @@ export default function ContractsPageClient() {
               <option value="all">{t("common.all")}</option>
               <option value="sale">{t("official.typeSale")}</option>
               <option value="purchase">{t("official.typePurchase")}</option>
+              <option value="service">{t("official.typeService")}</option>
             </select>
             <button type="button" onClick={() => void loadData()} className="btn-secondary p-2">
               <RefreshCw className="h-4 w-4" />
@@ -212,6 +240,7 @@ export default function ContractsPageClient() {
                   <th className="px-4 py-2">{t("official.contractType")}</th>
                   <th className="px-4 py-2">{t("official.party")}</th>
                   <th className="px-4 py-2 text-right">{t("official.contractAmount")}</th>
+                  <th className="px-4 py-2">{t("official.paymentTerms")}</th>
                   <th className="px-4 py-2">{t("common.status")}</th>
                   <th className="px-4 py-2" />
                 </tr>
@@ -221,12 +250,13 @@ export default function ContractsPageClient() {
                   <tr key={c.id} className="border-b border-app/50 hover:bg-app-card-hover">
                     <td className="px-4 py-2 font-mono">{c.contract_number}</td>
                     <td className="px-4 py-2">{c.title}</td>
-                    <td className="px-4 py-2">
-                      {c.type === "sale" ? t("official.typeSale") : t("official.typePurchase")}
-                    </td>
+                    <td className="px-4 py-2">{getContractTypeLabel(c.type, t)}</td>
                     <td className="px-4 py-2">{c.party_name || "-"}</td>
                     <td className="px-4 py-2 text-right font-mono">
-                      {Number(c.total_amount || 0).toFixed(2)}
+                      {c.total_amount != null ? Number(c.total_amount).toFixed(2) : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-app-muted">
+                      {formatContractOptionLabel(c, t).split(" - ").slice(1).join(" - ") || "—"}
                     </td>
                     <td className="px-4 py-2">{c.status}</td>
                     <td className="px-4 py-2 text-right">
@@ -250,7 +280,7 @@ export default function ContractsPageClient() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
-          <div className="app-modal w-full max-w-lg">
+          <div className="app-modal max-h-[90vh] w-full max-w-lg overflow-y-auto">
             <div className="flex items-center justify-between border-b border-app px-5 py-4">
               <h3 className="font-bold">
                 {editingId ? t("official.editContract") : t("official.newContract")}
@@ -264,18 +294,20 @@ export default function ContractsPageClient() {
                 <span className="font-semibold">{t("official.contractType")}</span>
                 <select
                   value={form.type}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const nextType = e.target.value as ContractType;
                     setForm((f) => ({
                       ...f,
-                      type: e.target.value as ContractType,
+                      type: nextType,
                       party_id: "",
-                      contract_number: generateContractNumber(e.target.value as ContractType),
-                    }))
-                  }
+                      contract_number: generateContractNumber(nextType),
+                    }));
+                  }}
                   className="app-input w-full"
                 >
                   <option value="sale">{t("official.typeSale")}</option>
                   <option value="purchase">{t("official.typePurchase")}</option>
+                  <option value="service">{t("official.typeService")}</option>
                 </select>
               </label>
 
@@ -292,27 +324,25 @@ export default function ContractsPageClient() {
 
               <label className="block space-y-1">
                 <span className="font-semibold">{t("official.party")}</span>
-                <select
-                  value={form.party_id}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    const party = partyOptions.find((p) => p.id === id);
-                    setForm((f) => ({
-                      ...f,
-                      party_id: id,
-                      voen: party?.voen || f.voen,
-                    }));
-                  }}
-                  className="app-input w-full"
-                  required
-                >
-                  <option value="">{t("common.select")}</option>
-                  {partyOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                {partyOptions.length === 0 ? (
+                  <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700">
+                    {t("official.noLegalParties")}
+                  </p>
+                ) : (
+                  <select
+                    value={form.party_id}
+                    onChange={(e) => setForm((f) => ({ ...f, party_id: e.target.value }))}
+                    className="app-input w-full"
+                    required
+                  >
+                    <option value="">{t("common.select")}</option>
+                    {partyOptions.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.voen ? `(VÖEN: ${p.voen})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
 
               <label className="block space-y-1">
@@ -328,7 +358,54 @@ export default function ContractsPageClient() {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
-                  <span className="font-semibold">{t("official.contractAmount")}</span>
+                  <span className="font-semibold">{t("official.contractDate")}</span>
+                  <input
+                    type="date"
+                    value={form.contract_date}
+                    onChange={(e) => setForm((f) => ({ ...f, contract_date: e.target.value }))}
+                    className="app-input w-full"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="font-semibold">{t("official.expiryDate")}</span>
+                  <input
+                    type="date"
+                    value={form.expiry_date}
+                    onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
+                    className="app-input w-full"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-lg border border-app bg-app-card-hover p-3 space-y-3">
+                <p className="font-semibold text-app">{t("official.paymentTerms")}</p>
+                <label className="block space-y-1">
+                  <span className="font-semibold">{t("official.advancePercentage")}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.advance_percentage}
+                    onChange={(e) => setForm((f) => ({ ...f, advance_percentage: e.target.value }))}
+                    className="app-input w-full"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="font-semibold">{t("official.paymentStages")}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.payment_stages}
+                    onChange={(e) => setForm((f) => ({ ...f, payment_stages: e.target.value }))}
+                    className="app-input w-full"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="font-semibold">
+                    {t("official.contractAmount")} ({t("official.optional")})
+                  </span>
                   <input
                     type="number"
                     min="0"
@@ -338,6 +415,19 @@ export default function ContractsPageClient() {
                     className="app-input w-full"
                   />
                 </label>
+              </div>
+
+              <label className="block space-y-1">
+                <span className="font-semibold">{t("official.paymentTermsNotes")}</span>
+                <textarea
+                  value={form.payment_terms_notes}
+                  onChange={(e) => setForm((f) => ({ ...f, payment_terms_notes: e.target.value }))}
+                  rows={3}
+                  className="app-input w-full resize-none"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
                   <span className="font-semibold">{t("common.status")}</span>
                   <select
@@ -354,21 +444,15 @@ export default function ContractsPageClient() {
                 </label>
               </div>
 
-              <label className="block space-y-1">
-                <span className="font-semibold">{t("invoice.voen")}</span>
-                <input
-                  type="text"
-                  value={form.voen}
-                  onChange={(e) => setForm((f) => ({ ...f, voen: e.target.value }))}
-                  className="app-input w-full"
-                />
-              </label>
-
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
                   {t("common.cancel")}
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary">
+                <button
+                  type="submit"
+                  disabled={saving || partyOptions.length === 0}
+                  className="btn-primary"
+                >
                   {saving ? t("common.saving") : t("common.save")}
                 </button>
               </div>
