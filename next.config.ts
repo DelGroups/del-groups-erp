@@ -9,6 +9,10 @@ const withPWA = require("next-pwa")({
   sw: "sw.js",
   runtimeCaching: [
     {
+      urlPattern: /\/manifest\.(json|webmanifest)$/i,
+      handler: "NetworkOnly",
+    },
+    {
       urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
       handler: "NetworkFirst",
       options: {
@@ -67,6 +71,15 @@ const nextConfig: NextConfig = {
         hostname: "**.supabase.co",
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/manifest.json",
+        destination: "/manifest.webmanifest",
+        permanent: false,
+      },
+    ];
   },
   async headers() {
     return [

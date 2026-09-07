@@ -9,6 +9,7 @@ export interface SaleRecord {
   customer_name: string | null;
   seller_name: string | null;
   warehouse_name: string | null;
+  warehouses?: { name?: string | null } | null;
   subtotal: number;
   discount_total: number;
   vat_total: number;
@@ -66,8 +67,27 @@ export function getSaleRemaining(
   return computed;
 }
 
-export function formatSaleAmount(amount: number, currencyLabel = "AZN"): string {
-  return `${toAmount(amount).toFixed(2)} ${currencyLabel}`;
+export const DEFAULT_SALE_WAREHOUSE_LABEL = "Əsas Anbar";
+
+export function formatSaleAmount(amount: unknown, currencyLabel = "AZN"): string {
+  return `${Number(amount || 0).toFixed(2)} ${currencyLabel}`;
+}
+
+export function getSaleWarehouseLabel(
+  sale: Pick<SaleRecord, "warehouse_name" | "items" | "warehouses"> | null | undefined
+): string {
+  if (!sale) return DEFAULT_SALE_WAREHOUSE_LABEL;
+
+  const headerName = sale.warehouse_name?.trim();
+  if (headerName) return headerName;
+
+  const joinedName = sale.warehouses?.name?.trim();
+  if (joinedName) return joinedName;
+
+  const itemName = (sale.items ?? []).find((item) => item.warehouse_name?.trim())?.warehouse_name?.trim();
+  if (itemName) return itemName;
+
+  return DEFAULT_SALE_WAREHOUSE_LABEL;
 }
 
 function resolveSaleWarehouseName(row: SalesListRow): string | null {
@@ -112,7 +132,7 @@ function mapSaleRow(row: SalesListRow): SaleRecord | null {
     customer_id: typeof row.customer_id === "string" ? row.customer_id : null,
     customer_name: typeof row.customer_name === "string" ? row.customer_name : null,
     seller_name: typeof row.seller_name === "string" ? row.seller_name : null,
-    warehouse_name: resolveSaleWarehouseName(row),
+    warehouse_name: resolveSaleWarehouseName(row) ?? DEFAULT_SALE_WAREHOUSE_LABEL,
     subtotal: toAmount(row.subtotal),
     discount_total: toAmount(row.discount_total),
     vat_total: toAmount(row.vat_total),
@@ -238,7 +258,8 @@ export async function fetchSaleById(id: string): Promise<SaleRecord | null> {
 
     return {
       ...mapped,
-      warehouse_name: mapped.warehouse_name || warehouseFromItems || null,
+      warehouse_name:
+        mapped.warehouse_name || warehouseFromItems || DEFAULT_SALE_WAREHOUSE_LABEL,
       items,
       payments: normalizePayments(sale.payments),
     };

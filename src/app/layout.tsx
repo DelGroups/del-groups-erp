@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   },
   description: "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
   applicationName: "DEL GROUPS ERP",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "DEL GROUPS ERP",

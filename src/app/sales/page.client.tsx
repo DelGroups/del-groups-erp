@@ -10,7 +10,7 @@ import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import SalesPrintTemplate from "@/components/sales/SalesPrintTemplate";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
-import { fetchSaleById, fetchSalesListWithMeta, formatSaleAmount, getSaleRemaining, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchSaleById, fetchSalesListWithMeta, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "@/lib/sales/fetchSales";
 import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -72,7 +72,8 @@ export default function SalesListPage() {
     return (
       (s.doc_no ?? "").toLowerCase().includes(q) ||
       (s.customer_name ?? "").toLowerCase().includes(q) ||
-      (s.warehouse_name ?? "").toLowerCase().includes(q)
+      (s.warehouse_name ?? "").toLowerCase().includes(q) ||
+      getSaleWarehouseLabel(s).toLowerCase().includes(q)
     );
   });
 
@@ -106,10 +107,10 @@ export default function SalesListPage() {
       s.doc_no ?? "",
       s.doc_date ?? "",
       `"${s.customer_name ?? ""}"`,
-      s.warehouse_name ?? "",
-      Number(s.total_amount ?? 0),
-      Number(s.paid_amount ?? 0),
-      getSaleRemaining(s),
+      getSaleWarehouseLabel(s),
+      Number(s.total_amount || 0).toFixed(2),
+      Number(s.paid_amount || 0).toFixed(2),
+      Number(getSaleRemaining(s) || 0).toFixed(2),
     ]);
     const csvContent =
       "data:text/csv;charset=utf-8,\uFEFF" +
@@ -202,7 +203,7 @@ export default function SalesListPage() {
                           {sale.customer_name || t("common.anonymousCustomer")}
                         </td>
                         <td className="px-4 py-3 text-app-muted">
-                          {sale.warehouse_name?.trim() || "—"}
+                          {getSaleWarehouseLabel(sale)}
                         </td>
                         <td className="px-4 py-3 font-mono font-bold">
                           {formatSaleAmount(sale.total_amount, t("common.currency"))}
@@ -211,7 +212,12 @@ export default function SalesListPage() {
                           {formatSaleAmount(sale.paid_amount, t("common.currency"))}
                         </td>
                         <td className="px-4 py-3 font-mono text-rose-600">
-                          {formatSaleAmount(getSaleRemaining(sale), t("common.currency"))}
+                          {formatSaleAmount(
+                            sale.remaining_balance != null && Number(sale.remaining_balance) > 0
+                              ? sale.remaining_balance
+                              : getSaleRemaining(sale),
+                            t("common.currency")
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <WarehouseSendBadge
