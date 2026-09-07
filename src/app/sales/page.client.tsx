@@ -10,7 +10,7 @@ import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import SalesPrintTemplate from "@/components/sales/SalesPrintTemplate";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
-import { fetchSaleById, fetchSalesListWithMeta, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchSaleById, fetchSalesListWithMeta, formatSaleAmount, getSaleRemaining, type SaleRecord } from "@/lib/sales/fetchSales";
 import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -24,13 +24,6 @@ import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrin
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
-
-function getSaleRemaining(sale: SaleRecord | null | undefined): number {
-  if (!sale) return 0;
-  const stored = Number(sale.remaining_balance ?? 0);
-  if (stored > 0) return stored;
-  return Math.max(0, Number(sale.total_amount ?? 0) - Number(sale.paid_amount ?? 0));
-}
 
 export default function SalesListPage() {
   const [sales, setSales] = useState<SaleRecord[]>([]);
@@ -208,15 +201,17 @@ export default function SalesListPage() {
                         <td className="px-4 py-3 font-semibold text-app">
                           {sale.customer_name || t("common.anonymousCustomer")}
                         </td>
-                        <td className="px-4 py-3 text-app-muted">{sale.warehouse_name ?? "-"}</td>
+                        <td className="px-4 py-3 text-app-muted">
+                          {sale.warehouse_name?.trim() || "—"}
+                        </td>
                         <td className="px-4 py-3 font-mono font-bold">
-                          {Number(sale.total_amount || 0).toFixed(2)} {t("common.currency")}
+                          {formatSaleAmount(sale.total_amount, t("common.currency"))}
                         </td>
                         <td className="px-4 py-3 font-mono text-emerald-600">
-                          {Number(sale.paid_amount || 0).toFixed(2)} {t("common.currency")}
+                          {formatSaleAmount(sale.paid_amount, t("common.currency"))}
                         </td>
                         <td className="px-4 py-3 font-mono text-rose-600">
-                          {getSaleRemaining(sale).toFixed(2)} {t("common.currency")}
+                          {formatSaleAmount(getSaleRemaining(sale), t("common.currency"))}
                         </td>
                         <td className="px-4 py-3">
                           <WarehouseSendBadge

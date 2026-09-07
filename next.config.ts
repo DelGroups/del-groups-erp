@@ -40,9 +40,10 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "worker-src 'self'",
       "frame-ancestors 'self'",
@@ -72,6 +73,18 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        source: "/manifest.json",
+        headers: [
+          { key: "Content-Type", value: "application/manifest+json; charset=utf-8" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Content-Type", value: "application/manifest+json; charset=utf-8" },
+        ],
       },
       {
         source: "/api/:path*",
