@@ -52,23 +52,23 @@ export default function SalesPrintTemplate({
           </tr>
         </thead>
         <tbody>
-          {sale.items.map((item, idx) => (
+          {(sale.items ?? []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className="border p-2">{idx + 1}</td>
-              <td className="border p-2">{item.product_name}</td>
+              <td className="border p-2">{item.product_name ?? "-"}</td>
               <td className="border p-2 text-right">
-                {item.quantity} {item.unit}
+                {item.quantity ?? 0} {item.unit ?? ""}
               </td>
-              <td className="border p-2 text-right">{item.unit_price.toFixed(2)}</td>
-              <td className="border p-2 text-right">{item.total.toFixed(2)}</td>
+              <td className="border p-2 text-right">{(item.unit_price ?? 0).toFixed(2)}</td>
+              <td className="border p-2 text-right">{(item.total ?? 0).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
       <div className="space-y-1 text-right text-sm font-bold">
-        <p>{t("print.total")}: {sale.total_amount.toFixed(2)} {t("common.currency")}</p>
-        <p>{t("print.paid")}: {sale.paid_amount.toFixed(2)} {t("common.currency")}</p>
-        <p>{t("print.remainingDebt")}: {sale.remaining_balance.toFixed(2)} {t("common.currency")}</p>
+        <p>{t("print.total")}: {(sale.total_amount ?? 0).toFixed(2)} {t("common.currency")}</p>
+        <p>{t("print.paid")}: {(sale.paid_amount ?? 0).toFixed(2)} {t("common.currency")}</p>
+        <p>{t("print.remainingDebt")}: {(sale.remaining_balance ?? 0).toFixed(2)} {t("common.currency")}</p>
       </div>
     </div>
   );

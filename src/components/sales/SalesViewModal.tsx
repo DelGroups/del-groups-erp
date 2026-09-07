@@ -55,22 +55,22 @@ export default function SalesViewModal({ sale, onClose, onPayment }: SalesViewMo
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sale.items.length === 0 ? (
+              {(sale.items ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={4} className="p-4 text-center text-app-muted">
                     {t("modals.salesView.noLineItems")}
                   </td>
                 </tr>
               ) : (
-                sale.items.map((item, idx) => (
+                (sale.items ?? []).map((item, idx) => (
                   <tr key={item.id || idx}>
-                    <td className="p-2.5">{item.product_name}</td>
+                    <td className="p-2.5">{item.product_name ?? "-"}</td>
                     <td className="p-2.5">
-                      {item.quantity} {item.unit}
+                      {item.quantity ?? 0} {item.unit ?? ""}
                     </td>
-                    <td className="p-2.5 font-mono">{item.unit_price.toFixed(2)}</td>
+                    <td className="p-2.5 font-mono">{(item.unit_price ?? 0).toFixed(2)}</td>
                     <td className="p-2.5 text-right font-mono font-bold">
-                      {item.total.toFixed(2)}
+                      {(item.total ?? 0).toFixed(2)}
                     </td>
                   </tr>
                 ))

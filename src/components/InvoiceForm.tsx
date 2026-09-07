@@ -97,8 +97,8 @@ interface Product {
 }
 
 function isPolywoodWarehouseRow(warehouseId: string, warehouses: Warehouse[]): boolean {
-  const wh = warehouses.find((w) => w.id === warehouseId);
-  return wh?.warehouse_type === POLYWOOD_WAREHOUSE_TYPE;
+  const wh = warehouses.find((w) => w?.id === warehouseId);
+  return (wh?.warehouse_type ?? "general") === POLYWOOD_WAREHOUSE_TYPE;
 }
 
 function isPolywoodProductRow(product: Product | null | undefined): boolean {
@@ -431,10 +431,14 @@ export default function UniversalInvoiceForm({
     if (cust) setCustomers(cust as Customer[]);
     if (emp) setEmployees(emp);
 
-    const allWarehouses = (wh as Warehouse[]) || [];
+    const allWarehouses = ((wh as Warehouse[]) || []).filter(Boolean);
     const warehouseRows = polywoodOnly
-      ? allWarehouses.filter((w) => w.warehouse_type === POLYWOOD_WAREHOUSE_TYPE)
-      : allWarehouses.filter((w) => w.warehouse_type !== POLYWOOD_WAREHOUSE_TYPE);
+      ? allWarehouses.filter(
+          (w) => (w.warehouse_type ?? "general") === POLYWOOD_WAREHOUSE_TYPE
+        )
+      : allWarehouses.filter(
+          (w) => (w.warehouse_type ?? "general") !== POLYWOOD_WAREHOUSE_TYPE
+        );
     setWarehouses(warehouseRows);
     const firstWh = warehouseRows[0];
     setItems([createEmptySaleItem(firstWh?.id || "", firstWh?.name || "")]);
@@ -751,7 +755,7 @@ export default function UniversalInvoiceForm({
           if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
             return Number(item.available_stock);
           }
-          const product = products.find((p) => p.id === item.product_id);
+          const product = productsList.find((p) => p.id === item.product_id);
           return Number(product?.stock) || 0;
         },
       }),
@@ -759,7 +763,7 @@ export default function UniversalInvoiceForm({
       canSaveInvoice,
       items,
       payments,
-      products,
+      productsList,
       selectedCustomerId,
       totals.grand_total,
       totals.paid_amount,
@@ -797,9 +801,9 @@ export default function UniversalInvoiceForm({
 
     const saleItems = items
       .filter((i) => i.product_id || i.product_name.trim())
-      .map((item) => normalizeSaleItemProductId(item, products));
+      .map((item) => normalizeSaleItemProductId(item, productsList));
 
-    const productIdError = validateSaleItemsHaveProductIds(saleItems, products);
+    const productIdError = validateSaleItemsHaveProductIds(saleItems, productsList);
     if (productIdError) {
       showToastError(productIdError);
       return;
@@ -809,7 +813,7 @@ export default function UniversalInvoiceForm({
       if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
         return Number(item.available_stock);
       }
-      const product = products.find((p) => p.id === item.product_id);
+      const product = productsList.find((p) => p.id === item.product_id);
       return Number(product?.stock) || 0;
     });
     if (lineIssue) {

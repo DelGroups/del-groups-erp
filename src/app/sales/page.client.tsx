@@ -10,7 +10,7 @@ import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import SalesPrintTemplate from "@/components/sales/SalesPrintTemplate";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
-import { fetchSaleById, fetchSalesList, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchSaleById, fetchSalesListWithMeta, type SaleRecord } from "@/lib/sales/fetchSales";
 import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -22,17 +22,20 @@ import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
 import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 
-function getSaleRemaining(sale: SaleRecord): number {
-  const stored = Number(sale.remaining_balance || 0);
+function getSaleRemaining(sale: SaleRecord | null | undefined): number {
+  if (!sale) return 0;
+  const stored = Number(sale.remaining_balance ?? 0);
   if (stored > 0) return stored;
-  return Math.max(0, Number(sale.total_amount || 0) - Number(sale.paid_amount || 0));
+  return Math.max(0, Number(sale.total_amount ?? 0) - Number(sale.paid_amount ?? 0));
 }
 
 export default function SalesListPage() {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
@@ -40,13 +43,29 @@ export default function SalesListPage() {
   const { printData: printSale, setPrintData: setPrintSale } = useDocumentPrint<SaleRecord>();
   const { can } = useAuth();
   const { t } = useI18n();
+  const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const canCreateInvoice = can("can_create_invoice");
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setSales(await fetchSalesList());
-    setLoading(false);
-  }, []);
+    setLoadError(null);
+    try {
+      const { sales: rows, error } = await fetchSalesListWithMeta();
+      setSales(rows);
+      if (error) {
+        setLoadError(error);
+        showError(`${t("common.error")}: ${error}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("common.error");
+      console.error("[/sales] loadData failed:", err);
+      setSales([]);
+      setLoadError(message);
+      showError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [showError, t]);
 
   const warehouseSend = useWarehouseDocumentSend(sendSaleToWarehouseAction, loadData);
 
@@ -54,12 +73,15 @@ export default function SalesListPage() {
     void loadData();
   }, [loadData]);
 
-  const filteredSales = sales.filter(
-    (s) =>
-      (s.doc_no || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.customer_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.warehouse_name || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSales = sales.filter((s) => {
+    if (!s?.id) return false;
+    const q = searchTerm.toLowerCase();
+    return (
+      (s.doc_no ?? "").toLowerCase().includes(q) ||
+      (s.customer_name ?? "").toLowerCase().includes(q) ||
+      (s.warehouse_name ?? "").toLowerCase().includes(q)
+    );
+  });
 
   const openView = async (row: SaleRecord) => {
     const full = await fetchSaleById(row.id);
@@ -88,13 +110,13 @@ export default function SalesListPage() {
       t("sales.remaining"),
     ];
     const rows = filteredSales.map((s) => [
-      s.doc_no,
-      s.doc_date,
-      `"${s.customer_name || ""}"`,
-      s.warehouse_name,
-      s.total_amount,
-      s.paid_amount,
-      s.remaining_balance,
+      s.doc_no ?? "",
+      s.doc_date ?? "",
+      `"${s.customer_name ?? ""}"`,
+      s.warehouse_name ?? "",
+      Number(s.total_amount ?? 0),
+      Number(s.paid_amount ?? 0),
+      getSaleRemaining(s),
     ]);
     const csvContent =
       "data:text/csv;charset=utf-8,\uFEFF" +
@@ -146,6 +168,13 @@ export default function SalesListPage() {
             loading={loading}
           />
 
+          {loadError && !loading && (
+            <div className="alert-warning text-xs">
+              <p className="font-semibold">{t("common.error")}</p>
+              <p className="mt-1 text-app-muted">{loadError}</p>
+            </div>
+          )}
+
           <div className="app-table-wrap">
             {loading ? (
               <div className="p-12 text-center text-xs text-app-muted">{t("sales.loading")}</div>
@@ -173,13 +202,13 @@ export default function SalesListPage() {
                     {filteredSales.map((sale) => (
                       <tr key={sale.id} className="transition-colors hover:bg-app-card-hover">
                         <td className="px-4 py-3 font-mono font-bold text-app-accent">
-                          {sale.doc_no}
+                          {sale.doc_no ?? "-"}
                         </td>
-                        <td className="px-4 py-3">{sale.doc_date}</td>
+                        <td className="px-4 py-3">{sale.doc_date ?? "-"}</td>
                         <td className="px-4 py-3 font-semibold text-app">
                           {sale.customer_name || t("common.anonymousCustomer")}
                         </td>
-                        <td className="px-4 py-3 text-app-muted">{sale.warehouse_name}</td>
+                        <td className="px-4 py-3 text-app-muted">{sale.warehouse_name ?? "-"}</td>
                         <td className="px-4 py-3 font-mono font-bold">
                           {Number(sale.total_amount || 0).toFixed(2)} {t("common.currency")}
                         </td>
@@ -191,8 +220,8 @@ export default function SalesListPage() {
                         </td>
                         <td className="px-4 py-3">
                           <WarehouseSendBadge
-                            warehouseSent={sale.warehouse_sent}
-                            warehouseSlipStatus={sale.warehouse_slip_status}
+                            warehouseSent={sale.warehouse_sent === true}
+                            warehouseSlipStatus={sale.warehouse_slip_status ?? null}
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -212,9 +241,9 @@ export default function SalesListPage() {
                             onSendToWarehouse={() =>
                               warehouseSend.handleSendClick({
                                 id: sale.id,
-                                warehouse_sent: sale.warehouse_sent,
+                                warehouse_sent: sale.warehouse_sent === true,
                                 documentLabel: t("sales.docNo"),
-                                documentNumber: sale.doc_no || "-",
+                                documentNumber: sale.doc_no ?? "-",
                               })
                             }
                           />
@@ -275,7 +304,7 @@ export default function SalesListPage() {
               notes: payload.notes,
               currentPaid: Number(paymentSale.paid_amount || 0),
               totalAmount: Number(paymentSale.total_amount || 0),
-              existingPayments: paymentSale.payments,
+              existingPayments: paymentSale.payments ?? [],
             });
             if (result.success) void loadData();
             return result;
@@ -312,7 +341,7 @@ export default function SalesListPage() {
         onConfirm={(iso) => void warehouseSend.confirmDelivery(iso)}
         loading={!!warehouseSend.sendingId}
       />
-      <ToastMessage message={warehouseSend.toastMessage} variant={warehouseSend.toastVariant} />
+      <ToastMessage message={warehouseSend.toastMessage ?? toastMessage} variant={warehouseSend.toastVariant ?? toastVariant} />
     </PageLayout>
   );
 }

@@ -26,98 +26,159 @@ export interface SaleRecord {
   payments: SalePayment[];
 }
 
-export async function fetchSalesList(): Promise<SaleRecord[]> {
-  const { data, error } = await supabase
-    .from("sales")
-    .select("*")
-    .order("created_at", { ascending: false });
+const SALES_LIST_SELECT =
+  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, payments";
 
-  if (error) {
-    console.error("Sales fetch error:", error.message);
-    return [];
+const SALES_LIST_SELECT_LEGACY =
+  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, payments";
+
+type SalesListRow = Record<string, unknown>;
+
+function normalizeWarehouseSlipStatus(value: unknown): WarehouseSlipStatus | null {
+  if (value === "pending" || value === "approved" || value === "rejected") {
+    return value;
   }
+  return null;
+}
 
-  return (data || []).map((row) => ({
-    id: row.id,
-    doc_no: row.doc_no,
-    doc_date: row.doc_date,
-    customer_id: row.customer_id,
-    customer_name: row.customer_name,
-    seller_name: row.seller_name,
-    warehouse_name: row.warehouse_name,
+function normalizePayments(value: unknown): SalePayment[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter((row): row is SalePayment => row != null && typeof row === "object");
+  }
+  return [];
+}
+
+function mapSaleRow(row: SalesListRow): SaleRecord | null {
+  const id = typeof row.id === "string" ? row.id : null;
+  if (!id) return null;
+
+  const totalAmount = Number(row.total_amount) || 0;
+  const paidAmount = Number(row.paid_amount) || 0;
+
+  return {
+    id,
+    doc_no: typeof row.doc_no === "string" ? row.doc_no : null,
+    doc_date: typeof row.doc_date === "string" ? row.doc_date : null,
+    customer_id: typeof row.customer_id === "string" ? row.customer_id : null,
+    customer_name: typeof row.customer_name === "string" ? row.customer_name : null,
+    seller_name: typeof row.seller_name === "string" ? row.seller_name : null,
+    warehouse_name: typeof row.warehouse_name === "string" ? row.warehouse_name : null,
     subtotal: Number(row.subtotal) || 0,
     discount_total: Number(row.discount_total) || 0,
     vat_total: Number(row.vat_total) || 0,
-    total_amount: Number(row.total_amount) || 0,
-    paid_amount: Number(row.paid_amount) || 0,
+    total_amount: totalAmount,
+    paid_amount: paidAmount,
     remaining_balance:
       row.remaining_balance != null
-        ? Number(row.remaining_balance)
-        : Math.max(0, (Number(row.total_amount) || 0) - (Number(row.paid_amount) || 0)),
-    delivery_address: row.delivery_address,
-    delivery_type: row.delivery_type,
+        ? Number(row.remaining_balance) || 0
+        : Math.max(0, totalAmount - paidAmount),
+    delivery_address: typeof row.delivery_address === "string" ? row.delivery_address : null,
+    delivery_type: typeof row.delivery_type === "string" ? row.delivery_type : null,
     delivery_fee: Number(row.delivery_fee) || 0,
-    note: row.note,
-    created_at: row.created_at,
+    note:
+      typeof row.note === "string"
+        ? row.note
+        : typeof row.notes === "string"
+          ? row.notes
+          : null,
+    created_at: typeof row.created_at === "string" ? row.created_at : null,
     warehouse_sent: row.warehouse_sent === true,
-    warehouse_slip_status: (row.warehouse_slip_status as WarehouseSlipStatus) || null,
+    warehouse_slip_status: normalizeWarehouseSlipStatus(row.warehouse_slip_status),
     items: [],
-    payments: [],
-  }));
+    payments: normalizePayments(row.payments),
+  };
 }
 
-export async function fetchSaleById(id: string): Promise<SaleRecord | null> {
-  const { data: sale, error } = await supabase.from("sales").select("*").eq("id", id).single();
-  if (error || !sale) return null;
-
-  const { data: itemRows } = await supabase.from("sale_items").select("*").eq("sale_id", id);
-
-  const items: SaleItem[] = (itemRows || []).map((row) => ({
-    id: row.id,
-    product_id: row.product_id || "",
-    product_code: row.product_code || "",
-    product_name: row.product_name || "",
-    warehouse_id: row.warehouse_id || "",
-    warehouse_name: row.warehouse_name || "",
+function mapSaleItemRow(row: Record<string, unknown>): SaleItem {
+  return {
+    id: typeof row.id === "string" ? row.id : "",
+    product_id: typeof row.product_id === "string" ? row.product_id : "",
+    product_code: typeof row.product_code === "string" ? row.product_code : "",
+    product_name: typeof row.product_name === "string" ? row.product_name : "",
+    warehouse_id: typeof row.warehouse_id === "string" ? row.warehouse_id : "",
+    warehouse_name: typeof row.warehouse_name === "string" ? row.warehouse_name : "",
     quantity: Number(row.quantity) || 0,
-    unit: row.unit || "Ədəd",
+    unit: typeof row.unit === "string" ? row.unit : "Ədəd",
     unit_price: Number(row.unit_price) || 0,
     discount_percent: Number(row.discount_percent) || 0,
     vat_rate: Number(row.vat_rate) || 0,
     total: Number(row.line_total) || 0,
-    extra_info: row.extra_info || "",
-  }));
-
-  let payments: SalePayment[] = [];
-  if (sale.payments && Array.isArray(sale.payments)) {
-    payments = sale.payments as unknown as SalePayment[];
-  }
-
-  return {
-    id: sale.id,
-    doc_no: sale.doc_no,
-    doc_date: sale.doc_date,
-    customer_id: sale.customer_id,
-    customer_name: sale.customer_name,
-    seller_name: sale.seller_name,
-    warehouse_name: sale.warehouse_name,
-    subtotal: Number(sale.subtotal) || 0,
-    discount_total: Number(sale.discount_total) || 0,
-    vat_total: Number(sale.vat_total) || 0,
-    total_amount: Number(sale.total_amount) || 0,
-    paid_amount: Number(sale.paid_amount) || 0,
-    remaining_balance:
-      sale.remaining_balance != null
-        ? Number(sale.remaining_balance)
-        : Math.max(0, (Number(sale.total_amount) || 0) - (Number(sale.paid_amount) || 0)),
-    delivery_address: sale.delivery_address,
-    delivery_type: sale.delivery_type,
-    delivery_fee: Number(sale.delivery_fee) || 0,
-    note: sale.note,
-    created_at: sale.created_at,
-    warehouse_sent: sale.warehouse_sent === true,
-    warehouse_slip_status: (sale.warehouse_slip_status as WarehouseSlipStatus) || null,
-    items,
-    payments,
+    extra_info: typeof row.extra_info === "string" ? row.extra_info : "",
   };
+}
+
+export type FetchSalesListResult = {
+  sales: SaleRecord[];
+  error?: string;
+};
+
+export async function fetchSalesList(): Promise<SaleRecord[]> {
+  const result = await fetchSalesListWithMeta();
+  return result.sales;
+}
+
+export async function fetchSalesListWithMeta(): Promise<FetchSalesListResult> {
+  try {
+    let { data, error } = await supabase
+      .from("sales")
+      .select(SALES_LIST_SELECT)
+      .order("created_at", { ascending: false });
+
+    if (error?.message?.includes("warehouse_slip_status") || error?.message?.includes("warehouse_sent")) {
+      ({ data, error } = await supabase
+        .from("sales")
+        .select(SALES_LIST_SELECT_LEGACY)
+        .order("created_at", { ascending: false }));
+    }
+
+    if (error) {
+      console.error("Sales fetch error:", error.message);
+      return { sales: [], error: error.message };
+    }
+
+    const sales = (data || [])
+      .map((row) => mapSaleRow(row as SalesListRow))
+      .filter((row): row is SaleRecord => row != null);
+
+    return { sales };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown sales fetch error";
+    console.error("Sales fetch exception:", message);
+    return { sales: [], error: message };
+  }
+}
+
+export async function fetchSaleById(id: string): Promise<SaleRecord | null> {
+  if (!id?.trim()) return null;
+
+  try {
+    const { data: sale, error } = await supabase.from("sales").select("*").eq("id", id).single();
+    if (error || !sale) {
+      if (error) console.error("Sale fetch error:", error.message);
+      return null;
+    }
+
+    const { data: itemRows, error: itemsError } = await supabase
+      .from("sale_items")
+      .select("*")
+      .eq("sale_id", id);
+
+    if (itemsError) {
+      console.error("Sale items fetch error:", itemsError.message);
+    }
+
+    const mapped = mapSaleRow(sale as SalesListRow);
+    if (!mapped) return null;
+
+    return {
+      ...mapped,
+      items: (itemRows || []).map((row) => mapSaleItemRow(row as Record<string, unknown>)),
+      payments: normalizePayments(sale.payments),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown sale fetch error";
+    console.error("Sale fetch exception:", message);
+    return null;
+  }
 }
