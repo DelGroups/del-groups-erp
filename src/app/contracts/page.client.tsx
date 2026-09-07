@@ -2,16 +2,33 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import { Plus, Pencil, RefreshCw, Search, X } from "lucide-react";
+import ContractAttachmentButton from "@/components/contracts/ContractAttachmentButton";
+import ContractLinkedInvoicesModal from "@/components/contracts/ContractLinkedInvoicesModal";
+import ContractPrintTemplate, {
+  type ContractPrintData,
+} from "@/components/contracts/ContractPrintTemplate";
+import ContractStatsCards from "@/components/contracts/ContractStatsCards";
+import {
+  Ban,
+  FileText,
+  Pencil,
+  Plus,
+  Printer,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import {
   createContract,
   fetchContracts,
   formatContractOptionLabel,
   generateContractNumber,
+  getContractStatusLabel,
   getContractTypeLabel,
   updateContract,
   type Contract,
@@ -19,24 +36,37 @@ import {
   type ContractType,
 } from "@/lib/contracts/api";
 import { filterLegalCustomers, filterLegalSuppliers } from "@/lib/customers/entityType";
+import { DEFAULT_COMPANY_BRANDING, type CompanyBranding } from "@/lib/print/types";
 import { supabase } from "@/lib/supabase";
 import type { Customer, Supplier } from "@/types/database.types";
+
+const TYPE_TABS: Array<"all" | ContractType> = ["all", "sale", "purchase", "service"];
+const STATUS_TABS: Array<"all" | ContractStatus> = [
+  "all",
+  "active",
+  "completed",
+  "cancelled",
+];
 
 export default function ContractsPageClient() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_create_invoice") || can("can_view_purchases");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+  const { printData, setPrintData } = useDocumentPrint<ContractPrintData>();
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [branding, setBranding] = useState<CompanyBranding>(DEFAULT_COMPANY_BRANDING);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | ContractType>("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | ContractStatus>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkedContract, setLinkedContract] = useState<Contract | null>(null);
 
   const [form, setForm] = useState({
     contract_number: "",
@@ -54,15 +84,31 @@ export default function ContractsPageClient() {
 
   const loadData = async () => {
     setLoading(true);
-    const [contractRows, customerRes, supplierRes] = await Promise.all([
+    const [contractRows, customerRes, supplierRes, companyRes] = await Promise.all([
       fetchContracts(),
       supabase.from("customers").select("*").order("full_name"),
       supabase.from("suppliers").select("*").order("full_name"),
+      supabase.from("company_settings").select("*").limit(1).maybeSingle(),
     ]);
 
     setContracts(contractRows);
     setCustomers((customerRes.data as Customer[]) || []);
     setSuppliers((supplierRes.data as Supplier[]) || []);
+
+    if (companyRes.data) {
+      const row = companyRes.data;
+      setBranding({
+        companyName: String(row.company_name || DEFAULT_COMPANY_BRANDING.companyName),
+        logoUrl: row.logo_url != null ? String(row.logo_url) : null,
+        voen: row.voen != null ? String(row.voen) : null,
+        address: row.address != null ? String(row.address) : null,
+        phone: row.phone != null ? String(row.phone) : null,
+        email: row.email != null ? String(row.email) : null,
+        bankName: row.bank_name != null ? String(row.bank_name) : null,
+        iban: row.iban != null ? String(row.iban) : null,
+      });
+    }
+
     setLoading(false);
   };
 
@@ -92,14 +138,16 @@ export default function ContractsPageClient() {
     const term = search.trim().toLowerCase();
     return contracts.filter((c) => {
       if (filterType !== "all" && c.type !== filterType) return false;
+      if (filterStatus !== "all" && c.status !== filterStatus) return false;
       if (!term) return true;
       return (
         c.contract_number.toLowerCase().includes(term) ||
         c.title.toLowerCase().includes(term) ||
-        (c.party_name || "").toLowerCase().includes(term)
+        (c.party_name || "").toLowerCase().includes(term) ||
+        (c.voen || "").toLowerCase().includes(term)
       );
     });
-  }, [contracts, search, filterType]);
+  }, [contracts, search, filterType, filterStatus]);
 
   const resetForm = (type: ContractType = "sale") => ({
     contract_number: generateContractNumber(type),
@@ -189,41 +237,104 @@ export default function ContractsPageClient() {
     void loadData();
   };
 
+  const handleToggleStatus = async (contract: Contract) => {
+    if (!canManage) {
+      showError(t("common.noPermission"));
+      return;
+    }
+    const nextStatus: ContractStatus =
+      contract.status === "cancelled" ? "active" : "cancelled";
+    const result = await updateContract(contract.id, { status: nextStatus });
+    if (!result.ok) {
+      showError(result.error);
+      return;
+    }
+    showSuccess(t("common.success"));
+    setContracts((rows) =>
+      rows.map((row) => (row.id === contract.id ? result.contract : row))
+    );
+  };
+
+  const handlePrint = (contract: Contract) => {
+    setPrintData({ contract, branding });
+  };
+
+  const handleAttachmentUploaded = (updated: Contract) => {
+    setContracts((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
+    showSuccess(t("common.success"));
+  };
+
+  const typeTabLabel = (tab: "all" | ContractType) => {
+    if (tab === "all") return t("common.all");
+    return getContractTypeLabel(tab, t);
+  };
+
+  const statusTabLabel = (tab: "all" | ContractStatus) => {
+    if (tab === "all") return t("official.filterStatusAll");
+    return getContractStatusLabel(tab, t);
+  };
+
   return (
     <PageLayout title={t("official.contractsPageTitle")}>
       <div className="space-y-4">
+        <ContractStatsCards contracts={contracts} />
+
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2 h-4 w-4 text-app-muted" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("common.search")}
-                className="app-input pl-8"
-              />
-            </div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as "all" | ContractType)}
-              className="app-input"
-            >
-              <option value="all">{t("common.all")}</option>
-              <option value="sale">{t("official.typeSale")}</option>
-              <option value="purchase">{t("official.typePurchase")}</option>
-              <option value="service">{t("official.typeService")}</option>
-            </select>
-            <button type="button" onClick={() => void loadData()} className="btn-secondary p-2">
-              <RefreshCw className="h-4 w-4" />
-            </button>
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="absolute left-2 top-2 h-4 w-4 text-app-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("official.searchContractsPlaceholder")}
+              className="app-input w-full pl-8"
+            />
           </div>
-          {canManage && (
-            <button type="button" onClick={openCreate} className="btn-primary flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              {t("official.newContract")}
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => void loadData()} className="btn-secondary p-2">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </button>
-          )}
+            {canManage && (
+              <button type="button" onClick={openCreate} className="btn-primary flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                {t("official.newContract")}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {TYPE_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFilterType(tab)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                filterType === tab
+                  ? "bg-app-accent text-white"
+                  : "bg-app-card-hover text-app-muted hover:text-app"
+              }`}
+            >
+              {typeTabLabel(tab)}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFilterStatus(tab)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                filterStatus === tab
+                  ? "border border-app-accent bg-app-accent/10 text-app-accent"
+                  : "border border-app bg-app-card-hover text-app-muted hover:text-app"
+              }`}
+            >
+              {statusTabLabel(tab)}
+            </button>
+          ))}
         </div>
 
         <div className="app-card overflow-hidden">
@@ -232,48 +343,108 @@ export default function ContractsPageClient() {
           ) : filtered.length === 0 ? (
             <p className="p-6 text-center text-sm text-app-muted">{t("common.noData")}</p>
           ) : (
-            <table className="w-full text-xs">
-              <thead className="border-b border-app bg-app-card-hover text-left text-app-muted">
-                <tr>
-                  <th className="px-4 py-2">{t("official.contractNumber")}</th>
-                  <th className="px-4 py-2">{t("official.contractTitle")}</th>
-                  <th className="px-4 py-2">{t("official.contractType")}</th>
-                  <th className="px-4 py-2">{t("official.party")}</th>
-                  <th className="px-4 py-2 text-right">{t("official.contractAmount")}</th>
-                  <th className="px-4 py-2">{t("official.paymentTerms")}</th>
-                  <th className="px-4 py-2">{t("common.status")}</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-app/50 hover:bg-app-card-hover">
-                    <td className="px-4 py-2 font-mono">{c.contract_number}</td>
-                    <td className="px-4 py-2">{c.title}</td>
-                    <td className="px-4 py-2">{getContractTypeLabel(c.type, t)}</td>
-                    <td className="px-4 py-2">{c.party_name || "-"}</td>
-                    <td className="px-4 py-2 text-right font-mono">
-                      {c.total_amount != null ? Number(c.total_amount).toFixed(2) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-app-muted">
-                      {formatContractOptionLabel(c, t).split(" - ").slice(1).join(" - ") || "—"}
-                    </td>
-                    <td className="px-4 py-2">{c.status}</td>
-                    <td className="px-4 py-2 text-right">
-                      {canManage && (
-                        <button
-                          type="button"
-                          onClick={() => openEdit(c)}
-                          className="rounded p-1 hover:bg-app-card"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[960px] text-xs">
+                <thead className="border-b border-app bg-app-card-hover text-left text-app-muted">
+                  <tr>
+                    <th className="px-4 py-2">{t("official.contractNumber")}</th>
+                    <th className="px-4 py-2">{t("official.contractTitle")}</th>
+                    <th className="px-4 py-2">{t("official.contractType")}</th>
+                    <th className="px-4 py-2">{t("official.party")}</th>
+                    <th className="px-4 py-2 text-right">{t("official.contractAmount")}</th>
+                    <th className="px-4 py-2">{t("official.paymentTerms")}</th>
+                    <th className="px-4 py-2">{t("common.status")}</th>
+                    <th className="px-4 py-2 text-right">{t("common.actions")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="border-b border-app/50 hover:bg-app-card-hover">
+                      <td className="px-4 py-2 font-mono">{c.contract_number}</td>
+                      <td className="px-4 py-2">{c.title}</td>
+                      <td className="px-4 py-2">{getContractTypeLabel(c.type, t)}</td>
+                      <td className="px-4 py-2">
+                        <div>{c.party_name || "—"}</div>
+                        {c.voen && (
+                          <div className="text-[10px] text-app-muted">VÖEN: {c.voen}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {c.total_amount != null ? Number(c.total_amount).toFixed(2) : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-app-muted">
+                        {formatContractOptionLabel(c, t).split(" - ").slice(1).join(" - ") || "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            c.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : c.status === "completed"
+                                ? "bg-blue-500/10 text-blue-600"
+                                : "bg-rose-500/10 text-rose-600"
+                          }`}
+                        >
+                          {getContractStatusLabel(c.status, t)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handlePrint(c)}
+                            className="rounded p-1.5 hover:bg-app-card-hover"
+                            title={t("official.printContract")}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </button>
+                          {canManage && (
+                            <ContractAttachmentButton
+                              contract={c}
+                              disabled={!canManage}
+                              onUploaded={handleAttachmentUploaded}
+                              onError={showError}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setLinkedContract(c)}
+                            className="rounded p-1.5 hover:bg-app-card-hover"
+                            title={t("official.linkedInvoices")}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+                          {canManage && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openEdit(c)}
+                                className="rounded p-1.5 hover:bg-app-card-hover"
+                                title={t("official.editContract")}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleToggleStatus(c)}
+                                className="rounded p-1.5 text-rose-500 hover:bg-rose-500/10"
+                                title={
+                                  c.status === "cancelled"
+                                    ? t("official.reactivateContract")
+                                    : t("official.cancelContract")
+                                }
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -458,6 +629,19 @@ export default function ContractsPageClient() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {linkedContract && (
+        <ContractLinkedInvoicesModal
+          contract={linkedContract}
+          onClose={() => setLinkedContract(null)}
+        />
+      )}
+
+      {printData && (
+        <div className="print-area">
+          <ContractPrintTemplate data={printData} />
         </div>
       )}
 

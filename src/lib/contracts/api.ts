@@ -18,6 +18,7 @@ export interface Contract {
   payment_terms_notes: string | null;
   contract_date: string | null;
   expiry_date: string | null;
+  attachment_path: string | null;
   created_at: string | null;
 }
 
@@ -35,6 +36,7 @@ export interface ContractInput {
   payment_terms_notes?: string | null;
   contract_date?: string | null;
   expiry_date?: string | null;
+  attachment_path?: string | null;
 }
 
 function normalizeContractType(value: unknown): ContractType {
@@ -67,6 +69,8 @@ function toContract(row: Record<string, unknown>): Contract {
       row.payment_terms_notes != null ? String(row.payment_terms_notes) : null,
     contract_date: row.contract_date != null ? String(row.contract_date) : null,
     expiry_date: row.expiry_date != null ? String(row.expiry_date) : null,
+    attachment_path:
+      row.attachment_path != null ? String(row.attachment_path) : null,
     created_at: row.created_at != null ? String(row.created_at) : null,
   };
 }
@@ -179,4 +183,161 @@ export function generateContractNumber(type: ContractType): string {
   const prefix = type === "purchase" ? "AL" : type === "service" ? "XID" : "SAT";
   const stamp = Date.now().toString(36).toUpperCase();
   return `${prefix}-${stamp}`;
+}
+
+export interface ContractStats {
+  activeCount: number;
+  saleCount: number;
+  purchaseCount: number;
+  totalPendingAdvance: number;
+}
+
+export function computeContractStats(contracts: Contract[]): ContractStats {
+  let activeCount = 0;
+  let saleCount = 0;
+  let purchaseCount = 0;
+  let totalPendingAdvance = 0;
+
+  for (const contract of contracts) {
+    if (contract.type === "purchase") purchaseCount += 1;
+    else saleCount += 1;
+
+    if (contract.status !== "active") continue;
+    activeCount += 1;
+
+    if (
+      contract.total_amount != null &&
+      contract.advance_percentage != null &&
+      contract.advance_percentage > 0
+    ) {
+      totalPendingAdvance +=
+        contract.total_amount * (contract.advance_percentage / 100);
+    }
+  }
+
+  return { activeCount, saleCount, purchaseCount, totalPendingAdvance };
+}
+
+export interface LinkedDocument {
+  id: string;
+  docNo: string;
+  docDate: string | null;
+  totalAmount: number;
+  paidAmount: number;
+  remainingBalance: number;
+  kind: "sale" | "purchase";
+}
+
+export async function fetchLinkedDocuments(
+  contract: Contract
+): Promise<LinkedDocument[]> {
+  if (contract.type === "purchase") {
+    const { data, error } = await supabase
+      .from("purchases")
+      .select("id, invoice_number, doc_date, total_amount, paid_amount, debt_amount")
+      .eq("contract_id", contract.id)
+      .order("doc_date", { ascending: false });
+
+    if (error) {
+      console.error("fetchLinkedDocuments purchases:", error.message);
+      return [];
+    }
+
+    return (data || []).map((row) => {
+      const total = Number(row.total_amount) || 0;
+      const paid = Number(row.paid_amount) || 0;
+      const debt = Number(row.debt_amount);
+      return {
+        id: String(row.id),
+        docNo: String(row.invoice_number ?? ""),
+        docDate: row.doc_date != null ? String(row.doc_date) : null,
+        totalAmount: total,
+        paidAmount: paid,
+        remainingBalance: Number.isFinite(debt) ? debt : Math.max(total - paid, 0),
+        kind: "purchase" as const,
+      };
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("sales")
+    .select("id, doc_no, doc_date, total_amount, paid_amount, remaining_balance, grand_total")
+    .eq("contract_id", contract.id)
+    .order("doc_date", { ascending: false });
+
+  if (error) {
+    console.error("fetchLinkedDocuments sales:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => {
+    const total =
+      row.grand_total != null
+        ? Number(row.grand_total) || 0
+        : Number(row.total_amount) || 0;
+    const paid = Number(row.paid_amount) || 0;
+    const remaining =
+      row.remaining_balance != null
+        ? Number(row.remaining_balance) || 0
+        : Math.max(total - paid, 0);
+    return {
+      id: String(row.id),
+      docNo: String(row.doc_no ?? ""),
+      docDate: row.doc_date != null ? String(row.doc_date) : null,
+      totalAmount: total,
+      paidAmount: paid,
+      remainingBalance: remaining,
+      kind: "sale" as const,
+    };
+  });
+}
+
+const CONTRACT_ATTACHMENT_BUCKET = "contract-attachments";
+
+export async function uploadContractAttachment(
+  contractId: string,
+  file: File
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${contractId}/${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(CONTRACT_ATTACHMENT_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (uploadError) {
+    return { ok: false, error: uploadError.message };
+  }
+
+  const result = await updateContract(contractId, { attachment_path: path });
+  if (!result.ok) {
+    await supabase.storage.from(CONTRACT_ATTACHMENT_BUCKET).remove([path]);
+    return { ok: false, error: result.error };
+  }
+
+  return { ok: true, path };
+}
+
+export async function getContractAttachmentUrl(
+  path: string,
+  expiresIn = 3600
+): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(CONTRACT_ATTACHMENT_BUCKET)
+    .createSignedUrl(path, expiresIn);
+
+  if (error) {
+    console.error("getContractAttachmentUrl:", error.message);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+export function getContractStatusLabel(
+  status: ContractStatus,
+  t: (key: string) => string
+): string {
+  if (status === "completed") return t("official.statusCompleted");
+  if (status === "cancelled") return t("official.statusCancelled");
+  return t("official.statusActive");
 }
