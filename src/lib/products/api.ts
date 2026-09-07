@@ -1,6 +1,76 @@
+import { insertPolywoodPieces } from "@/lib/polywood/inventory";
+import type { PolywoodPieceInsert } from "@/lib/polywood/types";
 import { supabase } from "@/lib/supabase";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import { generateProductCode } from "@/types/database.types";
+
+export interface DimensionalOffCutInput {
+  length_m: number;
+  count: number;
+}
+
+export interface DimensionalInitialStockInput {
+  warehouseId: string;
+  fullSheetCount: number;
+  offCuts: DimensionalOffCutInput[];
+}
+
+export function calculateDimensionalInitialStockMeters(
+  baseLengthM: number,
+  fullSheetCount: number,
+  offCuts: DimensionalOffCutInput[]
+): number {
+  const fullTotal = Math.max(0, fullSheetCount) * baseLengthM;
+  const cutsTotal = offCuts.reduce(
+    (sum, cut) => sum + Math.max(0, cut.length_m) * Math.max(0, Math.floor(cut.count)),
+    0
+  );
+  return Math.round((fullTotal + cutsTotal) * 1000) / 1000;
+}
+
+function buildDimensionalPieceRows(
+  productId: string,
+  warehouseId: string,
+  baseLengthM: number,
+  initialStock: DimensionalInitialStockInput
+): PolywoodPieceInsert[] {
+  const now = new Date().toISOString();
+  const rows: PolywoodPieceInsert[] = [];
+
+  for (let i = 0; i < Math.max(0, Math.floor(initialStock.fullSheetCount)); i += 1) {
+    rows.push({
+      product_id: productId,
+      warehouse_id: warehouseId,
+      length_m: Math.round(baseLengthM * 1000) / 1000,
+      piece_type: "full",
+      status: "available",
+      notes: null,
+      sale_item_id: null,
+      updated_at: now,
+    });
+  }
+
+  for (const cut of initialStock.offCuts) {
+    const lengthM = Math.round(Math.max(0, cut.length_m) * 1000) / 1000;
+    const count = Math.max(0, Math.floor(cut.count));
+    if (lengthM <= 0 || count <= 0) continue;
+
+    for (let i = 0; i < count; i += 1) {
+      rows.push({
+        product_id: productId,
+        warehouse_id: warehouseId,
+        length_m: lengthM,
+        piece_type: "cut",
+        status: "available",
+        notes: null,
+        sale_item_id: null,
+        updated_at: now,
+      });
+    }
+  }
+
+  return rows;
+}
 
 /** Normalizes insert payload — products are global; no warehouse_id on this table. */
 export function buildProductInsert(
@@ -56,13 +126,55 @@ export async function fetchProductsCatalog(): Promise<{
 }
 
 export async function createProduct(
-  input: Partial<ProductInsert> & Pick<ProductInsert, "name">
+  input: Partial<ProductInsert> & Pick<ProductInsert, "name">,
+  dimensionalInitialStock?: DimensionalInitialStockInput | null
 ): Promise<{ ok: boolean; error?: string; product?: Product }> {
+  const isDimensional = Boolean(input.is_dimensional);
+  const baseLengthM = isDimensional ? Number(input.base_length) || 0 : 0;
+
+  if (isDimensional && dimensionalInitialStock) {
+    if (!dimensionalInitialStock.warehouseId) {
+      return { ok: false, error: "Warehouse is required for dimensional initial stock" };
+    }
+    if (baseLengthM <= 0) {
+      return { ok: false, error: "Base length is required for dimensional initial stock" };
+    }
+    input.stock = calculateDimensionalInitialStockMeters(
+      baseLengthM,
+      dimensionalInitialStock.fullSheetCount,
+      dimensionalInitialStock.offCuts
+    );
+  }
+
   const payload = buildProductInsert(input);
 
   const { data, error } = await supabase.from("products").insert([payload]).select("*").single();
   if (error) return { ok: false, error: error.message };
-  return { ok: true, product: data as Product };
+
+  const product = data as Product;
+
+  if (isDimensional && dimensionalInitialStock) {
+    const pieceRows = buildDimensionalPieceRows(
+      product.id,
+      dimensionalInitialStock.warehouseId,
+      baseLengthM,
+      dimensionalInitialStock
+    );
+
+    if (pieceRows.length > 0) {
+      try {
+        await insertPolywoodPieces(pieceRows);
+      } catch (pieceError) {
+        await supabase.from("products").delete().eq("id", product.id);
+        return {
+          ok: false,
+          error: pieceError instanceof Error ? pieceError.message : "Failed to insert polywood pieces",
+        };
+      }
+    }
+  }
+
+  return { ok: true, product };
 }
 
 export async function createCategory(

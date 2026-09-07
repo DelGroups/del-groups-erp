@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { Save } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
-import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
+import {
+  calculateDimensionalInitialStockMeters,
+  createProduct,
+  getCategoryFullName,
+  updateProduct,
+} from "@/lib/products/api";
+import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -18,7 +24,25 @@ interface ProductFormProps {
   onCancel?: () => void;
 }
 
+interface OffCutRow {
+  id: string;
+  length_m: string;
+  count: string;
+}
+
 const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu"];
+
+function createOffCutRow(): OffCutRow {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    length_m: "",
+    count: "1",
+  };
+}
+
+function resolvePolywoodWarehouseId(warehouses: Warehouse[]): string {
+  return warehouses.find((w) => w.warehouse_type === POLYWOOD_WAREHOUSE_TYPE)?.id || "";
+}
 
 export default function ProductForm({
   categories,
@@ -39,6 +63,9 @@ export default function ProductForm({
     : initialCategory;
 
   const [saving, setSaving] = useState(false);
+  const polywoodWarehouseId = useMemo(() => resolvePolywoodWarehouseId(warehouses), [warehouses]);
+  const [fullSheetCount, setFullSheetCount] = useState("0");
+  const [offCutRows, setOffCutRows] = useState<OffCutRow[]>([]);
   const [form, setForm] = useState({
     code: initialProduct?.code || "",
     name: initialProduct?.name || "",
@@ -56,13 +83,53 @@ export default function ProductForm({
     color: initialProduct?.color || "",
     weight: String(initialProduct?.weight ?? 0),
     extra_info: initialProduct?.extra_info || "",
-    warehouse_id: warehouses[0]?.id || "",
+    warehouse_id: polywoodWarehouseId || warehouses[0]?.id || "",
     is_dimensional: Boolean(initialProduct?.is_dimensional),
     base_length: String(initialProduct?.base_length ?? ""),
     base_width: String(initialProduct?.base_width ?? ""),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const parsedOffCuts = useMemo(
+    () =>
+      offCutRows
+        .map((row) => ({
+          length_m: parseFloat(row.length_m) || 0,
+          count: Math.max(0, Math.floor(parseFloat(row.count) || 0)),
+        }))
+        .filter((row) => row.length_m > 0 && row.count > 0),
+    [offCutRows]
+  );
+
+  const dimensionalInitialMeters = useMemo(() => {
+    if (!form.is_dimensional) return 0;
+    const baseLength = parseFloat(form.base_length) || 0;
+    if (baseLength <= 0) return 0;
+    return calculateDimensionalInitialStockMeters(
+      baseLength,
+      Math.max(0, Math.floor(parseFloat(fullSheetCount) || 0)),
+      parsedOffCuts
+    );
+  }, [form.is_dimensional, form.base_length, fullSheetCount, parsedOffCuts]);
+
+  const handleDimensionalToggle = (checked: boolean) => {
+    set({
+      is_dimensional: checked,
+      unit: checked ? "Metr" : form.unit,
+      warehouse_id: checked ? polywoodWarehouseId || form.warehouse_id : form.warehouse_id,
+    });
+    if (!checked) {
+      setFullSheetCount("0");
+      setOffCutRows([]);
+    }
+  };
+
+  const addOffCutRow = () => setOffCutRows((prev) => [...prev, createOffCutRow()]);
+  const updateOffCutRow = (id: string, patch: Partial<OffCutRow>) =>
+    setOffCutRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  const removeOffCutRow = (id: string) =>
+    setOffCutRows((prev) => prev.filter((row) => row.id !== id));
 
   const parentCategories = categories.filter((cat) => !cat.parent_id);
   const selectedParent = categories.find((cat) => cat.name === form.category && !cat.parent_id);
@@ -75,6 +142,18 @@ export default function ProductForm({
     if (!form.name.trim()) {
       showError(t("forms.enterProductName"));
       return;
+    }
+
+    if (form.is_dimensional && !isEditMode) {
+      const baseLength = parseFloat(form.base_length) || 0;
+      if (baseLength <= 0 && (parseFloat(fullSheetCount) > 0 || parsedOffCuts.length > 0)) {
+        showError(t("forms.baseLengthRequiredForInitialStock"));
+        return;
+      }
+      if (!form.warehouse_id) {
+        showError(t("forms.selectWarehouse"));
+        return;
+      }
     }
 
     setSaving(true);
@@ -92,7 +171,10 @@ export default function ProductForm({
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
       sell_price: parseFloat(form.sell_price) || 0,
-      stock: parseFloat(form.stock) || 0,
+      stock:
+        form.is_dimensional && !isEditMode
+          ? dimensionalInitialMeters
+          : parseFloat(form.stock) || 0,
       min_stock: parseFloat(form.min_stock) || 0,
       barcode: form.barcode || null,
       color: form.color || null,
@@ -105,7 +187,16 @@ export default function ProductForm({
 
     const result = isEditMode && initialProduct
       ? await updateProduct(initialProduct.id, payload)
-      : await createProduct(payload);
+      : await createProduct(
+          payload,
+          form.is_dimensional
+            ? {
+                warehouseId: form.warehouse_id,
+                fullSheetCount: Math.max(0, Math.floor(parseFloat(fullSheetCount) || 0)),
+                offCuts: parsedOffCuts,
+              }
+            : null
+        );
     setSaving(false);
 
     if (!result.ok) {
@@ -181,7 +272,7 @@ export default function ProductForm({
             <input
               type="checkbox"
               checked={form.is_dimensional}
-              onChange={(e) => set({ is_dimensional: e.target.checked })}
+              onChange={(e) => handleDimensionalToggle(e.target.checked)}
             />
             {t("forms.isDimensionalProduct")}
           </label>
@@ -311,15 +402,98 @@ export default function ProductForm({
           />
         </label>
 
-        <label className="block text-xs font-semibold text-app">
-          {t("forms.initialStock")}
-          <input
-            type="number"
-            value={form.stock}
-            onChange={(e) => set({ stock: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
+        {!form.is_dimensional || isEditMode ? (
+          <label className="block text-xs font-semibold text-app">
+            {t("forms.initialStock")}
+            <input
+              type="number"
+              value={form.stock}
+              onChange={(e) => set({ stock: e.target.value })}
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+        ) : (
+          <div className="md:col-span-2 space-y-4 rounded-xl border border-app bg-app-card-hover p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2">
+              <h3 className="text-sm font-bold text-app">{t("forms.initialStockComposition")}</h3>
+              <p className="text-xs text-app-muted">
+                {t("forms.totalInitialMeterage")}:{" "}
+                <span className="font-mono font-semibold text-app-accent">
+                  {dimensionalInitialMeters.toFixed(2)} m
+                </span>
+              </p>
+            </div>
+
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.fullSheetCount")}
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={fullSheetCount}
+                onChange={(e) => setFullSheetCount(e.target.value)}
+                placeholder="10"
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm md:max-w-xs"
+              />
+            </label>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-app">{t("forms.offCutRemainders")}</p>
+              {offCutRows.length === 0 ? (
+                <p className="text-xs text-app-muted">{t("forms.offCutRemaindersEmpty")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {offCutRows.map((row) => (
+                    <div key={row.id} className="grid grid-cols-12 gap-2">
+                      <label className="col-span-5 text-[10px] font-semibold text-app">
+                        {t("forms.offCutLength")}
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.length_m}
+                          onChange={(e) => updateOffCutRow(row.id, { length_m: e.target.value })}
+                          placeholder="2.50"
+                          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="col-span-5 text-[10px] font-semibold text-app">
+                        {t("forms.offCutCount")}
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={row.count}
+                          onChange={(e) => updateOffCutRow(row.id, { count: e.target.value })}
+                          placeholder="1"
+                          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <div className="col-span-2 flex items-end justify-end">
+                        <button
+                          type="button"
+                          onClick={() => removeOffCutRow(row.id)}
+                          className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"
+                          aria-label={t("forms.remove")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={addOffCutRow}
+                className="btn-secondary flex items-center gap-1 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t("forms.addOffCutPiece")}
+              </button>
+            </div>
+          </div>
+        )}
 
         <label className="block text-xs font-semibold text-app">
           {t("forms.minStockThreshold")}
