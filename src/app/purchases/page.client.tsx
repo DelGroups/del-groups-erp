@@ -246,6 +246,11 @@ export default function PurchasesPage() {
           totalAmount={paymentPurchase.total_amount}
           paidAmount={paymentPurchase.paid_amount}
           remainingAmount={paymentPurchase.debt_amount}
+          isOfficial={paymentPurchase.is_official === true}
+          documentSubtotalAmount={Number(
+            paymentPurchase.subtotal_amount ?? paymentPurchase.total_amount ?? 0
+          )}
+          documentVatAmount={Number(paymentPurchase.vat_amount ?? 0)}
           onSubmit={async (payload) => {
             const result = await recordPurchasePaymentAction({
               purchaseId: paymentPurchase.id,
@@ -258,6 +263,7 @@ export default function PurchasesPage() {
               currentPaid: paymentPurchase.paid_amount,
               totalAmount: paymentPurchase.total_amount,
               currentDebt: paymentPurchase.debt_amount,
+              treasurySplits: payload.treasurySplits,
             });
             if (result.success) void loadData();
             return result;

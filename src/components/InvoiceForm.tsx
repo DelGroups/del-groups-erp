@@ -40,6 +40,13 @@ import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { fetchProductByBarcode, findProductByBarcodeInList } from "@/lib/products/barcode";
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
+import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import {
+  buildOfficialDocumentFields,
+  type OfficialTransactionState,
+} from "@/lib/finance/officialTransaction";
+import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
 import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import {
@@ -374,6 +381,10 @@ export default function UniversalInvoiceForm({
   ]);
   const [saving, setSaving] = useState(false);
   const [quickAddProductRowId, setQuickAddProductRowId] = useState<string | null>(null);
+  const [isOfficial, setIsOfficial] = useState(false);
+  const [vatMode, setVatMode] = useState<VatMode>("none");
+  const [contractId, setContractId] = useState<string | null>(null);
+  const [voenVerification, setVoenVerification] = useState("");
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
@@ -742,6 +753,32 @@ export default function UniversalInvoiceForm({
     () => calcSaleTotals(items, payments, deliveryType, deliveryFee, additionalExpensesTotal),
     [items, payments, deliveryType, deliveryFee, additionalExpensesTotal]
   );
+
+  const itemsNetTotal = totals.subtotal - totals.discount_total;
+  const officialAmounts = useMemo(
+    () =>
+      calcOfficialTransactionTotals(itemsNetTotal, {
+        isOfficial,
+        vatMode,
+        deliveryCost: totals.delivery_cost,
+        additionalExpensesTotal,
+      }),
+    [itemsNetTotal, isOfficial, vatMode, totals.delivery_cost, additionalExpensesTotal]
+  );
+
+  const displayTotals = useMemo(
+    () =>
+      isOfficial
+        ? {
+            ...totals,
+            vat_total: officialAmounts.vat_amount,
+            grand_total: officialAmounts.grand_total,
+            remaining_balance: officialAmounts.grand_total - totals.paid_amount,
+          }
+        : totals,
+    [isOfficial, totals, officialAmounts]
+  );
+
   const salePreflightIssue = useMemo(() => {
     if (!isOpen) return null;
 
@@ -751,7 +788,7 @@ export default function UniversalInvoiceForm({
       items,
       payments,
       paidAmount: totals.paid_amount,
-      grandTotal: totals.grand_total,
+      grandTotal: displayTotals.grand_total,
       resolveAvailableStock: (item) => {
         if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
           return Number(item.available_stock);
@@ -769,6 +806,7 @@ export default function UniversalInvoiceForm({
     selectedCustomerId,
     totals.grand_total,
     totals.paid_amount,
+    displayTotals.grand_total,
   ]);
   const salePreflightHint = salePreflightIssue ? preflightMessage(t, salePreflightIssue) : undefined;
   const { locked: sellerLocked, lockedEmployeeId, lockedName } =
@@ -828,9 +866,14 @@ export default function UniversalInvoiceForm({
       return;
     }
 
+    if (isOfficial && !contractId) {
+      showToastError(t("official.contractRequired"));
+      return;
+    }
+
     const paymentTotalIssue = validatePaymentsNotExceedTotal(
       totals.paid_amount,
-      totals.grand_total
+      displayTotals.grand_total
     );
     if (paymentTotalIssue) {
       showToastError(preflightMessage(t, paymentTotalIssue));
@@ -847,6 +890,14 @@ export default function UniversalInvoiceForm({
     const primaryWarehouse =
       items.find((i) => i.warehouse_name)?.warehouse_name || defaultWarehouse?.name || "";
 
+    const officialState: OfficialTransactionState = {
+      isOfficial,
+      contractId,
+      vatMode: isOfficial ? vatMode : "none",
+      voenVerification,
+    };
+    const officialFields = buildOfficialDocumentFields(officialState, officialAmounts);
+
     const salesPayload: SaleInsert = {
       doc_no: docNo,
       doc_date: docDate,
@@ -857,10 +908,10 @@ export default function UniversalInvoiceForm({
       warehouse_name: primaryWarehouse,
       subtotal: totals.subtotal,
       discount_total: totals.discount_total,
-      vat_total: totals.vat_total,
-      total_amount: totals.grand_total,
+      vat_total: isOfficial ? officialAmounts.vat_amount : totals.vat_total,
+      total_amount: displayTotals.grand_total,
       paid_amount: totals.paid_amount,
-      remaining_balance: totals.remaining_balance,
+      remaining_balance: displayTotals.grand_total - totals.paid_amount,
       delivery_address: deliveryAddress,
       delivery_type: deliveryType,
       delivery_fee: totals.delivery_cost,
@@ -874,6 +925,7 @@ export default function UniversalInvoiceForm({
       payments,
       docNo,
       additionalExpenses,
+      officialFields,
     });
 
     if (!result.success) {
@@ -1046,6 +1098,23 @@ export default function UniversalInvoiceForm({
               </div>
             )}
           </div>
+        </div>
+
+        <div className="px-0">
+          <OfficialTransactionSection
+            transactionType="sale"
+            partyId={selectedCustomerId || null}
+            partyName={selectedCustomer ? customerLabel(selectedCustomer, t) : undefined}
+            partyVoen={selectedCustomer?.voen}
+            isOfficial={isOfficial}
+            onIsOfficialChange={setIsOfficial}
+            vatMode={vatMode}
+            onVatModeChange={setVatMode}
+            contractId={contractId}
+            onContractIdChange={setContractId}
+            voenVerification={voenVerification}
+            onVoenVerificationChange={setVoenVerification}
+          />
         </div>
 
         <div className="app-table-wrap overflow-visible">
@@ -1490,12 +1559,20 @@ export default function UniversalInvoiceForm({
                 <span>{t("forms.additionalExpenses")}</span>
                 <span className="font-mono">+{additionalExpensesTotal.toFixed(2)}</span>
               </div>
-              <div className="flex items-center justify-between border-t border-white/20 pt-2 text-sm font-bold">
-                <span>{t("invoice.grandTotal")}</span>
-                <span className="font-mono text-lg text-emerald-400">
-                  {totals.grand_total.toFixed(2)} {t("common.currency")}
-                </span>
-              </div>
+              {isOfficial ? (
+                <OfficialTotalsBreakdown
+                  amounts={officialAmounts}
+                  isOfficial={isOfficial}
+                  dark
+                />
+              ) : (
+                <div className="flex items-center justify-between border-t border-white/20 pt-2 text-sm font-bold">
+                  <span>{t("invoice.grandTotal")}</span>
+                  <span className="font-mono text-lg text-emerald-400">
+                    {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button

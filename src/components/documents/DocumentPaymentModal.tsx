@@ -13,6 +13,8 @@ import {
   PAYMENT_ACCOUNT_REQUIRED_MESSAGE,
 } from "@/lib/forms/paymentValidation";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { allocateOfficialPaymentSplit } from "@/lib/finance/vatEngine";
+import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 
@@ -20,13 +22,17 @@ interface Account {
   id: string;
   name: string;
   type: string;
+  is_vat_account?: boolean | null;
 }
+
+export type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
 
 export interface DocumentPaymentPayload {
   amount: number;
   accountId: string;
   method: string;
   notes?: string;
+  treasurySplits?: TreasuryPaymentSplit[];
 }
 
 interface DocumentPaymentModalProps {
@@ -40,6 +46,9 @@ interface DocumentPaymentModalProps {
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  isOfficial?: boolean;
+  documentSubtotalAmount?: number;
+  documentVatAmount?: number;
   onSubmit: (payload: DocumentPaymentPayload) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -54,6 +63,9 @@ export default function DocumentPaymentModal({
   totalAmount,
   paidAmount,
   remainingAmount,
+  isOfficial = false,
+  documentSubtotalAmount = 0,
+  documentVatAmount = 0,
   onSubmit,
 }: DocumentPaymentModalProps) {
   const { t } = useI18n();
@@ -61,43 +73,89 @@ export default function DocumentPaymentModal({
   const resolvedTitle = title ?? t("modals.payment.title");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState("");
+  const [vatAccountId, setVatAccountId] = useState("");
   const [method, setMethod] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [useSplitTreasury, setUseSplitTreasury] = useState(false);
+
+  const canSplitTreasury =
+    isOfficial && documentVatAmount > 0 && documentSubtotalAmount > 0 && totalAmount > 0;
 
   useEffect(() => {
     if (!isOpen) return;
 
     void (async () => {
-      const { data } = await supabase.from("accounts").select("id, name, type").order("name");
+      const { data } = await supabase
+        .from("accounts")
+        .select("id, name, type, is_vat_account")
+        .order("name");
       const rows = (data as Account[]) || [];
       setAccounts(rows);
-      if (rows[0]) {
-        setAccountId(rows[0].id);
-        setMethod(rows[0].name);
+      const mainAccount = rows.find((a) => !a.is_vat_account) ?? rows[0];
+      const vatAccount = rows.find((a) => a.is_vat_account);
+      if (mainAccount) {
+        setAccountId(mainAccount.id);
+        setMethod(mainAccount.name);
       } else {
         setAccountId("");
         setMethod("");
       }
+      setVatAccountId(vatAccount?.id || "");
     })();
 
     setAmount(remainingAmount > 0 ? remainingAmount.toFixed(2) : "");
     setNotes("");
-  }, [isOpen, remainingAmount]);
+    setUseSplitTreasury(canSplitTreasury);
+  }, [isOpen, remainingAmount, canSplitTreasury]);
 
   const numericAmount = parseFloat(amount) || 0;
-  const paymentPreflightIssue = useMemo(
-    () =>
-      validateDocumentPaymentPreflight({
-        amount: numericAmount,
-        remainingAmount,
-        accountId,
-      }),
-    [accountId, numericAmount, remainingAmount]
-  );
+  const splitAmounts = useMemo(() => {
+    if (!canSplitTreasury || !useSplitTreasury) {
+      return { baseAmount: numericAmount, vatAmount: 0 };
+    }
+    return allocateOfficialPaymentSplit(
+      numericAmount,
+      documentSubtotalAmount,
+      documentVatAmount,
+      totalAmount
+    );
+  }, [
+    canSplitTreasury,
+    useSplitTreasury,
+    numericAmount,
+    documentSubtotalAmount,
+    documentVatAmount,
+    totalAmount,
+  ]);
+
+  const paymentPreflightIssue = useMemo(() => {
+    if (useSplitTreasury && canSplitTreasury) {
+      if (numericAmount <= 0) return "amount_required" as const;
+      if (numericAmount > remainingAmount + 0.001) return "amount_exceeds_remaining" as const;
+      if (!accountId) return "account_required" as const;
+      if (!vatAccountId) return "vat_account_required" as const;
+      return null;
+    }
+    return validateDocumentPaymentPreflight({
+      amount: numericAmount,
+      remainingAmount,
+      accountId,
+    });
+  }, [
+    accountId,
+    canSplitTreasury,
+    numericAmount,
+    remainingAmount,
+    useSplitTreasury,
+    vatAccountId,
+  ]);
+
   const paymentPreflightHint = paymentPreflightIssue
-    ? preflightMessage(t, paymentPreflightIssue)
+    ? paymentPreflightIssue === "vat_account_required"
+      ? t("official.vatAccountRequired")
+      : preflightMessage(t, paymentPreflightIssue)
     : undefined;
 
   if (!isOpen) return null;
@@ -109,13 +167,69 @@ export default function DocumentPaymentModal({
       return;
     }
 
+    setSaving(true);
+
+    if (useSplitTreasury && canSplitTreasury) {
+      const mainAccount = accounts.find((a) => a.id === accountId);
+      const vatAccount = accounts.find((a) => a.id === vatAccountId);
+      const splits: TreasuryPaymentSplit[] = [];
+
+      if (splitAmounts.baseAmount > 0) {
+        const baseError = assertPaymentAccountId(accountId);
+        if (baseError) {
+          setSaving(false);
+          showToastError(PAYMENT_ACCOUNT_REQUIRED_MESSAGE);
+          return;
+        }
+        splits.push({
+          amount: splitAmounts.baseAmount,
+          accountId: accountId.trim(),
+          method: mainAccount?.name || method,
+          label: t("official.baseAmount"),
+          notes: notes.trim() || undefined,
+        });
+      }
+
+      if (splitAmounts.vatAmount > 0) {
+        const vatError = assertPaymentAccountId(vatAccountId);
+        if (vatError) {
+          setSaving(false);
+          showToastError(t("official.vatAccountRequired"));
+          return;
+        }
+        splits.push({
+          amount: splitAmounts.vatAmount,
+          accountId: vatAccountId.trim(),
+          method: vatAccount?.name || t("official.vatAmount"),
+          label: t("official.vatAmount"),
+          notes: notes.trim() || undefined,
+        });
+      }
+
+      const result = await onSubmit({
+        amount: numericAmount,
+        accountId: accountId.trim(),
+        method,
+        notes: notes.trim() || undefined,
+        treasurySplits: splits,
+      });
+      setSaving(false);
+
+      if (!result.success) {
+        showToastError(formatRpcError(result.error || t("modals.payment.paymentFailed"), t));
+        return;
+      }
+      onClose();
+      return;
+    }
+
     const accountError = assertPaymentAccountId(accountId);
     if (accountError) {
+      setSaving(false);
       showToastError(PAYMENT_ACCOUNT_REQUIRED_MESSAGE);
       return;
     }
 
-    setSaving(true);
     const result = await onSubmit({
       amount: numericAmount,
       accountId: accountId.trim(),
@@ -131,6 +245,9 @@ export default function DocumentPaymentModal({
 
     onClose();
   };
+
+  const mainAccounts = accounts.filter((a) => !a.is_vat_account);
+  const vatAccounts = accounts.filter((a) => a.is_vat_account);
 
   return (
     <>
@@ -184,29 +301,91 @@ export default function DocumentPaymentModal({
             />
           </label>
 
-          <label className="block space-y-1 text-xs">
-            <span className="font-semibold text-app">{t("modals.payment.account")}</span>
-            <select
-              value={accountId}
-              onChange={(e) => {
-                const nextId = e.target.value;
-                setAccountId(nextId);
-                const acc = accounts.find((a) => a.id === nextId);
-                if (acc) setMethod(acc.name);
-              }}
-              className="app-input w-full"
-              required
-            >
-              {accounts.length === 0 && (
-                <option value="">{t("forms.paymentAccountRequiredSelect")}</option>
-              )}
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {canSplitTreasury && (
+            <label className="flex items-center gap-2 text-xs font-semibold text-app">
+              <input
+                type="checkbox"
+                checked={useSplitTreasury}
+                onChange={(e) => setUseSplitTreasury(e.target.checked)}
+              />
+              {t("official.splitTreasury")}
+            </label>
+          )}
+
+          {useSplitTreasury && canSplitTreasury ? (
+            <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
+              <div className="space-y-1">
+                <span className="font-semibold text-app">{t("official.baseAmount")}</span>
+                <p className="font-mono text-lg font-bold">{splitAmounts.baseAmount.toFixed(2)} AZN</p>
+                <select
+                  value={accountId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setAccountId(nextId);
+                    const acc = accounts.find((a) => a.id === nextId);
+                    if (acc) setMethod(acc.name);
+                  }}
+                  className="app-input w-full"
+                  required
+                >
+                  {mainAccounts.length === 0 && (
+                    <option value="">{t("forms.paymentAccountRequiredSelect")}</option>
+                  )}
+                  {mainAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="font-semibold text-app">{t("official.vatAmount")}</span>
+                <p className="font-mono text-lg font-bold text-amber-600">
+                  {splitAmounts.vatAmount.toFixed(2)} AZN
+                </p>
+                <select
+                  value={vatAccountId}
+                  onChange={(e) => setVatAccountId(e.target.value)}
+                  className="app-input w-full"
+                  required
+                >
+                  {vatAccounts.length === 0 && (
+                    <option value="">{t("official.noVatAccount")}</option>
+                  )}
+                  {vatAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <label className="block space-y-1 text-xs">
+              <span className="font-semibold text-app">{t("modals.payment.account")}</span>
+              <select
+                value={accountId}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  setAccountId(nextId);
+                  const acc = accounts.find((a) => a.id === nextId);
+                  if (acc) setMethod(acc.name);
+                }}
+                className="app-input w-full"
+                required
+              >
+                {accounts.length === 0 && (
+                  <option value="">{t("forms.paymentAccountRequiredSelect")}</option>
+                )}
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                    {acc.is_vat_account ? ` (${t("official.vatAccount")})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="block space-y-1 text-xs">
             <span className="font-semibold text-app">{t("modals.payment.method")}</span>

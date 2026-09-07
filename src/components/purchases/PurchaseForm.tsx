@@ -43,6 +43,13 @@ import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { fetchProductByBarcode, findProductByBarcodeInList } from "@/lib/products/barcode";
+import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
+import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import {
+  buildOfficialDocumentFields,
+  type OfficialTransactionState,
+} from "@/lib/finance/officialTransaction";
+import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
 
 interface Account {
   id: string;
@@ -113,6 +120,12 @@ export default function PurchaseForm({
     createEmptyPurchasePayment(),
   ]);
   const [saving, setSaving] = useState(false);
+  const [isOfficial, setIsOfficial] = useState(Boolean(initialPurchase?.is_official));
+  const [vatMode, setVatMode] = useState<VatMode>(
+    (initialPurchase?.vat_mode as VatMode) || "none"
+  );
+  const [contractId, setContractId] = useState<string | null>(initialPurchase?.contract_id || null);
+  const [voenVerification, setVoenVerification] = useState("");
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
@@ -170,9 +183,19 @@ export default function PurchaseForm({
     () => sumDocumentAdditionalExpenses(additionalExpenses),
     [additionalExpenses]
   );
+  const itemsSubtotal = useMemo(() => calcPurchaseGrandTotal(items), [items]);
+  const officialAmounts = useMemo(
+    () =>
+      calcOfficialTransactionTotals(itemsSubtotal, {
+        isOfficial,
+        vatMode,
+        additionalExpensesTotal,
+      }),
+    [itemsSubtotal, isOfficial, vatMode, additionalExpensesTotal]
+  );
   const grandTotal = useMemo(
-    () => calcPurchaseGrandTotal(items) + additionalExpensesTotal,
-    [items, additionalExpensesTotal]
+    () => (isOfficial ? officialAmounts.grand_total : itemsSubtotal + additionalExpensesTotal),
+    [isOfficial, officialAmounts.grand_total, itemsSubtotal, additionalExpensesTotal]
   );
   const newPaymentsTotal = useMemo(() => calcPurchasePaymentsTotal(payments), [payments]);
   const totalPaid = existingPaid + newPaymentsTotal;
@@ -193,6 +216,10 @@ export default function PurchaseForm({
   const purchasePreflightHint = purchasePreflightIssue
     ? preflightMessage(t, purchasePreflightIssue)
     : undefined;
+  const selectedSupplier = useMemo(
+    () => supplierList.find((s) => s.id === supplierId),
+    [supplierList, supplierId]
+  );
   const status = debt > 0 ? t("forms.statusDebtor") : t("forms.statusPaid");
 
   const updateItem = (id: string, patch: Partial<PurchaseLineItem>) => {
@@ -331,6 +358,10 @@ export default function PurchaseForm({
       showToastError(t("forms.selectWarehouse"));
       return;
     }
+    if (isOfficial && !contractId) {
+      showToastError(t("official.contractRequired"));
+      return;
+    }
 
     const lineIssue = validatePurchaseInvoiceLines(items);
     if (lineIssue) {
@@ -357,6 +388,13 @@ export default function PurchaseForm({
     }
 
     const paymentsToProcess = payments.filter((p) => p.account_id && p.amount > 0);
+    const officialState: OfficialTransactionState = {
+      isOfficial,
+      contractId,
+      vatMode: isOfficial ? vatMode : "none",
+      voenVerification,
+    };
+    const officialFields = buildOfficialDocumentFields(officialState, officialAmounts);
 
     setSaving(true);
     const header = {
@@ -376,7 +414,7 @@ export default function PurchaseForm({
     const result = isEdit
       ? await updatePurchase(
           initialPurchase!.id,
-          { header, items, invoiceNumber, payments: paymentsToProcess },
+          { header, items, invoiceNumber, payments: paymentsToProcess, officialFields },
           initialPurchase!.items,
           initialPurchase!.debt_amount,
           initialPurchase!.supplier_id || ""
@@ -387,6 +425,7 @@ export default function PurchaseForm({
           invoiceNumber,
           payments: paymentsToProcess,
           additionalExpenses,
+          officialFields,
         });
 
     setSaving(false);
@@ -487,6 +526,21 @@ export default function PurchaseForm({
             </div>
           </div>
         </div>
+
+        <OfficialTransactionSection
+          transactionType="purchase"
+          partyId={supplierId || null}
+          partyName={selectedSupplier?.full_name || selectedSupplier?.company_name}
+          partyVoen={selectedSupplier?.voen}
+          isOfficial={isOfficial}
+          onIsOfficialChange={setIsOfficial}
+          vatMode={vatMode}
+          onVatModeChange={setVatMode}
+          contractId={contractId}
+          onContractIdChange={setContractId}
+          voenVerification={voenVerification}
+          onVoenVerificationChange={setVoenVerification}
+        />
 
         <div className="app-table-wrap">
           <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
@@ -686,10 +740,14 @@ export default function PurchaseForm({
 
         <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
           <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("forms.purchaseTotal")}</span>
-              <span className="font-mono font-bold">{grandTotal.toFixed(2)} AZN</span>
-            </div>
+            {isOfficial ? (
+              <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+            ) : (
+              <div className="flex justify-between">
+                <span className="text-app-muted">{t("forms.purchaseTotal")}</span>
+                <span className="font-mono font-bold">{grandTotal.toFixed(2)} AZN</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-app-muted">{t("forms.totalPaid")}</span>
               <span className="font-mono font-bold text-emerald-600">{totalPaid.toFixed(2)} AZN</span>

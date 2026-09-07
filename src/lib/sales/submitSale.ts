@@ -17,6 +17,8 @@ import {
   type MixedDimensionalItemType,
   type MixedDimensionalSaleMode,
 } from "@/lib/polywood/processMixedDimensionalSale";
+import type { OfficialDocumentFields } from "@/lib/finance/officialTransaction";
+import { persistSaleOfficialFields } from "@/lib/finance/officialTransaction";
 import type { SaleInsert, SaleItem, SalePayment } from "@/types/database.types";
 import { toSalePaymentsJson } from "@/types/database.types";
 
@@ -27,6 +29,7 @@ export interface SubmitSalePayload {
   docNo: string;
   decrementStock?: boolean;
   additionalExpenses?: DocumentAdditionalExpense[];
+  officialFields?: OfficialDocumentFields;
 }
 
 export interface SubmitSaleResult {
@@ -336,6 +339,17 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
     payload.header.seller_name,
     validItems
   );
+
+  if (payload.officialFields) {
+    const persisted = await persistSaleOfficialFields(saleId, payload.officialFields);
+    if (!persisted.ok) {
+      return {
+        success: false,
+        saleId,
+        error: persisted.error || "Rəsmi əməliyyat sahələri saxlanmadı",
+      };
+    }
+  }
 
   return { success: true, saleId };
 }

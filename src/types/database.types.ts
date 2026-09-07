@@ -680,6 +680,7 @@ export interface Supplier {
   full_name?: string | null;
   company_name?: string | null;
   phone?: string | null;
+  voen?: string | null;
   balance?: number | null;
   created_at?: string | null;
 }
@@ -728,6 +729,13 @@ export interface Purchase {
   created_at: string | null;
   warehouse_sent?: boolean;
   warehouse_slip_status?: WarehouseSlipStatus | null;
+  is_official?: boolean;
+  contract_id?: string | null;
+  vat_mode?: "exclusive" | "inclusive" | "none" | null;
+  subtotal_amount?: number | null;
+  vat_rate?: number | null;
+  vat_amount?: number | null;
+  grand_total?: number | null;
 }
 
 export type PurchaseInsert = {

@@ -40,6 +40,14 @@ import {
   matchesServiceCategoryName,
 } from "@/lib/products/serviceCategory";
 import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
+import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import {
+  buildOfficialDocumentFields,
+  type OfficialTransactionState,
+} from "@/lib/finance/officialTransaction";
+import { calcOfficialTransactionTotals } from "@/lib/finance/vatEngine";
+import type { VatMode } from "@/lib/finance/vatEngine";
 
 export const ADHOC_SERVICE_PRODUCT_ID = "__custom_service__";
 
@@ -161,6 +169,10 @@ export default function MixedDimensionalInvoiceForm({
   const [rows, setRows] = useState<GridRow[]>([createEmptyRow()]);
   const [additionalExpenses, setAdditionalExpenses] = useState<DocumentAdditionalExpense[]>([]);
   const [payments, setPayments] = useState<SalePayment[]>([]);
+  const [isOfficial, setIsOfficial] = useState(false);
+  const [vatMode, setVatMode] = useState<VatMode>("none");
+  const [contractId, setContractId] = useState<string | null>(null);
+  const [voenVerification, setVoenVerification] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -351,6 +363,32 @@ export default function MixedDimensionalInvoiceForm({
     [saleItems, payments, additionalExpensesTotal]
   );
 
+  const itemsNetTotal = totals.subtotal - totals.discount_total;
+  const officialAmounts = useMemo(
+    () =>
+      calcOfficialTransactionTotals(itemsNetTotal, {
+        isOfficial,
+        vatMode,
+        additionalExpensesTotal,
+      }),
+    [itemsNetTotal, isOfficial, vatMode, additionalExpensesTotal]
+  );
+
+  const displayTotals = useMemo(
+    () =>
+      isOfficial
+        ? {
+            ...totals,
+            vat_total: officialAmounts.vat_amount,
+            grand_total: officialAmounts.grand_total,
+            remaining_balance: officialAmounts.grand_total - totals.paid_amount,
+          }
+        : totals,
+    [isOfficial, totals, officialAmounts]
+  );
+
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+
   const addPaymentRow = () =>
     setPayments((prev) => [
       ...prev,
@@ -428,6 +466,18 @@ export default function MixedDimensionalInvoiceForm({
       0,
       additionalExpensesTotal
     );
+    const netForSubmit = totalsForSubmit.subtotal - totalsForSubmit.discount_total;
+    const officialForSubmit = calcOfficialTransactionTotals(netForSubmit, {
+      isOfficial,
+      vatMode,
+      additionalExpensesTotal,
+    });
+    const finalGrandTotal = isOfficial ? officialForSubmit.grand_total : totalsForSubmit.grand_total;
+
+    if (isOfficial && !contractId) {
+      showError(t("official.contractRequired"));
+      return;
+    }
 
     const expenseError = validateDocumentAdditionalExpenses(additionalExpenses);
     if (expenseError) {
@@ -441,7 +491,7 @@ export default function MixedDimensionalInvoiceForm({
     }
     const paymentsExceedIssue = validatePaymentsNotExceedTotal(
       totalsForSubmit.paid_amount,
-      totalsForSubmit.grand_total
+      finalGrandTotal
     );
     if (paymentsExceedIssue) {
       showError(t(paymentsExceedIssue.key, paymentsExceedIssue.params));
@@ -449,6 +499,14 @@ export default function MixedDimensionalInvoiceForm({
     }
 
     setSaving(true);
+    const officialState: OfficialTransactionState = {
+      isOfficial,
+      contractId,
+      vatMode: isOfficial ? vatMode : "none",
+      voenVerification,
+    };
+    const officialFields = buildOfficialDocumentFields(officialState, officialForSubmit);
+
     const header: SaleInsert = {
       doc_no: docNo,
       doc_date: docDate,
@@ -459,10 +517,10 @@ export default function MixedDimensionalInvoiceForm({
       warehouse_name: warehouses.find((w) => w.id === warehouseId)?.name || null,
       subtotal: totalsForSubmit.subtotal,
       discount_total: totalsForSubmit.discount_total,
-      vat_total: totalsForSubmit.vat_total,
-      total_amount: totalsForSubmit.grand_total,
+      vat_total: isOfficial ? officialForSubmit.vat_amount : totalsForSubmit.vat_total,
+      total_amount: finalGrandTotal,
       paid_amount: totalsForSubmit.paid_amount,
-      remaining_balance: totalsForSubmit.remaining_balance,
+      remaining_balance: finalGrandTotal - totalsForSubmit.paid_amount,
       notes: notes || null,
     } as SaleInsert;
 
@@ -472,6 +530,7 @@ export default function MixedDimensionalInvoiceForm({
       payments,
       docNo,
       additionalExpenses,
+      officialFields,
     });
     setSaving(false);
 
@@ -574,6 +633,23 @@ export default function MixedDimensionalInvoiceForm({
               ))}
             </select>
           </label>
+        </div>
+
+        <div className="px-6">
+          <OfficialTransactionSection
+            transactionType="sale"
+            partyId={customerId || null}
+            partyName={customerName}
+            partyVoen={selectedCustomer?.voen}
+            isOfficial={isOfficial}
+            onIsOfficialChange={setIsOfficial}
+            vatMode={vatMode}
+            onVatModeChange={setVatMode}
+            contractId={contractId}
+            onContractIdChange={setContractId}
+            voenVerification={voenVerification}
+            onVoenVerificationChange={setVoenVerification}
+          />
         </div>
 
         <div className="px-6">
@@ -808,21 +884,27 @@ export default function MixedDimensionalInvoiceForm({
 
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-6 py-4">
           <div className="flex flex-wrap gap-4 text-xs text-app-muted">
-            <span>
-              {t("common.total")}:{" "}
-              <span className="font-mono font-bold text-app">{totals.subtotal.toFixed(2)}</span>
-            </span>
-            <span>
-              {t("forms.additionalExpenses")}:{" "}
-              <span className="font-mono font-bold text-app">{additionalExpensesTotal.toFixed(2)}</span>
-            </span>
-            <span>
-              {t("invoice.grandTotal")}:{" "}
-              <span className="font-mono font-bold text-app-accent">{totals.grand_total.toFixed(2)}</span>
-            </span>
+            {isOfficial ? (
+              <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+            ) : (
+              <>
+                <span>
+                  {t("common.total")}:{" "}
+                  <span className="font-mono font-bold text-app">{displayTotals.subtotal.toFixed(2)}</span>
+                </span>
+                <span>
+                  {t("forms.additionalExpenses")}:{" "}
+                  <span className="font-mono font-bold text-app">{additionalExpensesTotal.toFixed(2)}</span>
+                </span>
+                <span>
+                  {t("invoice.grandTotal")}:{" "}
+                  <span className="font-mono font-bold text-app-accent">{displayTotals.grand_total.toFixed(2)}</span>
+                </span>
+              </>
+            )}
             <span>
               {t("invoice.remainingBalance")}:{" "}
-              <span className="font-mono font-bold text-app">{totals.remaining_balance.toFixed(2)}</span>
+              <span className="font-mono font-bold text-app">{displayTotals.remaining_balance.toFixed(2)}</span>
             </span>
           </div>
           <button

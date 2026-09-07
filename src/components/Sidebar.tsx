@@ -74,6 +74,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { titleKey: "nav.items.sales", path: "/sales", icon: ShoppingCart },
       { titleKey: "nav.items.purchases", path: "/purchases", icon: ShoppingBag },
+      { titleKey: "nav.items.contracts", path: "/contracts", icon: FileText },
       { titleKey: "nav.items.consignments", path: "/consignments", icon: FileSpreadsheet },
     ],
   },

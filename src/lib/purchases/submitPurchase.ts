@@ -4,6 +4,8 @@ import {
   documentExpensesToRpcPayload,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
+import type { OfficialDocumentFields } from "@/lib/finance/officialTransaction";
+import { persistPurchaseOfficialFields } from "@/lib/finance/officialTransaction";
 import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
@@ -14,6 +16,7 @@ export interface SubmitPurchasePayload {
   invoiceNumber: string;
   payments?: PurchasePaymentRow[];
   additionalExpenses?: DocumentAdditionalExpense[];
+  officialFields?: OfficialDocumentFields;
 }
 
 export interface SubmitPurchaseResult {
@@ -196,6 +199,17 @@ export async function submitPurchase(
     return { success: false, error: "Alış RPC cavab vermədi (purchase_id yoxdur)" };
   }
 
+  if (payload.officialFields) {
+    const persisted = await persistPurchaseOfficialFields(purchaseId, payload.officialFields);
+    if (!persisted.ok) {
+      return {
+        success: false,
+        purchaseId,
+        error: persisted.error || "Rəsmi əməliyyat sahələri saxlanmadı",
+      };
+    }
+  }
+
   return { success: true, purchaseId };
 }
 
@@ -288,6 +302,17 @@ export async function updatePurchase(
       purchaseId
     );
     if (!payResult.ok) return { success: false, error: payResult.error };
+  }
+
+  if (payload.officialFields) {
+    const persisted = await persistPurchaseOfficialFields(purchaseId, payload.officialFields);
+    if (!persisted.ok) {
+      return {
+        success: false,
+        purchaseId,
+        error: persisted.error || "Rəsmi əməliyyat sahələri saxlanmadı",
+      };
+    }
   }
 
   return { success: true, purchaseId };

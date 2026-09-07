@@ -299,6 +299,9 @@ export default function SalesListPage() {
           totalAmount={Number(paymentSale.total_amount || 0)}
           paidAmount={Number(paymentSale.paid_amount || 0)}
           remainingAmount={getSaleRemaining(paymentSale)}
+          isOfficial={paymentSale.is_official === true}
+          documentSubtotalAmount={Number(paymentSale.subtotal_amount ?? paymentSale.subtotal ?? 0)}
+          documentVatAmount={Number(paymentSale.vat_amount ?? paymentSale.vat_total ?? 0)}
           onSubmit={async (payload) => {
             const result = await recordSalePaymentAction({
               saleId: paymentSale.id,
@@ -311,6 +314,7 @@ export default function SalesListPage() {
               currentPaid: Number(paymentSale.paid_amount || 0),
               totalAmount: Number(paymentSale.total_amount || 0),
               existingPayments: paymentSale.payments ?? [],
+              treasurySplits: payload.treasurySplits,
             });
             if (result.success) void loadData();
             return result;
