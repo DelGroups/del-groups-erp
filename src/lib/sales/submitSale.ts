@@ -132,7 +132,11 @@ interface MixedDimensionalCallPlan {
 
 function resolveMixedDimensionalCall(item: SaleItem): MixedDimensionalCallPlan | null {
   if (item.sale_item_type === "service") {
-    return { itemType: "service", amount: 0, pieceCount: 1 };
+    return {
+      itemType: "service",
+      amount: item.quantity,
+      pieceCount: Math.max(1, Math.round(item.quantity) || 1),
+    };
   }
   if (item.sale_item_type === "accessory") {
     return { itemType: "accessory", amount: item.quantity, pieceCount: 1 };
@@ -212,12 +216,32 @@ async function applyDimensionalAndAccessoryDeductions(
     if (!plan) continue;
 
     if (plan.itemType === "service") {
-      if (inserted?.id) {
-        await supabase
-          .from("sale_items")
-          .update({ sale_item_type: "service", piece_count: 1 })
-          .eq("id", inserted.id);
+      const productId = resolveSaleItemProductId(item);
+      if (!productId || !inserted?.id) continue;
+
+      const result = await processMixedDimensionalSaleRpc({
+        productId,
+        warehouseId: item.warehouse_id || null,
+        itemType: "service",
+        amount: plan.amount,
+        pieceCount: plan.pieceCount,
+        saleItemId: inserted.id,
+      });
+
+      if (!result.ok) {
+        return {
+          ok: false,
+          error: `${item.product_name}: ${result.error || "Xidmət sətri emal edilmədi"}`,
+        };
       }
+
+      await supabase
+        .from("sale_items")
+        .update({
+          sale_item_type: "service",
+          piece_count: plan.pieceCount,
+        })
+        .eq("id", inserted.id);
       continue;
     }
 

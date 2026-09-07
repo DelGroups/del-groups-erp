@@ -23,6 +23,7 @@ import { submitSale } from "@/lib/sales/submitSale";
 import {
   calcLineTotal,
   calcSaleTotals,
+  type Category,
   type Customer,
   type Product,
   type SaleInsert,
@@ -102,9 +103,41 @@ function employeeLabel(e: Employee): string {
   return e.full_name || e.name || "—";
 }
 
-function isServiceCategory(product: Product): boolean {
-  const cat = productCategoryName(product);
-  return cat === "services" || cat === "service";
+function isServiceLineType(itemType: GridItemType): boolean {
+  return itemType === "service";
+}
+
+const SERVICE_CATEGORY_KEYS = new Set([
+  "services",
+  "service",
+  "xidmət",
+  "xidmet",
+]);
+
+function matchesServiceCategoryName(value: string | null | undefined): boolean {
+  return SERVICE_CATEGORY_KEYS.has(normalizeCategory(value));
+}
+
+function isServiceProduct(product: Product, categoryById: Map<string, Category>): boolean {
+  if (
+    matchesServiceCategoryName(product.category) ||
+    matchesServiceCategoryName(product.subcategory)
+  ) {
+    return true;
+  }
+
+  if (!product.category_id) return false;
+
+  const category = categoryById.get(product.category_id);
+  if (!category) return false;
+  if (matchesServiceCategoryName(category.name)) return true;
+
+  if (category.parent_id) {
+    const parent = categoryById.get(category.parent_id);
+    return parent ? matchesServiceCategoryName(parent.name) : false;
+  }
+
+  return false;
 }
 
 interface MixedDimensionalInvoiceFormProps {
@@ -128,6 +161,7 @@ export default function MixedDimensionalInvoiceForm({
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [docNo, setDocNo] = useState("");
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
@@ -145,13 +179,14 @@ export default function MixedDimensionalInvoiceForm({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, whResult] =
+      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: cats }, whResult] =
         await Promise.all([
           supabase.from("customers").select("*").order("created_at", { ascending: false }),
           supabase.from("employees").select("*"),
           supabase.from("warehouses").select("*").order("created_at", { ascending: true }),
           supabase.from("accounts").select("*").order("created_at", { ascending: true }),
           supabase.from("products").select("*").order("name", { ascending: true }),
+          supabase.from("categories").select("*").order("name", { ascending: true }),
           ensurePolywoodWarehouseAction(),
         ]);
 
@@ -160,6 +195,7 @@ export default function MixedDimensionalInvoiceForm({
       setWarehouses((wh as Warehouse[]) || []);
       setAccounts(acc ?? []);
       setProducts((prod as Product[]) || []);
+      setCategories((cats as Category[]) || []);
 
       const polywoodWarehouseId =
         whResult.success && whResult.data?.warehouse ? whResult.data.warehouse.id : "";
@@ -188,6 +224,11 @@ export default function MixedDimensionalInvoiceForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories]
+  );
+
   const productsForType = useCallback(
     (itemType: GridItemType): Product[] =>
       products.filter((product) => {
@@ -198,8 +239,8 @@ export default function MixedDimensionalInvoiceForm({
               Boolean(product.is_dimensional) &&
               (category === "polywood" ||
                 (category !== "sinelik" &&
-                  category !== "services" &&
-                  category !== "service" &&
+                  !matchesServiceCategoryName(category) &&
+                  !matchesServiceCategoryName(product.subcategory) &&
                   category !== "accessories" &&
                   category !== "accessory" &&
                   category !== "aksessuar"))
@@ -207,14 +248,14 @@ export default function MixedDimensionalInvoiceForm({
           case "sinelik":
             return Boolean(product.is_dimensional) && category === "sinelik";
           case "accessory":
-            return !product.is_dimensional && !isServiceCategory(product);
+            return !product.is_dimensional && !isServiceProduct(product, categoryById);
           case "service":
-            return isServiceCategory(product);
+            return isServiceProduct(product, categoryById);
           default:
             return false;
         }
       }),
-    [products]
+    [products, categoryById]
   );
 
   const updateRow = (id: string, patch: Partial<GridRow>) => {
@@ -226,7 +267,7 @@ export default function MixedDimensionalInvoiceForm({
       itemType,
       productId: "",
       saleMode: "meter",
-      amount: 0,
+      amount: itemType === "service" || itemType === "accessory" ? 1 : 0,
       pieceCount: 1,
       unitPrice: 0,
     });
@@ -269,7 +310,9 @@ export default function MixedDimensionalInvoiceForm({
               ? row.saleMode === "full_sheet"
                 ? t("polywood.unit.sheet")
                 : t("polywood.unit.meter")
-              : product?.unit || "Ədəd",
+              : isServiceLineType(row.itemType)
+                ? product?.unit || t("polywood.unit.service")
+                : product?.unit || t("polywood.unit.qty"),
           unit_price: row.unitPrice,
           discount_percent: row.discountPercent,
           vat_rate: row.vatRate,
@@ -481,6 +524,8 @@ export default function MixedDimensionalInvoiceForm({
                 {rows.map((row) => {
                   const options = productsForType(row.itemType);
                   const isMeter = isDimensionalLineType(row.itemType) && row.saleMode === "meter";
+                  const isService = isServiceLineType(row.itemType);
+                  const isAccessory = row.itemType === "accessory";
                   return (
                     <tr key={row.id}>
                       <td className="p-2">
@@ -521,19 +566,24 @@ export default function MixedDimensionalInvoiceForm({
                             <option value="full_sheet">{t("polywood.unit.sheet")}</option>
                             <option value="meter">{t("polywood.unit.meter")}</option>
                           </select>
+                        ) : isService ? (
+                          <span className="text-app-muted">{t("polywood.unit.service")}</span>
                         ) : (
-                          <span className="text-app-muted">{t("polywood.unit.qty")}</span>
+                          <span className="text-app-muted">
+                            {options.find((p) => p.id === row.productId)?.unit || t("polywood.unit.qty")}
+                          </span>
                         )}
                       </td>
                       <td className="p-2 text-right">
                         <div className="flex flex-col items-end gap-1">
                           <input
                             type="number"
-                            step="0.01"
+                            step={isService || isAccessory ? "1" : "0.01"}
                             min="0"
                             value={row.amount || ""}
                             onChange={(e) => updateRow(row.id, { amount: Number(e.target.value) || 0 })}
                             className="app-input w-24 text-right text-xs"
+                            placeholder={isService ? "2" : undefined}
                           />
                           {isMeter ? (
                             <input

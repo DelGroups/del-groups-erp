@@ -1172,6 +1172,7 @@ export const azMessages = {
       sheet: "Vərəq",
       meter: "Metr",
       qty: "Ədəd",
+      service: "Xidmət",
     },
     type: {
       polywood: "Polywood",

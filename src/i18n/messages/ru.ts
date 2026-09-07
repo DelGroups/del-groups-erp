@@ -1174,6 +1174,7 @@ export const ruMessages: Messages = {
       sheet: "Лист",
       meter: "Метр",
       qty: "Шт.",
+      service: "Услуга",
     },
     type: {
       polywood: "Polywood",

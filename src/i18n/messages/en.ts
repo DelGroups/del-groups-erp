@@ -1174,6 +1174,7 @@ export const enMessages: Messages = {
       sheet: "Sheet",
       meter: "Meter",
       qty: "Qty",
+      service: "Service",
     },
     type: {
       polywood: "Polywood",
