@@ -1,0 +1,17 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+NotFound: FileSystem.readFile (C:\Users\Del-Design\.supabase\profile)
+Using access token for profile: supabase
+Supabase CLI 2.116.0
+Using profile: supabase (supabase.co)
+Using access token for profile: supabase
+Initialising login role...
+2026/09/07 17:14:27 HTTP POST: https://api.supabase.com/v1/projects/cuppxakkeetejwyxelml/cli/login-role
+Connecting to remote database...
+{"_tag":"Error","error":{"code":"LegacyDbPushApplyError","message":"effect/sql/SqlError: Connection error"}}
