@@ -337,6 +337,8 @@ export const azMessages = {
     name: "Ad",
     category: "Kateqoriya",
     stock: "Stok",
+    stockDropdown: "Stok: {stock} {unit}",
+    stockDropdownDimensional: "Stok: {sheets} {unit} / {meters}m",
     price: "Qiymət",
     titleWarehouse: "Məhsullar və Anbar",
     listSubtitle: "Məhsul kataloqu, filtr və sütun idarəetməsi",

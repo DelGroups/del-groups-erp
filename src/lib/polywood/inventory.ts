@@ -84,6 +84,38 @@ export function buildInventorySummary(
   };
 }
 
+export async function fetchPolywoodSummariesByWarehouse(
+  warehouseId: string
+): Promise<Map<string, PolywoodInventorySummary>> {
+  const { data, error } = await supabase
+    .from("polywood_pieces")
+    .select("*")
+    .eq("warehouse_id", warehouseId)
+    .eq("status", "available");
+
+  if (error) throw new Error(error.message);
+  const allPieces = (data as PolywoodPiece[]) || [];
+
+  const byProduct = new Map<string, PolywoodPiece[]>();
+  for (const piece of allPieces) {
+    const list = byProduct.get(piece.product_id) || [];
+    list.push(piece);
+    byProduct.set(piece.product_id, list);
+  }
+
+  const summaries = new Map<string, PolywoodInventorySummary>();
+  for (const [productId, productPieces] of byProduct) {
+    const fullSheetLengthM =
+      Number(productPieces.find((p) => p.piece_type === "full")?.length_m) ||
+      DEFAULT_FULL_SHEET_LENGTH_M;
+    summaries.set(
+      productId,
+      buildInventorySummary(productId, warehouseId, productPieces, fullSheetLengthM)
+    );
+  }
+  return summaries;
+}
+
 export async function fetchPolywoodInventorySummary(
   productId: string,
   warehouseId: string,

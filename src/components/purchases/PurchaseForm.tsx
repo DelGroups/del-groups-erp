@@ -50,6 +50,8 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import { DEFAULT_INVOICE_ROW_COUNT, createEmptyPurchaseLineItems } from "@/lib/forms/invoiceDefaults";
+import ProductCombobox from "@/components/products/ProductCombobox";
 import {
   filterLegalSuppliers,
   isLegalEntityWithVoen,
@@ -118,7 +120,7 @@ export default function PurchaseForm({
   const [items, setItems] = useState<PurchaseLineItem[]>(
     initialPurchase?.items?.length
       ? initialPurchase.items
-      : [createEmptyPurchaseLineItem()]
+      : createEmptyPurchaseLineItems(DEFAULT_INVOICE_ROW_COUNT)
   );
   const [payments, setPayments] = useState<PurchasePaymentRow[]>([
     createEmptyPurchasePayment(),
@@ -597,7 +599,7 @@ export default function PurchaseForm({
             />
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-left text-xs">
               <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
                 <tr>
@@ -613,20 +615,23 @@ export default function PurchaseForm({
                 {items.map((row, idx) => (
                   <tr key={row.id}>
                     <td className="p-2.5 font-mono text-app-muted">{idx + 1}</td>
-                    <td className="p-2.5">
+                    <td className="relative overflow-visible p-2.5">
                       <div className="flex min-w-[240px] gap-1">
-                        <select
-                          value={row.product_id}
-                          onChange={(e) => handleProductSelect(row.id, e.target.value)}
-                          className="min-w-0 flex-1 rounded border px-2 py-1.5"
-                        >
-                          <option value="">{t("forms.selectProduct")}</option>
-                          {productList.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} ({p.code})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="min-w-0 flex-1">
+                          <ProductCombobox
+                            instanceId={row.id}
+                            products={productList}
+                            selectedId={row.product_id}
+                            selectedName={row.product_name}
+                            onSelect={(product) => {
+                              if (!product) {
+                                handleProductSelect(row.id, "");
+                                return;
+                              }
+                              handleProductSelect(row.id, product.id);
+                            }}
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => setQuickAddProductRowId(row.id)}

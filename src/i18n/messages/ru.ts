@@ -339,6 +339,8 @@ export const ruMessages: Messages = {
     name: "Название",
     category: "Категория",
     stock: "Запас",
+    stockDropdown: "Запас: {stock} {unit}",
+    stockDropdownDimensional: "Запас: {sheets} {unit} / {meters}м",
     price: "Цена",
     titleWarehouse: "Товары и склад",
     listSubtitle: "Каталог товаров, фильтры и управление колонками",

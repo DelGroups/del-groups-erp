@@ -29,7 +29,7 @@ export function createEmptyPurchaseLineItem(): PurchaseLineItem {
     product_id: "",
     product_code: "",
     product_name: "",
-    quantity: 1,
+    quantity: 0,
     unit: "Ədəd",
     unit_price: 0,
     total: 0,

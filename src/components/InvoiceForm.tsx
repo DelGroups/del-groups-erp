@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   calcLineTotal,
@@ -53,13 +53,14 @@ import {
 } from "@/lib/customers/entityType";
 import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
+import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
+import { productCode } from "@/lib/products/productOptionLabel";
+import ProductCombobox from "@/components/products/ProductCombobox";
 import {
   Building2,
-  ChevronDown,
   CreditCard,
   Plus,
   Save,
-  Search,
   Trash2,
   Truck,
   User,
@@ -146,203 +147,6 @@ function roundPrice(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-function productCode(p: Product) {
-  return (p.code || p.sku || "").trim();
-}
-
-function productOptionLabel(p: Product) {
-  const code = productCode(p) || "-";
-  const barcode = (p.barcode || "").trim() || "-";
-  return `${p.name} (Code: ${code} | Barcode: ${barcode})`;
-}
-
-function productMatches(p: Product, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return (
-    (p.name || "").toLowerCase().includes(q) ||
-    (p.code || "").toLowerCase().includes(q) ||
-    (p.sku || "").toLowerCase().includes(q) ||
-    (p.barcode || "").toLowerCase().includes(q)
-  );
-}
-
-function ProductCombobox({
-  products,
-  selectedId,
-  selectedName,
-  onSelect,
-}: {
-  products: Product[];
-  selectedId: string;
-  selectedName: string;
-  onSelect: (product: Product | null) => void;
-}) {
-  const { t } = useI18n();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState(selectedName);
-  const [highlight, setHighlight] = useState(0);
-
-  useEffect(() => {
-    if (!open) setQuery(selectedName || "");
-  }, [selectedName, open]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    const list = q ? products.filter((p) => productMatches(p, q)) : products;
-    return list.slice(0, 80);
-  }, [products, query]);
-
-  const exactScanMatch = useMemo(() => {
-    const raw = query.trim();
-    if (!raw) return null;
-    const barcodeHits = products.filter(
-      (p) => (p.barcode || "").trim().toLowerCase() === raw.toLowerCase()
-    );
-    if (barcodeHits.length === 1) return barcodeHits[0];
-    const codeHits = products.filter(
-      (p) => productCode(p).toLowerCase() === raw.toLowerCase()
-    );
-    if (codeHits.length === 1) return codeHits[0];
-    return null;
-  }, [products, query]);
-
-  useEffect(() => {
-    setHighlight(0);
-  }, [query, open]);
-
-  useEffect(() => {
-    const option = listRef.current?.querySelector(`[data-index="${highlight}"]`);
-    option?.scrollIntoView({ block: "nearest" });
-  }, [highlight]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const choose = useCallback(
-    (product: Product | null) => {
-      onSelect(product);
-      setQuery(product ? product.name : "");
-      setOpen(false);
-      inputRef.current?.blur();
-    },
-    [onSelect]
-  );
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (!open) {
-        setOpen(true);
-        return;
-      }
-      setHighlight((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)));
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlight((i) => Math.max(i - 1, 0));
-      return;
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-      setQuery(selectedName || "");
-      return;
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (exactScanMatch) {
-        choose(exactScanMatch);
-        return;
-      }
-      if (!open) {
-        setOpen(true);
-        return;
-      }
-      const picked = filtered[highlight];
-      if (picked) choose(picked);
-    }
-  };
-
-  return (
-    <div ref={rootRef} className="relative z-[9998] min-w-[220px] overflow-visible">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-1.5 top-1.5 h-3.5 w-3.5 text-app-muted" />
-        <input
-          ref={inputRef}
-          type="text"
-          role="combobox"
-          aria-expanded={open}
-          aria-autocomplete="list"
-          aria-controls={`product-combobox-list-${selectedId || "new"}`}
-          value={query}
-          placeholder={t("invoice.productSearchPlaceholder")}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-            if (!e.target.value) onSelect(null);
-          }}
-          onKeyDown={handleKeyDown}
-          className="w-full rounded border border-app py-1 pl-6 pr-6 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]"
-        />
-        <ChevronDown className="pointer-events-none absolute right-1.5 top-1.5 h-3.5 w-3.5 text-app-muted" />
-      </div>
-
-      {open && (
-        <div
-          id={`product-combobox-list-${selectedId || "new"}`}
-          ref={listRef}
-          role="listbox"
-          className="app-dropdown-panel absolute left-0 top-full z-[9999] mt-1 max-h-56 w-[min(420px,70vw)] overflow-y-auto py-1"
-        >
-          {filtered.length === 0 ? (
-            <div className="px-3 py-2 text-[11px] text-app-muted">{t("invoice.productNotFound")}</div>
-          ) : (
-            filtered.map((p, idx) => {
-              const active = idx === highlight;
-              const selected = p.id === selectedId;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="option"
-                  data-index={idx}
-                  aria-selected={selected}
-                  onMouseEnter={() => setHighlight(idx)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => choose(p)}
-                  className={`flex w-full flex-col items-start px-3 py-1.5 text-left ${
-                    active ? "app-dropdown-item-active" : "bg-app-card"
-                  } ${selected ? "font-semibold" : ""}`}
-                >
-                  <span className="text-xs text-app">{productOptionLabel(p)}</span>
-                  <span className="text-[10px] text-app-muted">
-                    {t("invoice.stockLabel", {
-                      stock: Number(p.stock) || 0,
-                      unit: p.unit || "Ədəd",
-                      price: productPrice(p).toFixed(2),
-                    })}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function UniversalInvoiceForm({
   isOpen,
   onClose,
@@ -379,7 +183,7 @@ export default function UniversalInvoiceForm({
     voen: "",
   });
 
-  const [items, setItems] = useState<SaleItem[]>([createEmptySaleItem()]);
+  const [items, setItems] = useState<SaleItem[]>(() => createEmptySaleItems(5));
   const [payments, setPayments] = useState<SalePayment[]>([
     { id: "1", account_id: "", method: "Nəğd", amount: 0 },
   ]);
@@ -439,7 +243,7 @@ export default function UniversalInvoiceForm({
       address: "",
       voen: "",
     });
-    setItems([createEmptySaleItem()]);
+    setItems(createEmptySaleItems(5));
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
     void fetchInitialData();
@@ -472,7 +276,7 @@ export default function UniversalInvoiceForm({
         );
     setWarehouses(warehouseRows);
     const firstWh = warehouseRows[0];
-    setItems([createEmptySaleItem(firstWh?.id || "", firstWh?.name || "")]);
+    setItems(createEmptySaleItems(5, firstWh?.id || "", firstWh?.name || ""));
 
     const accountRows = (acc ?? []) as unknown as Account[];
     setAccounts(accountRows);
@@ -1194,10 +998,11 @@ export default function UniversalInvoiceForm({
                 {items.map((row, idx) => (
                   <tr key={row.id} className="overflow-visible">
                     <td className="p-2.5 font-mono text-app-muted">{idx + 1}</td>
-                    <td className="relative z-[9997] overflow-visible p-2.5">
+                    <td className="relative overflow-visible p-2.5">
                       <div className="flex min-w-[220px] gap-1">
                         <div className="min-w-0 flex-1">
                           <ProductCombobox
+                            instanceId={row.id}
                             products={
                               polywoodOnly
                                 ? products
@@ -1205,6 +1010,13 @@ export default function UniversalInvoiceForm({
                             }
                             selectedId={row.product_id}
                             selectedName={row.product_name}
+                            polywoodWarehouseId={
+                              isPolywoodWarehouseRow(row.warehouse_id, warehouses)
+                                ? row.warehouse_id
+                                : polywoodOnly
+                                  ? defaultWarehouse?.id || null
+                                  : null
+                            }
                             onSelect={(prod) => void handleProductSelect(row.id, prod)}
                           />
                         </div>

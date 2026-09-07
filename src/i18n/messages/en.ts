@@ -339,6 +339,8 @@ export const enMessages: Messages = {
     name: "Name",
     category: "Category",
     stock: "Stock",
+    stockDropdown: "Stock: {stock} {unit}",
+    stockDropdownDimensional: "Stock: {sheets} {unit} / {meters}m",
     price: "Price",
     titleWarehouse: "Products & Warehouse",
     listSubtitle: "Product catalog, filters and column management",

@@ -48,6 +48,8 @@ import {
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals } from "@/lib/finance/vatEngine";
 import type { VatMode } from "@/lib/finance/vatEngine";
+import { DEFAULT_INVOICE_ROW_COUNT } from "@/lib/forms/invoiceDefaults";
+import ProductCombobox from "@/components/products/ProductCombobox";
 import {
   filterLegalCustomers,
   isLegalEntityWithVoen,
@@ -93,6 +95,10 @@ function createEmptyRow(): GridRow {
     vatRate: 0,
     customServiceName: "",
   };
+}
+
+function createInitialRows(): GridRow[] {
+  return Array.from({ length: DEFAULT_INVOICE_ROW_COUNT }, () => createEmptyRow());
 }
 
 function isDimensionalLineType(itemType: GridItemType): boolean {
@@ -170,7 +176,7 @@ export default function MixedDimensionalInvoiceForm({
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [rows, setRows] = useState<GridRow[]>([createEmptyRow()]);
+  const [rows, setRows] = useState<GridRow[]>(() => createInitialRows());
   const [additionalExpenses, setAdditionalExpenses] = useState<DocumentAdditionalExpense[]>([]);
   const [payments, setPayments] = useState<SalePayment[]>([]);
   const [isOfficial, setIsOfficial] = useState(false);
@@ -717,7 +723,7 @@ export default function MixedDimensionalInvoiceForm({
                           <option value="service">{t("polywood.type.service")}</option>
                         </select>
                       </td>
-                      <td className="p-2">
+                      <td className="relative overflow-visible p-2">
                         {isService ? (
                           <div className="space-y-1">
                             <select
@@ -748,18 +754,20 @@ export default function MixedDimensionalInvoiceForm({
                             ) : null}
                           </div>
                         ) : (
-                          <select
-                            value={row.productId}
-                            onChange={(e) => handleProductChange(row.id, e.target.value)}
-                            className="app-input min-w-[180px] text-xs"
-                          >
-                            <option value="">{t("common.select")}</option>
-                            {options.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} {p.code ? `(${p.code})` : ""}
-                              </option>
-                            ))}
-                          </select>
+                          <ProductCombobox
+                            instanceId={row.id}
+                            products={options}
+                            selectedId={row.productId}
+                            selectedName={
+                              options.find((p) => p.id === row.productId)?.name || ""
+                            }
+                            polywoodWarehouseId={
+                              isDimensionalLineType(row.itemType) ? warehouseId : null
+                            }
+                            onSelect={(product) =>
+                              handleProductChange(row.id, product?.id || "")
+                            }
+                          />
                         )}
                       </td>
                       <td className="p-2">
