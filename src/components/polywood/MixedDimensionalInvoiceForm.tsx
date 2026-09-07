@@ -128,7 +128,7 @@ function rowHasProductSelection(row: GridRow): boolean {
 
 interface MixedDimensionalInvoiceFormProps {
   onClose?: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (saleId?: string) => void;
 }
 
 export default function MixedDimensionalInvoiceForm({
@@ -481,7 +481,7 @@ export default function MixedDimensionalInvoiceForm({
     }
 
     showSuccess(t("common.success"));
-    onSuccess?.();
+    onSuccess?.(result.saleId);
   };
 
   if (loading) {

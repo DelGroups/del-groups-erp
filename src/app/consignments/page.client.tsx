@@ -5,7 +5,8 @@ import * as XLSX from "xlsx";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import ConsignmentDeliveryPrintTemplate from "@/components/consignment/ConsignmentDeliveryPrintTemplate";
-import ConsignmentSettlementPrintTemplate from "@/components/consignment/ConsignmentSettlementPrintTemplate";
+import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
+import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentReportToInvoicePrint";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -62,8 +63,7 @@ export default function ConsignmentPage() {
 
   const { printData: printDispatch, setPrintData: setPrintDispatch } =
     useDocumentPrint<ConsignmentDispatch>();
-  const { printData: printReport, setPrintData: setPrintReport } =
-    useDocumentPrint<ConsignmentMonthlyReport>();
+  const invoicePrint = useInvoicePrintSystem();
 
   const [partnerId, setPartnerId] = useState("");
   const [category, setCategory] = useState("all");
@@ -249,7 +249,7 @@ export default function ConsignmentPage() {
     }
     setSoldQtyByProduct({});
     await load();
-    setPrintReport(result.data);
+    invoicePrint.requestPrint(mapConsignmentReportToInvoicePrint(result.data));
   };
 
   const exportInventory = () => {
@@ -725,7 +725,7 @@ export default function ConsignmentPage() {
                         {r.report_no} · {r.partner_name} · {r.report_period} · {r.total_amount.toFixed(2)}{" "}
                         {t("common.currency")}
                       </span>
-                      <button type="button" className="btn-secondary text-xs" onClick={() => setPrintReport(r)}>
+                      <button type="button" className="btn-secondary text-xs" onClick={() => invoicePrint.requestPrint(mapConsignmentReportToInvoicePrint(r))}>
                         <Printer className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -774,11 +774,14 @@ export default function ConsignmentPage() {
           <ConsignmentDeliveryPrintTemplate data={printDispatch} companyName={companyName} />
         </div>
       )}
-      {printReport && (
-        <div className="print-area">
-          <ConsignmentSettlementPrintTemplate data={printReport} companyName={companyName} />
-        </div>
-      )}
+      <InvoicePrintSystem
+        branding={invoicePrint.branding}
+        modalOpen={invoicePrint.modalOpen}
+        pendingData={invoicePrint.pendingData}
+        printPayload={invoicePrint.printPayload}
+        closeModal={invoicePrint.closeModal}
+        confirmPrint={invoicePrint.confirmPrint}
+      />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

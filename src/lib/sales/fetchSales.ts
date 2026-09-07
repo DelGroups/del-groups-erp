@@ -174,6 +174,18 @@ function mapSaleItemRow(row: Record<string, unknown>): SaleItem {
     vat_rate: Number(row.vat_rate) || 0,
     total: Number(row.line_total) || 0,
     extra_info: typeof row.extra_info === "string" ? row.extra_info : "",
+    sale_item_type:
+      row.sale_item_type === "dimensional" ||
+      row.sale_item_type === "accessory" ||
+      row.sale_item_type === "service" ||
+      row.sale_item_type === "standard"
+        ? row.sale_item_type
+        : undefined,
+    piece_count: row.piece_count != null ? Number(row.piece_count) || 1 : undefined,
+    polywood_sale_mode:
+      typeof row.polywood_sale_mode === "string" ? row.polywood_sale_mode : null,
+    polywood_length_m:
+      row.polywood_length_m != null ? Number(row.polywood_length_m) || null : null,
   };
 }
 

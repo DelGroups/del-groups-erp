@@ -8,12 +8,12 @@ import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar"
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import SalesViewModal from "@/components/sales/SalesViewModal";
-import SalesPrintTemplate from "@/components/sales/SalesPrintTemplate";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
+import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
+import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
 import { fetchSaleById, fetchSalesListWithMeta, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "@/lib/sales/fetchSales";
 import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
-import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useWarehouseDocumentSend } from "@/hooks/useWarehouseDocumentSend";
@@ -33,7 +33,7 @@ export default function SalesListPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
-  const { printData: printSale, setPrintData: setPrintSale } = useDocumentPrint<SaleRecord>();
+  const invoicePrint = useInvoicePrintSystem();
   const { can } = useAuth();
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
@@ -84,7 +84,7 @@ export default function SalesListPage() {
 
   const openPrint = async (row: SaleRecord) => {
     const full = await fetchSaleById(row.id);
-    if (full) setPrintSale(full);
+    if (full) invoicePrint.requestPrint(mapSaleToInvoicePrint(full));
   };
 
   const openPayment = async (row: SaleRecord) => {
@@ -274,6 +274,9 @@ export default function SalesListPage() {
         <SalesViewModal
           sale={viewingSale}
           onClose={() => setViewingSale(null)}
+          onPrint={() => {
+            invoicePrint.requestPrint(mapSaleToInvoicePrint(viewingSale));
+          }}
           onPayment={
             getSaleRemaining(viewingSale) > 0
               ? () => {
@@ -315,11 +318,14 @@ export default function SalesListPage() {
         />
       )}
 
-      {printSale && (
-        <div className="print-area">
-          <SalesPrintTemplate sale={printSale} />
-        </div>
-      )}
+      <InvoicePrintSystem
+        branding={invoicePrint.branding}
+        modalOpen={invoicePrint.modalOpen}
+        pendingData={invoicePrint.pendingData}
+        printPayload={invoicePrint.printPayload}
+        closeModal={invoicePrint.closeModal}
+        confirmPrint={invoicePrint.confirmPrint}
+      />
 
       {warehouseSend.printSlip && (
         <div className="print-area">

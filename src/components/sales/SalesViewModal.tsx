@@ -1,17 +1,18 @@
 "use client";
 
 import React from "react";
-import { Banknote, X } from "lucide-react";
+import { Banknote, Printer, X } from "lucide-react";
 import type { SaleRecord } from "@/lib/sales/fetchSales";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface SalesViewModalProps {
   sale: SaleRecord;
   onClose: () => void;
+  onPrint?: () => void;
   onPayment?: () => void;
 }
 
-export default function SalesViewModal({ sale, onClose, onPayment }: SalesViewModalProps) {
+export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: SalesViewModalProps) {
   const { t } = useI18n();
 
   return (
@@ -78,21 +79,33 @@ export default function SalesViewModal({ sale, onClose, onPayment }: SalesViewMo
             </tbody>
           </table>
           <div className="flex items-center justify-between gap-4 border-t border-app pt-4">
-            <div className="flex gap-6 text-sm font-bold">
+            <div className="flex flex-wrap gap-4 text-sm font-bold">
               <span>{t("modals.salesView.total")}: {sale.total_amount.toFixed(2)} {t("common.currency")}</span>
               <span className="text-emerald-600">{t("modals.salesView.paid")}: {sale.paid_amount.toFixed(2)}</span>
               <span className="text-rose-600">{t("modals.salesView.remaining")}: {sale.remaining_balance.toFixed(2)}</span>
             </div>
-            {onPayment && (
-              <button
-                type="button"
-                onClick={onPayment}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
-              >
-                <Banknote className="h-4 w-4" />
-                {t("common.payment")}
-              </button>
-            )}
+            <div className="flex gap-2">
+              {onPrint ? (
+                <button
+                  type="button"
+                  onClick={onPrint}
+                  className="flex items-center gap-1.5 rounded-lg border border-app px-4 py-2 text-xs font-bold text-app hover:bg-app-card-hover"
+                >
+                  <Printer className="h-4 w-4" />
+                  {t("common.print")}
+                </button>
+              ) : null}
+              {onPayment ? (
+                <button
+                  type="button"
+                  onClick={onPayment}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                >
+                  <Banknote className="h-4 w-4" />
+                  {t("common.payment")}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

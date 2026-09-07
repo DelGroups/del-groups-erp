@@ -665,4 +665,33 @@ textarea:focus {
     top: 0;
     width: 100%;
   }
+
+  .invoice-print-layout,
+  .invoice-print-layout * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invoice-print-table {
+    border: 1px solid #000;
+  }
+
+  .invoice-print-th,
+  .invoice-print-cell {
+    border: 1px solid #000;
+    padding: 4px 6px;
+  }
+
+  .invoice-print-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  nav,
+  aside,
+  header:not(.invoice-print-layout header),
+  button,
+  .app-scrim {
+    display: none !important;
+  }
 }
