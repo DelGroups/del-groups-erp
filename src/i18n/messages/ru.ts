@@ -421,6 +421,7 @@ export const ruMessages: Messages = {
     entityPhysical: "Физическое лицо",
     entityLegal: "Юридическое лицо",
     voenRequiredForLegal: "Для юрлица обязателен ИНН",
+    companyRequiredForLegal: "Для юрлица обязательно название компании",
   },
   suppliers: {
     title: "Поставщики",

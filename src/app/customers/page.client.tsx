@@ -65,25 +65,52 @@ export default function CustomersPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleEntityTypeChange = (entityType: EntityType) => {
+    setFormData((prev) => ({
+      ...prev,
+      entity_type: entityType,
+      voen: entityType === "physical" ? "" : prev.voen,
+      address: entityType === "physical" ? "" : prev.address,
+    }));
+  };
+
+  const buildCustomerPayload = () => {
+    const entityType: EntityType = formData.entity_type === "legal" ? "legal" : "physical";
+    const trimmedVoen = formData.voen.trim();
+
+    return {
+      code: formData.code.trim() || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+      full_name: formData.full_name.trim(),
+      name: formData.full_name.trim(),
+      phone: formData.phone.trim() || null,
+      company_name: formData.company_name.trim() || null,
+      address: formData.address.trim() || null,
+      entity_type: entityType,
+      voen: entityType === "legal" ? trimmedVoen : trimmedVoen || null,
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
 
-    const newCustomer = {
-      code: formData.code || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-      full_name: formData.full_name,
-      phone: formData.phone,
-      company_name: formData.company_name,
-      address: formData.address,
-      voen: formData.entity_type === "legal" ? formData.voen.trim() : formData.voen.trim() || null,
-      entity_type: formData.entity_type,
-    };
-
-    if (formData.entity_type === "legal" && !formData.voen.trim()) {
-      showError(t("customers.voenRequiredForLegal"));
-      setSaving(false);
+    if (!formData.full_name.trim()) {
+      showError(t("customers.fullNameRequired"));
       return;
     }
+
+    if (formData.entity_type === "legal") {
+      if (!formData.company_name.trim()) {
+        showError(t("customers.companyRequiredForLegal"));
+        return;
+      }
+      if (!formData.voen.trim()) {
+        showError(t("customers.voenRequiredForLegal"));
+        return;
+      }
+    }
+
+    setSaving(true);
+    const newCustomer = buildCustomerPayload();
 
     const isEdit = Boolean(editingCustomerId);
     const { data, error } = isEdit
@@ -299,7 +326,7 @@ export default function CustomersPage() {
                 <div className="inline-flex overflow-hidden rounded-lg border border-app">
                   <button
                     type="button"
-                    onClick={() => setFormData((f) => ({ ...f, entity_type: "physical" }))}
+                    onClick={() => handleEntityTypeChange("physical")}
                     className={`px-3 py-1.5 text-xs font-semibold ${
                       formData.entity_type === "physical"
                         ? "bg-slate-600 text-white"
@@ -310,7 +337,7 @@ export default function CustomersPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData((f) => ({ ...f, entity_type: "legal" }))}
+                    onClick={() => handleEntityTypeChange("legal")}
                     className={`px-3 py-1.5 text-xs font-semibold ${
                       formData.entity_type === "legal"
                         ? "bg-emerald-600 text-white"

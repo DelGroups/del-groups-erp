@@ -419,6 +419,7 @@ export const azMessages = {
     entityPhysical: "Fiziki şəxs",
     entityLegal: "Hüquqi şəxs",
     voenRequiredForLegal: "Hüquqi şəxs üçün VÖEN mütləqdir",
+    companyRequiredForLegal: "Hüquqi şəxs üçün şirkət adı mütləqdir",
   },
   suppliers: {
     title: "Təchizatçılar",

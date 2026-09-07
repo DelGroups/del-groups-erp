@@ -421,6 +421,7 @@ export const enMessages: Messages = {
     entityPhysical: "Individual",
     entityLegal: "Legal entity",
     voenRequiredForLegal: "TIN is required for legal entities",
+    companyRequiredForLegal: "Company name is required for legal entities",
   },
   suppliers: {
     title: "Suppliers",
