@@ -88,6 +88,14 @@ import {
 } from "@/app/production/materialInsert";
 import { resolveProductionProduct } from "@/lib/production/resolveProductId";
 import {
+  getWarehouseProductAvailableStock,
+  hasWarehouseStockShortage,
+  resolveStandardProductWarehouseStock,
+  warehouseStockBalancesFromMovements,
+  warehouseStockShortageDelta,
+} from "@/lib/production/warehouseStock";
+import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
+import {
   buildProductionExpenseInsertPayload,
   buildProductionOutsourcingInsertPayload,
   formatProductionDbError,
@@ -1883,22 +1891,31 @@ export async function addProductionMaterialAction(
     const stageNo = Math.max(1, Math.round(num(safeInput.stage_no) || 1));
     let issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
 
-    if (issueNow && inventoryMode !== POLYWOOD_INVENTORY_MODE) {
-      const warehouseId = safeInput.warehouse_id || null;
-      let available = Number(p.stock) || 0;
-      if (warehouseId) {
-        const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
-        const movementStock = movementBalances.get(p.id);
-        if (movementStock !== undefined) available = Math.max(0, movementStock);
-      }
-      if (available < qty) {
+    const warehouseId = safeInput.warehouse_id || null;
+    if (issueNow && warehouseId) {
+      const { data: warehouse } = await admin
+        .from("warehouses")
+        .select("warehouse_type")
+        .eq("id", warehouseId)
+        .maybeSingle();
+
+      const available = await getWarehouseProductAvailableStock(admin, {
+        warehouseId,
+        productId: p.id,
+        globalStock: Number(p.stock) || 0,
+        inventoryMode: p.inventory_mode,
+        warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
+      });
+
+      if (hasWarehouseStockShortage(qty, available)) {
+        const shortageQty = warehouseStockShortageDelta(qty, available);
         await createPurchaseRequestInternal(admin, {
           orderId,
           product: p,
-          warehouseId: safeInput.warehouse_id || null,
-          quantity: qty,
+          warehouseId,
+          quantity: shortageQty,
           userId: user.id,
-          notes: `Stok çatışmır (mövcud: ${available}, tələb: ${qty})`,
+          notes: `Stok çatışmır (mövcud: ${available}, tələb: ${qty}, çatışmayan: ${shortageQty})`,
         });
         issueNow = false;
       }
@@ -2638,7 +2655,7 @@ async function createPurchaseRequestInternal(
   }
   if (!requestRow?.id) return;
 
-  const invoiceNumber = `DRAFT-${requestNo}`;
+  const invoiceNumber = generatePurchaseInvoiceNumber();
   const { data: purchase, error: purchaseError } = await admin
     .from("purchases")
     .insert({
@@ -2649,7 +2666,7 @@ async function createPurchaseRequestInternal(
       total_amount: totalAmount,
       paid_amount: 0,
       debt_amount: totalAmount,
-      status: "Qaralama",
+      status: "draft",
       notes: `İstehsalat satınalma tələbi: ${requestNo} (layihə ${input.orderId})`,
     })
     .select("id")
@@ -2700,26 +2717,6 @@ export type WarehouseProductOption = {
   stock: number;
   inventory_mode: string | null;
 };
-
-async function warehouseStockBalancesFromMovements(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  warehouseId: string
-): Promise<Map<string, number>> {
-  const { data, error } = await admin
-    .from("stock_movements")
-    .select("product_id, movement_type, quantity")
-    .eq("warehouse_id", warehouseId);
-
-  if (error || !data?.length) return new Map();
-
-  const balances = new Map<string, number>();
-  for (const row of data as { product_id?: string | null; movement_type?: string; quantity?: number }[]) {
-    if (!row.product_id) continue;
-    const delta = row.movement_type === "in" ? num(row.quantity) : -num(row.quantity);
-    balances.set(row.product_id, (balances.get(row.product_id) || 0) + delta);
-  }
-  return balances;
-}
 
 async function fetchPolywoodWarehouseProducts(
   admin: ReturnType<typeof createSupabaseAdminClient>,
@@ -2779,11 +2776,11 @@ async function fetchStandardWarehouseProducts(
   const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
 
   return (products as Product[]).map((product) => {
-    const movementStock = movementBalances.get(product.id);
-    const stock =
-      movementStock !== undefined && movementBalances.size > 0
-        ? Math.max(0, movementStock)
-        : Number(product.stock) || 0;
+    const stock = resolveStandardProductWarehouseStock(
+      movementBalances,
+      product.id,
+      Number(product.stock) || 0
+    );
     return {
       id: product.id,
       product_id: product.id,
@@ -2856,12 +2853,38 @@ export async function createPurchaseRequestAction(
     if ("error" in resolved) {
       return { success: false, error: resolved.error };
     }
+    const product = resolved.product;
+
+    let requestQty = qty;
+    if (input.warehouse_id) {
+      const { data: warehouse } = await admin
+        .from("warehouses")
+        .select("warehouse_type")
+        .eq("id", input.warehouse_id)
+        .maybeSingle();
+
+      const available = await getWarehouseProductAvailableStock(admin, {
+        warehouseId: input.warehouse_id,
+        productId: product.id,
+        globalStock: Number(product.stock) || 0,
+        inventoryMode: product.inventory_mode,
+        warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
+      });
+
+      if (!hasWarehouseStockShortage(qty, available)) {
+        return {
+          success: false,
+          error: `Anbarda kifayət qədər stok var (mövcud: ${available}, tələb: ${qty})`,
+        };
+      }
+      requestQty = warehouseStockShortageDelta(qty, available);
+    }
 
     await createPurchaseRequestInternal(admin, {
       orderId,
-      product: resolved.product,
+      product,
       warehouseId: input.warehouse_id || null,
-      quantity: qty,
+      quantity: requestQty,
       userId: user.id,
       notes: input.notes || null,
     });

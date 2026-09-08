@@ -32,6 +32,10 @@ import {
   type MaterialLineSelection,
 } from "@/lib/production/materialSelection";
 import { isValidUuid } from "@/lib/auth/validate";
+import {
+  hasWarehouseStockShortage,
+  warehouseStockShortageDelta,
+} from "@/lib/production/warehouseStock";
 
 type WorkflowTab = "materials" | "services" | "payments";
 
@@ -121,8 +125,9 @@ export default function ProductionInProgressPhase({
     );
   }, [warehouseProducts, materialSelection]);
   const availableStock = Number(selectedProduct?.stock || 0);
-  const stockShortage = Boolean(selectedProduct) && materialQty > availableStock;
-  const shortageDelta = stockShortage ? Math.max(0, materialQty - availableStock) : 0;
+  const stockShortage =
+    Boolean(selectedProduct) && hasWarehouseStockShortage(materialQty, availableStock);
+  const shortageDelta = warehouseStockShortageDelta(materialQty, availableStock);
   const unitCost = Number(selectedProduct?.buy_price || 0);
   const lineTotalCost = (Number(materialQty) || 0) * unitCost;
   const productUnit = selectedProduct?.unit || "ədəd";
@@ -271,7 +276,7 @@ export default function ProductionInProgressPhase({
       setError(`${t("production.workflow.selectProduct")} — ${formatMaterialPayloadDebug(materialSelection)}`);
       return;
     }
-    const requestQty = shortageDelta > 0 ? shortageDelta : materialQty;
+    const requestQty = materialQty;
     await runAction(
       () =>
         createPurchaseRequestAction(order.id, {
