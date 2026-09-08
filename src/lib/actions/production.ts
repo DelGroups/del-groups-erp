@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { userHasPermission } from "@/lib/auth/routePermissions";
 import { createSupabaseServerClient, getServerAuthContext } from "@/lib/supabaseServer";
-import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
+import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
 import { DEFAULT_CONTRACT_TERMS_AZ } from "@/lib/production/constants";
 import {
   buildSyntheticProductionContract,
@@ -886,7 +886,7 @@ export async function fetchProductionLookupsAction(): Promise<
     const admin = createSupabaseAdminClient();
     const [customers, products, warehouses, suppliers, employees, accounts, bomsRes] = await Promise.all([
       admin.from("customers").select("id,full_name,name,company_name").order("full_name").limit(250),
-      admin.from("products").select("id,code,name,category,subcategory,unit,buy_price,sell_price,stock,min_stock,barcode,color,weight,extra_info,warehouse_id,inventory_mode,full_sheet_length_m").order("name").limit(500),
+      admin.from("products").select("id,code,name,category,subcategory,unit,buy_price,sell_price,stock,min_stock,barcode,color,weight,extra_info,inventory_mode,full_sheet_length_m").order("name").limit(500),
       admin.from("warehouses").select("id,code,name,location,is_default,warehouse_type").order("name").limit(100),
       admin.from("suppliers").select("id,code,full_name,company_name,phone,balance").order("full_name").limit(250),
       admin.from("employees").select("id,employee_code,full_name,role,department,phone,base_salary,default_commission,status").eq("status", "active").order("full_name").limit(250),
@@ -2686,6 +2686,100 @@ export type WarehouseProductOption = {
   inventory_mode: string | null;
 };
 
+async function warehouseStockBalancesFromMovements(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  warehouseId: string
+): Promise<Map<string, number>> {
+  const { data, error } = await admin
+    .from("stock_movements")
+    .select("product_id, movement_type, quantity")
+    .eq("warehouse_id", warehouseId);
+
+  if (error || !data?.length) return new Map();
+
+  const balances = new Map<string, number>();
+  for (const row of data as { product_id?: string | null; movement_type?: string; quantity?: number }[]) {
+    if (!row.product_id) continue;
+    const delta = row.movement_type === "in" ? num(row.quantity) : -num(row.quantity);
+    balances.set(row.product_id, (balances.get(row.product_id) || 0) + delta);
+  }
+  return balances;
+}
+
+async function fetchPolywoodWarehouseProducts(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  warehouseId: string
+): Promise<WarehouseProductOption[]> {
+  const { data: products, error: productsError } = await admin
+    .from("products")
+    .select("id,code,name,unit,buy_price,inventory_mode")
+    .eq("inventory_mode", POLYWOOD_INVENTORY_MODE)
+    .order("name")
+    .limit(500);
+
+  if (productsError) return [];
+
+  const { data: pieces, error: piecesError } = await admin
+    .from("polywood_pieces")
+    .select("product_id, length_m")
+    .eq("warehouse_id", warehouseId)
+    .eq("status", "available");
+
+  if (piecesError) return [];
+
+  const stockByProduct = new Map<string, number>();
+  for (const piece of (pieces || []) as { product_id?: string; length_m?: number }[]) {
+    if (!piece.product_id) continue;
+    stockByProduct.set(
+      piece.product_id,
+      (stockByProduct.get(piece.product_id) || 0) + (Number(piece.length_m) || 0)
+    );
+  }
+
+  return ((products || []) as Product[]).map((product) => ({
+    id: product.id,
+    code: product.code || null,
+    name: product.name,
+    unit: product.unit || "Metr",
+    buy_price: num(product.buy_price),
+    stock: Math.round((stockByProduct.get(product.id) || 0) * 100) / 100,
+    inventory_mode: product.inventory_mode || POLYWOOD_INVENTORY_MODE,
+  }));
+}
+
+async function fetchStandardWarehouseProducts(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  warehouseId: string
+): Promise<WarehouseProductOption[]> {
+  const { data: products, error } = await admin
+    .from("products")
+    .select("id,code,name,unit,buy_price,stock,inventory_mode")
+    .or(`inventory_mode.is.null,inventory_mode.neq.${POLYWOOD_INVENTORY_MODE}`)
+    .order("name")
+    .limit(500);
+
+  if (error || !products?.length) return [];
+
+  const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
+
+  return (products as Product[]).map((product) => {
+    const movementStock = movementBalances.get(product.id);
+    const stock =
+      movementStock !== undefined && movementBalances.size > 0
+        ? Math.max(0, movementStock)
+        : Number(product.stock) || 0;
+    return {
+      id: product.id,
+      code: product.code || null,
+      name: product.name,
+      unit: product.unit || "Ədəd",
+      buy_price: num(product.buy_price),
+      stock,
+      inventory_mode: product.inventory_mode || null,
+    };
+  });
+}
+
 export async function fetchWarehouseProductsForProductionAction(
   warehouseId: string
 ): Promise<ProductionActionResult<WarehouseProductOption[]>> {
@@ -2696,44 +2790,21 @@ export async function fetchWarehouseProductsForProductionAction(
     }
 
     const admin = createSupabaseAdminClient();
-    const { data, error } = await admin
-      .from("products")
-      .select("id,code,name,unit,buy_price,stock,warehouse_id,inventory_mode")
-      .eq("warehouse_id", warehouseId)
-      .order("name")
-      .limit(500);
+    const { data: warehouse, error: warehouseError } = await admin
+      .from("warehouses")
+      .select("id, warehouse_type")
+      .eq("id", warehouseId)
+      .maybeSingle();
 
-    if (error) return { success: false, error: error.message };
+    if (warehouseError) return { success: false, error: warehouseError.message };
+    if (!warehouse) return { success: false, error: "Anbar tapılmadı" };
 
-    const products = (data || []) as Product[];
-    const options: WarehouseProductOption[] = [];
+    const isPolywoodWarehouse =
+      (warehouse as { warehouse_type?: string | null }).warehouse_type === POLYWOOD_WAREHOUSE_TYPE;
 
-    for (const product of products) {
-      let stock = Number(product.stock) || 0;
-      if (product.inventory_mode === POLYWOOD_INVENTORY_MODE) {
-        const { data: pieces } = await admin
-          .from("polywood_pieces")
-          .select("length_m")
-          .eq("product_id", product.id)
-          .eq("warehouse_id", warehouseId)
-          .eq("status", "available");
-        stock = (pieces || []).reduce(
-          (sum, piece) => sum + (Number((piece as { length_m?: number }).length_m) || 0),
-          0
-        );
-        stock = Math.round(stock * 100) / 100;
-      }
-
-      options.push({
-        id: product.id,
-        code: product.code || null,
-        name: product.name,
-        unit: product.unit || "Ədəd",
-        buy_price: num(product.buy_price),
-        stock,
-        inventory_mode: product.inventory_mode || null,
-      });
-    }
+    const options = isPolywoodWarehouse
+      ? await fetchPolywoodWarehouseProducts(admin, warehouseId)
+      : await fetchStandardWarehouseProducts(admin, warehouseId);
 
     return { success: true, data: options };
   } catch (err) {
@@ -2754,7 +2825,7 @@ export async function createPurchaseRequestAction(
 
     const { data: product } = await admin
       .from("products")
-      .select("id,code,name,unit,buy_price,warehouse_id")
+      .select("id,code,name,unit,buy_price")
       .eq("id", input.product_id)
       .maybeSingle();
     if (!product) return { success: false, error: "Məhsul tapılmadı" };
@@ -2762,7 +2833,7 @@ export async function createPurchaseRequestAction(
     await createPurchaseRequestInternal(admin, {
       orderId,
       product: product as Product,
-      warehouseId: input.warehouse_id || (product as Product).warehouse_id || null,
+      warehouseId: input.warehouse_id || null,
       quantity: qty,
       userId: user.id,
       notes: input.notes || null,

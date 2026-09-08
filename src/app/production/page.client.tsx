@@ -40,7 +40,7 @@ const STATUSES: ProductionStatus[] = [...PRODUCTION_STATUSES];
 
 export default function ProductionBoardPage() {
   const { t } = useI18n();
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const canManage = can("can_manage_production");
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [lookups, setLookups] = useState<ProductionLookups | null>(null);
@@ -232,7 +232,7 @@ export default function ProductionBoardPage() {
           </div>
         )}
 
-        {!loading && orders.length > 0 && (
+        {!loading && orders.length > 0 && isAdmin && (
           <section className="mb-6">
             <h3 className="mb-3 text-sm font-bold text-app">{t("production.dashboardSummary")}</h3>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -295,6 +295,7 @@ export default function ProductionBoardPage() {
                         costing={costings.get(order.id)}
                         typeLabel={typeLabel(order)}
                         canManage={canManage}
+                        showFinancials={isAdmin}
                         t={t}
                         onEdit={handleEdit}
                         onDelete={setDeleteTarget}
@@ -317,10 +318,14 @@ export default function ProductionBoardPage() {
                   <th className="px-3 py-2">{t("common.type")}</th>
                   <th className="px-3 py-2">{t("common.status")}</th>
                   <th className="px-3 py-2">{t("sales.customer")}</th>
-                  <th className="px-3 py-2 text-right">{t("production.revenue")}</th>
-                  <th className="px-3 py-2 text-right">{t("production.totalCost")}</th>
-                  <th className="px-3 py-2 text-right">{t("production.profit")}</th>
-                  <th className="px-3 py-2">{t("production.margin")}</th>
+                  {isAdmin ? (
+                    <>
+                      <th className="px-3 py-2 text-right">{t("production.revenue")}</th>
+                      <th className="px-3 py-2 text-right">{t("production.totalCost")}</th>
+                      <th className="px-3 py-2 text-right">{t("production.profit")}</th>
+                      <th className="px-3 py-2">{t("production.margin")}</th>
+                    </>
+                  ) : null}
                   <th className="px-3 py-2">{t("common.actions")}</th>
                 </tr>
               </thead>
@@ -332,14 +337,18 @@ export default function ProductionBoardPage() {
                       <td className="px-3 py-2"><Link className="text-app-accent hover:underline" href={`/production/${order.id}`}>{order.order_no}</Link></td>
                       <td className="px-3 py-2">{order.project_name}</td>
                       <td className="px-3 py-2">{typeLabel(order)}</td>
-                      <td className="px-3 py-2"><div className="flex flex-wrap gap-1"><ProductionStatusChip status={order.status} /><ProductionHealthChip health={costing.health} /></div></td>
+                      <td className="px-3 py-2"><div className="flex flex-wrap gap-1"><ProductionStatusChip status={order.status} />{isAdmin ? <ProductionHealthChip health={costing.health} /> : null}</div></td>
                       <td className="px-3 py-2">{order.customer_name || "-"}</td>
-                      <td className="px-3 py-2 text-right">{costing.revenue.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right">{costing.totalCost.toFixed(2)}</td>
-                      <td className={`px-3 py-2 text-right ${costing.profit < 0 ? "text-rose-400" : ""}`}>{costing.profit.toFixed(2)}</td>
-                      <td className="px-3 py-2">{costing.marginPercent.toFixed(1)}%</td>
+                      {isAdmin ? (
+                        <>
+                          <td className="px-3 py-2 text-right">{costing.revenue.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">{costing.totalCost.toFixed(2)}</td>
+                          <td className={`px-3 py-2 text-right ${costing.profit < 0 ? "text-rose-400" : ""}`}>{costing.profit.toFixed(2)}</td>
+                          <td className="px-3 py-2">{costing.marginPercent.toFixed(1)}%</td>
+                        </>
+                      ) : null}
                       <td className="px-3 py-2">
-                        <ProductionProfitabilityCard order={order} costing={costing} compact />
+                        {isAdmin ? <ProductionProfitabilityCard order={order} costing={costing} compact /> : null}
                         {canManage ? (
                           <div className="mt-2 flex flex-wrap gap-1">
                             <button type="button" className="btn-secondary text-[10px]" onClick={() => void handleEdit(order)}>{t("common.edit")}</button>

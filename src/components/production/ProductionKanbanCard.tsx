@@ -17,6 +17,7 @@ interface ProductionKanbanCardProps {
   costing?: ProductionCosting;
   typeLabel: string;
   canManage: boolean;
+  showFinancials?: boolean;
   t: (key: string, vars?: Record<string, string | number>) => string;
   onEdit: (order: ProductionOrder) => void;
   onDelete: (order: ProductionOrder) => void;
@@ -38,6 +39,7 @@ export default function ProductionKanbanCard({
   costing,
   typeLabel,
   canManage,
+  showFinancials = false,
   t,
   onEdit,
   onDelete,
@@ -97,7 +99,9 @@ export default function ProductionKanbanCard({
       <p className="mt-1 text-xs text-app-muted">{typeLabel}</p>
       <p className="text-xs">{order.customer_name || t("common.anonymousCustomer")}</p>
 
-      <ProductionProfitabilityCard order={order} costing={resolvedCosting} compact />
+      {showFinancials ? (
+        <ProductionProfitabilityCard order={order} costing={resolvedCosting} compact />
+      ) : null}
 
       {canManage && advanceLabel && nextStatus ? (
         <button

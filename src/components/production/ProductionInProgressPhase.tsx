@@ -15,6 +15,7 @@ import {
   type WarehouseProductOption,
 } from "@/lib/actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   calcProductionCosting,
   mergeProductionOrder,
@@ -79,6 +80,7 @@ export default function ProductionInProgressPhase({
   onUpdated,
 }: Props) {
   const { t } = useI18n();
+  const { isAdmin } = useAuth();
   const currency = t("common.currency");
   const [tab, setTab] = useState<WorkflowTab>("materials");
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
@@ -327,30 +329,41 @@ export default function ProductionInProgressPhase({
     order.expenses.reduce((sum, row) => sum + row.amount, 0) +
     order.outsourcing.reduce((sum, row) => sum + row.total_cost, 0);
 
+  const visibleTabs = useMemo(
+    () => (isAdmin ? (["materials", "services", "payments"] as WorkflowTab[]) : (["materials", "services"] as WorkflowTab[])),
+    [isAdmin]
+  );
+
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) setTab("materials");
+  }, [tab, visibleTabs]);
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label={t("production.workflow.projectBudget")}
-          value={formatMoney(order.total_project_price, currency)}
-        />
-        <SummaryCard
-          label={t("production.materialCost")}
-          value={formatMoney(costing.materialCost, currency)}
-        />
-        <SummaryCard
-          label={t("production.workflow.servicesAndExpenses")}
-          value={formatMoney(servicesAndOverhead, currency)}
-        />
-        <SummaryCard
-          label={t("production.workflow.estimatedProfit")}
-          value={formatMoney(estimatedProfit, currency)}
-          emphasize={estimatedProfit >= 0 ? "good" : "bad"}
-        />
-      </div>
+      {isAdmin ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label={t("production.workflow.projectBudget")}
+            value={formatMoney(order.total_project_price, currency)}
+          />
+          <SummaryCard
+            label={t("production.materialCost")}
+            value={formatMoney(costing.materialCost, currency)}
+          />
+          <SummaryCard
+            label={t("production.workflow.servicesAndExpenses")}
+            value={formatMoney(servicesAndOverhead, currency)}
+          />
+          <SummaryCard
+            label={t("production.workflow.estimatedProfit")}
+            value={formatMoney(estimatedProfit, currency)}
+            emphasize={estimatedProfit >= 0 ? "good" : "bad"}
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-app pb-2">
-        {(["materials", "services", "payments"] as WorkflowTab[]).map((key) => (
+        {visibleTabs.map((key) => (
           <button
             key={key}
             type="button"
@@ -437,7 +450,7 @@ export default function ProductionInProgressPhase({
               </div>
             ) : null}
 
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className={`mt-3 grid gap-3 ${isAdmin ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("forms.quantity")}</span>
                 <input
@@ -450,23 +463,27 @@ export default function ProductionInProgressPhase({
                   disabled={!materialProductId}
                 />
               </label>
-              <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-app-muted">
-                  {t("production.workflow.unitCostLabel")}
-                </span>
-                <p className="mt-1 font-mono font-semibold text-app">
-                  {selectedProduct ? formatMoney(unitCost, currency) : "—"}
-                  {selectedProduct ? ` / ${productUnit}` : ""}
-                </p>
-              </div>
-              <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-app-muted">
-                  {t("production.workflow.totalMaterialCost")}
-                </span>
-                <p className={`mt-1 font-mono font-semibold ${stockShortage ? "text-rose-400" : "text-emerald-400"}`}>
-                  {selectedProduct ? formatMoney(lineTotalCost, currency) : "—"}
-                </p>
-              </div>
+              {isAdmin ? (
+                <>
+                  <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-app-muted">
+                      {t("production.workflow.unitCostLabel")}
+                    </span>
+                    <p className="mt-1 font-mono font-semibold text-app">
+                      {selectedProduct ? formatMoney(unitCost, currency) : "—"}
+                      {selectedProduct ? ` / ${productUnit}` : ""}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-app-muted">
+                      {t("production.workflow.totalMaterialCost")}
+                    </span>
+                    <p className={`mt-1 font-mono font-semibold ${stockShortage ? "text-rose-400" : "text-emerald-400"}`}>
+                      {selectedProduct ? formatMoney(lineTotalCost, currency) : "—"}
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -519,15 +536,19 @@ export default function ProductionInProgressPhase({
                   <th className="px-3 py-2">{t("forms.selectProduct")}</th>
                   <th className="px-3 py-2">{t("production.warehouse")}</th>
                   <th className="px-3 py-2 text-right">{t("forms.quantity")}</th>
-                  <th className="px-3 py-2 text-right">{t("production.unitCost")}</th>
-                  <th className="px-3 py-2 text-right">{t("forms.lineTotal")}</th>
+                  {isAdmin ? (
+                    <>
+                      <th className="px-3 py-2 text-right">{t("production.unitCost")}</th>
+                      <th className="px-3 py-2 text-right">{t("forms.lineTotal")}</th>
+                    </>
+                  ) : null}
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {order.materials.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-6 text-center text-app-muted">
+                    <td colSpan={isAdmin ? 7 : 5} className="px-3 py-6 text-center text-app-muted">
                       {t("common.noData")}
                     </td>
                   </tr>
@@ -540,8 +561,12 @@ export default function ProductionInProgressPhase({
                       <td className="px-3 py-2 text-right">
                         {row.quantity} {row.unit}
                       </td>
-                      <td className="px-3 py-2 text-right">{row.unit_cost.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{row.line_cost.toFixed(2)}</td>
+                      {isAdmin ? (
+                        <>
+                          <td className="px-3 py-2 text-right">{row.unit_cost.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-semibold">{row.line_cost.toFixed(2)}</td>
+                        </>
+                      ) : null}
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
@@ -700,7 +725,7 @@ export default function ProductionInProgressPhase({
         </div>
       ) : null}
 
-      {tab === "payments" ? (
+      {tab === "payments" && isAdmin ? (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <SummaryCard
