@@ -92,9 +92,12 @@ import {
 import { resolveProductionProduct } from "@/lib/production/resolveProductId";
 import {
   getWarehouseProductAvailableStock,
-  resolveRealWarehouseStock,
-  warehouseStockBalancesFromMovements,
 } from "@/lib/production/warehouseStock";
+import {
+  fetchPolywoodWarehouseCatalog,
+  fetchStandardWarehouseCatalog,
+  type WarehouseCatalogItem,
+} from "@/lib/production/warehouseProductCatalog";
 import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
 import {
   buildProductionExpenseInsertPayload,
@@ -1972,7 +1975,6 @@ export async function addProductionMaterialAction(
         warehouseId,
         productId: p.id,
         globalStock: Number(p.stock) || 0,
-        productWarehouseId: p.warehouse_id ?? null,
         inventoryMode: p.inventory_mode,
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
@@ -2863,105 +2865,20 @@ async function createPurchaseRequestInternal(
     .eq("id", requestRow.id);
 }
 
-export type WarehouseProductOption = {
-  id: string;
-  product_id: string;
-  code: string | null;
-  name: string;
-  unit: string;
-  buy_price: number;
-  cost_price: number;
-  realStock: number;
-  unitCost: number;
-  stock: number;
-  inventory_mode: string | null;
-};
-
-function toWarehouseProductOption(
-  product: Product,
-  realStock: number,
-  unitOverride?: string
-): WarehouseProductOption {
-  const unitCost = num(product.buy_price);
-  const stock = Math.round(realStock * 100) / 100;
-  return {
-    id: product.id,
-    product_id: product.id,
-    code: product.code || null,
-    name: product.name,
-    unit: unitOverride || product.unit || "Ədəd",
-    buy_price: unitCost,
-    cost_price: unitCost,
-    realStock: stock,
-    unitCost,
-    stock,
-    inventory_mode: product.inventory_mode || null,
-  };
-}
+export type WarehouseProductOption = WarehouseCatalogItem;
 
 async function fetchPolywoodWarehouseProducts(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   warehouseId: string
 ): Promise<WarehouseProductOption[]> {
-  const { data: products, error: productsError } = await admin
-    .from("products")
-    .select("id,code,name,unit,buy_price,inventory_mode")
-    .eq("inventory_mode", POLYWOOD_INVENTORY_MODE)
-    .order("name")
-    .limit(500);
-
-  if (productsError) return [];
-
-  const { data: pieces, error: piecesError } = await admin
-    .from("polywood_pieces")
-    .select("product_id, length_m")
-    .eq("warehouse_id", warehouseId)
-    .eq("status", "available");
-
-  if (piecesError) return [];
-
-  const stockByProduct = new Map<string, number>();
-  for (const piece of (pieces || []) as { product_id?: string; length_m?: number }[]) {
-    if (!piece.product_id) continue;
-    stockByProduct.set(
-      piece.product_id,
-      (stockByProduct.get(piece.product_id) || 0) + (Number(piece.length_m) || 0)
-    );
-  }
-
-  return ((products || []) as Product[]).map((product) => {
-    const realStock = Math.round((stockByProduct.get(product.id) || 0) * 100) / 100;
-    return toWarehouseProductOption(product, realStock, product.unit || "Metr");
-  });
+  return fetchPolywoodWarehouseCatalog(admin, warehouseId);
 }
 
 async function fetchStandardWarehouseProducts(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   warehouseId: string
 ): Promise<WarehouseProductOption[]> {
-  const { data: products, error } = await admin
-    .from("products")
-    .select("id,code,name,unit,buy_price,stock,warehouse_id,inventory_mode")
-    .or(`inventory_mode.is.null,inventory_mode.neq.${POLYWOOD_INVENTORY_MODE}`)
-    .order("name")
-    .limit(500);
-
-  if (error || !products?.length) return [];
-
-  const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
-
-  return (products as Product[]).map((product) => {
-    const realStock = resolveRealWarehouseStock(
-      movementBalances,
-      product.id,
-      Number(product.stock) || 0,
-      {
-        productWarehouseId: product.warehouse_id ?? null,
-        selectedWarehouseId: warehouseId,
-      }
-    );
-    return toWarehouseProductOption(product, realStock);
-  });
+  return fetchStandardWarehouseCatalog(admin, warehouseId);
 }
 
 export async function fetchWarehouseProductsForProductionAction(
@@ -3037,7 +2954,6 @@ export async function createPurchaseRequestAction(
         warehouseId: input.warehouse_id,
         productId: product.id,
         globalStock: Number(product.stock) || 0,
-        productWarehouseId: product.warehouse_id ?? null,
         inventoryMode: product.inventory_mode,
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });

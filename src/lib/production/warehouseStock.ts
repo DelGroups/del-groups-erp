@@ -9,6 +9,23 @@ type StockAdminClient = ReturnType<
   typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient
 >;
 
+export function resolveCatalogWarehouseStock(
+  movementBalances: Map<string, number>,
+  productId: string,
+  catalogStock: number
+): number {
+  const productStock = Math.max(0, num(catalogStock));
+  const movementStock = movementBalances.get(productId);
+
+  if (movementStock !== undefined) {
+    const ledgerStock = Math.max(0, movementStock);
+    if (ledgerStock <= 0 && productStock > 0) return productStock;
+    return ledgerStock;
+  }
+
+  return productStock;
+}
+
 export function resolveRealWarehouseStock(
   movementBalances: Map<string, number>,
   productId: string,
@@ -18,25 +35,8 @@ export function resolveRealWarehouseStock(
     selectedWarehouseId?: string;
   }
 ): number {
-  const productStock = Math.max(0, num(catalogStock));
-  const movementStock = movementBalances.get(productId);
-  const belongsToWarehouse =
-    Boolean(options?.productWarehouseId) &&
-    options?.productWarehouseId === options?.selectedWarehouseId;
-
-  if (movementStock !== undefined) {
-    const ledgerStock = Math.max(0, movementStock);
-    if (belongsToWarehouse && ledgerStock <= 0 && productStock > 0) {
-      return productStock;
-    }
-    return ledgerStock;
-  }
-
-  if (belongsToWarehouse || movementBalances.size === 0) {
-    return productStock;
-  }
-
-  return 0;
+  void options;
+  return resolveCatalogWarehouseStock(movementBalances, productId, catalogStock);
 }
 
 /** @deprecated Use resolveRealWarehouseStock */

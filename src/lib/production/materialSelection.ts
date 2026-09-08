@@ -20,6 +20,7 @@ export type WarehouseProductCatalogRow = {
   cost_price?: number | null;
   realStock?: number;
   unitCost?: number;
+  stock_quantity?: number;
   stock: number;
   unit: string;
 };
@@ -34,8 +35,12 @@ export function resolveProductUnitCost(
 }
 
 export function resolveProductRealStock(
-  product: Pick<WarehouseProductCatalogRow, "realStock" | "stock">
+  product: Pick<WarehouseProductCatalogRow, "realStock" | "stock"> & {
+    stock_quantity?: number;
+  }
 ): number {
+  const fromQuantity = Number(product.stock_quantity);
+  if (Number.isFinite(fromQuantity)) return Math.max(0, fromQuantity);
   const explicit = Number(product.realStock);
   if (Number.isFinite(explicit)) return Math.max(0, explicit);
   return Math.max(0, Number(product.stock) || 0);
