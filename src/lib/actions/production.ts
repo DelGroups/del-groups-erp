@@ -2035,12 +2035,29 @@ export async function removeProductionMaterialAction(
     if (!material || material.production_order_id !== orderId) {
       return { success: false, error: "Material tapılmadı" };
     }
-    if (material.issued) {
-      return { success: false, error: "Anbardan çıxılmış material silinə bilməz" };
+
+    if (material.issued && material.product_id) {
+      if (material.inventory_mode !== POLYWOOD_INVENTORY_MODE) {
+        const restored = await incrementProductStock(admin, material.product_id, material.quantity);
+        if (!restored.ok) {
+          return {
+            success: false,
+            error: `${material.product_name}: stok geri qaytarılmadı (${restored.error})`,
+          };
+        }
+      }
     }
+
+    await admin
+      .from("production_stock_reservations")
+      .delete()
+      .eq("production_material_id", materialId);
+
     const { error } = await admin.from("production_materials").delete().eq("id", materialId);
     if (error) return { success: false, error: error.message };
-    return { success: true };
+
+    const updated = await loadOrderBundle(admin, orderId);
+    return { success: true, data: updated || undefined };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
@@ -2257,20 +2274,51 @@ export async function removeProductionExpenseAction(
     const admin = createSupabaseAdminClient();
     const { data: expense } = await admin
       .from("production_expenses")
-      .select("id,finance_expense_id")
+      .select("id,finance_expense_id,account_id,amount,description")
       .eq("id", expenseId)
       .eq("production_order_id", orderId)
       .maybeSingle();
     if (!expense) return { success: false, error: "Xərc tapılmadı" };
-    if ((expense as { finance_expense_id?: string | null }).finance_expense_id) {
-      return {
-        success: false,
-        error: "Maliyyəyə yazılmış xərc silinə bilməz. Kassa/bank qeydini maliyyə modulundan idarə edin.",
-      };
+
+    const financeExpenseId = (expense as { finance_expense_id?: string | null }).finance_expense_id;
+    const accountId = (expense as { account_id?: string | null }).account_id;
+    const amount = num((expense as { amount?: number }).amount);
+    const description = String((expense as { description?: string }).description || "");
+
+    if (financeExpenseId && accountId && amount > 0) {
+      const { data: transactions } = await admin
+        .from("transactions")
+        .select("id,account_id,notes")
+        .eq("production_order_id", orderId)
+        .eq("account_id", accountId)
+        .eq("amount", amount);
+
+      const matched =
+        (transactions || []).find((row) => {
+          const notes = String((row as { notes?: string }).notes || "");
+          return notes.includes(description) || description.includes(notes.trim());
+        }) || (transactions || [])[0];
+
+      if (matched?.id) {
+        const txAccountId = (matched as { account_id?: string }).account_id;
+        const { error: txDeleteError } = await admin
+          .from("transactions")
+          .delete()
+          .eq("id", matched.id);
+        if (txDeleteError) return { success: false, error: txDeleteError.message };
+        if (txAccountId) {
+          await admin.rpc("reconcile_account_balance_atomic", { p_account_id: txAccountId });
+        }
+      }
+
+      await admin.from("expenses").delete().eq("id", financeExpenseId);
     }
+
     const { error } = await admin.from("production_expenses").delete().eq("id", expenseId);
     if (error) return { success: false, error: error.message };
-    return { success: true };
+
+    const updated = await loadOrderBundle(admin, orderId);
+    return { success: true, data: updated || undefined };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
@@ -2626,6 +2674,41 @@ async function createPurchaseRequestInternal(
       updated_at: new Date().toISOString(),
     })
     .eq("id", requestRow.id);
+}
+
+export async function createPurchaseRequestAction(
+  orderId: string,
+  input: { product_id: string; warehouse_id?: string | null; quantity: number; notes?: string | null }
+): Promise<ProductionActionResult<PurchaseRequest[]>> {
+  try {
+    const { user } = await requireProductionIssuePermission();
+    const admin = createSupabaseAdminClient();
+    const qty = num(input.quantity);
+    if (qty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
+
+    const { data: product } = await admin
+      .from("products")
+      .select("id,code,name,unit,buy_price,warehouse_id")
+      .eq("id", input.product_id)
+      .maybeSingle();
+    if (!product) return { success: false, error: "Məhsul tapılmadı" };
+
+    await createPurchaseRequestInternal(admin, {
+      orderId,
+      product: product as Product,
+      warehouseId: input.warehouse_id || (product as Product).warehouse_id || null,
+      quantity: qty,
+      userId: user.id,
+      notes: input.notes || null,
+    });
+
+    const listed = await listPurchaseRequestsAction(orderId);
+    if (!listed.success) return listed;
+    return { success: true, data: listed.data || [] };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
 }
 
 export async function listPurchaseRequestsAction(

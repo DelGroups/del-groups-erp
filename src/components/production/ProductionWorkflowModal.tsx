@@ -1,29 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { X } from "lucide-react";
 import {
-  addProductionExpenseAction,
-  addProductionMaterialAction,
-  addProductionOutsourcingAction,
-  listPurchaseRequestsAction,
   recordProductionCustomerPaymentAction,
   updateProductionLogisticsAction,
   updateProductionOrderAction,
   type ProductionLookups,
 } from "@/lib/actions/production";
+import ProductionInProgressPhase from "@/components/production/ProductionInProgressPhase";
 import {
-  PRODUCTION_EXPENSE_CATEGORIES,
   calcProductionCosting,
   remainingBalanceFromOrder,
-  type ProductionExpenseCategory,
   type ProductionOrder,
   type ProductionStatus,
-  type PurchaseRequest,
 } from "@/lib/production/types";
-
-type WorkflowTab = "materials" | "services" | "payments";
 
 interface Props {
   open: boolean;
@@ -50,28 +41,13 @@ export default function ProductionWorkflowModal({
   onCompleted,
 }: Props) {
   const phase = order.status;
-  const [tab, setTab] = useState<WorkflowTab>("materials");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
 
   const [projectName, setProjectName] = useState(order.project_name);
   const [customerId, setCustomerId] = useState(order.customer_id || "");
   const [notes, setNotes] = useState(order.notes || order.project_scope || "");
   const [totalPrice, setTotalPrice] = useState(order.total_project_price);
-
-  const [materialProductId, setMaterialProductId] = useState("");
-  const [materialWarehouseId, setMaterialWarehouseId] = useState("");
-  const [materialQty, setMaterialQty] = useState(1);
-
-  const [expenseCategory, setExpenseCategory] = useState<ProductionExpenseCategory>("other");
-  const [expenseDescription, setExpenseDescription] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState(0);
-  const [expenseAccountId, setExpenseAccountId] = useState("");
-
-  const [outsourcingDesc, setOutsourcingDesc] = useState("");
-  const [outsourcingQty, setOutsourcingQty] = useState(1);
-  const [outsourcingPrice, setOutsourcingPrice] = useState(0);
 
   const [deliveryDate, setDeliveryDate] = useState(order.expected_delivery_date || "");
   const [shippingDate, setShippingDate] = useState(order.shipping_date || "");
@@ -118,13 +94,6 @@ export default function ProductionWorkflowModal({
     setError(null);
   }, [open, order]);
 
-  useEffect(() => {
-    if (!open || phase !== "In-Progress") return;
-    void listPurchaseRequestsAction(order.id).then((result) => {
-      if (result.success && result.data) setPurchaseRequests(result.data);
-    });
-  }, [open, order.id, phase]);
-
   if (!open) return null;
 
   const saveDraft = async () => {
@@ -145,69 +114,6 @@ export default function ProductionWorkflowModal({
       return;
     }
     onCompleted(result.data);
-  };
-
-  const addMaterial = async () => {
-    if (!materialProductId) {
-      setError("Məhsul seçin");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    const product = lookups?.products.find((row) => row.id === materialProductId);
-    const warehouse = lookups?.warehouses.find((row) => row.id === materialWarehouseId);
-    const result = await addProductionMaterialAction(order.id, {
-      product_id: materialProductId,
-      warehouse_id: materialWarehouseId || product?.warehouse_id || "",
-      warehouse_name: warehouse?.name || null,
-      quantity: materialQty,
-      issue_now: true,
-    });
-    setSaving(false);
-    if (!result.success) {
-      setError(result.error || "Material əlavə edilmədi");
-      return;
-    }
-    const pr = await listPurchaseRequestsAction(order.id);
-    if (pr.success && pr.data) setPurchaseRequests(pr.data);
-    if (result.data) onUpdated(result.data);
-  };
-
-  const addExpense = async () => {
-    if (!expenseAccountId) {
-      setError("Ödəniş üçün kassa/bank hesabı seçin");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    const result = await addProductionExpenseAction(order.id, {
-      category: expenseCategory,
-      description: expenseDescription,
-      amount: expenseAmount,
-      account_id: expenseAccountId || null,
-    });
-    setSaving(false);
-    if (!result.success) {
-      setError(result.error || "Xərc əlavə edilmədi");
-      return;
-    }
-    if (result.data) onUpdated(result.data);
-  };
-
-  const addOutsourcing = async () => {
-    setSaving(true);
-    setError(null);
-    const result = await addProductionOutsourcingAction(order.id, {
-      material_description: outsourcingDesc,
-      sqm_quantity: outsourcingQty,
-      price_per_sqm: outsourcingPrice,
-    });
-    setSaving(false);
-    if (!result.success) {
-      setError(result.error || "Xidmət əlavə edilmədi");
-      return;
-    }
-    if (result.data) onUpdated(result.data);
   };
 
   const saveLogistics = async () => {
@@ -254,9 +160,11 @@ export default function ProductionWorkflowModal({
     onCompleted(result.data);
   };
 
+  const modalWidth = phase === "In-Progress" ? "max-w-5xl" : "max-w-3xl";
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
-      <div className="app-modal flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden">
+      <div className={`app-modal flex max-h-[90vh] w-full ${modalWidth} flex-col overflow-hidden`}>
         <div className="flex items-center justify-between border-b border-app px-4 py-3">
           <div>
             <h3 className="font-bold text-app">{order.order_no}</h3>
@@ -318,153 +226,14 @@ export default function ProductionWorkflowModal({
           ) : null}
 
           {phase === "In-Progress" ? (
-            <div>
-              <div className="mb-3 flex gap-2">
-                {(["materials", "services", "payments"] as WorkflowTab[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`rounded px-3 py-1 text-xs font-semibold ${tab === key ? "bg-app-accent text-white" : "bg-app-card-hover text-app"}`}
-                    onClick={() => setTab(key)}
-                  >
-                    {key === "materials" ? "Materiallar" : key === "services" ? "Xidmət / Xərc" : "Ödənişlər"}
-                  </button>
-                ))}
-              </div>
-
-              {tab === "materials" ? (
-                <div className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <select
-                      className="input-field"
-                      value={materialProductId}
-                      onChange={(e) => setMaterialProductId(e.target.value)}
-                    >
-                      <option value="">Məhsul</option>
-                      {(lookups?.products || []).map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                    <select
-                      className="input-field"
-                      value={materialWarehouseId}
-                      onChange={(e) => setMaterialWarehouseId(e.target.value)}
-                    >
-                      <option value="">Anbar</option>
-                      {(lookups?.warehouses || []).map((w) => (
-                        <option key={w.id} value={w.id}>{w.name}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      className="input-field"
-                      value={materialQty}
-                      onChange={(e) => setMaterialQty(Number(e.target.value))}
-                    />
-                  </div>
-                  <button type="button" className="btn-primary" disabled={saving} onClick={() => void addMaterial()}>
-                    Material əlavə et
-                  </button>
-                  {purchaseRequests.length > 0 ? (
-                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                      <p className="font-semibold text-amber-200">Satınalma tələbləri</p>
-                      <ul className="mt-2 space-y-1 text-xs">
-                        {purchaseRequests.map((row) => (
-                          <li key={row.id}>
-                            {row.request_no}: {row.product_name} — {row.quantity} {row.unit} ({row.status})
-                            {row.purchase_id ? (
-                              <Link href="/purchases" className="ml-2 text-app-accent underline">
-                                Alış fakturası
-                              </Link>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {tab === "services" ? (
-                <div className="space-y-4">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <input
-                      className="input-field"
-                      placeholder="Xarici xidmət təsviri"
-                      value={outsourcingDesc}
-                      onChange={(e) => setOutsourcingDesc(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      className="input-field"
-                      placeholder="m²"
-                      value={outsourcingQty}
-                      onChange={(e) => setOutsourcingQty(Number(e.target.value))}
-                    />
-                    <input
-                      type="number"
-                      className="input-field"
-                      placeholder="Qiymət / m²"
-                      value={outsourcingPrice}
-                      onChange={(e) => setOutsourcingPrice(Number(e.target.value))}
-                    />
-                    <button type="button" className="btn-secondary" disabled={saving} onClick={() => void addOutsourcing()}>
-                      Xarici xidmət əlavə et
-                    </button>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <select
-                      className="input-field"
-                      value={expenseCategory}
-                      onChange={(e) => setExpenseCategory(e.target.value as ProductionExpenseCategory)}
-                    >
-                      {PRODUCTION_EXPENSE_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                    <input
-                      className="input-field"
-                      placeholder="Xərc təsviri"
-                      value={expenseDescription}
-                      onChange={(e) => setExpenseDescription(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      className="input-field"
-                      placeholder="Məbləğ"
-                      value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(Number(e.target.value))}
-                    />
-                    <select
-                      className="input-field"
-                      value={expenseAccountId}
-                      onChange={(e) => setExpenseAccountId(e.target.value)}
-                    >
-                      <option value="">Hesab</option>
-                      {(lookups?.accounts || []).map((a) => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                    <button type="button" className="btn-primary sm:col-span-2" disabled={saving} onClick={() => void addExpense()}>
-                      Xərc ödənişi qeyd et
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {tab === "payments" ? (
-                <div className="space-y-3 text-sm">
-                  <p className="text-app-muted">
-                    İstehsal xərcləri üçün ödənişlər &quot;Xidmət / Xərc&quot; bölməsində kassa hesabı ilə qeyd olunur.
-                  </p>
-                  <div className="rounded-lg border border-app bg-app-card-hover p-3">
-                    <p>Ödənilmiş xərclər: <strong>{order.expenses.reduce((sum, row) => sum + row.amount, 0).toFixed(2)} AZN</strong></p>
-                    <p>Xarici xidmətlər: <strong>{order.outsourcing.reduce((sum, row) => sum + row.total_cost, 0).toFixed(2)} AZN</strong></p>
-                    <p>Materiallar: <strong>{order.materials.reduce((sum, row) => sum + (row.line_cost || 0), 0).toFixed(2)} AZN</strong></p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            <ProductionInProgressPhase
+              order={order}
+              lookups={lookups}
+              saving={saving}
+              setSaving={setSaving}
+              setError={setError}
+              onUpdated={onUpdated}
+            />
           ) : null}
 
           {phase === "Ready" ? (
