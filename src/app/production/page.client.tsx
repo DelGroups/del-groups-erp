@@ -101,7 +101,8 @@ export default function ProductionBoardPage() {
   const handleEdit = useCallback(
     async (order: ProductionOrder) => {
       await ensureLookups();
-      setWorkflowOrder(order);
+      const full = await getProductionOrderAction(order.id);
+      setWorkflowOrder(full.success && full.data ? full.data : order);
     },
     [ensureLookups]
   );

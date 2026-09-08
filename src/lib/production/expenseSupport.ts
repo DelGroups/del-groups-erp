@@ -150,6 +150,65 @@ export function resolveExpenseCategoryName(
   return match?.name || category;
 }
 
+const LEGACY_EXPENSE_CATEGORY_SLUGS = new Set([
+  "transport",
+  "delivery",
+  "installation",
+  "tools",
+  "other",
+]);
+
+const FINANCIAL_CATEGORY_SLUG_MAP: Record<string, string> = {
+  nəqliyyat: "transport",
+  neqliyyat: "transport",
+  çatdırılma: "delivery",
+  catdirilma: "delivery",
+  quraşdırma: "installation",
+  qurasdirma: "installation",
+  "alət / material": "tools",
+  "alet / material": "tools",
+  alət: "tools",
+  alet: "tools",
+  material: "tools",
+  digər: "other",
+  diger: "other",
+};
+
+function normalizeCategoryKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+export function resolveProductionExpenseCategoryStorage(
+  categoryName: string,
+  categoryId?: string | null
+): string {
+  const raw = String(categoryName || categoryId || "").trim();
+  if (!raw) return "other";
+  if (LEGACY_EXPENSE_CATEGORY_SLUGS.has(raw)) return raw;
+  const mapped = FINANCIAL_CATEGORY_SLUG_MAP[normalizeCategoryKey(raw)];
+  if (mapped) return mapped;
+  return raw;
+}
+
+export function parseProductionPartyRef(
+  partyId?: string | null
+): { entityType: "employee" | "supplier"; entityId: string } | null {
+  const value = String(partyId || "").trim();
+  if (!value) return null;
+  const [entityType, entityId] = value.split(":");
+  if (entityType === "employee" && entityId) {
+    return { entityType: "employee", entityId };
+  }
+  if (entityType === "supplier" && entityId) {
+    return { entityType: "supplier", entityId };
+  }
+  return null;
+}
+
 export function buildProductionExpenseNotes(
   description: string,
   contractorLabel?: string | null,

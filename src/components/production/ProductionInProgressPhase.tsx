@@ -374,7 +374,7 @@ export default function ProductionInProgressPhase({
     await runAction(
       () =>
         addProductionExpenseAction(order.id, {
-          category: expenseCategory,
+          category_id: expenseCategory,
           category_name: selectedCategory?.name || expenseCategory,
           description: expenseDescription.trim(),
           amount: expenseAmount,
@@ -383,10 +383,12 @@ export default function ProductionInProgressPhase({
           account_name: expenseAccountId
             ? accountsById.get(expenseAccountId)?.name || null
             : null,
+          contractor_id: expensePartyId || null,
+          contractor_name: party?.label || null,
           notes: partyNotes,
         }),
       (data) => {
-        applyOrder(mergeProductionOrder(order, data));
+        applyOrder(data);
         setExpenseDescription("");
         setExpenseAmount(0);
         setExpenseAccountId("");

@@ -1,7 +1,8 @@
 "use server";
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
-import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
+import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
+import { isValidUuid } from "@/lib/auth/validate";
 import { userHasPermission } from "@/lib/auth/routePermissions";
 import { createSupabaseServerClient, getServerAuthContext } from "@/lib/supabaseServer";
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
@@ -102,8 +103,10 @@ import {
   EXPENSE_SELECT_FIELD_ATTEMPTS,
   formatProductionDbError,
   insertProductionExpenseRow,
+  insertProductionExpenseRowWithCategoryFallback,
   PRODUCTION_MATERIAL_LIVE_COLUMNS,
   productionSchemaColumnFromError,
+  selectProductionExpensesForOrders,
   selectProductionExpensesWithFallback,
   selectProductionMaterialsWithFallback,
 } from "@/lib/production/payloads";
@@ -112,7 +115,9 @@ import {
   fetchActiveExpenseCategories,
   fetchProductionPartyOptions,
   parseProductionExpenseNotes,
+  parseProductionPartyRef,
   resolveExpenseCategoryName,
+  resolveProductionExpenseCategoryStorage,
   type ExpenseCategoryOption,
   type ProductionPartyOption,
 } from "@/lib/production/expenseSupport";
@@ -525,7 +530,7 @@ async function updateMaterialOmittingMissingColumns(
 
 function mapExpense(row: Record<string, unknown>): ProductionExpense {
   const parsedNotes = parseProductionExpenseNotes(row.notes as string | null | undefined);
-  const description = String(row.description || parsedNotes.description || "");
+  const description = String(row.description || row.title || parsedNotes.description || "");
   const category = String(row.category || "other");
   const financeExpenseId =
     (row.finance_expense_id as string) ||
@@ -822,7 +827,7 @@ async function loadOrderBundleParallel(
     selectMaterialsForOrder(admin, { orderId: id, orderCreatedAt: true }),
     selectOutsourcingRows(admin, { orderId: id, orderCreatedAt: true }),
     admin.from("production_contractors").select(CONTRACTOR_FIELDS).eq("production_order_id", id).order("created_at"),
-    admin.from("production_expenses").select(EXPENSE_FIELDS).eq("production_order_id", id).order("created_at"),
+    selectProductionExpensesWithFallback(admin, id),
     selectProductionContractForOrder(admin, id),
   ]);
 
@@ -830,9 +835,7 @@ async function loadOrderBundleParallel(
     materials: materialsRes,
     outsourcing: ((outsourcingRes.data || []) as unknown as Record<string, unknown>[]).map(mapOutsourcing),
     contractors: ((contractorsRes.data || []) as Record<string, unknown>[]).map(mapContractor),
-    expenses: isMissingRelation(expensesRes.error)
-      ? []
-      : ((expensesRes.data || []) as Record<string, unknown>[]).map(mapExpense),
+    expenses: expensesRes.error ? [] : expensesRes.data.map(mapExpense),
     contract,
   });
 }
@@ -1014,7 +1017,7 @@ export async function listProductionOrdersAction(): Promise<
       }),
       selectOutsourcingRows(admin, { orderIds: ids, limit: 1000 }),
       admin.from("production_contractors").select(CONTRACTOR_FIELDS).in("production_order_id", ids).limit(500),
-      admin.from("production_expenses").select(EXPENSE_FIELDS).in("production_order_id", ids).limit(2000),
+      selectProductionExpensesForOrders(admin, ids),
     ]);
 
     const materials = await enrichMaterialRows(
@@ -1023,7 +1026,7 @@ export async function listProductionOrdersAction(): Promise<
     );
     const outsourcing = ((outsourcingRes.data || []) as unknown as Record<string, unknown>[]).map(mapOutsourcing);
     const contractors = ((contractorsRes.data || []) as Record<string, unknown>[]).map(mapContractor);
-    const expenses = isMissingRelation(expensesRes.error)
+    const expenses = expensesRes.error
       ? []
       : ((expensesRes.data || []) as Record<string, unknown>[]).map(mapExpense);
 
@@ -2372,13 +2375,64 @@ async function postFinanceSideExpense(
 
 export interface AddProductionExpenseInput {
   category: string;
+  category_id?: string | null;
+  category_name?: string | null;
   description: string;
   amount: number;
   expense_date?: string | null;
   account_id?: string | null;
   account_name?: string | null;
+  contractor_id?: string | null;
+  contractor_name?: string | null;
   notes?: string | null;
-  category_name?: string | null;
+}
+
+async function postProductionExpenseCashTransaction(
+  client: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  input: {
+    accountId: string;
+    amount: number;
+    category: string;
+    orderId: string;
+    orderNo: string;
+    description: string;
+    notes: string;
+    expenseDate?: string | null;
+    expenseId?: string | null;
+  }
+): Promise<{ ok: true; transactionId: string } | { ok: false; error: string }> {
+  const memo = `İstehsalat ${input.orderNo}: ${input.notes}`.slice(0, 500);
+  const posted = await client.rpc("post_cash_transaction", {
+    p_account_id: input.accountId,
+    p_type: "Məxaric",
+    p_amount: input.amount,
+    p_category: input.category,
+    p_notes: memo,
+    p_production_order_id: input.orderId,
+    p_source_type: "production_expense",
+    p_source_id: input.expenseId || null,
+  });
+
+  if (posted.error || !posted.data) {
+    return {
+      ok: false,
+      error: mapRpcError(posted.error?.message || "Kassa əməliyyatı qeydə alınmadı"),
+    };
+  }
+
+  const transactionId = String(posted.data);
+  await client
+    .from("transactions")
+    .update({
+      unified_type: "EXPENSE",
+      reference_type: "production_expense",
+      reference_id: input.expenseId || null,
+      description: input.description,
+      transaction_date: input.expenseDate || new Date().toISOString(),
+    } as never)
+    .eq("id", transactionId);
+
+  return { ok: true, transactionId };
 }
 
 export async function addProductionExpenseAction(
@@ -2388,6 +2442,7 @@ export async function addProductionExpenseAction(
   try {
     const { user, profile } = await requirePermissionAction("can_manage_production");
     const admin = createSupabaseAdminClient();
+    const client = await createSupabaseServerClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.status === "Delivered") {
@@ -2398,80 +2453,86 @@ export async function addProductionExpenseAction(
     const amount = num(input.amount);
     if (!description) return { success: false, error: "Xərc təsviri tələb olunur" };
     if (amount <= 0) return { success: false, error: "Məbləğ sıfırdan böyük olmalıdır" };
-    const categoryValue = String(input.category_name || input.category || "").trim();
-    if (!categoryValue) return { success: false, error: "Xərc kateqoriyası tələb olunur" };
 
-    const expenseNotes = buildProductionExpenseNotes(description, null, input.notes);
+    const categoryId = isValidUuid(input.category_id || input.category)
+      ? String(input.category_id || input.category)
+      : null;
+    const categoryName = String(input.category_name || input.category || "").trim();
+    if (!categoryName && !categoryId) {
+      return { success: false, error: "Xərc kateqoriyası tələb olunur" };
+    }
 
-    if (input.account_id) {
-      const posted = await postFinanceSideExpense({
+    const resolvedCategoryName = categoryName || categoryId || "Digər";
+    const categoryStorage = resolveProductionExpenseCategoryStorage(
+      resolvedCategoryName,
+      categoryId
+    );
+    const contractorLabel = input.contractor_name?.trim() || null;
+    const expenseNotes = buildProductionExpenseNotes(description, contractorLabel, input.notes);
+    const accountId = input.account_id?.trim() || null;
+    const partyRef = parseProductionPartyRef(input.contractor_id);
+
+    let financeTransactionId: string | null = null;
+    if (accountId && isValidUuid(accountId)) {
+      const posted = await postProductionExpenseCashTransaction(client, {
+        accountId,
         amount,
-        accountId: input.account_id,
+        category: resolvedCategoryName,
         orderId,
         orderNo: order.order_no,
         description,
-        category: categoryValue,
-        expenseDate: input.expense_date,
-        accountName: input.account_name,
         notes: expenseNotes,
-        actorName: actorName(profile),
+        expenseDate: input.expense_date,
       });
       if (!posted.ok) return { success: false, error: posted.error };
-      const expenseSelect = await selectProductionExpensesWithFallback(admin, orderId);
-      const expenseRow = expenseSelect.data.find((row) => String(row.id) === posted.expenseId);
-      if (!expenseRow) return { success: true };
-      return {
-        success: true,
-        data: orderCollectionDelta(order, {
-          expenses: [mapExpense(expenseRow)],
-        }),
-      };
+      financeTransactionId = posted.transactionId;
     }
 
-    const inserted = await insertProductionExpenseRow(admin, {
+    const inserted = await insertProductionExpenseRowWithCategoryFallback(admin, {
       production_order_id: orderId,
-      category: categoryValue,
+      category: categoryStorage,
+      category_id: categoryId,
+      title: description,
       description,
       amount,
       expense_date: input.expense_date,
-      account_id: input.account_id,
+      account_id: accountId,
       account_name: input.account_name,
+      contractor_id: partyRef?.entityId || null,
       notes: expenseNotes,
+      finance_expense_id: financeTransactionId,
       created_by: user.id,
       created_by_name: actorName(profile),
     });
+
     if (inserted.error || !inserted.data) {
+      if (financeTransactionId) {
+        await admin.from("transactions").delete().eq("id", financeTransactionId);
+        await client.rpc("reconcile_account_balance_atomic", { p_account_id: accountId });
+      }
       return { success: false, error: inserted.error || "Xərc əlavə edilmədi" };
     }
 
-    const expenseSelect = await selectProductionExpensesWithFallback(admin, orderId);
-    const expenseRow =
-      expenseSelect.data.find((row) => String(row.id) === inserted.data?.id) ||
-      expenseSelect.data[expenseSelect.data.length - 1];
-    if (!expenseRow) {
-      return {
-        success: true,
-        data: orderCollectionDelta(order, {
-          expenses: [
-            mapExpense({
-              id: inserted.data.id,
-              production_order_id: orderId,
-              category: categoryValue,
-              amount,
-              notes: expenseNotes,
-              created_at: new Date().toISOString(),
-            }),
-          ],
-        }),
-      };
+    if (financeTransactionId) {
+      await client
+        .from("transactions")
+        .update({
+          source_id: inserted.data.id,
+          reference_id: inserted.data.id,
+        } as never)
+        .eq("id", financeTransactionId);
+
+      await admin
+        .from("production_expenses")
+        .update({
+          finance_transaction_id: financeTransactionId,
+          is_posted_to_finance: true,
+        } as never)
+        .eq("id", inserted.data.id);
     }
 
-    return {
-      success: true,
-      data: orderCollectionDelta(order, {
-        expenses: [mapExpense(expenseRow)],
-      }),
-    };
+    const bundle = await loadOrderBundle(admin, orderId);
+    return { success: true, data: bundle || order };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };

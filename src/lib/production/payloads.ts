@@ -1,3 +1,4 @@
+import { resolveProductionExpenseCategoryStorage } from "@/lib/production/expenseSupport";
 import { missingColumnFromError } from "@/lib/production/safeQuery";
 
 /** Live production_materials columns — price pair + workflow fields used by RPC and UI. */
@@ -179,11 +180,14 @@ export const EXPENSE_SELECT_FIELD_ATTEMPTS = [
 export type ProductionExpenseInsertSource = {
   production_order_id: string;
   category: string;
+  category_id?: string | null;
+  title?: string | null;
   description: string;
   amount: number;
   expense_date?: string | null;
   account_id?: string | null;
   account_name?: string | null;
+  contractor_id?: string | null;
   finance_expense_id?: string | null;
   notes?: string | null;
   created_by?: string | null;
@@ -194,6 +198,7 @@ export function buildProductionExpenseInsertPayload(
   source: ProductionExpenseInsertSource
 ): Record<string, unknown> {
   const description = source.description.trim();
+  const title = String(source.title || description).trim();
   const mergedNotes =
     source.notes?.trim() ||
     description;
@@ -201,6 +206,8 @@ export function buildProductionExpenseInsertPayload(
   const payload: Record<string, unknown> = {
     production_order_id: source.production_order_id,
     category: source.category,
+    category_id: source.category_id || null,
+    title,
     amount: toNumber(source.amount),
     notes: mergedNotes,
     is_posted_to_finance: Boolean(source.finance_expense_id || source.account_id),
@@ -209,6 +216,7 @@ export function buildProductionExpenseInsertPayload(
     expense_date: source.expense_date || new Date().toISOString().slice(0, 10),
     account_id: source.account_id || null,
     account_name: source.account_name?.trim() || null,
+    contractor_id: source.contractor_id || null,
     finance_expense_id: source.finance_expense_id ?? null,
     created_by: source.created_by || null,
     created_by_name: source.created_by_name?.trim() || null,
@@ -249,6 +257,67 @@ export async function insertProductionExpenseRow(
   }
 
   return { data: null, error: "production_expenses schema mismatch" };
+}
+
+function isCategoryConstraintError(message?: string | null): boolean {
+  if (!message) return false;
+  return /category|check constraint|invalid_category|22023/i.test(message);
+}
+
+export async function insertProductionExpenseRowWithCategoryFallback(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: { from: (table: string) => any },
+  source: ProductionExpenseInsertSource
+): Promise<{ data: { id: string } | null; error: string | null }> {
+  const categoryCandidates = Array.from(
+    new Set(
+      [
+        source.category,
+        resolveProductionExpenseCategoryStorage(source.category, source.category_id),
+        "other",
+      ].filter(Boolean)
+    )
+  );
+
+  let lastError: string | null = null;
+  for (const category of categoryCandidates) {
+    const result = await insertProductionExpenseRow(admin, { ...source, category });
+    if (result.data) return result;
+    lastError = result.error;
+    if (!isCategoryConstraintError(result.error)) {
+      return result;
+    }
+  }
+
+  return { data: null, error: lastError || "Xərc əlavə edilmədi" };
+}
+
+export async function selectProductionExpensesForOrders(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: { from: (table: string) => any },
+  orderIds: string[]
+): Promise<{ data: Record<string, unknown>[]; error: string | null }> {
+  if (!orderIds.length) return { data: [], error: null };
+
+  for (const fields of EXPENSE_SELECT_FIELD_ATTEMPTS) {
+    const { data, error } = await admin
+      .from("production_expenses")
+      .select(fields)
+      .in("production_order_id", orderIds)
+      .order("created_at")
+      .limit(5000);
+
+    if (!error) {
+      return { data: (data || []) as Record<string, unknown>[], error: null };
+    }
+
+    const blocked = productionSchemaColumnFromError(error);
+    if (!blocked) {
+      return { data: [], error: error.message };
+    }
+  }
+
+  return { data: [], error: "production_expenses schema mismatch" };
 }
 
 export async function selectProductionExpensesWithFallback(

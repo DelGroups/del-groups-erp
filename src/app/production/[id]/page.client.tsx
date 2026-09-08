@@ -587,10 +587,12 @@ export default function ProductionOrderDetailPage() {
 
   const handleAddExpense = () => {
     const account = lookups?.accounts.find((a) => a.id === expenseAccountId);
+    const selectedCategory = lookups?.expenseCategories.find((row) => row.id === expenseCategory);
     return run(
       async () => {
       const result = await addProductionExpenseAction(id, {
-        category: expenseCategory,
+        category_id: expenseCategory,
+        category_name: selectedCategory?.name || expenseCategory,
         description: expenseDesc,
         amount: Number(expenseAmount) || 0,
         expense_date: expenseDate || null,
