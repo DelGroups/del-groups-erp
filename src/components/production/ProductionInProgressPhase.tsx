@@ -24,6 +24,14 @@ import {
   type ProductionOrder,
   type PurchaseRequest,
 } from "@/lib/production/types";
+import {
+  buildMaterialLineSelection,
+  decodeMaterialLineSelection,
+  encodeMaterialLineSelection,
+  formatMaterialPayloadDebug,
+  type MaterialLineSelection,
+} from "@/lib/production/materialSelection";
+import { isValidUuid } from "@/lib/auth/validate";
 
 type WorkflowTab = "materials" | "services" | "payments";
 
@@ -85,7 +93,8 @@ export default function ProductionInProgressPhase({
   const [tab, setTab] = useState<WorkflowTab>("materials");
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
 
-  const [materialProductId, setMaterialProductId] = useState("");
+  const [materialOptionValue, setMaterialOptionValue] = useState("");
+  const [materialSelection, setMaterialSelection] = useState<MaterialLineSelection | null>(null);
   const [materialWarehouseId, setMaterialWarehouseId] = useState("");
   const [materialQty, setMaterialQty] = useState(1);
   const [warehouseProducts, setWarehouseProducts] = useState<WarehouseProductOption[]>([]);
@@ -103,10 +112,14 @@ export default function ProductionInProgressPhase({
   const estimatedProfit = order.total_project_price - (costing.materialCost + servicesAndOverhead);
   const remaining = useMemo(() => remainingBalanceFromOrder(order), [order]);
 
-  const selectedProduct = useMemo(
-    () => warehouseProducts.find((row) => row.id === materialProductId) || null,
-    [warehouseProducts, materialProductId]
-  );
+  const selectedProduct = useMemo(() => {
+    if (!materialSelection?.productId) return null;
+    return (
+      warehouseProducts.find(
+        (row) => row.product_id === materialSelection.productId || row.id === materialSelection.productId
+      ) || null
+    );
+  }, [warehouseProducts, materialSelection]);
   const availableStock = Number(selectedProduct?.stock || 0);
   const stockShortage = Boolean(selectedProduct) && materialQty > availableStock;
   const shortageDelta = stockShortage ? Math.max(0, materialQty - availableStock) : 0;
@@ -128,6 +141,20 @@ export default function ProductionInProgressPhase({
       unit: product.unit,
     });
 
+  const productOptionValue = (product: WarehouseProductOption) =>
+    encodeMaterialLineSelection(buildMaterialLineSelection(product, materialWarehouseId));
+
+  const handleMaterialProductChange = (value: string) => {
+    setMaterialOptionValue(value);
+    const decoded = decodeMaterialLineSelection(value, materialWarehouseId, warehouseProducts);
+    setMaterialSelection(decoded);
+  };
+
+  const clearMaterialProduct = () => {
+    setMaterialOptionValue("");
+    setMaterialSelection(null);
+  };
+
   const accountsById = useMemo(
     () => new Map((lookups?.accounts || []).map((row) => [row.id, row])),
     [lookups?.accounts]
@@ -146,7 +173,7 @@ export default function ProductionInProgressPhase({
   useEffect(() => {
     if (!materialWarehouseId) {
       setWarehouseProducts([]);
-      setMaterialProductId("");
+      clearMaterialProduct();
       return;
     }
 
@@ -162,7 +189,18 @@ export default function ProductionInProgressPhase({
       }
       const rows = result.data || [];
       setWarehouseProducts(rows);
-      setMaterialProductId((current) => (current && rows.some((row) => row.id === current) ? current : ""));
+      setMaterialSelection((current) => {
+        if (!current?.productId) return current;
+        const stillValid = rows.some(
+          (row) => row.product_id === current.productId || row.id === current.productId
+        );
+        return stillValid ? current : null;
+      });
+      setMaterialOptionValue((current) => {
+        if (!current) return current;
+        const decoded = decodeMaterialLineSelection(current, materialWarehouseId, rows);
+        return decoded ? current : "";
+      });
     });
 
     return () => {
@@ -192,23 +230,31 @@ export default function ProductionInProgressPhase({
       setError(t("production.workflow.selectWarehouseFirst"));
       return;
     }
-    if (!materialProductId) {
-      setError(t("production.workflow.selectProduct"));
+    if (!materialSelection?.productId || !isValidUuid(materialSelection.productId)) {
+      setError(`${t("production.workflow.selectProduct")} — ${formatMaterialPayloadDebug(materialSelection)}`);
+      return;
+    }
+    if (!isValidUuid(materialWarehouseId)) {
+      setError(`${t("production.workflow.selectWarehouseFirst")} — ${formatMaterialPayloadDebug(materialSelection)}`);
       return;
     }
     await runAction(
       () =>
         addProductionMaterialAction(order.id, {
-          product_id: materialProductId,
-          warehouse_id: materialWarehouseId,
+          product_id: materialSelection.productId,
+          product_name: materialSelection.productName || selectedProduct?.name || null,
+          product_code: materialSelection.productCode || selectedProduct?.code || null,
+          warehouse_id: materialSelection.warehouseId || materialWarehouseId,
           warehouse_name:
             lookups?.warehouses.find((row) => row.id === materialWarehouseId)?.name || null,
+          unit_cost: materialSelection.unitPrice || selectedProduct?.buy_price || 0,
           quantity: materialQty,
           issue_now: true,
         }),
       (data) => {
         applyOrder(mergeProductionOrder(order, data));
         setMaterialQty(1);
+        clearMaterialProduct();
         void listPurchaseRequestsAction(order.id).then((pr) => {
           if (pr.success && pr.data) setPurchaseRequests(pr.data);
         });
@@ -221,16 +267,18 @@ export default function ProductionInProgressPhase({
       setError(t("production.workflow.selectWarehouseFirst"));
       return;
     }
-    if (!materialProductId) {
-      setError(t("production.workflow.selectProduct"));
+    if (!materialSelection?.productId || !isValidUuid(materialSelection.productId)) {
+      setError(`${t("production.workflow.selectProduct")} — ${formatMaterialPayloadDebug(materialSelection)}`);
       return;
     }
     const requestQty = shortageDelta > 0 ? shortageDelta : materialQty;
     await runAction(
       () =>
         createPurchaseRequestAction(order.id, {
-          product_id: materialProductId,
-          warehouse_id: materialWarehouseId,
+          product_id: materialSelection.productId,
+          product_name: materialSelection.productName || selectedProduct?.name || null,
+          product_code: materialSelection.productCode || selectedProduct?.code || null,
+          warehouse_id: materialSelection.warehouseId || materialWarehouseId,
           quantity: requestQty,
           notes: `Stok çatışmır (mövcud: ${availableStock}, tələb: ${materialQty}, çatışmayan: ${requestQty})`,
         }),
@@ -392,7 +440,7 @@ export default function ProductionInProgressPhase({
                   value={materialWarehouseId}
                   onChange={(e) => {
                     setMaterialWarehouseId(e.target.value);
-                    setMaterialProductId("");
+                    clearMaterialProduct();
                   }}
                 >
                   <option value="">—</option>
@@ -405,9 +453,9 @@ export default function ProductionInProgressPhase({
                 <span className="text-app-muted">{t("production.workflow.selectProduct")}</span>
                 <select
                   className="input-field mt-1 w-full"
-                  value={materialProductId}
+                  value={materialOptionValue}
                   disabled={!materialWarehouseId || loadingWarehouseProducts}
-                  onChange={(e) => setMaterialProductId(e.target.value)}
+                  onChange={(e) => handleMaterialProductChange(e.target.value)}
                 >
                   <option value="">
                     {!materialWarehouseId
@@ -417,7 +465,7 @@ export default function ProductionInProgressPhase({
                         : "—"}
                   </option>
                   {warehouseProducts.map((p) => (
-                    <option key={p.id} value={p.id}>{productOptionLabel(p)}</option>
+                    <option key={p.product_id} value={productOptionValue(p)}>{productOptionLabel(p)}</option>
                   ))}
                 </select>
               </label>
@@ -460,7 +508,7 @@ export default function ProductionInProgressPhase({
                   className={`input-field mt-1 w-full ${stockShortage ? "border-rose-500 ring-1 ring-rose-500/40" : ""}`}
                   value={materialQty}
                   onChange={(e) => setMaterialQty(Number(e.target.value))}
-                  disabled={!materialProductId}
+                  disabled={!materialSelection?.productId}
                 />
               </label>
               {isAdmin ? (
@@ -490,7 +538,7 @@ export default function ProductionInProgressPhase({
               <button
                 type="button"
                 className="btn-primary"
-                disabled={saving || !materialWarehouseId || !materialProductId}
+                disabled={saving || !materialWarehouseId || !materialSelection?.productId}
                 onClick={() => void addMaterial()}
               >
                 {t("production.workflow.addMaterial")}
@@ -499,7 +547,7 @@ export default function ProductionInProgressPhase({
                 <button
                   type="button"
                   className="btn-secondary border-amber-500/40 text-amber-300"
-                  disabled={saving || !materialWarehouseId || !materialProductId}
+                  disabled={saving || !materialWarehouseId || !materialSelection?.productId}
                   onClick={() => void createPurchaseRequest()}
                 >
                   {t("production.workflow.createPurchaseRequest")}

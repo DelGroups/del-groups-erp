@@ -86,6 +86,7 @@ import {
   sanitizeMaterialPayload,
   type AddProductionMaterialInput,
 } from "@/app/production/materialInsert";
+import { resolveProductionProduct } from "@/lib/production/resolveProductId";
 import {
   buildProductionExpenseInsertPayload,
   buildProductionOutsourcingInsertPayload,
@@ -1867,25 +1868,34 @@ export async function addProductionMaterialAction(
     const qty = num(safeInput.quantity);
     if (qty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
 
-    const { data: product } = await admin
-      .from("products")
-      .select("id,code,name,unit,buy_price,warehouse_id,inventory_mode")
-      .eq("id", safeInput.product_id)
-      .maybeSingle();
-    if (!product) return { success: false, error: "Məhsul tapılmadı" };
-    const p = product as Product;
-    const unitCost = num(p.buy_price);
+    const resolved = await resolveProductionProduct(admin, {
+      product_id: safeInput.product_id,
+      product_name: safeInput.product_name,
+      product_code: safeInput.product_code,
+      warehouse_id: safeInput.warehouse_id,
+    });
+    if ("error" in resolved) {
+      return { success: false, error: resolved.error };
+    }
+    const p = resolved.product;
+    const unitCost = safeInput.unit_cost > 0 ? safeInput.unit_cost : num(p.buy_price);
     const inventoryMode = p.inventory_mode === POLYWOOD_INVENTORY_MODE ? POLYWOOD_INVENTORY_MODE : "standard";
     const stageNo = Math.max(1, Math.round(num(safeInput.stage_no) || 1));
     let issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
 
     if (issueNow && inventoryMode !== POLYWOOD_INVENTORY_MODE) {
-      const available = Number(p.stock) || 0;
+      const warehouseId = safeInput.warehouse_id || null;
+      let available = Number(p.stock) || 0;
+      if (warehouseId) {
+        const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
+        const movementStock = movementBalances.get(p.id);
+        if (movementStock !== undefined) available = Math.max(0, movementStock);
+      }
       if (available < qty) {
         await createPurchaseRequestInternal(admin, {
           orderId,
           product: p,
-          warehouseId: safeInput.warehouse_id || p.warehouse_id || null,
+          warehouseId: safeInput.warehouse_id || null,
           quantity: qty,
           userId: user.id,
           notes: `Stok çatışmır (mövcud: ${available}, tələb: ${qty})`,
@@ -1915,7 +1925,11 @@ export async function addProductionMaterialAction(
     });
 
     if (insertedMaterial.error || !insertedMaterial.material) {
-      return { success: false, error: formatProductionDbError(insertedMaterial.error || "Material əlavə edilmədi") };
+      const debug = `Product ID: ${p.id} | Warehouse: ${safeInput.warehouse_id || "null"} | Qty: ${qty}`;
+      return {
+        success: false,
+        error: `${formatProductionDbError(insertedMaterial.error || "Material əlavə edilmədi")} — ${debug}`,
+      };
     }
     let material = insertedMaterial.material;
     const reservationResult = await syncProductionReservations(admin, orderId);
@@ -2678,6 +2692,7 @@ async function createPurchaseRequestInternal(
 
 export type WarehouseProductOption = {
   id: string;
+  product_id: string;
   code: string | null;
   name: string;
   unit: string;
@@ -2738,6 +2753,7 @@ async function fetchPolywoodWarehouseProducts(
 
   return ((products || []) as Product[]).map((product) => ({
     id: product.id,
+    product_id: product.id,
     code: product.code || null,
     name: product.name,
     unit: product.unit || "Metr",
@@ -2770,6 +2786,7 @@ async function fetchStandardWarehouseProducts(
         : Number(product.stock) || 0;
     return {
       id: product.id,
+      product_id: product.id,
       code: product.code || null,
       name: product.name,
       unit: product.unit || "Ədəd",
@@ -2815,7 +2832,14 @@ export async function fetchWarehouseProductsForProductionAction(
 
 export async function createPurchaseRequestAction(
   orderId: string,
-  input: { product_id: string; warehouse_id?: string | null; quantity: number; notes?: string | null }
+  input: {
+    product_id: string;
+    warehouse_id?: string | null;
+    quantity: number;
+    notes?: string | null;
+    product_name?: string | null;
+    product_code?: string | null;
+  }
 ): Promise<ProductionActionResult<PurchaseRequest[]>> {
   try {
     const { user } = await requireProductionIssuePermission();
@@ -2823,16 +2847,19 @@ export async function createPurchaseRequestAction(
     const qty = num(input.quantity);
     if (qty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
 
-    const { data: product } = await admin
-      .from("products")
-      .select("id,code,name,unit,buy_price")
-      .eq("id", input.product_id)
-      .maybeSingle();
-    if (!product) return { success: false, error: "Məhsul tapılmadı" };
+    const resolved = await resolveProductionProduct(admin, {
+      product_id: input.product_id,
+      product_name: input.product_name,
+      product_code: input.product_code,
+      warehouse_id: input.warehouse_id,
+    });
+    if ("error" in resolved) {
+      return { success: false, error: resolved.error };
+    }
 
     await createPurchaseRequestInternal(admin, {
       orderId,
-      product: product as Product,
+      product: resolved.product,
       warehouseId: input.warehouse_id || null,
       quantity: qty,
       userId: user.id,

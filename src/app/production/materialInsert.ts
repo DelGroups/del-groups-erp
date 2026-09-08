@@ -54,6 +54,10 @@ export interface AddProductionMaterialInput {
   warehouse_id?: string | null;
   /** Display label only — never written to production_materials. */
   warehouse_name?: string | null;
+  /** Fallback lookup when product_id is missing or invalid. */
+  product_name?: string | null;
+  product_code?: string | null;
+  unit_cost?: number;
   quantity: number;
   polywood_sale_mode?: "linear_m" | "full_sheet" | null;
   stage_no?: number;
@@ -187,9 +191,12 @@ export async function insertSanitizedMaterialRow(
 export function sanitizeAddProductionMaterialInput(input: AddProductionMaterialInput): AddProductionMaterialInput {
   const quantity = Number(input.quantity ?? (input as { qty?: number }).qty ?? 1) || 0;
   return {
-    product_id: String(input.product_id),
+    product_id: String(input.product_id ?? "").trim(),
     warehouse_id: input.warehouse_id ?? null,
     warehouse_name: input.warehouse_name ?? null,
+    product_name: input.product_name?.trim() || null,
+    product_code: input.product_code?.trim() || null,
+    unit_cost: Number(input.unit_cost) || 0,
     quantity,
     polywood_sale_mode: input.polywood_sale_mode ?? null,
     stage_no: Number(input.stage_no) || 1,
