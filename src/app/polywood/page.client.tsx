@@ -11,7 +11,7 @@ import {
 } from "@/lib/polywood/inventory";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Warehouse } from "@/types/database.types";
-import { Layers, Package, RefreshCw, Upload } from "lucide-react";
+import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Upload } from "lucide-react";
 
 export default function PolywoodPageClient() {
   const { t } = useI18n();
@@ -21,6 +21,7 @@ export default function PolywoodPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"inventory" | "import">("inventory");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [importProductId, setImportProductId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -172,7 +173,7 @@ export default function PolywoodPageClient() {
         ) : null}
 
         {activeTab === "import" ? (
-          <PolywoodImportPanel onImported={loadData} />
+          <PolywoodImportPanel onImported={loadData} initialProductId={importProductId} />
         ) : loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
         ) : rows.length === 0 ? (
@@ -215,12 +216,13 @@ export default function PolywoodPageClient() {
                   <th className="p-3 text-right">{t("polywood.table.fullSheets")}</th>
                   <th className="p-3">{t("polywood.table.cutBreakdown")}</th>
                   <th className="p-3 text-right">{t("polywood.table.pieces")}</th>
+                  <th className="p-3 text-right">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-app">
                 {visibleRows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-sm text-app-muted">
+                    <td colSpan={7} className="p-6 text-center text-sm text-app-muted">
                       {t("common.noData")}
                     </td>
                   </tr>
@@ -251,10 +253,51 @@ export default function PolywoodPageClient() {
                             : "—"}
                         </td>
                         <td className="p-3 text-right">{summary.available_piece_count}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="rounded p-1.5 hover:bg-app-card-hover"
+                              title={t("production.workflow.viewDetails")}
+                              onClick={() => setExpandedProductId(isExpanded ? null : product.id)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded p-1.5 hover:bg-app-card-hover"
+                              title={t("common.edit")}
+                              onClick={() => {
+                                setImportProductId(product.id);
+                                setActiveTab("import");
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded p-1.5 hover:bg-app-card-hover"
+                              title={t("common.print")}
+                              onClick={() => {
+                                setExpandedProductId(product.id);
+                                window.setTimeout(() => window.print(), 200);
+                              }}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                            <Link
+                              href={`/products?highlight=${product.id}`}
+                              className="rounded p-1.5 hover:bg-app-card-hover"
+                              title={t("products.title")}
+                            >
+                              <Package className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
+                        </td>
                       </tr>
                       {isExpanded ? (
                         <tr className="bg-app-card-hover/50">
-                          <td colSpan={6} className="p-4">
+                          <td colSpan={7} className="p-4">
                             <p className="mb-2 text-xs font-bold uppercase text-app-muted">
                               {t("polywood.pieceDetails")}
                             </p>

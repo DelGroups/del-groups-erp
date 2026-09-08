@@ -1431,6 +1431,12 @@ export const enMessages: Messages = {
       in_house: "Fully in-house",
       outsourced_cut: "Outsourced cut + in-house assembly",
       subcontractor: "Subcontractor 20%",
+      sendToProduction: "Send to Production",
+      sendToLogistics: "Ready / Send to Delivery",
+      markDelivered: "Delivered",
+      viewDetails: "View Details",
+      customerPayment: "Customer Payment",
+      deleteConfirm: "Delete this project? Issued material stock will be restored.",
     },
     advanceTo: {
       "In-Progress": "Start production (deduct stock)",

@@ -228,6 +228,36 @@ export interface ProductionOrder {
   contractors: ProductionContractor[];
   expenses: ProductionExpense[];
   contract: ProductionContract | null;
+  purchase_requests?: PurchaseRequest[];
+  shipping_date?: string | null;
+  installation_start_date?: string | null;
+  installer_id?: string | null;
+  shipping_cost?: number;
+  installation_cost?: number;
+  shipping_paid_by_customer?: boolean;
+  installation_paid_by_customer?: boolean;
+  installation_address?: string | null;
+  installation_floor?: string | null;
+  has_elevator?: boolean | null;
+  installation_difficulty_notes?: string | null;
+}
+
+export type PurchaseRequestStatus = "pending" | "ordered" | "received" | "cancelled";
+
+export interface PurchaseRequest {
+  id: string;
+  request_no: string;
+  production_order_id: string;
+  product_id: string | null;
+  product_code: string | null;
+  product_name: string;
+  warehouse_id: string | null;
+  quantity: number;
+  unit: string | null;
+  status: PurchaseRequestStatus;
+  purchase_id: string | null;
+  notes: string | null;
+  created_at: string | null;
 }
 
 export interface ProductionCosting {

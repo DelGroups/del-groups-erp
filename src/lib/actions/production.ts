@@ -35,7 +35,7 @@ import {
   allocateProductionMaterialPolywood,
 } from "@/lib/production/inventory";
 import { completeProductionDelivery } from "@/lib/production/delivery";
-import { recordProductionAdvancePayment } from "@/lib/production/advancePayment";
+import { recordProductionAdvancePayment, productionAdvanceIdempotencyKey } from "@/lib/production/advancePayment";
 import {
   DEFAULT_CONTRACTOR_COMMISSION,
   PRODUCTION_EXPENSE_CATEGORIES,
@@ -57,6 +57,8 @@ import {
   type ProductionOrderType,
   type ProductionOutsourcing,
   type ProductionStatus,
+  type PurchaseRequest,
+  type PurchaseRequestStatus,
 } from "@/lib/production/types";
 import {
   legacyFromProductionModel,
@@ -90,6 +92,7 @@ import {
   productionSchemaColumnFromError,
   selectProductionMaterialsWithFallback,
 } from "@/lib/production/payloads";
+import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
 import { normalizeEmployee } from "@/types/database.types";
 
@@ -237,6 +240,17 @@ function asOrder(row: Record<string, unknown>, extras?: Partial<ProductionOrder>
     finished_goods_posted: Boolean(row.finished_goods_posted),
     sale_id: (row.sale_id as string) || null,
     delivered_at: (row.delivered_at as string) || null,
+    shipping_date: (row.shipping_date as string) || null,
+    installation_start_date: (row.installation_start_date as string) || null,
+    installer_id: (row.installer_id as string) || null,
+    shipping_cost: num(row.shipping_cost),
+    installation_cost: num(row.installation_cost),
+    shipping_paid_by_customer: row.shipping_paid_by_customer === true,
+    installation_paid_by_customer: row.installation_paid_by_customer === true,
+    installation_address: pickText(row, "installation_address"),
+    installation_floor: pickText(row, "installation_floor"),
+    has_elevator: row.has_elevator === null || row.has_elevator === undefined ? null : row.has_elevator === true,
+    installation_difficulty_notes: pickText(row, "installation_difficulty_notes"),
     created_at: (row.created_at as string) || null,
     materials: extras?.materials || [],
     outsourcing: extras?.outsourcing || [],
@@ -1807,7 +1821,22 @@ export async function addProductionMaterialAction(
     const unitCost = num(p.buy_price);
     const inventoryMode = p.inventory_mode === POLYWOOD_INVENTORY_MODE ? POLYWOOD_INVENTORY_MODE : "standard";
     const stageNo = Math.max(1, Math.round(num(safeInput.stage_no) || 1));
-    const issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
+    let issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
+
+    if (issueNow && inventoryMode !== POLYWOOD_INVENTORY_MODE) {
+      const available = Number(p.stock) || 0;
+      if (available < qty) {
+        await createPurchaseRequestInternal(admin, {
+          orderId,
+          product: p,
+          warehouseId: safeInput.warehouse_id || p.warehouse_id || null,
+          quantity: qty,
+          userId: user.id,
+          notes: `Stok çatışmır (mövcud: ${available}, tələb: ${qty})`,
+        });
+        issueNow = false;
+      }
+    }
 
     const insertedMaterial = await insertMaterialRow(admin, {
       production_order_id: orderId,
@@ -2424,6 +2453,268 @@ export async function deleteProductionBomAction(bomId: string): Promise<Producti
     await requirePermissionAction("can_manage_production");
     const admin = createSupabaseAdminClient();
     const { error } = await admin.from("production_boms").delete().eq("id", bomId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+function mapPurchaseRequest(row: Record<string, unknown>): PurchaseRequest {
+  return {
+    id: String(row.id),
+    request_no: String(row.request_no || ""),
+    production_order_id: String(row.production_order_id),
+    product_id: (row.product_id as string) || null,
+    product_code: (row.product_code as string) || null,
+    product_name: String(row.product_name || ""),
+    warehouse_id: (row.warehouse_id as string) || null,
+    quantity: num(row.quantity),
+    unit: (row.unit as string) || null,
+    status: (["pending", "ordered", "received", "cancelled"].includes(String(row.status))
+      ? String(row.status)
+      : "pending") as PurchaseRequestStatus,
+    purchase_id: (row.purchase_id as string) || null,
+    notes: (row.notes as string) || null,
+    created_at: (row.created_at as string) || null,
+  };
+}
+
+async function createPurchaseRequestInternal(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  input: {
+    orderId: string;
+    product: Pick<Product, "id" | "code" | "name" | "unit">;
+    warehouseId: string | null;
+    quantity: number;
+    userId: string;
+    notes?: string | null;
+  }
+): Promise<void> {
+  const requestNo = createDocNo("PR");
+  const { error } = await admin.from("purchase_requests").insert({
+    request_no: requestNo,
+    production_order_id: input.orderId,
+    product_id: input.product.id,
+    product_code: input.product.code,
+    product_name: input.product.name,
+    warehouse_id: input.warehouseId,
+    quantity: input.quantity,
+    unit: input.product.unit || "Ədəd",
+    status: "pending",
+    notes: input.notes || null,
+    created_by: input.userId,
+  });
+  if (error && !isMissingRelation(error)) {
+    throw new Error(error.message);
+  }
+}
+
+export async function listPurchaseRequestsAction(
+  orderId: string
+): Promise<ProductionActionResult<PurchaseRequest[]>> {
+  try {
+    await requirePermissionAction("can_manage_production");
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("purchase_requests")
+      .select("*")
+      .eq("production_order_id", orderId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      if (isMissingRelation(error)) return { success: true, data: [] };
+      return { success: false, error: error.message };
+    }
+    return {
+      success: true,
+      data: ((data || []) as Record<string, unknown>[]).map(mapPurchaseRequest),
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export interface UpdateProductionLogisticsInput {
+  expected_delivery_date?: string | null;
+  shipping_date?: string | null;
+  installation_start_date?: string | null;
+  installer_id?: string | null;
+  ousta_id?: string | null;
+  shipping_cost?: number;
+  installation_cost?: number;
+  shipping_paid_by_customer?: boolean;
+  installation_paid_by_customer?: boolean;
+  installation_address?: string | null;
+  installation_floor?: string | null;
+  has_elevator?: boolean | null;
+  installation_difficulty_notes?: string | null;
+}
+
+export async function updateProductionLogisticsAction(
+  orderId: string,
+  input: UpdateProductionLogisticsInput
+): Promise<ProductionActionResult<ProductionOrder>> {
+  try {
+    await requirePermissionAction("can_manage_production");
+    const admin = createSupabaseAdminClient();
+    const order = await loadOrderBundle(admin, orderId);
+    if (!order) return { success: false, error: "Sənəd tapılmadı" };
+
+    const shippingCost = input.shipping_cost !== undefined ? num(input.shipping_cost) : order.shipping_cost || 0;
+    const installationCost =
+      input.installation_cost !== undefined ? num(input.installation_cost) : order.installation_cost || 0;
+
+    const { error } = await mutateOmittingMissingColumns(
+      async (payload) => {
+        const result = await updateProductionOrders(admin, payload).eq("id", orderId).select("id").maybeSingle();
+        return { data: result.data, error: result.error };
+      },
+      {
+        expected_delivery_date:
+          input.expected_delivery_date === undefined
+            ? order.expected_delivery_date
+            : input.expected_delivery_date,
+        shipping_date: input.shipping_date === undefined ? order.shipping_date : input.shipping_date,
+        installation_start_date:
+          input.installation_start_date === undefined
+            ? order.installation_start_date
+            : input.installation_start_date,
+        installer_id:
+          input.installer_id === undefined
+            ? order.installer_id
+            : input.installer_id || input.ousta_id || null,
+        ousta_id:
+          input.ousta_id === undefined
+            ? order.ousta_id
+            : input.ousta_id || input.installer_id || null,
+        shipping_cost: shippingCost,
+        installation_cost: installationCost,
+        shipping_paid_by_customer:
+          input.shipping_paid_by_customer ?? order.shipping_paid_by_customer ?? false,
+        installation_paid_by_customer:
+          input.installation_paid_by_customer ?? order.installation_paid_by_customer ?? false,
+        installation_address:
+          input.installation_address === undefined
+            ? order.installation_address
+            : input.installation_address?.trim() || null,
+        installation_floor:
+          input.installation_floor === undefined
+            ? order.installation_floor
+            : input.installation_floor?.trim() || null,
+        has_elevator:
+          input.has_elevator === undefined ? order.has_elevator : input.has_elevator,
+        installation_difficulty_notes:
+          input.installation_difficulty_notes === undefined
+            ? order.installation_difficulty_notes
+            : input.installation_difficulty_notes?.trim() || null,
+        updated_at: new Date().toISOString(),
+      }
+    );
+
+    if (error) return { success: false, error: error.message };
+
+    const companyPaysShipping =
+      shippingCost > 0 && !(input.shipping_paid_by_customer ?? order.shipping_paid_by_customer);
+    const companyPaysInstall =
+      installationCost > 0 &&
+      !(input.installation_paid_by_customer ?? order.installation_paid_by_customer);
+
+    if (companyPaysShipping) {
+      await addProductionExpenseAction(orderId, {
+        category: "delivery",
+        description: `Çatdırılma xərci — ${order.order_no}`,
+        amount: shippingCost,
+        account_id: order.advance_account_id || undefined,
+        expense_date: input.shipping_date || new Date().toISOString().slice(0, 10),
+      });
+    }
+
+    if (companyPaysInstall) {
+      await addProductionExpenseAction(orderId, {
+        category: "installation",
+        description: `Quraşdırma xərci — ${order.order_no}`,
+        amount: installationCost,
+        account_id: order.advance_account_id || undefined,
+        expense_date: input.installation_start_date || new Date().toISOString().slice(0, 10),
+      });
+    }
+
+    const updated = await loadOrderBundle(admin, orderId);
+    return { success: true, data: updated || undefined };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function recordProductionCustomerPaymentAction(
+  orderId: string,
+  input: { accountId: string; amount: number }
+): Promise<ProductionActionResult<ProductionOrder>> {
+  try {
+    await requirePermissionAction("can_manage_production");
+    const admin = createSupabaseAdminClient();
+    const order = await loadOrderBundle(admin, orderId);
+    if (!order) return { success: false, error: "Sənəd tapılmadı" };
+    if (!input.accountId?.trim()) {
+      return { success: false, error: "Ödəniş hesabı seçilməlidir" };
+    }
+    if (num(input.amount) <= 0) {
+      return { success: false, error: "Ödəniş məbləği sıfırdan böyük olmalıdır" };
+    }
+
+    const posted = await recordProductionAdvancePayment(admin, {
+      orderId,
+      accountId: input.accountId.trim(),
+      amount: num(input.amount),
+      idempotencyKey: `${productionAdvanceIdempotencyKey(orderId)}:${Date.now()}`,
+    });
+    if (!posted.ok) return { success: false, error: posted.error };
+
+    const newAdvance = num(order.advance_payment) + num(input.amount);
+    await updateProductionOrderAction(orderId, {
+      advance_payment: newAdvance,
+      advance_account_id: input.accountId.trim(),
+    });
+
+    const updated = await loadOrderBundle(admin, orderId);
+    return { success: true, data: updated || undefined };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function deleteProductionOrderAction(
+  orderId: string
+): Promise<ProductionActionResult> {
+  try {
+    await requirePermissionAction("can_manage_production");
+    const admin = createSupabaseAdminClient();
+    const order = await loadOrderBundle(admin, orderId);
+    if (!order) return { success: false, error: "Sənəd tapılmadı" };
+    if (order.status === "Delivered" && order.sale_id) {
+      return {
+        success: false,
+        error: "Təhvil verilmiş və satış fakturası bağlı olan layihə silinə bilməz",
+      };
+    }
+
+    for (const material of order.materials) {
+      if (!material.issued || !material.product_id) continue;
+      if (material.inventory_mode === POLYWOOD_INVENTORY_MODE) continue;
+      const restored = await incrementProductStock(admin, material.product_id, material.quantity);
+      if (!restored.ok) {
+        return {
+          success: false,
+          error: `${material.product_name}: stok geri qaytarılmadı (${restored.error})`,
+        };
+      }
+    }
+
+    const { error } = await admin.from("production_orders").delete().eq("id", orderId);
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {

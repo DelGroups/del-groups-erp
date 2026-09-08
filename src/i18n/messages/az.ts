@@ -1425,15 +1425,21 @@ export const azMessages = {
       Ready: "Hazır",
       Delivered: "Təhvil",
     },
-    workflow: {
-      in_house: "Sıfırdan daxili",
-      outsourced_cut: "Xarici kəsim + daxili yığılma",
-      subcontractor: "Podratçı 20%",
-    },
     advanceTo: {
       "In-Progress": "İstehsala başla (stok çıx)",
       Ready: "Hazır et (seriyada anbara yaz)",
       Delivered: "Təhvil ver",
+    },
+    workflow: {
+      in_house: "Sıfırdan daxili",
+      outsourced_cut: "Xarici kəsim + daxili yığılma",
+      subcontractor: "Podratçı 20%",
+      sendToProduction: "İstehsala Göndər",
+      sendToLogistics: "Hazırdır / Çatdırılmaya Göndər",
+      markDelivered: "Təhvil Verildi",
+      viewDetails: "Ətraflı",
+      customerPayment: "Müştəri Ödənişi",
+      deleteConfirm: "Bu layihə silinsin? Verilmiş materialların stoku geri qaytarılacaq.",
     },
     deliveryConfirm:
       "Təhvil veriləndə avtomatik olaraq fərdi məhsul SKU, satış fakturası və maliyyə qeydləri yaradılacaq. Davam edilsin?",

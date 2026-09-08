@@ -1431,6 +1431,12 @@ export const ruMessages: Messages = {
       in_house: "Полностью внутри",
       outsourced_cut: "Внешний раскрой + внутренняя сборка",
       subcontractor: "Подряд 20%",
+      sendToProduction: "Отправить в производство",
+      sendToLogistics: "Готово / Отправить на доставку",
+      markDelivered: "Сдано",
+      viewDetails: "Подробнее",
+      customerPayment: "Оплата клиента",
+      deleteConfirm: "Удалить проект? Выданные материалы будут возвращены на склад.",
     },
     advanceTo: {
       "In-Progress": "Начать производство (списать склад)",

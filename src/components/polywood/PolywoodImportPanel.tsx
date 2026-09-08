@@ -15,9 +15,10 @@ import { Download, Upload } from "lucide-react";
 
 interface PolywoodImportPanelProps {
   onImported?: () => void;
+  initialProductId?: string | null;
 }
 
-export default function PolywoodImportPanel({ onImported }: PolywoodImportPanelProps) {
+export default function PolywoodImportPanel({ onImported, initialProductId }: PolywoodImportPanelProps) {
   const { t } = useI18n();
   const [rows, setRows] = useState<PolywoodImportRow[]>([]);
   const [importing, setImporting] = useState(false);
@@ -66,6 +67,11 @@ export default function PolywoodImportPanel({ onImported }: PolywoodImportPanelP
 
   return (
     <div className="space-y-4">
+      {initialProductId ? (
+        <p className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-sm text-app-muted">
+          Seçilmiş məhsul üçün idxal: <span className="font-mono text-app">{initialProductId}</span>
+        </p>
+      ) : null}
       <div className="app-card p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>

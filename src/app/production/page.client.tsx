@@ -7,17 +7,26 @@ import { Factory, LayoutGrid, List, RefreshCw } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import ProductionOrderModal from "@/components/production/ProductionOrderModal";
+import ProductionKanbanCard from "@/components/production/ProductionKanbanCard";
+import ProductionWorkflowModal from "@/components/production/ProductionWorkflowModal";
+import ProductionJobCardPrintTemplate from "@/components/production/ProductionJobCardPrintTemplate";
 import ProductionProfitabilityCard, {
   ProductionHealthChip,
   ProductionStatusChip,
 } from "@/components/production/ProductionProfitabilityCard";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
+  deleteProductionOrderAction,
   fetchProductionLookupsAction,
+  getProductionOrderAction,
   listProductionOrdersAction,
+  updateProductionStatusAction,
   type ProductionLookups,
 } from "@/lib/actions/production";
+import { withPrintableProductionContract } from "@/lib/production/contracts";
 import { productionModelLabel } from "@/lib/production/models";
 import {
   PRODUCTION_STATUSES,
@@ -42,6 +51,15 @@ export default function ProductionBoardPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [showCreate, setShowCreate] = useState(false);
   const [loadingLookups, setLoadingLookups] = useState(false);
+  const [workflowOrder, setWorkflowOrder] = useState<ProductionOrder | null>(null);
+  const [workflowFocus, setWorkflowFocus] = useState<ProductionStatus | "payment" | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<ProductionOrder | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const { printData, setPrintData } = useDocumentPrint<{
+    order: ProductionOrder;
+    companyName: string;
+  }>();
   const initialLoadStarted = useRef(false);
   const loadErrorLabel = t("production.loadError");
 
@@ -66,15 +84,84 @@ export default function ProductionBoardPage() {
     queueMicrotask(() => void loadRef.current());
   }, []);
 
-  const handleOpenCreate = useCallback(async () => {
-    setShowCreate(true);
-    if (lookups || loadingLookups) return;
+  const ensureLookups = useCallback(async () => {
+    if (lookups) return lookups;
     setLoadingLookups(true);
     const result = await fetchProductionLookupsAction();
-    if (!result.success) setError(result.error || loadErrorLabel);
-    else if (result.data) setLookups(result.data);
     setLoadingLookups(false);
-  }, [loadingLookups, loadErrorLabel, lookups]);
+    if (result.success && result.data) {
+      setLookups(result.data);
+      return result.data;
+    }
+    return null;
+  }, [lookups]);
+
+  const handleOpenCreate = useCallback(async () => {
+    setShowCreate(true);
+    await ensureLookups();
+  }, [ensureLookups]);
+
+  const handleEdit = useCallback(
+    async (order: ProductionOrder) => {
+      await ensureLookups();
+      setWorkflowFocus(undefined);
+      setWorkflowOrder(order);
+    },
+    [ensureLookups]
+  );
+
+  const handlePrint = useCallback(async (order: ProductionOrder) => {
+    const full = await getProductionOrderAction(order.id);
+    if (!full.success || !full.data) return;
+    setPrintData({
+      order: withPrintableProductionContract(full.data),
+      companyName,
+    });
+  }, [companyName, setPrintData]);
+
+  const handleAdvance = useCallback(
+    async (order: ProductionOrder, nextStatus: ProductionStatus) => {
+      if (nextStatus === "Ready" || nextStatus === "Delivered") {
+        await ensureLookups();
+        setWorkflowFocus(nextStatus === "Ready" ? "Ready" : undefined);
+        setWorkflowOrder(order);
+        return;
+      }
+      const result = await updateProductionStatusAction(order.id, nextStatus);
+      if (!result.success) {
+        setError(result.error || loadErrorLabel);
+        return;
+      }
+      if (result.data) {
+        setOrders((prev) => prev.map((row) => (row.id === order.id ? result.data! : row)));
+        if (nextStatus === "In-Progress") {
+          await ensureLookups();
+          setWorkflowOrder(result.data);
+        }
+      } else {
+        void load();
+      }
+    },
+    [ensureLookups, load, loadErrorLabel]
+  );
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteProductionOrderAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      setError(result.error || loadErrorLabel);
+      return;
+    }
+    setDeleteTarget(null);
+    setOrders((prev) => prev.filter((row) => row.id !== deleteTarget.id));
+  }, [deleteTarget, loadErrorLabel]);
+
+  const handleWorkflowSaved = useCallback((order: ProductionOrder) => {
+    setOrders((prev) => prev.map((row) => (row.id === order.id ? order : row)));
+    setWorkflowOrder(null);
+  }, []);
 
   const costings = useMemo(
     () => new Map(orders.map((order) => [order.id, calcProductionCosting(order)])),
@@ -212,21 +299,18 @@ export default function ProductionBoardPage() {
                       <p className="px-2 py-6 text-center text-xs text-app-muted">{t("common.noData")}</p>
                     )}
                     {column.map((order) => (
-                      <Link
+                      <ProductionKanbanCard
                         key={order.id}
-                        href={`/production/${order.id}`}
-                        className="app-card app-card-interactive block p-3"
-                      >
-                        <p className="text-xs text-app-muted">{order.order_no}</p>
-                        <p className="font-semibold text-app">{order.project_name}</p>
-                        <p className="mt-1 text-xs text-app-muted">{typeLabel(order)}</p>
-                        <p className="text-xs">{order.customer_name || t("common.anonymousCustomer")}</p>
-                        <ProductionProfitabilityCard
-                          order={order}
-                          costing={costings.get(order.id)}
-                          compact
-                        />
-                      </Link>
+                        order={order}
+                        costing={costings.get(order.id)}
+                        typeLabel={typeLabel(order)}
+                        canManage={canManage}
+                        t={t}
+                        onEdit={handleEdit}
+                        onDelete={setDeleteTarget}
+                        onPrint={handlePrint}
+                        onAdvance={handleAdvance}
+                      />
                     ))}
                   </div>
                 </section>
@@ -247,6 +331,7 @@ export default function ProductionBoardPage() {
                   <th className="px-3 py-2 text-right">{t("production.totalCost")}</th>
                   <th className="px-3 py-2 text-right">{t("production.profit")}</th>
                   <th className="px-3 py-2">{t("production.margin")}</th>
+                  <th className="px-3 py-2">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,6 +348,16 @@ export default function ProductionBoardPage() {
                       <td className="px-3 py-2 text-right">{costing.totalCost.toFixed(2)}</td>
                       <td className={`px-3 py-2 text-right ${costing.profit < 0 ? "text-rose-400" : ""}`}>{costing.profit.toFixed(2)}</td>
                       <td className="px-3 py-2">{costing.marginPercent.toFixed(1)}%</td>
+                      <td className="px-3 py-2">
+                        <ProductionProfitabilityCard order={order} costing={costing} compact />
+                        {canManage ? (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            <button type="button" className="btn-secondary text-[10px]" onClick={() => void handleEdit(order)}>{t("common.edit")}</button>
+                            <button type="button" className="btn-secondary text-[10px]" onClick={() => void handlePrint(order)}>{t("common.print")}</button>
+                            <button type="button" className="btn-secondary text-[10px] text-rose-400" onClick={() => setDeleteTarget(order)}>{t("common.delete")}</button>
+                          </div>
+                        ) : null}
+                      </td>
                     </tr>
                   );
                 })}
@@ -279,6 +374,7 @@ export default function ProductionBoardPage() {
           onClose={() => setShowCreate(false)}
           onCreated={(order) => {
             setShowCreate(false);
+            setOrders((prev) => [order, ...prev]);
             router.push(`/production/${order.id}`);
           }}
         />
@@ -294,6 +390,38 @@ export default function ProductionBoardPage() {
           </div>
         </div>
       )}
+
+      {workflowOrder ? (
+        <ProductionWorkflowModal
+          open
+          order={workflowOrder}
+          lookups={lookups}
+          focusStatus={workflowFocus}
+          onClose={() => {
+            setWorkflowOrder(null);
+            setWorkflowFocus(undefined);
+          }}
+          onSaved={handleWorkflowSaved}
+        />
+      ) : null}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        title={t("common.deleteConfirmTitle")}
+        message={t("production.workflow.deleteConfirm")}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDelete()}
+      />
+
+      {printData ? (
+        <div className="print-area">
+          <ProductionJobCardPrintTemplate
+            order={printData.order}
+            companyName={printData.companyName}
+          />
+        </div>
+      ) : null}
     </PageLayout>
   );
 }
