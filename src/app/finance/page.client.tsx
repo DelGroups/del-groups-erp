@@ -4,15 +4,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { deleteTransactionAction, fetchUnifiedLedgerAction } from "@/lib/actions/finance";
+import { fetchUnifiedLedgerAction } from "@/lib/actions/finance";
 import { formatReferenceTypeLabel, type UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
-import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { ArrowDownRight, ArrowUpRight, CircleDollarSign, Trash2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CircleDollarSign } from "lucide-react";
 
 function formatTypeLabel(type: string, t: (key: string) => string): string {
   if (type === "INCOME") return t("finance.typeIncome");
@@ -25,13 +24,13 @@ export default function FinancePage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageFinance = can("can_manage_finance");
+  const canManageExpenses = can("can_manage_expenses");
+  const canManage = canManageFinance || canManageExpenses;
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [transactions, setTransactions] = useState<UnifiedLedgerTransaction[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netBalance: 0 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<UnifiedLedgerTransaction | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -66,25 +65,6 @@ export default function FinancePage() {
       .toLowerCase();
     return haystack.includes(searchTerm.toLowerCase());
   });
-
-  const canDeleteTransaction = (tx: UnifiedLedgerTransaction) => {
-    const source = (tx.reference_type || "").trim();
-    return !source || !["sale", "purchase", "production", "production_expense"].includes(source);
-  };
-
-  const handleDeleteTransaction = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    const result = await deleteTransactionAction(deleteTarget.id);
-    setDeleting(false);
-    if (!result.success) {
-      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
-      return;
-    }
-    setDeleteTarget(null);
-    showSuccess(t("finance.deleteSuccess"));
-    void loadData();
-  };
 
   return (
     <PageLayout>
@@ -143,7 +123,7 @@ export default function FinancePage() {
                     <th className="px-4 py-3">{t("finance.columnAccount")}</th>
                     <th className="px-4 py-3">{t("finance.columnDescription")}</th>
                     <th className="px-4 py-3">{t("finance.columnSource")}</th>
-                    {canManageFinance ? <th className="px-4 py-3">{t("common.actions")}</th> : null}
+                    <th className="px-4 py-3 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-app">
@@ -191,22 +171,15 @@ export default function FinancePage() {
                             {formatReferenceTypeLabel(tx.reference_type)}
                           </span>
                         </td>
-                        {canManageFinance ? (
-                          <td className="px-4 py-3">
-                            {canDeleteTransaction(tx) ? (
-                              <button
-                                type="button"
-                                onClick={() => setDeleteTarget(tx)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {t("common.delete")}
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-app-muted">—</span>
-                            )}
-                          </td>
-                        ) : null}
+                        <td className="px-4 py-3">
+                          <UnifiedLedgerRowActions
+                            transaction={tx}
+                            canManage={canManage}
+                            onChanged={() => void loadData()}
+                            onError={showError}
+                            onSuccess={showSuccess}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
@@ -217,12 +190,6 @@ export default function FinancePage() {
         </div>
       </main>
 
-      <ConfirmDeleteModal
-        open={Boolean(deleteTarget)}
-        loading={deleting}
-        onConfirm={() => void handleDeleteTransaction()}
-        onCancel={() => setDeleteTarget(null)}
-      />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

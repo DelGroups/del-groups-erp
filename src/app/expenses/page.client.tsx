@@ -12,9 +12,11 @@ import {
 } from "@/lib/actions/finance";
 import { formatReferenceTypeLabel } from "@/lib/finance/unifiedLedger";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { Plus, RefreshCw, X } from "lucide-react";
+import type { UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
 
 interface AccountOption {
   id: string;
@@ -27,17 +29,7 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [expenseRows, setExpenseRows] = useState<
-    Array<{
-      id: string;
-      category: string;
-      amount: number;
-      account_name: string | null;
-      description: string;
-      transaction_date: string;
-      reference_type: string | null;
-    }>
-  >([]);
+  const [expenseRows, setExpenseRows] = useState<UnifiedLedgerTransaction[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -49,6 +41,8 @@ export default function ExpensesPage() {
   });
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
+  const canManageFinance = can("can_manage_finance");
+  const canManage = canManageExpenses || canManageFinance;
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const fetchExpensesAndAccounts = useCallback(async () => {
@@ -61,17 +55,7 @@ export default function ExpensesPage() {
 
     if (ledgerRes.success && ledgerRes.data) {
       setTotalExpense(ledgerRes.data.summary.totalExpense);
-      setExpenseRows(
-        ledgerRes.data.transactions.map((tx) => ({
-          id: tx.id,
-          category: tx.category,
-          amount: tx.amount,
-          account_name: tx.account_name,
-          description: tx.description || tx.notes || "",
-          transaction_date: tx.transaction_date || tx.created_at,
-          reference_type: tx.reference_type,
-        }))
-      );
+      setExpenseRows(ledgerRes.data.transactions);
     } else {
       showError(ledgerRes.error || t("common.error"));
       setExpenseRows([]);
@@ -192,6 +176,7 @@ export default function ExpensesPage() {
                   <th className="px-6 py-3">{t("finance.columnSource")}</th>
                   <th className="px-6 py-3 text-right">{t("common.amount")}</th>
                   <th className="px-6 py-3 text-right">{t("common.date")}</th>
+                  <th className="px-6 py-3 text-right">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,7 +184,7 @@ export default function ExpensesPage() {
                   <tr key={e.id} className="hover:bg-app-card-hover">
                     <td className="px-6 py-4 font-semibold text-app">{e.category}</td>
                     <td className="px-6 py-4 text-app-muted">{e.account_name || "—"}</td>
-                    <td className="px-6 py-4 text-app-muted">{e.description || "—"}</td>
+                    <td className="px-6 py-4 text-app-muted">{e.description || e.notes || "—"}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
                         {formatReferenceTypeLabel(e.reference_type)}
@@ -209,7 +194,16 @@ export default function ExpensesPage() {
                       -{e.amount.toFixed(2)} AZN
                     </td>
                     <td className="px-6 py-4 text-right text-xs text-app-muted">
-                      {new Date(e.transaction_date).toLocaleDateString("az-AZ")}
+                      {new Date(e.transaction_date || e.created_at).toLocaleDateString("az-AZ")}
+                    </td>
+                    <td className="px-6 py-4">
+                      <UnifiedLedgerRowActions
+                        transaction={e}
+                        canManage={canManage}
+                        onChanged={() => void fetchExpensesAndAccounts()}
+                        onError={showError}
+                        onSuccess={showSuccess}
+                      />
                     </td>
                   </tr>
                 ))}

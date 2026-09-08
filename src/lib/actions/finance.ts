@@ -6,7 +6,10 @@ import {
   ActionAuthError,
   mapRpcError,
   requirePermissionAction,
+  type ActionAuthContext,
 } from "@/lib/auth/serverActionAuth";
+import { userHasPermission } from "@/lib/auth/routePermissions";
+import { getServerAuthContext } from "@/lib/supabaseServer";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import {
   attachAccountNamesToLedgerRows,
@@ -26,7 +29,47 @@ export type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
 
+export interface UpdateTransactionInput {
+  transactionId: string;
+  amount: number;
+  category: string;
+  description?: string;
+  accountId?: string | null;
+  notes?: string;
+}
+
 const ACCOUNT_TYPES = new Set(["Kassa", "Bank"]);
+
+async function requireFinanceOrExpenseManageAction(): Promise<ActionAuthContext> {
+  const { user, profile } = await getServerAuthContext();
+  if (!user) throw new ActionAuthError("Giriş tələb olunur");
+  if (profile?.is_active === false) {
+    throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
+  }
+  if (
+    userHasPermission(profile, "can_manage_finance") ||
+    userHasPermission(profile, "can_manage_expenses")
+  ) {
+    return { user, profile };
+  }
+  throw new ActionAuthError("İcazəniz yoxdur");
+}
+
+async function reconcileAccounts(
+  client: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  accountIds: Array<string | null | undefined>
+): Promise<ActionResult> {
+  const unique = Array.from(
+    new Set(accountIds.filter((id): id is string => Boolean(id && isValidUuid(id))))
+  );
+  for (const accountId of unique) {
+    const { error } = await client.rpc("reconcile_account_balance_atomic", {
+      p_account_id: accountId,
+    });
+    if (error) return { success: false, error: error.message };
+  }
+  return { success: true };
+}
 
 export interface CreateExpenseInput {
   category: string;
@@ -404,9 +447,78 @@ const LINKED_TRANSACTION_SOURCES = new Set([
   "production_expense",
 ]);
 
+export async function updateTransactionAction(
+  input: UpdateTransactionInput
+): Promise<ActionResult> {
+  try {
+    await requireFinanceOrExpenseManageAction();
+
+    const transactionId = input.transactionId?.trim() ?? "";
+    const category = clampString(input.category, 100);
+    const amount = Number(input.amount);
+    const description = clampString(input.description ?? "", 500);
+    const notes = clampString(input.notes ?? input.description ?? "", 500);
+    const accountId = input.accountId?.trim() || null;
+
+    if (!isValidUuid(transactionId)) {
+      return { success: false, error: "Etibarlı tranzaksiya seçin" };
+    }
+    if (!category) return { success: false, error: "Kateqoriya tələb olunur" };
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: "Məbləğ sıfırdan böyük olmalıdır" };
+    }
+    if (accountId && !isValidUuid(accountId)) {
+      return { success: false, error: "Etibarlı hesab seçin" };
+    }
+
+    const client = await createSupabaseServerClient();
+    const { data: tx, error: fetchError } = await client
+      .from("transactions")
+      .select("id, account_id, source_type, source_id, reference_type")
+      .eq("id", transactionId)
+      .single();
+
+    if (fetchError || !tx) {
+      return { success: false, error: fetchError?.message || "Tranzaksiya tapılmadı" };
+    }
+
+    const sourceType = String(tx.reference_type || tx.source_type || "").trim();
+    if (sourceType && LINKED_TRANSACTION_SOURCES.has(sourceType)) {
+      return {
+        success: false,
+        error: "Sənədə bağlı tranzaksiya redaktə edilə bilməz",
+      };
+    }
+
+    const oldAccountId = (tx.account_id as string) || null;
+    const patch: Record<string, unknown> = {
+      amount,
+      category,
+      notes,
+      description,
+      account_id: accountId,
+    };
+
+    const { error: updateError } = await client
+      .from("transactions")
+      .update(patch as never)
+      .eq("id", transactionId);
+
+    if (updateError) return { success: false, error: updateError.message };
+
+    const reconciled = await reconcileAccounts(client, [oldAccountId, accountId]);
+    if (!reconciled.success) return reconciled;
+
+    return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Tranzaksiya yenilənmədi" };
+  }
+}
+
 export async function deleteTransactionAction(transactionId: string): Promise<ActionResult> {
   try {
-    await requirePermissionAction("can_manage_finance");
+    await requireFinanceOrExpenseManageAction();
     if (!isValidUuid(transactionId)) {
       return { success: false, error: "Etibarlı tranzaksiya seçin" };
     }
@@ -434,12 +546,8 @@ export async function deleteTransactionAction(transactionId: string): Promise<Ac
     const { error: deleteError } = await client.from("transactions").delete().eq("id", transactionId);
     if (deleteError) return { success: false, error: deleteError.message };
 
-    if (tx.account_id) {
-      const { error: reconcileError } = await client.rpc("reconcile_account_balance_atomic", {
-        p_account_id: tx.account_id,
-      });
-      if (reconcileError) return { success: false, error: reconcileError.message };
-    }
+    const reconciled = await reconcileAccounts(client, [tx.account_id]);
+    if (!reconciled.success) return reconciled;
 
     return { success: true };
   } catch (err) {
