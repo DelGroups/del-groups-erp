@@ -972,7 +972,7 @@ export const azMessages = {
   },
   print: {
     salesInvoice: "Satış fakturası",
-    officialInvoiceTitle: "RƏSMİ SATIŞ FAKTURASI",
+    officialInvoiceTitle: "SATIŞ FAKTURASI",
     unofficialTitle: "SATIŞ FAKTURASI",
     salesManager: "Satış meneceri",
     paidAmount: "Ödənilən məbləğ",
@@ -1027,6 +1027,9 @@ export const azMessages = {
       grandTotal: "Yekun məbləğ",
     },
     signatures: {
+      seller: "Satıcı",
+      buyer: "Alıcı",
+      signatureAndStamp: "İmza və Möhür",
       handedOver: "Təhvil verdi (Məsul şəxs)",
       receivedBy: "Təhvil aldı (Müştəri)",
       signature: "İmza",

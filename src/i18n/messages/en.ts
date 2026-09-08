@@ -974,7 +974,7 @@ export const enMessages: Messages = {
   },
   print: {
     salesInvoice: "Sales invoice",
-    officialInvoiceTitle: "OFFICIAL INVOICE",
+    officialInvoiceTitle: "SALES INVOICE",
     unofficialTitle: "SALES INVOICE",
     salesManager: "Sales manager",
     paidAmount: "Paid amount",
@@ -1029,6 +1029,9 @@ export const enMessages: Messages = {
       grandTotal: "Grand total",
     },
     signatures: {
+      seller: "Seller",
+      buyer: "Buyer",
+      signatureAndStamp: "Signature & Stamp",
       handedOver: "Handed over (Responsible person)",
       receivedBy: "Received by (Customer)",
       signature: "Signature",

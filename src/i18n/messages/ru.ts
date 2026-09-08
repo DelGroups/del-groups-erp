@@ -974,7 +974,7 @@ export const ruMessages: Messages = {
   },
   print: {
     salesInvoice: "Счёт продажи",
-    officialInvoiceTitle: "ОФИЦИАЛЬНЫЙ СЧЁТ",
+    officialInvoiceTitle: "СЧЁТ ПРОДАЖИ",
     unofficialTitle: "СЧЁТ ПРОДАЖИ",
     salesManager: "Менеджер по продажам",
     paidAmount: "Оплаченная сумма",
@@ -1029,6 +1029,9 @@ export const ruMessages: Messages = {
       grandTotal: "Итого к оплате",
     },
     signatures: {
+      seller: "Продавец",
+      buyer: "Покупатель",
+      signatureAndStamp: "Подпись и печать",
       handedOver: "Сдал (Ответственное лицо)",
       receivedBy: "Принял (Клиент)",
       signature: "Подпись",

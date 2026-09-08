@@ -15,13 +15,16 @@ interface InvoicePrintLayoutProps {
   branding: CompanyBranding;
 }
 
-const NAVY = "#1e3a8a";
 const INK = "#0f172a";
+const HEADER_TEXT = "#1e293b";
 const SLATE = "#64748b";
 const BORDER = "#e2e8f0";
 const CARD_BG = "#f8fafc";
+const HEADER_BG = "#f8fafc";
+const TH_BG = "#f1f5f9";
 const SUMMARY_BG = "#f1f5f9";
 const SUMMARY_BORDER = "#cbd5e1";
+const ACCENT_BORDER = "#cbd5e1";
 const PAID_GREEN = "#16a34a";
 const BALANCE_RED = "#dc2626";
 const WHITE = "#ffffff";
@@ -35,8 +38,8 @@ const PRINT_STYLE = `
     body { background-color: #ffffff !important; }
     .invoice-print-layout { background-color: #ffffff !important; }
     .invoice-print-th {
-      background-color: ${NAVY} !important;
-      color: ${WHITE} !important;
+      background-color: ${TH_BG} !important;
+      color: ${HEADER_TEXT} !important;
     }
     .invoice-print-row-even { background-color: ${CARD_BG} !important; }
     .invoice-print-row-odd { background-color: ${WHITE} !important; }
@@ -48,13 +51,19 @@ const PRINT_STYLE = `
       background-color: ${SUMMARY_BG} !important;
       border: 1px solid ${SUMMARY_BORDER} !important;
     }
+    .invoice-print-header {
+      background-color: ${HEADER_BG} !important;
+      border: 2px solid ${ACCENT_BORDER} !important;
+    }
     .invoice-print-badge {
-      background-color: ${NAVY} !important;
-      color: ${WHITE} !important;
+      background-color: ${TH_BG} !important;
+      color: ${INK} !important;
+      border: 1px solid ${ACCENT_BORDER} !important;
     }
     .invoice-print-doc-pill {
-      background-color: ${NAVY} !important;
-      color: ${WHITE} !important;
+      background-color: ${TH_BG} !important;
+      color: ${INK} !important;
+      border: 1px solid ${ACCENT_BORDER} !important;
     }
   }
 `;
@@ -81,15 +90,15 @@ const cellBase: React.CSSProperties = {
 };
 
 const thStyle: React.CSSProperties = {
-  backgroundColor: NAVY,
-  color: WHITE,
+  backgroundColor: TH_BG,
+  color: HEADER_TEXT,
   padding: "9px 8px",
   fontSize: "9px",
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
   textAlign: "left",
-  borderBottom: `1px solid ${NAVY}`,
+  borderBottom: `1px solid ${BORDER}`,
 };
 
 function rowBg(index: number): React.CSSProperties {
@@ -266,17 +275,18 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
           printColorAdjust: "exact",
         }}
       >
-        <div style={{ height: "3px", backgroundColor: NAVY, marginBottom: "14px", borderRadius: "2px" }} />
-
         <header
+          className="invoice-print-header"
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
             gap: "16px",
             marginBottom: "14px",
-            paddingBottom: "12px",
-            borderBottom: `1px solid ${BORDER}`,
+            padding: "14px 16px",
+            backgroundColor: HEADER_BG,
+            border: `2px solid ${ACCENT_BORDER}`,
+            borderRadius: "8px",
           }}
         >
           {isOfficial ? (
@@ -291,7 +301,7 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
                     objectFit: "contain",
                     borderRadius: "10px",
                     backgroundColor: WHITE,
-                    border: `2px solid ${NAVY}`,
+                    border: `2px solid ${ACCENT_BORDER}`,
                     padding: "4px",
                   }}
                 />
@@ -302,8 +312,9 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
                     width: "56px",
                     height: "56px",
                     borderRadius: "10px",
-                    backgroundColor: NAVY,
-                    color: WHITE,
+                    backgroundColor: TH_BG,
+                    color: INK,
+                    border: `1px solid ${ACCENT_BORDER}`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -320,8 +331,9 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
                   className="invoice-print-badge"
                   style={{
                     display: "inline-block",
-                    backgroundColor: NAVY,
-                    color: WHITE,
+                    backgroundColor: TH_BG,
+                    color: INK,
+                    border: `1px solid ${ACCENT_BORDER}`,
                     fontSize: "11px",
                     fontWeight: 900,
                     letterSpacing: "0.08em",
@@ -364,8 +376,9 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
               className="invoice-print-doc-pill"
               style={{
                 display: "inline-block",
-                backgroundColor: NAVY,
-                color: WHITE,
+                backgroundColor: TH_BG,
+                color: INK,
+                border: `1px solid ${ACCENT_BORDER}`,
                 fontSize: "10px",
                 fontWeight: 800,
                 padding: "6px 12px",
@@ -474,7 +487,7 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
                 {formatMoney(data.subtotal, data.currency)}
               </span>
             </div>
-            {isOfficial && data.vatTotal > 0 ? (
+            {isOfficial ? (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${BORDER}`, fontSize: "10px" }}>
                 <span style={{ color: SLATE }}>{t("print.totals.vat")}</span>
                 <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: INK }}>
@@ -499,8 +512,8 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
               </div>
             ) : null}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 5px", fontSize: "12px", fontWeight: 900 }}>
-              <span style={{ color: NAVY }}>{t("print.totals.grandTotal")}</span>
-              <span style={{ fontVariantNumeric: "tabular-nums", color: NAVY }}>
+              <span style={{ color: INK }}>{t("print.totals.grandTotal")}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums", color: INK }}>
                 {formatMoney(data.grandTotal, data.currency)}
               </span>
             </div>
@@ -529,48 +542,25 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
-              gap: "16px",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "24px",
               alignItems: "end",
             }}
           >
             <div>
               <p style={{ margin: "0 0 24px", fontSize: "10px", fontWeight: 800, color: INK }}>
-                {t("print.signatures.handedOver")}
+                {t("print.signatures.seller")} ({companyName})
               </p>
               <div style={{ borderBottom: "1.5px dashed #94a3b8", marginBottom: "4px" }} />
-              <p style={{ margin: 0, fontSize: "9px", color: SLATE }}>{t("print.signatures.signature")}</p>
+              <p style={{ margin: 0, fontSize: "9px", color: SLATE }}>{t("print.signatures.signatureAndStamp")}</p>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "center", paddingBottom: "4px" }}>
-              <div
-                style={{
-                  width: "96px",
-                  height: "96px",
-                  borderRadius: "999px",
-                  border: "2px dashed #94a3b8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "10px",
-                  fontWeight: 800,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: SLATE,
-                  textAlign: "center",
-                  padding: "8px",
-                }}
-              >
-                {t("print.stampArea")}
-              </div>
-            </div>
-
-            <div style={{ textAlign: "right" }}>
+            <div>
               <p style={{ margin: "0 0 24px", fontSize: "10px", fontWeight: 800, color: INK }}>
-                {t("print.signatures.receivedBy")}
+                {t("print.signatures.buyer")} ({data.customerName})
               </p>
               <div style={{ borderBottom: "1.5px dashed #94a3b8", marginBottom: "4px" }} />
-              <p style={{ margin: 0, fontSize: "9px", color: SLATE }}>{t("print.signatures.signature")}</p>
+              <p style={{ margin: 0, fontSize: "9px", color: SLATE }}>{t("print.signatures.signatureAndStamp")}</p>
             </div>
           </div>
         </footer>
