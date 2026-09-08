@@ -113,6 +113,7 @@ export const enMessages: Messages = {
     deleting: "Deleting...",
     void: "Void",
     voidConfirmMessage: "Are you sure you want to void this document? Outstanding balance will be cleared.",
+    voidSuccessRestore: "Document voided successfully and warehouse/treasury balances were restored.",
     debtor: "Debtor",
     weOwe: "We owe",
     active: "Active",
@@ -291,6 +292,7 @@ export const enMessages: Messages = {
     debt: "Debt",
     sendStatus: "Send status",
     deleteSuccess: "Purchase invoice deleted successfully",
+    voidReason: "Purchase invoice voided",
   },
   warehouseSlips: {
     title: "Warehouse Slips",

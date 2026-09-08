@@ -25,6 +25,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidSaleAction } from "@/lib/actions/entityDelete";
+import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -111,7 +112,7 @@ export default function SalesListPage() {
       return;
     }
     setVoidTarget(null);
-    showSuccess(t("sales.voidSuccess"));
+    showSuccess(t("common.voidSuccessRestore"));
     void loadData();
   };
 
@@ -276,7 +277,7 @@ export default function SalesListPage() {
                             onPayment={() => void openPayment(sale)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onDelete={
-                              canDeleteSales && debtBreakdown.totalRemaining > 0
+                              canDeleteSales && !isInvoiceCancelled(sale.status)
                                 ? () => setVoidTarget(sale)
                                 : undefined
                             }

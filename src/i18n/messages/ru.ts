@@ -113,6 +113,7 @@ export const ruMessages: Messages = {
     deleting: "Удаление...",
     void: "Аннулировать",
     voidConfirmMessage: "Вы уверены, что хотите аннулировать этот документ? Остаток долга будет обнулён.",
+    voidSuccessRestore: "Документ успешно аннулирован, складские и кассовые балансы восстановлены.",
     debtor: "Должник",
     weOwe: "Мы должны",
     active: "Активен",
@@ -291,6 +292,7 @@ export const ruMessages: Messages = {
     debt: "Долг",
     sendStatus: "Статус отправки",
     deleteSuccess: "Счёт закупки успешно удалён",
+    voidReason: "Счёт закупки аннулирован",
   },
   warehouseSlips: {
     title: "Складские накладные",

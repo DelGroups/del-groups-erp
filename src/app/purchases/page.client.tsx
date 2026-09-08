@@ -28,7 +28,8 @@ import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrin
 import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
-import { deletePurchaseAction } from "@/lib/actions/entityDelete";
+import { voidPurchaseAction } from "@/lib/actions/entityDelete";
+import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import { ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -120,17 +121,17 @@ export default function PurchasesPage() {
     void loadData();
   };
 
-  const handleDeletePurchase = async () => {
+  const handleVoidPurchase = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deletePurchaseAction(deleteTarget.id);
+    const result = await voidPurchaseAction(deleteTarget.id, t("purchases.voidReason"));
     setDeleting(false);
     if (!result.success) {
       showError(result.error || t("common.error"));
       return;
     }
     setDeleteTarget(null);
-    showSuccess(t("purchases.deleteSuccess"));
+    showSuccess(t("common.voidSuccessRestore"));
     void loadData();
   };
 
@@ -234,7 +235,12 @@ export default function PurchasesPage() {
                             onPayment={() => void openPayment(row)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
-                            onDelete={canDeletePurchases ? () => setDeleteTarget(row) : undefined}
+                            onDelete={
+                              canDeletePurchases && !isInvoiceCancelled(row.status)
+                                ? () => setDeleteTarget(row)
+                                : undefined
+                            }
+                            deleteTitle={t("common.void")}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}
                             sendToWarehouseDisabled={
                               warehouseSend.getSendButtonProps(row).disabled
@@ -321,9 +327,12 @@ export default function PurchasesPage() {
 
       <ConfirmDeleteModal
         open={Boolean(deleteTarget)}
+        title={t("common.void")}
+        message={t("common.voidConfirmMessage")}
         itemName={deleteTarget?.invoice_number}
+        confirmLabel={t("common.void")}
         loading={deleting}
-        onConfirm={() => void handleDeletePurchase()}
+        onConfirm={() => void handleVoidPurchase()}
         onCancel={() => setDeleteTarget(null)}
       />
 

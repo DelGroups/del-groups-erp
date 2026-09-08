@@ -23,6 +23,7 @@ export interface SaleRecord {
   created_at: string | null;
   warehouse_sent: boolean;
   warehouse_slip_status: WarehouseSlipStatus | null;
+  status?: string | null;
   is_official?: boolean;
   contract_id?: string | null;
   vat_mode?: "exclusive" | "inclusive" | "none" | null;
@@ -35,10 +36,10 @@ export interface SaleRecord {
 }
 
 const SALES_LIST_SELECT =
-  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, sale_items (warehouse_name)";
+  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, sale_items (warehouse_name)";
 
 const SALES_LIST_SELECT_NO_ITEMS =
-  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total";
+  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total";
 
 const SALES_LIST_SELECT_NO_ITEMS_LEGACY =
   "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, payments";
@@ -161,6 +162,7 @@ function mapSaleRow(row: SalesListRow): SaleRecord | null {
     created_at: typeof row.created_at === "string" ? row.created_at : null,
     warehouse_sent: row.warehouse_sent === true,
     warehouse_slip_status: normalizeWarehouseSlipStatus(row.warehouse_slip_status),
+    status: typeof row.status === "string" ? row.status : null,
     is_official: row.is_official === true,
     contract_id: typeof row.contract_id === "string" ? row.contract_id : null,
     vat_mode:

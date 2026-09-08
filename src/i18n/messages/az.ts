@@ -110,7 +110,8 @@ export const azMessages = {
     deleteConfirmMessage: "Bu məlumatı silməyə əminsiniz?",
     deleting: "Silinir...",
     void: "Ləğv et",
-    voidConfirmMessage: "Bu sənədi ləğv etməyə əminsiniz? Borc sıfırlanacaq.",
+    voidConfirmMessage: "Bu sənədi ləğv etməyə əminsiniz? Anbar və xəzinə balansları bərpa olunacaq.",
+    voidSuccessRestore: "Sənəd uğurla ləğv edildi və anbar/xəzinə balansları bərpa olundu.",
     debtor: "Borclu",
     weOwe: "Borcluyuq",
     active: "Aktiv",
@@ -289,6 +290,7 @@ export const azMessages = {
     debt: "Borc",
     sendStatus: "Göndərilmə",
     deleteSuccess: "Alış fakturası uğurla silindi",
+    voidReason: "Alış fakturası ləğv edildi",
   },
   warehouseSlips: {
     title: "Anbar Qaimələri",
