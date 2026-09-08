@@ -4,6 +4,12 @@ import {
 } from "@/lib/auth/serverActionAuth";
 import type { PermissionKey } from "@/types/database.types";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  restoreSaleStock,
+  revertPurchaseStock,
+  type ProductQuantityLine,
+  type SaleItemStockRow,
+} from "@/lib/inventory/stockAdjustment";
 
 export type VoidInvoiceResult = { success: boolean; error?: string };
 
@@ -118,42 +124,29 @@ async function deleteDocumentCashTransactions(
   await reverseAndDeleteTransactions(client, rows);
 }
 
-async function restoreSaleStock(client: SupabaseClient, saleId: string): Promise<void> {
-  const { data: items, error } = await client
+async function fetchSaleItemsForStockRestore(
+  client: SupabaseClient,
+  saleId: string
+): Promise<SaleItemStockRow[]> {
+  const { data, error } = await client
     .from("sale_items")
-    .select("product_id, quantity, polywood_sale_mode")
+    .select(
+      "id, product_id, warehouse_id, quantity, polywood_sale_mode, polywood_length_m, polywood_cut_details, sale_item_type, piece_count"
+    )
     .eq("sale_id", saleId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  for (const item of items || []) {
-    if (!item.product_id || item.polywood_sale_mode) continue;
-    const qty = Number(item.quantity) || 0;
-    if (qty <= 0) continue;
-
-    const { data: product, error: productError } = await client
-      .from("products")
-      .select("stock")
-      .eq("id", item.product_id)
-      .single();
-
-    if (productError || !product) continue;
-
-    const { error: updateError } = await client
-      .from("products")
-      .update({ stock: (Number(product.stock) || 0) + qty })
-      .eq("id", item.product_id);
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-  }
+  return (data || []) as SaleItemStockRow[];
 }
 
-async function revertPurchaseStock(client: SupabaseClient, purchaseId: string): Promise<void> {
-  const { data: items, error } = await client
+async function fetchPurchaseItemsForStockRevert(
+  client: SupabaseClient,
+  purchaseId: string
+): Promise<ProductQuantityLine[]> {
+  const { data, error } = await client
     .from("purchase_items")
     .select("product_id, quantity")
     .eq("purchase_id", purchaseId);
@@ -162,28 +155,12 @@ async function revertPurchaseStock(client: SupabaseClient, purchaseId: string): 
     throw new Error(error.message);
   }
 
-  for (const item of items || []) {
-    if (!item.product_id) continue;
-    const qty = Number(item.quantity) || 0;
-    if (qty <= 0) continue;
-
-    const { data: product, error: productError } = await client
-      .from("products")
-      .select("stock")
-      .eq("id", item.product_id)
-      .single();
-
-    if (productError || !product) continue;
-
-    const { error: updateError } = await client
-      .from("products")
-      .update({ stock: Math.max(0, (Number(product.stock) || 0) - qty) })
-      .eq("id", item.product_id);
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-  }
+  return (data || [])
+    .filter((row) => row.product_id)
+    .map((row) => ({
+      product_id: row.product_id as string,
+      quantity: Number(row.quantity) || 0,
+    }));
 }
 
 async function refreshCustomerArBalance(
@@ -283,7 +260,7 @@ export async function voidSaleInvoiceDirect(saleId: string): Promise<VoidInvoice
       (typeof sale.invoice_number === "string" && sale.invoice_number.trim()) ||
       saleId;
 
-    await restoreSaleStock(client, saleId);
+    await restoreSaleStock(client, await fetchSaleItemsForStockRestore(client, saleId));
     await deleteDocumentCashTransactions(client, "sale", saleId, docLabel);
     await deleteLinkedWarehouseSlips(client, "sale", saleId);
 
@@ -343,7 +320,10 @@ export async function voidPurchaseInvoiceDirect(
       (typeof purchase.invoice_number === "string" && purchase.invoice_number.trim()) ||
       purchaseId;
 
-    await revertPurchaseStock(client, purchaseId);
+    await revertPurchaseStock(
+      client,
+      await fetchPurchaseItemsForStockRevert(client, purchaseId)
+    );
     await deleteDocumentCashTransactions(client, "purchase", purchaseId, docLabel);
 
     if (purchase.supplier_id) {

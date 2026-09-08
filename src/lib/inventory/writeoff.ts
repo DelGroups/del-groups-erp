@@ -1,4 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import {
+  applyWriteoffStockDeltas,
+  decrementProductStock,
+} from "@/lib/inventory/stockAdjustment";
 import type {
   DamagedGoodsItem,
   InventoryWriteoffInsert,
@@ -21,45 +25,6 @@ export interface SubmitWriteoffResult {
   success: boolean;
   error?: string;
   writeoffId?: string;
-}
-
-async function fetchProductStock(productId: string): Promise<number | null> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("stock")
-    .eq("id", productId)
-    .single();
-
-  if (error || !data) return null;
-  return Number(data.stock) || 0;
-}
-
-export async function decrementProductStock(
-  productId: string,
-  quantity: number
-): Promise<{ ok: boolean; error?: string; previousStock?: number }> {
-  const currentStock = await fetchProductStock(productId);
-  if (currentStock === null) {
-    return { ok: false, error: "Məhsul tapılmadı" };
-  }
-  if (currentStock < quantity) {
-    return {
-      ok: false,
-      error: `Kifayət qədər stok yoxdur (mövcud: ${currentStock})`,
-    };
-  }
-
-  const newStock = currentStock - quantity;
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: newStock })
-    .eq("id", productId);
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  return { ok: true, previousStock: currentStock };
 }
 
 async function restoreProductStock(productId: string, previousStock: number): Promise<void> {
@@ -89,7 +54,7 @@ export async function submitDamagedGoodsWriteoff(
   const applied: { productId: string; previousStock: number }[] = [];
 
   for (const item of validItems) {
-    const stockResult = await decrementProductStock(item.product_id, item.quantity);
+    const stockResult = await decrementProductStock(supabase, item.product_id, item.quantity);
     if (!stockResult.ok) {
       for (const rollback of applied.reverse()) {
         await restoreProductStock(rollback.productId, rollback.previousStock);
@@ -189,20 +154,6 @@ export async function fetchInventoryWriteoffs(): Promise<WriteoffRecord[]> {
   }));
 }
 
-async function incrementProductStock(
-  productId: string,
-  quantity: number
-): Promise<{ ok: boolean; error?: string }> {
-  const currentStock = await fetchProductStock(productId);
-  if (currentStock === null) return { ok: false, error: "Məhsul tapılmadı" };
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: currentStock + quantity })
-    .eq("id", productId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
-}
-
 export async function updateInventoryWriteoff(
   writeoffId: string,
   payload: SubmitWriteoffPayload,
@@ -225,41 +176,22 @@ export async function updateInventoryWriteoff(
     }
   }
 
-  const restored: { productId: string; quantity: number }[] = [];
+  const toStockLines = (items: DamagedGoodsItem[]) =>
+    items
+      .filter((item) => item.product_id && item.quantity > 0)
+      .map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }));
 
-  for (const item of previousItems) {
-    if (!item.product_id || item.quantity <= 0) continue;
-    const result = await incrementProductStock(item.product_id, item.quantity);
-    if (!result.ok) {
-      for (const rb of restored.reverse()) {
-        await decrementProductStock(rb.productId, rb.quantity);
-      }
-      return { success: false, error: `${item.product_name}: ${result.error}` };
-    }
-    restored.push({ productId: item.product_id, quantity: item.quantity });
-  }
+  const stockResult = await applyWriteoffStockDeltas(
+    supabase,
+    toStockLines(previousItems),
+    toStockLines(validItems)
+  );
 
-  const applied: { productId: string; previousStock: number }[] = [];
-
-  for (const item of validItems) {
-    const stockResult = await decrementProductStock(item.product_id, item.quantity);
-    if (!stockResult.ok) {
-      for (const rb of applied.reverse()) {
-        await restoreProductStock(rb.productId, rb.previousStock);
-      }
-      for (const prev of previousItems) {
-        if (!prev.product_id || prev.quantity <= 0) continue;
-        await decrementProductStock(prev.product_id, prev.quantity);
-      }
-      return {
-        success: false,
-        error: `${item.product_name}: ${stockResult.error}`,
-      };
-    }
-    applied.push({
-      productId: item.product_id,
-      previousStock: stockResult.previousStock!,
-    });
+  if (!stockResult.ok) {
+    return { success: false, error: stockResult.error };
   }
 
   const { error } = await supabase
@@ -274,13 +206,7 @@ export async function updateInventoryWriteoff(
     .eq("id", writeoffId);
 
   if (error) {
-    for (const rb of applied.reverse()) {
-      await restoreProductStock(rb.productId, rb.previousStock);
-    }
-    for (const prev of previousItems) {
-      if (!prev.product_id || prev.quantity <= 0) continue;
-      await decrementProductStock(prev.product_id, prev.quantity);
-    }
+    await applyWriteoffStockDeltas(supabase, toStockLines(validItems), toStockLines(previousItems));
     return { success: false, error: error.message };
   }
 

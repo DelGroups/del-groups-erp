@@ -6,6 +6,7 @@ import {
 } from "@/lib/forms/documentExpenses";
 import type { OfficialDocumentFields } from "@/lib/finance/officialTransaction";
 import { persistPurchaseOfficialFields } from "@/lib/finance/officialTransaction";
+import { applyPurchaseStockDeltas } from "@/lib/inventory/stockAdjustment";
 import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
@@ -70,48 +71,23 @@ function buildCreatePurchasePayload(payload: SubmitPurchasePayload, validItems: 
   };
 }
 
-async function fetchProductStock(productId: string): Promise<number | null> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("stock")
-    .eq("id", productId)
-    .single();
-  if (error || !data) return null;
-  return Number(data.stock) || 0;
+function toPurchaseStockLines(items: PurchaseLineItem[]) {
+  return items
+    .filter((item) => item.product_id && item.quantity > 0)
+    .map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    }));
 }
 
-async function increaseProductStock(
-  productId: string,
-  quantity: number,
-  unitPrice: number
-): Promise<{ ok: boolean; error?: string; previous?: number }> {
-  const current = await fetchProductStock(productId);
-  if (current === null) return { ok: false, error: "Məhsul tapılmadı" };
-
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: current + quantity, buy_price: unitPrice })
-    .eq("id", productId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, previous: current };
-}
-
-async function decreaseProductStock(
-  productId: string,
-  quantity: number,
-  previousBuyPrice: number
-): Promise<{ ok: boolean; error?: string }> {
-  const current = await fetchProductStock(productId);
-  if (current === null) return { ok: false, error: "Məhsul tapılmadı" };
-  if (current < quantity) {
-    return { ok: false, error: `Stok geri qaytarıla bilməz (mövcud: ${current})` };
+function buildUnitPriceByProduct(items: PurchaseLineItem[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    if (!item.product_id) continue;
+    map.set(item.product_id, item.unit_price);
   }
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: current - quantity, buy_price: previousBuyPrice })
-    .eq("id", productId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return map;
 }
 
 async function processPurchasePaymentsOnEdit(
@@ -226,31 +202,18 @@ export async function updatePurchase(
     return { success: false, error: "Ən azı bir məhsul tələb olunur" };
   }
 
-  for (const item of previousItems) {
-    if (!item.product_id || item.quantity <= 0) continue;
-    const result = await decreaseProductStock(
-      item.product_id,
-      item.quantity,
-      item.unit_price
-    );
-    if (!result.ok) {
-      return { success: false, error: `${item.product_name} (geri qaytarma): ${result.error}` };
-    }
+  const stockResult = await applyPurchaseStockDeltas(
+    supabase,
+    toPurchaseStockLines(previousItems),
+    toPurchaseStockLines(validItems),
+    buildUnitPriceByProduct(validItems)
+  );
+  if (!stockResult.ok) {
+    return { success: false, error: stockResult.error };
   }
 
   if (previousDebt > 0 && previousSupplierId) {
     await adjustSupplierBalance(previousSupplierId, -previousDebt);
-  }
-
-  for (const item of validItems) {
-    const result = await increaseProductStock(
-      item.product_id,
-      item.quantity,
-      item.unit_price
-    );
-    if (!result.ok) {
-      return { success: false, error: `${item.product_name}: ${result.error}` };
-    }
   }
 
   if (payload.header.debt_amount > 0) {
