@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Factory, LayoutGrid, List, RefreshCw } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
@@ -42,7 +41,6 @@ const STATUSES: ProductionStatus[] = [...PRODUCTION_STATUSES];
 export default function ProductionBoardPage() {
   const { t } = useI18n();
   const { can } = useAuth();
-  const router = useRouter();
   const canManage = can("can_manage_production");
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [lookups, setLookups] = useState<ProductionLookups | null>(null);
@@ -52,7 +50,6 @@ export default function ProductionBoardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [loadingLookups, setLoadingLookups] = useState(false);
   const [workflowOrder, setWorkflowOrder] = useState<ProductionOrder | null>(null);
-  const [workflowFocus, setWorkflowFocus] = useState<ProductionStatus | "payment" | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<ProductionOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
@@ -104,7 +101,6 @@ export default function ProductionBoardPage() {
   const handleEdit = useCallback(
     async (order: ProductionOrder) => {
       await ensureLookups();
-      setWorkflowFocus(undefined);
       setWorkflowOrder(order);
     },
     [ensureLookups]
@@ -121,28 +117,17 @@ export default function ProductionBoardPage() {
 
   const handleAdvance = useCallback(
     async (order: ProductionOrder, nextStatus: ProductionStatus) => {
-      if (nextStatus === "Ready" || nextStatus === "Delivered") {
-        await ensureLookups();
-        setWorkflowFocus(nextStatus === "Ready" ? "Ready" : undefined);
-        setWorkflowOrder(order);
-        return;
-      }
       const result = await updateProductionStatusAction(order.id, nextStatus);
       if (!result.success) {
         setError(result.error || loadErrorLabel);
         return;
       }
-      if (result.data) {
-        setOrders((prev) => prev.map((row) => (row.id === order.id ? result.data! : row)));
-        if (nextStatus === "In-Progress") {
-          await ensureLookups();
-          setWorkflowOrder(result.data);
-        }
-      } else {
-        void load();
-      }
+      const updated = result.data || { ...order, status: nextStatus };
+      setOrders((prev) => prev.map((row) => (row.id === order.id ? updated : row)));
+      await ensureLookups();
+      setWorkflowOrder(updated);
     },
-    [ensureLookups, load, loadErrorLabel]
+    [ensureLookups, loadErrorLabel]
   );
 
   const handleDelete = useCallback(async () => {
@@ -158,7 +143,12 @@ export default function ProductionBoardPage() {
     setOrders((prev) => prev.filter((row) => row.id !== deleteTarget.id));
   }, [deleteTarget, loadErrorLabel]);
 
-  const handleWorkflowSaved = useCallback((order: ProductionOrder) => {
+  const handleWorkflowUpdated = useCallback((order: ProductionOrder) => {
+    setOrders((prev) => prev.map((row) => (row.id === order.id ? order : row)));
+    setWorkflowOrder(order);
+  }, []);
+
+  const handleWorkflowCompleted = useCallback((order: ProductionOrder) => {
     setOrders((prev) => prev.map((row) => (row.id === order.id ? order : row)));
     setWorkflowOrder(null);
   }, []);
@@ -375,7 +365,6 @@ export default function ProductionBoardPage() {
           onCreated={(order) => {
             setShowCreate(false);
             setOrders((prev) => [order, ...prev]);
-            router.push(`/production/${order.id}`);
           }}
         />
       )}
@@ -396,12 +385,9 @@ export default function ProductionBoardPage() {
           open
           order={workflowOrder}
           lookups={lookups}
-          focusStatus={workflowFocus}
-          onClose={() => {
-            setWorkflowOrder(null);
-            setWorkflowFocus(undefined);
-          }}
-          onSaved={handleWorkflowSaved}
+          onClose={() => setWorkflowOrder(null)}
+          onUpdated={handleWorkflowUpdated}
+          onCompleted={handleWorkflowCompleted}
         />
       ) : null}
 
