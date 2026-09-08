@@ -15,8 +15,16 @@ export type WarehouseProductCatalogRow = {
   name: string;
   code?: string | null;
   buy_price: number;
+  cost_price?: number | null;
   unit: string;
 };
+
+export function resolveProductUnitCost(
+  product: Pick<WarehouseProductCatalogRow, "buy_price" | "cost_price">
+): number {
+  const cost = product.cost_price ?? product.buy_price;
+  return Number(cost) || 0;
+}
 
 export function encodeMaterialLineSelection(selection: MaterialLineSelection): string {
   return JSON.stringify(selection);
@@ -30,7 +38,7 @@ export function buildMaterialLineSelection(
   return {
     productId,
     warehouseId,
-    unitPrice: Number(product.buy_price) || 0,
+    unitPrice: resolveProductUnitCost(product),
     productName: product.name,
     productCode: product.code ?? null,
     unit: product.unit,

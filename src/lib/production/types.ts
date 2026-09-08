@@ -285,12 +285,17 @@ export function productionHealth(revenue: number, marginPercent: number): Produc
 }
 
 export function calcProductionCosting(order: ProductionOrder): ProductionCosting {
-  const materialCost = (order.materials || [])
-    .filter((row) => row.issued)
-    .reduce((sum, row) => sum + Number(row.line_cost || 0), 0);
+  const resolveLineCost = (row: ProductionMaterial) => {
+    const lineCost = Number(row.line_cost);
+    if (Number.isFinite(lineCost) && lineCost > 0) return lineCost;
+    return num(row.quantity) * num(row.unit_cost);
+  };
+
+  const allMaterialCost = (order.materials || []).reduce((sum, row) => sum + resolveLineCost(row), 0);
+  const materialCost = allMaterialCost;
   const plannedMaterialCost = (order.materials || [])
     .filter((row) => !row.issued)
-    .reduce((sum, row) => sum + Number(row.line_cost || 0), 0);
+    .reduce((sum, row) => sum + resolveLineCost(row), 0);
   const outsourcingCost = (order.outsourcing || []).reduce(
     (sum, row) => sum + Number(row.total_cost || 0),
     0

@@ -2876,6 +2876,7 @@ export type WarehouseProductOption = {
   name: string;
   unit: string;
   buy_price: number;
+  cost_price: number;
   stock: number;
   inventory_mode: string | null;
 };
@@ -2917,6 +2918,7 @@ async function fetchPolywoodWarehouseProducts(
     name: product.name,
     unit: product.unit || "Metr",
     buy_price: num(product.buy_price),
+    cost_price: num(product.buy_price),
     stock: Math.round((stockByProduct.get(product.id) || 0) * 100) / 100,
     inventory_mode: product.inventory_mode || POLYWOOD_INVENTORY_MODE,
   }));
@@ -2950,6 +2952,7 @@ async function fetchStandardWarehouseProducts(
       name: product.name,
       unit: product.unit || "Ədəd",
       buy_price: num(product.buy_price),
+      cost_price: num(product.buy_price),
       stock,
       inventory_mode: product.inventory_mode || null,
     };

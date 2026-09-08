@@ -9,14 +9,32 @@ export function sumOrderAllocatedQuantity(
   materials: ProductionMaterial[],
   productId: string,
   warehouseId: string | null,
-  excludeMaterialId?: string
+  excludeMaterialId?: string,
+  options?: { includeIssued?: boolean }
 ): number {
   return materials.reduce((sum, material) => {
     if (material.id === excludeMaterialId) return sum;
+    if (!options?.includeIssued && material.issued) return sum;
     if (material.product_id !== productId) return sum;
     if ((material.warehouse_id || null) !== (warehouseId || null)) return sum;
     return sum + num(material.quantity);
   }, 0);
+}
+
+export function netAvailableStockForProduct(
+  grossWarehouseStock: number,
+  materials: ProductionMaterial[],
+  productId: string,
+  warehouseId: string | null,
+  excludeMaterialId?: string
+): number {
+  const reserved = sumOrderAllocatedQuantity(
+    materials,
+    productId,
+    warehouseId,
+    excludeMaterialId
+  );
+  return netAvailableWarehouseStock(grossWarehouseStock, reserved);
 }
 
 export function netAvailableWarehouseStock(
@@ -46,6 +64,7 @@ export function adjustWarehouseProductsForOrderAllocations<
 >(products: T[], materials: ProductionMaterial[], warehouseId: string): T[] {
   const allocatedByProduct = new Map<string, number>();
   for (const material of materials) {
+    if (material.issued) continue;
     if (!material.product_id) continue;
     if ((material.warehouse_id || null) !== warehouseId) continue;
     allocatedByProduct.set(
