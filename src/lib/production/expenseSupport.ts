@@ -47,14 +47,29 @@ export async function fetchActiveExpenseCategories(
   admin: DbClient
 ): Promise<ExpenseCategoryOption[]> {
   const { data, error } = await admin
-    .from("expense_categories")
-    .select("id,name,is_active")
+    .from("financial_categories")
+    .select("id,name,type,is_active")
+    .eq("type", "EXPENSE")
     .eq("is_active", true)
     .order("name")
     .limit(200);
 
   if (!error && data?.length) {
     return data.map((row) => ({
+      id: String((row as { id: string }).id),
+      name: String((row as { name: string }).name),
+    }));
+  }
+
+  const legacy = await admin
+    .from("expense_categories")
+    .select("id,name,is_active")
+    .eq("is_active", true)
+    .order("name")
+    .limit(200);
+
+  if (!legacy.error && legacy.data?.length) {
+    return legacy.data.map((row) => ({
       id: String((row as { id: string }).id),
       name: String((row as { name: string }).name),
     }));
