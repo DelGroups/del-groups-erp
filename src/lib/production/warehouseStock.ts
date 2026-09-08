@@ -9,16 +9,43 @@ type StockAdminClient = ReturnType<
   typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient
 >;
 
+export function resolveRealWarehouseStock(
+  movementBalances: Map<string, number>,
+  productId: string,
+  catalogStock: number,
+  options?: {
+    productWarehouseId?: string | null;
+    selectedWarehouseId?: string;
+  }
+): number {
+  const productStock = Math.max(0, num(catalogStock));
+  const movementStock = movementBalances.get(productId);
+  const belongsToWarehouse =
+    Boolean(options?.productWarehouseId) &&
+    options?.productWarehouseId === options?.selectedWarehouseId;
+
+  if (movementStock !== undefined) {
+    const ledgerStock = Math.max(0, movementStock);
+    if (belongsToWarehouse && ledgerStock <= 0 && productStock > 0) {
+      return productStock;
+    }
+    return ledgerStock;
+  }
+
+  if (belongsToWarehouse || movementBalances.size === 0) {
+    return productStock;
+  }
+
+  return 0;
+}
+
+/** @deprecated Use resolveRealWarehouseStock */
 export function resolveStandardProductWarehouseStock(
   movementBalances: Map<string, number>,
   productId: string,
   globalStock: number
 ): number {
-  const movementStock = movementBalances.get(productId);
-  if (movementBalances.size > 0 && movementStock !== undefined) {
-    return Math.max(0, movementStock);
-  }
-  return Math.max(0, num(globalStock));
+  return resolveRealWarehouseStock(movementBalances, productId, globalStock);
 }
 
 export async function warehouseStockBalancesFromMovements(
@@ -65,6 +92,7 @@ export async function getWarehouseProductAvailableStock(
     warehouseId: string;
     productId: string;
     globalStock: number;
+    productWarehouseId?: string | null;
     inventoryMode?: string | null;
     warehouseType?: string | null;
   }
@@ -78,11 +106,10 @@ export async function getWarehouseProductAvailableStock(
   }
 
   const movementBalances = await warehouseStockBalancesFromMovements(admin, input.warehouseId);
-  return resolveStandardProductWarehouseStock(
-    movementBalances,
-    input.productId,
-    input.globalStock
-  );
+  return resolveRealWarehouseStock(movementBalances, input.productId, input.globalStock, {
+    productWarehouseId: input.productWarehouseId,
+    selectedWarehouseId: input.warehouseId,
+  });
 }
 
 export function hasWarehouseStockShortage(requestedQty: number, availableStock: number): boolean {

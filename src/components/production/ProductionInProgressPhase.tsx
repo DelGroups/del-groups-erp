@@ -30,11 +30,11 @@ import {
   decodeMaterialLineSelection,
   encodeMaterialLineSelection,
   formatMaterialPayloadDebug,
+  resolveProductRealStock,
+  resolveProductUnitCost,
   type MaterialLineSelection,
 } from "@/lib/production/materialSelection";
 import { isValidUuid } from "@/lib/auth/validate";
-import { netAvailableStockForProduct } from "@/lib/production/orderStock";
-import { resolveProductUnitCost } from "@/lib/production/materialSelection";
 import {
   hasWarehouseStockShortage,
   warehouseStockShortageDelta,
@@ -130,6 +130,13 @@ export default function ProductionInProgressPhase({
       if (result.success && result.data) setPurchaseRequests(result.data);
     });
   };
+
+  const refreshWarehouseProducts = () => {
+    if (!materialWarehouseId) return;
+    void fetchWarehouseProductsForProductionAction(materialWarehouseId).then((result) => {
+      if (result.success && result.data) setWarehouseProducts(result.data);
+    });
+  };
   const servicesAndOverhead = costing.outsourcingCost + costing.sideExpenseCost;
   const estimatedProfit = order.total_project_price - (costing.materialCost + servicesAndOverhead);
   const remaining = useMemo(() => remainingBalanceFromOrder(order), [order]);
@@ -143,25 +150,26 @@ export default function ProductionInProgressPhase({
     );
   }, [warehouseProducts, materialSelection]);
 
-  const selectedProduct = useMemo(() => {
-    if (!selectedWarehouseProduct) return null;
-    const netStock = netAvailableStockForProduct(
-      Number(selectedWarehouseProduct.stock) || 0,
-      order.materials,
-      selectedWarehouseProduct.product_id,
-      materialWarehouseId
-    );
-    return { ...selectedWarehouseProduct, stock: netStock };
-  }, [selectedWarehouseProduct, order.materials, materialWarehouseId]);
+  const currentStock = useMemo(() => {
+    if (selectedWarehouseProduct) {
+      return resolveProductRealStock(selectedWarehouseProduct);
+    }
+    return Math.max(0, Number(materialSelection?.realStock) || 0);
+  }, [selectedWarehouseProduct, materialSelection?.realStock]);
 
-  const availableStock = Number(selectedProduct?.stock || 0);
-  const stockShortage = Boolean(selectedProduct) && hasWarehouseStockShortage(materialQty, availableStock);
-  const shortageDelta = warehouseStockShortageDelta(materialQty, availableStock);
-  const unitCost =
-    Number(materialSelection?.unitPrice) ||
-    (selectedWarehouseProduct ? resolveProductUnitCost(selectedWarehouseProduct) : 0);
+  const unitCost = useMemo(() => {
+    if (selectedWarehouseProduct) {
+      return resolveProductUnitCost(selectedWarehouseProduct);
+    }
+    const fromSelection = Number(materialSelection?.unitCost ?? materialSelection?.unitPrice);
+    return Number.isFinite(fromSelection) && fromSelection > 0 ? fromSelection : 0;
+  }, [selectedWarehouseProduct, materialSelection?.unitCost, materialSelection?.unitPrice]);
+
+  const availableStock = currentStock;
+  const stockShortage = Boolean(materialSelection?.productId) && hasWarehouseStockShortage(materialQty, currentStock);
+  const shortageDelta = warehouseStockShortageDelta(materialQty, currentStock);
   const lineTotalCost = (Number(materialQty) || 0) * unitCost;
-  const productUnit = selectedProduct?.unit || "ədəd";
+  const productUnit = selectedWarehouseProduct?.unit || materialSelection?.unit || "ədəd";
 
   const formatStockValue = (stock: number, unit: string) => {
     if (unit.toLowerCase().includes("m") && !unit.includes("²")) {
@@ -170,15 +178,12 @@ export default function ProductionInProgressPhase({
     return String(Math.round(stock * 100) / 100);
   };
 
-  const productOptionLabel = (product: WarehouseProductOption) => {
-    const gross =
-      warehouseProducts.find((row) => row.product_id === product.product_id)?.stock ?? product.stock;
-    return t("production.workflow.productInWarehouse", {
+  const productOptionLabel = (product: WarehouseProductOption) =>
+    t("production.workflow.productInWarehouse", {
       name: product.name,
-      stock: formatStockValue(gross, product.unit),
+      stock: formatStockValue(resolveProductRealStock(product), product.unit),
       unit: product.unit,
     });
-  };
 
   const productOptionValue = (product: WarehouseProductOption) =>
     encodeMaterialLineSelection(buildMaterialLineSelection(product, materialWarehouseId));
@@ -273,12 +278,12 @@ export default function ProductionInProgressPhase({
       () =>
         addProductionMaterialAction(order.id, {
           product_id: materialSelection.productId,
-          product_name: materialSelection.productName || selectedProduct?.name || null,
-          product_code: materialSelection.productCode || selectedProduct?.code || null,
+          product_name: materialSelection.productName || selectedWarehouseProduct?.name || null,
+          product_code: materialSelection.productCode || selectedWarehouseProduct?.code || null,
           warehouse_id: materialSelection.warehouseId || materialWarehouseId,
           warehouse_name:
             lookups?.warehouses.find((row) => row.id === materialWarehouseId)?.name || null,
-          unit_cost: materialSelection.unitPrice || (selectedWarehouseProduct ? resolveProductUnitCost(selectedWarehouseProduct) : 0),
+          unit_cost: unitCost,
           quantity: materialQty,
           issue_now: true,
           confirm_deficit_purchase: confirmDeficitPurchase,
@@ -289,6 +294,7 @@ export default function ProductionInProgressPhase({
         clearMaterialProduct();
         setShortageConfirmOpen(false);
         refreshPurchaseRequests();
+        refreshWarehouseProducts();
       }
     );
   };
@@ -505,27 +511,16 @@ export default function ProductionInProgressPhase({
                         ? t("production.workflow.loadingProducts")
                         : "—"}
                   </option>
-                  {warehouseProducts.map((p) => {
-                    const netStock = materialWarehouseId
-                      ? netAvailableStockForProduct(
-                          p.stock,
-                          order.materials,
-                          p.product_id,
-                          materialWarehouseId
-                        )
-                      : p.stock;
-                    const optionProduct = { ...p, stock: netStock };
-                    return (
-                      <option key={p.product_id} value={productOptionValue(p)}>
-                        {productOptionLabel(optionProduct)}
-                      </option>
-                    );
-                  })}
+                  {warehouseProducts.map((p) => (
+                    <option key={p.product_id} value={productOptionValue(p)}>
+                      {productOptionLabel(p)}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
 
-            {selectedProduct ? (
+            {materialSelection?.productId ? (
               <p className="mt-2 text-xs">
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 font-semibold ${
@@ -560,8 +555,8 @@ export default function ProductionInProgressPhase({
                       {t("production.workflow.unitCostLabel")}
                     </span>
                     <p className="mt-1 font-mono font-semibold text-app">
-                      {selectedProduct ? formatMoney(unitCost, currency) : "—"}
-                      {selectedProduct ? ` / ${productUnit}` : ""}
+                      {materialSelection?.productId ? formatMoney(unitCost, currency) : "—"}
+                      {materialSelection?.productId ? ` / ${productUnit}` : ""}
                     </p>
                   </div>
                   <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
@@ -569,7 +564,7 @@ export default function ProductionInProgressPhase({
                       {t("production.workflow.totalMaterialCost")}
                     </span>
                     <p className={`mt-1 font-mono font-semibold ${stockShortage ? "text-rose-400" : "text-emerald-400"}`}>
-                      {selectedProduct ? formatMoney(lineTotalCost, currency) : "—"}
+                      {materialSelection?.productId ? formatMoney(lineTotalCost, currency) : "—"}
                     </p>
                   </div>
                 </>
@@ -666,7 +661,11 @@ export default function ProductionInProgressPhase({
                     </td>
                   </tr>
                 ) : (
-                  order.materials.map((row, index) => (
+                  order.materials.map((row, index) => {
+                    const rowUnitCost = Number(row.unit_cost) || 0;
+                    const rowLineTotal =
+                      Number(row.line_cost) > 0 ? Number(row.line_cost) : row.quantity * rowUnitCost;
+                    return (
                     <tr key={row.id} className="border-t border-app">
                       <td className="px-3 py-2 text-app-muted">{index + 1}</td>
                       <td className="px-3 py-2 font-medium">{row.product_name}</td>
@@ -676,8 +675,8 @@ export default function ProductionInProgressPhase({
                       </td>
                       {isAdmin ? (
                         <>
-                          <td className="px-3 py-2 text-right">{row.unit_cost.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right font-semibold">{row.line_cost.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">{rowUnitCost.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-semibold">{rowLineTotal.toFixed(2)}</td>
                         </>
                       ) : null}
                       <td className="px-3 py-2 text-right">
@@ -692,7 +691,8 @@ export default function ProductionInProgressPhase({
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

@@ -59,6 +59,24 @@ export function computeMaterialAllocation(
   return { available, issueQty, deficit };
 }
 
+/** Real warehouse stock vs requested quantity — no order-reservation subtraction. */
+export function computeMaterialWorkflow(
+  requestedQty: number,
+  currentStock: number
+): {
+  currentStock: number;
+  issueQty: number;
+  deficit: number;
+} {
+  const stock = Math.max(0, num(currentStock));
+  const requested = Math.max(0, num(requestedQty));
+  return {
+    currentStock: stock,
+    issueQty: Math.min(requested, stock),
+    deficit: Math.max(0, requested - stock),
+  };
+}
+
 export function adjustWarehouseProductsForOrderAllocations<
   T extends { product_id: string; stock: number }
 >(products: T[], materials: ProductionMaterial[], warehouseId: string): T[] {

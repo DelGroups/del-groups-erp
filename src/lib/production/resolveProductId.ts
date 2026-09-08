@@ -1,7 +1,8 @@
 import { isValidUuid } from "@/lib/auth/validate";
 import type { Product } from "@/types/database.types";
 
-const PRODUCT_LOOKUP_FIELDS = "id,code,name,unit,buy_price,inventory_mode,barcode";
+const PRODUCT_LOOKUP_FIELDS =
+  "id,code,name,unit,buy_price,stock,warehouse_id,inventory_mode,barcode";
 
 type ProductLookupClient = {
   from: (table: string) => {

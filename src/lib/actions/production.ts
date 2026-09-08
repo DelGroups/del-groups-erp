@@ -87,13 +87,12 @@ import {
   type AddProductionMaterialInput,
 } from "@/app/production/materialInsert";
 import {
-  computeMaterialAllocation,
-  sumOrderAllocatedQuantity,
+  computeMaterialWorkflow,
 } from "@/lib/production/orderStock";
 import { resolveProductionProduct } from "@/lib/production/resolveProductId";
 import {
   getWarehouseProductAvailableStock,
-  resolveStandardProductWarehouseStock,
+  resolveRealWarehouseStock,
   warehouseStockBalancesFromMovements,
 } from "@/lib/production/warehouseStock";
 import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
@@ -1969,23 +1968,18 @@ export async function addProductionMaterialAction(
         .eq("id", warehouseId)
         .maybeSingle();
 
-      const orderAllocated = sumOrderAllocatedQuantity(
-        existingMaterials,
-        p.id,
-        warehouseId,
-        existingMaterial?.id
-      );
       const warehouseStock = await getWarehouseProductAvailableStock(admin, {
         warehouseId,
         productId: p.id,
         globalStock: Number(p.stock) || 0,
+        productWarehouseId: p.warehouse_id ?? null,
         inventoryMode: p.inventory_mode,
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
 
-      const allocation = computeMaterialAllocation(addQty, warehouseStock, orderAllocated);
-      issueQty = allocation.issueQty;
-      deficitQty = allocation.deficit;
+      const workflow = computeMaterialWorkflow(addQty, warehouseStock);
+      issueQty = workflow.issueQty;
+      deficitQty = workflow.deficit;
     }
 
     if (deficitQty > 0 && !safeInput.confirm_deficit_purchase) {
@@ -2877,9 +2871,33 @@ export type WarehouseProductOption = {
   unit: string;
   buy_price: number;
   cost_price: number;
+  realStock: number;
+  unitCost: number;
   stock: number;
   inventory_mode: string | null;
 };
+
+function toWarehouseProductOption(
+  product: Product,
+  realStock: number,
+  unitOverride?: string
+): WarehouseProductOption {
+  const unitCost = num(product.buy_price);
+  const stock = Math.round(realStock * 100) / 100;
+  return {
+    id: product.id,
+    product_id: product.id,
+    code: product.code || null,
+    name: product.name,
+    unit: unitOverride || product.unit || "Ədəd",
+    buy_price: unitCost,
+    cost_price: unitCost,
+    realStock: stock,
+    unitCost,
+    stock,
+    inventory_mode: product.inventory_mode || null,
+  };
+}
 
 async function fetchPolywoodWarehouseProducts(
   admin: ReturnType<typeof createSupabaseAdminClient>,
@@ -2911,17 +2929,10 @@ async function fetchPolywoodWarehouseProducts(
     );
   }
 
-  return ((products || []) as Product[]).map((product) => ({
-    id: product.id,
-    product_id: product.id,
-    code: product.code || null,
-    name: product.name,
-    unit: product.unit || "Metr",
-    buy_price: num(product.buy_price),
-    cost_price: num(product.buy_price),
-    stock: Math.round((stockByProduct.get(product.id) || 0) * 100) / 100,
-    inventory_mode: product.inventory_mode || POLYWOOD_INVENTORY_MODE,
-  }));
+  return ((products || []) as Product[]).map((product) => {
+    const realStock = Math.round((stockByProduct.get(product.id) || 0) * 100) / 100;
+    return toWarehouseProductOption(product, realStock, product.unit || "Metr");
+  });
 }
 
 async function fetchStandardWarehouseProducts(
@@ -2930,7 +2941,7 @@ async function fetchStandardWarehouseProducts(
 ): Promise<WarehouseProductOption[]> {
   const { data: products, error } = await admin
     .from("products")
-    .select("id,code,name,unit,buy_price,stock,inventory_mode")
+    .select("id,code,name,unit,buy_price,stock,warehouse_id,inventory_mode")
     .or(`inventory_mode.is.null,inventory_mode.neq.${POLYWOOD_INVENTORY_MODE}`)
     .order("name")
     .limit(500);
@@ -2940,22 +2951,16 @@ async function fetchStandardWarehouseProducts(
   const movementBalances = await warehouseStockBalancesFromMovements(admin, warehouseId);
 
   return (products as Product[]).map((product) => {
-    const stock = resolveStandardProductWarehouseStock(
+    const realStock = resolveRealWarehouseStock(
       movementBalances,
       product.id,
-      Number(product.stock) || 0
+      Number(product.stock) || 0,
+      {
+        productWarehouseId: product.warehouse_id ?? null,
+        selectedWarehouseId: warehouseId,
+      }
     );
-    return {
-      id: product.id,
-      product_id: product.id,
-      code: product.code || null,
-      name: product.name,
-      unit: product.unit || "Ədəd",
-      buy_price: num(product.buy_price),
-      cost_price: num(product.buy_price),
-      stock,
-      inventory_mode: product.inventory_mode || null,
-    };
+    return toWarehouseProductOption(product, realStock);
   });
 }
 
@@ -3028,28 +3033,23 @@ export async function createPurchaseRequestAction(
         .eq("id", input.warehouse_id)
         .maybeSingle();
 
-      const existingMaterials = await selectMaterialsForOrder(admin, { orderId });
-      const orderAllocated = sumOrderAllocatedQuantity(
-        existingMaterials,
-        product.id,
-        input.warehouse_id
-      );
       const warehouseStock = await getWarehouseProductAvailableStock(admin, {
         warehouseId: input.warehouse_id,
         productId: product.id,
         globalStock: Number(product.stock) || 0,
+        productWarehouseId: product.warehouse_id ?? null,
         inventoryMode: product.inventory_mode,
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
 
-      const allocation = computeMaterialAllocation(qty, warehouseStock, orderAllocated);
-      if (allocation.deficit <= 0) {
+      const workflow = computeMaterialWorkflow(qty, warehouseStock);
+      if (workflow.deficit <= 0) {
         return {
           success: false,
-          error: `Anbarda kifayət qədər stok var (mövcud: ${allocation.available}, tələb: ${qty})`,
+          error: `Anbarda kifayət qədər stok var (mövcud: ${workflow.currentStock}, tələb: ${qty})`,
         };
       }
-      requestQty = allocation.deficit;
+      requestQty = workflow.deficit;
     }
 
     await createPurchaseRequestInternal(admin, {

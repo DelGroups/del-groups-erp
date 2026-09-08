@@ -4,6 +4,8 @@ export type MaterialLineSelection = {
   productId: string;
   warehouseId: string;
   unitPrice: number;
+  realStock: number;
+  unitCost: number;
   productName?: string;
   productCode?: string | null;
   unit?: string;
@@ -16,14 +18,27 @@ export type WarehouseProductCatalogRow = {
   code?: string | null;
   buy_price: number;
   cost_price?: number | null;
+  realStock?: number;
+  unitCost?: number;
+  stock: number;
   unit: string;
 };
 
 export function resolveProductUnitCost(
-  product: Pick<WarehouseProductCatalogRow, "buy_price" | "cost_price">
+  product: Pick<WarehouseProductCatalogRow, "buy_price" | "cost_price" | "unitCost">
 ): number {
+  const explicit = Number(product.unitCost);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
   const cost = product.cost_price ?? product.buy_price;
   return Number(cost) || 0;
+}
+
+export function resolveProductRealStock(
+  product: Pick<WarehouseProductCatalogRow, "realStock" | "stock">
+): number {
+  const explicit = Number(product.realStock);
+  if (Number.isFinite(explicit)) return Math.max(0, explicit);
+  return Math.max(0, Number(product.stock) || 0);
 }
 
 export function encodeMaterialLineSelection(selection: MaterialLineSelection): string {
@@ -35,10 +50,14 @@ export function buildMaterialLineSelection(
   warehouseId: string
 ): MaterialLineSelection {
   const productId = product.product_id || product.id || "";
+  const unitCost = resolveProductUnitCost(product);
+  const realStock = resolveProductRealStock(product);
   return {
     productId,
     warehouseId,
-    unitPrice: resolveProductUnitCost(product),
+    unitPrice: unitCost,
+    unitCost,
+    realStock,
     productName: product.name,
     productCode: product.code ?? null,
     unit: product.unit,
@@ -57,10 +76,19 @@ export function decodeMaterialLineSelection(
     const productId = String(parsed.productId || "").trim();
     const resolvedWarehouseId = String(parsed.warehouseId || warehouseId || "").trim();
     if (isValidUuid(productId) && isValidUuid(resolvedWarehouseId)) {
+      const unitCost = Number(parsed.unitCost ?? parsed.unitPrice) || 0;
+      const realStock = Number(parsed.realStock);
+      const catalogRow = catalog.find((item) => item.product_id === productId || item.id === productId);
       return {
         productId,
         warehouseId: resolvedWarehouseId,
-        unitPrice: Number(parsed.unitPrice) || 0,
+        unitPrice: unitCost,
+        unitCost: unitCost > 0 ? unitCost : resolveProductUnitCost(catalogRow || { buy_price: 0, stock: 0, unit: "" }),
+        realStock: Number.isFinite(realStock)
+          ? Math.max(0, realStock)
+          : catalogRow
+            ? resolveProductRealStock(catalogRow)
+            : 0,
         productName: parsed.productName,
         productCode: parsed.productCode ?? null,
         unit: parsed.unit,
