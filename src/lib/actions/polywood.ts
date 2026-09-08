@@ -13,6 +13,8 @@ import {
 } from "@/lib/polywood/constants";
 import { addPolywoodStockFromLengths } from "@/lib/polywood/inventory";
 import type { PolywoodImportRow } from "@/lib/polywood/import";
+import type { PolywoodPiece } from "@/lib/polywood/types";
+import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Warehouse } from "@/types/database.types";
 
 export type PolywoodActionResult<T = void> =
@@ -220,5 +222,96 @@ export async function addPolywoodPiecesAction(input: {
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+async function syncPolywoodProductStockAdmin(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  productId: string,
+  warehouseId: string
+): Promise<number> {
+  const { data: pieces } = await admin
+    .from("polywood_pieces")
+    .select("length_m")
+    .eq("product_id", productId)
+    .eq("warehouse_id", warehouseId)
+    .eq("status", "available");
+
+  const totalLength = (pieces || []).reduce(
+    (sum, piece) => sum + (Number(piece.length_m) || 0),
+    0
+  );
+  const rounded = Math.round(totalLength * 1000) / 1000;
+  await admin.from("products").update({ stock: rounded }).eq("id", productId);
+  return rounded;
+}
+
+export async function deletePolywoodInventoryAction(input: {
+  productId: string;
+  pieceIds?: string[];
+}): Promise<PolywoodActionResult<{ deletedPieces: number; removedLengthM: number }>> {
+  try {
+    const { user } = await requirePermissionAction("can_manage_products");
+    const admin = createSupabaseAdminClient();
+    const warehouse = await ensurePolywoodWarehouseAdmin();
+
+    let query = admin
+      .from("polywood_pieces")
+      .select("id, length_m, status, warehouse_id, product_id")
+      .eq("product_id", input.productId)
+      .eq("warehouse_id", warehouse.id);
+
+    if (input.pieceIds?.length) {
+      query = query.in("id", input.pieceIds);
+    } else {
+      query = query.eq("status", "available");
+    }
+
+    const { data: pieces, error: fetchError } = await query;
+    if (fetchError) return { success: false, error: fetchError.message };
+
+    const rows = (pieces || []) as PolywoodPiece[];
+    if (rows.length === 0) {
+      return { success: false, error: "Silinəcək polywood hissəsi tapılmadı" };
+    }
+
+    const blocked = rows.filter((piece) => piece.status !== "available");
+    if (blocked.length > 0) {
+      return {
+        success: false,
+        error: "Satılmış və ya istehlak edilmiş hissələr silinə bilməz",
+      };
+    }
+
+    const removedLengthM = rows.reduce((sum, piece) => sum + (Number(piece.length_m) || 0), 0);
+    const pieceIds = rows.map((piece) => piece.id);
+
+    const { error: deleteError } = await admin.from("polywood_pieces").delete().in("id", pieceIds);
+    if (deleteError) return { success: false, error: deleteError.message };
+
+    await syncPolywoodProductStockAdmin(admin, input.productId, warehouse.id);
+
+    await recordStockMovement(admin, {
+      productId: input.productId,
+      warehouseId: warehouse.id,
+      movementType: "out",
+      quantity: Math.round(removedLengthM * 1000) / 1000,
+      unit: "Metr",
+      referenceType: "polywood_delete",
+      referenceId: input.productId,
+      description: "Polywood hissəsi silindi",
+      createdBy: user.id,
+    });
+
+    return {
+      success: true,
+      data: {
+        deletedPieces: pieceIds.length,
+        removedLengthM: Math.round(removedLengthM * 1000) / 1000,
+      },
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Delete failed" };
   }
 }

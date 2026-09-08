@@ -1241,6 +1241,8 @@ export const ruMessages: Messages = {
     fullSheet: "целый лист",
     cutPiece: "обрезок",
     pieceDetails: "Список физических деталей",
+    deleteConfirm: "Удалить эту деталь и вернуть на склад?",
+    deleteError: "Не удалось удалить запас Polywood",
     tabs: {
       inventory: "Остатки",
       import: "Импорт Excel/CSV",

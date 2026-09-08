@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 import {
   addProductionExpenseAction,
@@ -316,6 +317,11 @@ export default function ProductionWorkflowModal({
                         {purchaseRequests.map((row) => (
                           <li key={row.id}>
                             {row.request_no}: {row.product_name} — {row.quantity} {row.unit} ({row.status})
+                            {row.purchase_id ? (
+                              <Link href="/purchases" className="ml-2 text-app-accent underline">
+                                Alış fakturası
+                              </Link>
+                            ) : null}
                           </li>
                         ))}
                       </ul>

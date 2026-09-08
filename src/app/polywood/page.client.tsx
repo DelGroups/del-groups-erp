@@ -4,14 +4,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import Link from "next/link";
 import PolywoodImportPanel from "@/components/polywood/PolywoodImportPanel";
-import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import { deletePolywoodInventoryAction, ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import {
   fetchAllPolywoodInventory,
   type PolywoodProductInventoryRow,
 } from "@/lib/polywood/inventory";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Warehouse } from "@/types/database.types";
-import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Upload } from "lucide-react";
+import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Trash2, Upload } from "lucide-react";
 
 export default function PolywoodPageClient() {
   const { t } = useI18n();
@@ -22,6 +23,8 @@ export default function PolywoodPageClient() {
   const [activeTab, setActiveTab] = useState<"inventory" | "import">("inventory");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [importProductId, setImportProductId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PolywoodProductInventoryRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -88,6 +91,19 @@ export default function PolywoodPageClient() {
       );
     });
   }, [rows, search, categoryFilter]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deletePolywoodInventoryAction({ productId: deleteTarget.product.id });
+    setDeleting(false);
+    if (!result.success) {
+      setError(result.error || t("polywood.deleteError"));
+      return;
+    }
+    setDeleteTarget(null);
+    void loadData();
+  }, [deleteTarget, loadData, t]);
 
   return (
     <PageLayout>
@@ -292,6 +308,14 @@ export default function PolywoodPageClient() {
                             >
                               <Package className="h-3.5 w-3.5" />
                             </Link>
+                            <button
+                              type="button"
+                              className="rounded p-1.5 text-rose-600 hover:bg-rose-50"
+                              title={t("common.delete")}
+                              onClick={() => setDeleteTarget({ product, summary })}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -333,6 +357,15 @@ export default function PolywoodPageClient() {
           </>
         )}
       </main>
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        message={t("polywood.deleteConfirm")}
+        itemName={deleteTarget?.product.name}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </PageLayout>
   );
 }

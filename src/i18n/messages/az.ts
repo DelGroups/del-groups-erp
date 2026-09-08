@@ -1239,6 +1239,8 @@ export const azMessages = {
     fullSheet: "tam vərəq",
     cutPiece: "kəsim",
     pieceDetails: "Fiziki hissələrin siyahısı",
+    deleteConfirm: "Bu detalı silmək və anbara qaytarmaq istəyirsiniz?",
+    deleteError: "Polywood stoku silinmədi",
     tabs: {
       inventory: "Stok görünüşü",
       import: "Excel/CSV idxal",

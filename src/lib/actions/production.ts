@@ -93,6 +93,7 @@ import {
   selectProductionMaterialsWithFallback,
 } from "@/lib/production/payloads";
 import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
+import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
 import { normalizeEmployee } from "@/types/database.types";
 
@@ -1575,6 +1576,21 @@ async function issueMaterialRow(
       polywood_length_m: polywood.polywoodLengthM ?? material.polywood_length_m,
       polywood_cut_details: (polywood.cutDetails as unknown as Record<string, unknown>) ?? null,
     });
+
+    const polywoodQty = num(polywood.polywoodLengthM ?? material.quantity);
+    if (polywoodQty > 0) {
+      await recordStockMovement(admin, {
+        productId: material.product_id,
+        warehouseId: material.warehouse_id || null,
+        movementType: "out",
+        quantity: polywoodQty,
+        unit: material.unit || "Metr",
+        referenceType: "production",
+        referenceId: material.production_order_id,
+        sourceLineId: material.id,
+        description: "İstehsalat üçün material",
+      });
+    }
   }
 
   const issued = await runProductionMaterialIssueEvent(admin, material.production_order_id, {
@@ -1651,6 +1667,21 @@ async function allocateOrderMaterials(
         polywood_length_m: polywood.polywoodLengthM ?? material.polywood_length_m,
         polywood_cut_details: (polywood.cutDetails as unknown as Record<string, unknown>) ?? null,
       });
+
+      const polywoodQty = num(polywood.polywoodLengthM ?? material.quantity);
+      if (polywoodQty > 0) {
+        await recordStockMovement(admin, {
+          productId: material.product_id,
+          warehouseId: material.warehouse_id || null,
+          movementType: "out",
+          quantity: polywoodQty,
+          unit: material.unit || "Metr",
+          referenceType: "production",
+          referenceId: order.id,
+          sourceLineId: material.id,
+          description: "İstehsalat üçün material",
+        });
+      }
     }
   }
 
@@ -2485,7 +2516,7 @@ async function createPurchaseRequestInternal(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   input: {
     orderId: string;
-    product: Pick<Product, "id" | "code" | "name" | "unit">;
+    product: Pick<Product, "id" | "code" | "name" | "unit" | "buy_price">;
     warehouseId: string | null;
     quantity: number;
     userId: string;
@@ -2493,22 +2524,83 @@ async function createPurchaseRequestInternal(
   }
 ): Promise<void> {
   const requestNo = createDocNo("PR");
-  const { error } = await admin.from("purchase_requests").insert({
-    request_no: requestNo,
-    production_order_id: input.orderId,
-    product_id: input.product.id,
-    product_code: input.product.code,
-    product_name: input.product.name,
-    warehouse_id: input.warehouseId,
-    quantity: input.quantity,
-    unit: input.product.unit || "Ədəd",
-    status: "pending",
-    notes: input.notes || null,
-    created_by: input.userId,
-  });
+  const unitPrice = Math.max(num(input.product.buy_price), 0);
+  const lineTotal = Math.round(unitPrice * input.quantity * 100) / 100;
+  const totalAmount = lineTotal > 0 ? lineTotal : input.quantity;
+
+  const { data: requestRow, error } = await admin
+    .from("purchase_requests")
+    .insert({
+      request_no: requestNo,
+      production_order_id: input.orderId,
+      product_id: input.product.id,
+      product_code: input.product.code,
+      product_name: input.product.name,
+      warehouse_id: input.warehouseId,
+      quantity: input.quantity,
+      unit: input.product.unit || "Ədəd",
+      status: "pending",
+      notes: input.notes || null,
+      created_by: input.userId,
+    })
+    .select("id")
+    .maybeSingle();
+
   if (error && !isMissingRelation(error)) {
     throw new Error(error.message);
   }
+  if (!requestRow?.id) return;
+
+  const invoiceNumber = `DRAFT-${requestNo}`;
+  const { data: purchase, error: purchaseError } = await admin
+    .from("purchases")
+    .insert({
+      invoice_number: invoiceNumber,
+      supplier_id: null,
+      warehouse_id: input.warehouseId,
+      doc_date: new Date().toISOString().slice(0, 10),
+      total_amount: totalAmount,
+      paid_amount: 0,
+      debt_amount: totalAmount,
+      status: "Qaralama",
+      notes: `İstehsalat satınalma tələbi: ${requestNo} (layihə ${input.orderId})`,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (purchaseError || !purchase?.id) {
+    if (purchaseError && !isMissingRelation(purchaseError)) {
+      throw new Error(purchaseError.message);
+    }
+    return;
+  }
+
+  const effectiveUnitPrice = unitPrice > 0 ? unitPrice : 1;
+  const effectiveLineTotal = lineTotal > 0 ? lineTotal : input.quantity * effectiveUnitPrice;
+
+  const { error: itemError } = await admin.from("purchase_items").insert({
+    purchase_id: purchase.id,
+    product_id: input.product.id,
+    product_code: input.product.code,
+    product_name: input.product.name,
+    quantity: input.quantity,
+    unit: input.product.unit || "Ədəd",
+    unit_price: effectiveUnitPrice,
+    total_price: effectiveLineTotal,
+  });
+
+  if (itemError && !isMissingRelation(itemError)) {
+    throw new Error(itemError.message);
+  }
+
+  await admin
+    .from("purchase_requests")
+    .update({
+      purchase_id: purchase.id,
+      status: "ordered",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestRow.id);
 }
 
 export async function listPurchaseRequestsAction(

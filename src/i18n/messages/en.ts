@@ -1241,6 +1241,8 @@ export const enMessages: Messages = {
     fullSheet: "full sheet",
     cutPiece: "cut",
     pieceDetails: "Physical piece breakdown",
+    deleteConfirm: "Delete this piece and return it to warehouse stock?",
+    deleteError: "Failed to delete Polywood stock",
     tabs: {
       inventory: "Inventory view",
       import: "Excel/CSV import",
