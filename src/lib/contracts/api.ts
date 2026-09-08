@@ -106,6 +106,22 @@ export function formatContractOptionLabel(
   return `${contract.contract_number} - ${typeLabel}${suffix}`;
 }
 
+export async function fetchActiveContractsForParty(partyId: string): Promise<Contract[]> {
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("*")
+    .eq("party_id", partyId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("fetchActiveContractsForParty:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => toContract(row as Record<string, unknown>));
+}
+
 export async function fetchContracts(filters?: {
   type?: ContractType;
   types?: ContractType[];

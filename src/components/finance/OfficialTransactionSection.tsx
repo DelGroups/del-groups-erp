@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FileText, Plus } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { VatMode } from "@/lib/finance/vatEngine";
 import {
-  contractTypesForTransaction,
-  fetchContracts,
+  fetchActiveContractsForParty,
   formatContractOptionLabel,
   type Contract,
 } from "@/lib/contracts/api";
@@ -47,7 +46,9 @@ export default function OfficialTransactionSection({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
-  const contractTypes = contractTypesForTransaction(transactionType);
+  const prevPartyIdRef = useRef<string | null>(null);
+  const contractIdRef = useRef(contractId);
+  contractIdRef.current = contractId;
 
   useEffect(() => {
     if (!partyId || !isOfficial) {
@@ -56,15 +57,27 @@ export default function OfficialTransactionSection({
       return;
     }
 
+    if (prevPartyIdRef.current !== null && prevPartyIdRef.current !== partyId) {
+      onContractIdChange(null);
+    }
+    prevPartyIdRef.current = partyId;
+
+    let cancelled = false;
     setLoadingContracts(true);
-    void fetchContracts({ types: contractTypes, partyId, status: "active" }).then((rows) => {
+    void fetchActiveContractsForParty(partyId).then((rows) => {
+      if (cancelled) return;
       setContracts(rows);
       setLoadingContracts(false);
-      if (contractId && !rows.some((c) => c.id === contractId)) {
+      const currentContractId = contractIdRef.current;
+      if (currentContractId && !rows.some((c) => c.id === currentContractId)) {
         onContractIdChange(null);
       }
     });
-  }, [partyId, isOfficial, contractTypes, contractId, onContractIdChange]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [partyId, isOfficial, onContractIdChange]);
 
   useEffect(() => {
     if (isOfficial && partyVoen) {
