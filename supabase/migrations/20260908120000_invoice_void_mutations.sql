@@ -239,8 +239,6 @@ BEGIN
     AND source_document_id = p_sale_id
     AND status = 'pending';
 
-  DELETE FROM sales_commissions WHERE sale_id = p_sale_id;
-
   UPDATE sales
   SET
     status = 'cancelled',

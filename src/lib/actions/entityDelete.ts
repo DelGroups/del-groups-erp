@@ -2,21 +2,21 @@
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import {
-  voidPurchaseInvoiceRpc,
-  voidSaleInvoiceRpc,
-} from "@/lib/invoices/voidInvoiceRpc";
+  voidPurchaseInvoiceDirect,
+  voidSaleInvoiceDirect,
+} from "@/lib/invoices/voidInvoiceDirect";
 
 export type DeleteActionResult = { success: boolean; error?: string };
 
 export async function voidSaleAction(saleId: string, reason?: string): Promise<DeleteActionResult> {
-  return voidSaleInvoiceRpc(saleId, reason);
+  return voidSaleInvoiceDirect(saleId, reason);
 }
 
 export async function voidPurchaseAction(
   purchaseId: string,
   reason?: string
 ): Promise<DeleteActionResult> {
-  return voidPurchaseInvoiceRpc(purchaseId, reason);
+  return voidPurchaseInvoiceDirect(purchaseId, reason);
 }
 
 /** @deprecated Use voidPurchaseAction — kept for imports during transition */
