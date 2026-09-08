@@ -29,7 +29,6 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidPurchaseAction } from "@/lib/actions/entityDelete";
-import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import { ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -123,15 +122,17 @@ export default function PurchasesPage() {
 
   const handleVoidPurchase = async () => {
     if (!deleteTarget) return;
+    const deletedId = deleteTarget.id;
     setDeleting(true);
-    const result = await voidPurchaseAction(deleteTarget.id, t("purchases.voidReason"));
+    const result = await voidPurchaseAction(deletedId);
     setDeleting(false);
     if (!result.success) {
       showError(result.error || t("common.error"));
       return;
     }
     setDeleteTarget(null);
-    showSuccess(t("common.voidSuccessRestore"));
+    setPurchases((prev) => prev.filter((row) => row.id !== deletedId));
+    showSuccess(t("purchases.deleteSuccess"));
     void loadData();
   };
 
@@ -236,9 +237,7 @@ export default function PurchasesPage() {
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
                             onDelete={
-                              canDeletePurchases && !isInvoiceCancelled(row.status)
-                                ? () => setDeleteTarget(row)
-                                : undefined
+                              canDeletePurchases ? () => setDeleteTarget(row) : undefined
                             }
                             deleteTitle={t("common.void")}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}

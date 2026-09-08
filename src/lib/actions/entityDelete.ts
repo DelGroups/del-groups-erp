@@ -8,23 +8,17 @@ import {
 
 export type DeleteActionResult = { success: boolean; error?: string };
 
-export async function voidSaleAction(saleId: string, reason?: string): Promise<DeleteActionResult> {
-  return voidSaleInvoiceDirect(saleId, reason);
+export async function voidSaleAction(saleId: string): Promise<DeleteActionResult> {
+  return voidSaleInvoiceDirect(saleId);
 }
 
-export async function voidPurchaseAction(
-  purchaseId: string,
-  reason?: string
-): Promise<DeleteActionResult> {
-  return voidPurchaseInvoiceDirect(purchaseId, reason);
+export async function voidPurchaseAction(purchaseId: string): Promise<DeleteActionResult> {
+  return voidPurchaseInvoiceDirect(purchaseId);
 }
 
 /** @deprecated Use voidPurchaseAction — kept for imports during transition */
-export async function deletePurchaseAction(
-  purchaseId: string,
-  reason?: string
-): Promise<DeleteActionResult> {
-  return voidPurchaseAction(purchaseId, reason);
+export async function deletePurchaseAction(purchaseId: string): Promise<DeleteActionResult> {
+  return voidPurchaseAction(purchaseId);
 }
 
 export async function deleteCustomerAction(customerId: string): Promise<DeleteActionResult> {

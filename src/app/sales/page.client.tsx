@@ -25,7 +25,6 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidSaleAction } from "@/lib/actions/entityDelete";
-import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -104,14 +103,16 @@ export default function SalesListPage() {
 
   const handleVoidSale = async () => {
     if (!voidTarget) return;
+    const deletedId = voidTarget.id;
     setVoiding(true);
-    const result = await voidSaleAction(voidTarget.id, t("sales.voidReason"));
+    const result = await voidSaleAction(deletedId);
     setVoiding(false);
     if (!result.success) {
       showError(result.error || t("common.error"));
       return;
     }
     setVoidTarget(null);
+    setSales((prev) => prev.filter((row) => row.id !== deletedId));
     showSuccess(t("common.voidSuccessRestore"));
     void loadData();
   };
@@ -277,9 +278,7 @@ export default function SalesListPage() {
                             onPayment={() => void openPayment(sale)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onDelete={
-                              canDeleteSales && !isInvoiceCancelled(sale.status)
-                                ? () => setVoidTarget(sale)
-                                : undefined
+                              canDeleteSales ? () => setVoidTarget(sale) : undefined
                             }
                             deleteTitle={t("common.void")}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(sale).show}

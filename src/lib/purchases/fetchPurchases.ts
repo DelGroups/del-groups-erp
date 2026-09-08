@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import type {
   PurchaseInsert,
   PurchaseLineItem,
@@ -42,7 +43,9 @@ export async function fetchPurchaseList(): Promise<PurchaseRecord[]> {
     return [];
   }
 
-  return (data || []).map((row) => ({
+  return (data || [])
+    .filter((row) => !isInvoiceCancelled(row.status))
+    .map((row) => ({
     id: row.id,
     invoice_number: row.invoice_number,
     supplier_id: row.supplier_id,

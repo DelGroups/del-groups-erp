@@ -4,7 +4,6 @@ import {
 } from "@/lib/auth/serverActionAuth";
 import type { PermissionKey } from "@/types/database.types";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 
 export type VoidInvoiceResult = { success: boolean; error?: string };
 
@@ -193,16 +192,17 @@ async function refreshCustomerArBalance(
 ): Promise<void> {
   const { data: rows, error } = await client
     .from("sales")
-    .select("remaining_balance, status")
+    .select("remaining_balance")
     .eq("customer_id", customerId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const openAr = (rows || [])
-    .filter((row) => !isInvoiceCancelled(row.status))
-    .reduce((sum, row) => sum + Math.max(0, Number(row.remaining_balance) || 0), 0);
+  const openAr = (rows || []).reduce(
+    (sum, row) => sum + Math.max(0, Number(row.remaining_balance) || 0),
+    0
+  );
 
   const { error: updateError } = await client
     .from("customers")
@@ -243,27 +243,23 @@ async function revertSupplierDebt(
   }
 }
 
-async function rejectPendingWarehouseSlips(
+async function deleteLinkedWarehouseSlips(
   client: SupabaseClient,
   sourceType: "sale" | "purchase",
   sourceId: string
 ): Promise<void> {
   const { error } = await client
     .from("warehouse_slips")
-    .update({ status: "rejected" })
+    .delete()
     .eq("source_type", sourceType)
-    .eq("source_document_id", sourceId)
-    .eq("status", "pending");
+    .eq("source_document_id", sourceId);
 
   if (error) {
     throw new Error(error.message);
   }
 }
 
-export async function voidSaleInvoiceDirect(
-  saleId: string,
-  reason?: string
-): Promise<VoidInvoiceResult> {
+export async function voidSaleInvoiceDirect(saleId: string): Promise<VoidInvoiceResult> {
   if (!saleId?.trim()) {
     return { success: false, error: "Satış tapılmadı" };
   }
@@ -274,7 +270,7 @@ export async function voidSaleInvoiceDirect(
 
     const { data: sale, error: fetchError } = await client
       .from("sales")
-      .select("id, status, doc_no, invoice_number, customer_id, notes, note")
+      .select("id, doc_no, invoice_number, customer_id")
       .eq("id", saleId)
       .single();
 
@@ -282,42 +278,28 @@ export async function voidSaleInvoiceDirect(
       return { success: false, error: fetchError?.message || "Satış fakturası tapılmadı" };
     }
 
-    if (isInvoiceCancelled(sale.status)) {
-      return { success: true };
-    }
-
     const docLabel =
       (typeof sale.doc_no === "string" && sale.doc_no.trim()) ||
       (typeof sale.invoice_number === "string" && sale.invoice_number.trim()) ||
       saleId;
-    const voidNote = (reason || "").trim() || "Satış fakturası ləğv edildi";
-    const existingNotes =
-      typeof sale.notes === "string" && sale.notes.trim()
-        ? sale.notes
-        : typeof sale.note === "string"
-          ? sale.note
-          : "";
 
     await restoreSaleStock(client, saleId);
     await deleteDocumentCashTransactions(client, "sale", saleId, docLabel);
-    await rejectPendingWarehouseSlips(client, "sale", saleId);
+    await deleteLinkedWarehouseSlips(client, "sale", saleId);
 
-    const { error: updateError } = await client
-      .from("sales")
-      .update({
-        status: "cancelled",
-        paid_amount: 0,
-        remaining_balance: 0,
-        payments: [],
-        warehouse_sent: false,
-        warehouse_slip_status: null,
-        note: voidNote,
-        notes: existingNotes ? `${existingNotes}\n${voidNote}` : voidNote,
-      })
-      .eq("id", saleId);
+    const { error: deleteItemsError } = await client
+      .from("sale_items")
+      .delete()
+      .eq("sale_id", saleId);
 
-    if (updateError) {
-      return { success: false, error: updateError.message };
+    if (deleteItemsError) {
+      return { success: false, error: deleteItemsError.message };
+    }
+
+    const { error: deleteSaleError } = await client.from("sales").delete().eq("id", saleId);
+
+    if (deleteSaleError) {
+      return { success: false, error: deleteSaleError.message };
     }
 
     if (sale.customer_id) {
@@ -331,14 +313,13 @@ export async function voidSaleInvoiceDirect(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Satış fakturası ləğv edilmədi",
+      error: err instanceof Error ? err.message : "Satış fakturası silinmədi",
     };
   }
 }
 
 export async function voidPurchaseInvoiceDirect(
-  purchaseId: string,
-  reason?: string
+  purchaseId: string
 ): Promise<VoidInvoiceResult> {
   if (!purchaseId?.trim()) {
     return { success: false, error: "Alış tapılmadı" };
@@ -350,7 +331,7 @@ export async function voidPurchaseInvoiceDirect(
 
     const { data: purchase, error: fetchError } = await client
       .from("purchases")
-      .select("id, status, invoice_number, supplier_id, debt_amount, notes")
+      .select("id, invoice_number, supplier_id, debt_amount")
       .eq("id", purchaseId)
       .single();
 
@@ -358,15 +339,9 @@ export async function voidPurchaseInvoiceDirect(
       return { success: false, error: fetchError?.message || "Alış fakturası tapılmadı" };
     }
 
-    if (isInvoiceCancelled(purchase.status)) {
-      return { success: true };
-    }
-
     const docLabel =
       (typeof purchase.invoice_number === "string" && purchase.invoice_number.trim()) ||
       purchaseId;
-    const voidNote = (reason || "").trim() || "Alış fakturası ləğv edildi";
-    const existingNotes = typeof purchase.notes === "string" ? purchase.notes : "";
 
     await revertPurchaseStock(client, purchaseId);
     await deleteDocumentCashTransactions(client, "purchase", purchaseId, docLabel);
@@ -379,22 +354,24 @@ export async function voidPurchaseInvoiceDirect(
       );
     }
 
-    await rejectPendingWarehouseSlips(client, "purchase", purchaseId);
+    await deleteLinkedWarehouseSlips(client, "purchase", purchaseId);
 
-    const { error: updateError } = await client
+    const { error: deleteItemsError } = await client
+      .from("purchase_items")
+      .delete()
+      .eq("purchase_id", purchaseId);
+
+    if (deleteItemsError) {
+      return { success: false, error: deleteItemsError.message };
+    }
+
+    const { error: deletePurchaseError } = await client
       .from("purchases")
-      .update({
-        status: "cancelled",
-        paid_amount: 0,
-        debt_amount: 0,
-        warehouse_sent: false,
-        warehouse_slip_status: null,
-        notes: existingNotes ? `${existingNotes}\n${voidNote}` : voidNote,
-      })
+      .delete()
       .eq("id", purchaseId);
 
-    if (updateError) {
-      return { success: false, error: updateError.message };
+    if (deletePurchaseError) {
+      return { success: false, error: deletePurchaseError.message };
     }
 
     return { success: true };
@@ -404,7 +381,7 @@ export async function voidPurchaseInvoiceDirect(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Alış fakturası ləğv edilmədi",
+      error: err instanceof Error ? err.message : "Alış fakturası silinmədi",
     };
   }
 }

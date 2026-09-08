@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import type { SaleItem, SalePayment, WarehouseSlipStatus } from "@/types/database.types";
 
 export interface SaleRecord {
@@ -252,7 +253,8 @@ export async function fetchSalesListWithMeta(): Promise<FetchSalesListResult> {
 
     const sales = (data || [])
       .map((row) => mapSaleRow(row as SalesListRow))
-      .filter((row): row is SaleRecord => row != null);
+      .filter((row): row is SaleRecord => row != null)
+      .filter((row) => !isInvoiceCancelled(row.status));
 
     return { sales };
   } catch (err) {
