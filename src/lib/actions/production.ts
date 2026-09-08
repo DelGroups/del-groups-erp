@@ -1908,15 +1908,6 @@ export async function addProductionMaterialAction(
       });
 
       if (hasWarehouseStockShortage(qty, available)) {
-        const shortageQty = warehouseStockShortageDelta(qty, available);
-        await createPurchaseRequestInternal(admin, {
-          orderId,
-          product: p,
-          warehouseId,
-          quantity: shortageQty,
-          userId: user.id,
-          notes: `Stok çatışmır (mövcud: ${available}, tələb: ${qty}, çatışmayan: ${shortageQty})`,
-        });
         issueNow = false;
       }
     }
@@ -2083,6 +2074,8 @@ export async function removeProductionMaterialAction(
       .from("production_stock_reservations")
       .delete()
       .eq("production_material_id", materialId);
+
+    await cancelPendingPurchaseRequestsForProduct(admin, orderId, material.product_id);
 
     const { error } = await admin.from("production_materials").delete().eq("id", materialId);
     if (error) return { success: false, error: error.message };
@@ -2616,6 +2609,45 @@ function mapPurchaseRequest(row: Record<string, unknown>): PurchaseRequest {
   };
 }
 
+async function cancelLinkedDraftPurchase(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  purchaseId: string | null | undefined
+): Promise<void> {
+  if (!purchaseId) return;
+  await admin.from("purchases").update({ status: "cancelled" }).eq("id", purchaseId).eq("status", "draft");
+}
+
+async function cancelPendingPurchaseRequestsForProduct(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  orderId: string,
+  productId: string | null | undefined
+): Promise<void> {
+  if (!productId) return;
+
+  const { data: requests, error } = await admin
+    .from("purchase_requests")
+    .select("id, purchase_id, status")
+    .eq("production_order_id", orderId)
+    .eq("product_id", productId)
+    .in("status", ["pending", "ordered"]);
+
+  if (error && !isMissingRelation(error)) {
+    throw new Error(error.message);
+  }
+
+  for (const request of (requests || []) as {
+    id: string;
+    purchase_id?: string | null;
+    status?: string;
+  }[]) {
+    await admin
+      .from("purchase_requests")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", request.id);
+    await cancelLinkedDraftPurchase(admin, request.purchase_id);
+  }
+}
+
 async function createPurchaseRequestInternal(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   input: {
@@ -2898,6 +2930,52 @@ export async function createPurchaseRequestAction(
   }
 }
 
+export async function cancelPurchaseRequestAction(
+  orderId: string,
+  requestId: string
+): Promise<ProductionActionResult<PurchaseRequest[]>> {
+  try {
+    await requireProductionIssuePermission();
+    const admin = createSupabaseAdminClient();
+
+    const { data: request, error } = await admin
+      .from("purchase_requests")
+      .select("id, production_order_id, purchase_id, status")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (error) return { success: false, error: error.message };
+    if (!request || String(request.production_order_id) !== orderId) {
+      return { success: false, error: "Satınalma tələbi tapılmadı" };
+    }
+
+    const status = String(request.status || "");
+    if (status === "cancelled") {
+      return { success: false, error: "Satınalma tələbi artıq ləğv edilib" };
+    }
+    if (status === "received") {
+      return { success: false, error: "Qəbul edilmiş satınalma tələbi ləğv edilə bilməz" };
+    }
+
+    const { error: updateError } = await admin
+      .from("purchase_requests")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (updateError) return { success: false, error: updateError.message };
+
+    await cancelLinkedDraftPurchase(
+      admin,
+      (request as { purchase_id?: string | null }).purchase_id
+    );
+
+    return listPurchaseRequestsAction(orderId);
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
 export async function listPurchaseRequestsAction(
   orderId: string
 ): Promise<ProductionActionResult<PurchaseRequest[]>> {
@@ -2915,7 +2993,9 @@ export async function listPurchaseRequestsAction(
     }
     return {
       success: true,
-      data: ((data || []) as Record<string, unknown>[]).map(mapPurchaseRequest),
+      data: ((data || []) as Record<string, unknown>[])
+        .map(mapPurchaseRequest)
+        .filter((row) => row.status !== "cancelled"),
     };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };

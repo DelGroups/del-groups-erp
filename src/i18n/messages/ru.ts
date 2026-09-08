@@ -1449,6 +1449,7 @@ export const ruMessages: Messages = {
       createPurchaseRequest: "Создать заявку на закупку",
       purchaseRequests: "Заявки на закупку",
       draftPurchase: "Черновик счёта закупки",
+      cancelPurchaseRequest: "Отменить / Удалить",
       addMaterial: "Добавить материал",
       selectWarehouseFirst: "Сначала выберите склад",
       productInWarehouse: "{name} (На складе: {stock} {unit})",

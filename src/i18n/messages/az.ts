@@ -1452,6 +1452,7 @@ export const azMessages = {
       createPurchaseRequest: "Satın Alma Tələbi Yarat",
       purchaseRequests: "Satınalma tələbləri",
       draftPurchase: "Qaralama alış fakturası",
+      cancelPurchaseRequest: "Ləğv et / Sil",
       addMaterial: "Material əlavə et",
       selectProduct: "Məhsul seçin",
       selectWarehouseFirst: "Öncə anbar seçin",

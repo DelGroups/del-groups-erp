@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import {
   addProductionExpenseAction,
   addProductionMaterialAction,
+  cancelPurchaseRequestAction,
   createPurchaseRequestAction,
   fetchWarehouseProductsForProductionAction,
   listPurchaseRequestsAction,
@@ -112,6 +113,16 @@ export default function ProductionInProgressPhase({
   const [expenseSupplierId, setExpenseSupplierId] = useState("");
 
   const costing = useMemo(() => calcProductionCosting(order), [order]);
+  const activePurchaseRequests = useMemo(
+    () => purchaseRequests.filter((row) => row.status !== "cancelled"),
+    [purchaseRequests]
+  );
+
+  const refreshPurchaseRequests = () => {
+    void listPurchaseRequestsAction(order.id).then((result) => {
+      if (result.success && result.data) setPurchaseRequests(result.data);
+    });
+  };
   const servicesAndOverhead = costing.outsourcingCost + costing.sideExpenseCost;
   const estimatedProfit = order.total_project_price - (costing.materialCost + servicesAndOverhead);
   const remaining = useMemo(() => remainingBalanceFromOrder(order), [order]);
@@ -260,9 +271,7 @@ export default function ProductionInProgressPhase({
         applyOrder(mergeProductionOrder(order, data));
         setMaterialQty(1);
         clearMaterialProduct();
-        void listPurchaseRequestsAction(order.id).then((pr) => {
-          if (pr.success && pr.data) setPurchaseRequests(pr.data);
-        });
+        refreshPurchaseRequests();
       }
     );
   };
@@ -294,7 +303,17 @@ export default function ProductionInProgressPhase({
   const deleteMaterial = async (materialId: string) => {
     await runAction(
       () => removeProductionMaterialAction(order.id, materialId),
-      (data) => applyOrder(data)
+      (data) => {
+        applyOrder(data);
+        refreshPurchaseRequests();
+      }
+    );
+  };
+
+  const cancelPurchaseRequest = async (requestId: string) => {
+    await runAction(
+      () => cancelPurchaseRequestAction(order.id, requestId),
+      (data) => setPurchaseRequests(data)
     );
   };
 
@@ -561,11 +580,11 @@ export default function ProductionInProgressPhase({
             </div>
           </div>
 
-          {purchaseRequests.length > 0 ? (
+          {activePurchaseRequests.length > 0 ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
               <p className="font-semibold text-amber-200">{t("production.workflow.purchaseRequests")}</p>
               <ul className="mt-2 space-y-1 text-xs">
-                {purchaseRequests.map((row) => (
+                {activePurchaseRequests.map((row) => (
                   <li key={row.id} className="flex flex-wrap items-center gap-2">
                     <span>
                       {row.request_no}: {row.product_name} — {row.quantity} {row.unit} ({row.status})
@@ -574,6 +593,16 @@ export default function ProductionInProgressPhase({
                       <Link href="/purchases" className="text-app-accent underline">
                         {t("production.workflow.draftPurchase")}
                       </Link>
+                    ) : null}
+                    {row.status === "pending" || row.status === "ordered" ? (
+                      <button
+                        type="button"
+                        className="rounded border border-amber-500/50 px-2 py-0.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/20"
+                        disabled={saving}
+                        onClick={() => void cancelPurchaseRequest(row.id)}
+                      >
+                        {t("production.workflow.cancelPurchaseRequest")}
+                      </button>
                     ) : null}
                   </li>
                 ))}

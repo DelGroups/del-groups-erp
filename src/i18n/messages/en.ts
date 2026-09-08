@@ -1449,6 +1449,7 @@ export const enMessages: Messages = {
       createPurchaseRequest: "Create Purchase Request",
       purchaseRequests: "Purchase requests",
       draftPurchase: "Draft purchase invoice",
+      cancelPurchaseRequest: "Cancel / Delete",
       addMaterial: "Add material",
       selectWarehouseFirst: "Select a warehouse first",
       productInWarehouse: "{name} (In stock: {stock} {unit})",
