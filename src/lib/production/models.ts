@@ -16,6 +16,30 @@ export const PRODUCTION_MODEL_LABELS: Record<ProductionModel, string> = {
   subcontractor_custom: "Podratçı Sifarişi",
 };
 
+export const PRODUCTION_CREATION_TYPES = [
+  {
+    value: "bom_series",
+    model: "series" as ProductionModel,
+    label: "Seriya İstehsalı (BOM / Resept ilə)",
+  },
+  {
+    value: "internal_custom",
+    model: "in_house_custom" as ProductionModel,
+    label: "Daxili Fərdi İstehsalat (Usta və Personal)",
+  },
+  {
+    value: "contractor_outsource",
+    model: "subcontractor_custom" as ProductionModel,
+    label: "Xarici Podratçı / Outsource",
+  },
+] as const;
+
+export type ProductionCreationType = (typeof PRODUCTION_CREATION_TYPES)[number]["value"];
+
+export function productionCreationTypeToModel(type: ProductionCreationType): ProductionModel {
+  return PRODUCTION_CREATION_TYPES.find((row) => row.value === type)?.model ?? PRODUCTION_MODEL_DEFAULT;
+}
+
 export function isProductionModel(value: unknown): value is ProductionModel {
   return typeof value === "string" && (PRODUCTION_MODELS as readonly string[]).includes(value);
 }
@@ -29,6 +53,9 @@ export function normalizeProductionModel(value: unknown): ProductionModel {
   }
   if (raw === "subcontractor_custom" || raw === "subcontractor" || raw === "podratci") {
     return "subcontractor_custom";
+  }
+  if (raw === "bom_series" || raw === "internal_custom" || raw === "contractor_outsource") {
+    return productionCreationTypeToModel(raw as ProductionCreationType);
   }
   return PRODUCTION_MODEL_DEFAULT;
 }

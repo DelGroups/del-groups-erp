@@ -1136,7 +1136,9 @@ export async function createProductionOrderAction(
     }
     const installFee = num(input.installation_fee);
     const advance = num(input.advance_payment);
-    if (advance > 0 && !input.advance_account_id?.trim()) {
+    const advanceAccountId =
+      advance > 0 ? input.advance_account_id?.trim() || null : null;
+    if (advance > 0 && !advanceAccountId) {
       return { success: false, error: "Avans üçün kassa/bank hesabı seçilməlidir" };
     }
 
@@ -1174,7 +1176,7 @@ export async function createProductionOrderAction(
       total_project_price: totalPrice,
       installation_fee: installFee,
       advance_payment: advance,
-      advance_account_id: input.advance_account_id?.trim() || null,
+      advance_account_id: advanceAccountId,
       expected_delivery_date: input.expected_delivery_date || null,
       project_scope: input.project_scope?.trim() || null,
       terms: resolvedType === "Custom" ? DEFAULT_CONTRACT_TERMS_AZ : null,
@@ -1379,9 +1381,9 @@ export async function createProductionOrderAction(
     if (!reservationResult.ok) return failCreatedOrder(reservationResult.error || "Material rezervasiyası yaradılmadı");
 
     const bundled = await loadOrderBundle(admin, orderId);
-    if (bundled && advance > 0) {
+    if (bundled && advance > 0 && advanceAccountId) {
       const adv = await syncProductionAdvancePayment(admin, bundled, {
-        accountId: input.advance_account_id,
+        accountId: advanceAccountId,
       });
       if (!adv.ok) return failCreatedOrder(adv.error || "Avans ödənişi qeydə alınmadı");
     }

@@ -2,9 +2,19 @@
 
 import React, { useMemo, useState } from "react";
 import { Factory, X } from "lucide-react";
-import { createProductionOrderAction, type ProductionLookups } from "@/lib/actions/production";
-import { PRODUCTION_MODEL_DEFAULT } from "@/lib/production/models";
+import {
+  createProductionOrderAction,
+  type CreateProductionOrderInput,
+  type ProductionLookups,
+} from "@/lib/actions/production";
+import {
+  PRODUCTION_CREATION_TYPES,
+  legacyFromProductionModel,
+  productionCreationTypeToModel,
+  type ProductionCreationType,
+} from "@/lib/production/models";
 import type { ProductionOrder } from "@/lib/production/types";
+import type { Supplier } from "@/types/database.types";
 
 interface Props {
   open: boolean;
@@ -13,14 +23,12 @@ interface Props {
   onCreated: (order: ProductionOrder) => void;
 }
 
-const PRODUCTION_CATEGORIES = [
-  { value: "mebel", label: "Mebel" },
-  { value: "polywood", label: "Polywood" },
-  { value: "dekorasiya", label: "Dekorasiya" },
-] as const;
-
 function customerLabel(customer: ProductionLookups["customers"][number]) {
   return customer.full_name || customer.name || customer.company_name || "";
+}
+
+function supplierLabel(supplier: Supplier) {
+  return supplier.company_name || supplier.full_name || supplier.code || "Podratçı";
 }
 
 function FieldLabel({
@@ -38,10 +46,17 @@ function FieldLabel({
   );
 }
 
+function nullIfEmpty(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export default function ProductionOrderModal({ open, lookups, onClose, onCreated }: Props) {
   const [projectName, setProjectName] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [productionCategory, setProductionCategory] = useState("");
+  const [productionType, setProductionType] = useState<ProductionCreationType>("internal_custom");
+  const [bomId, setBomId] = useState("");
+  const [subcontractorId, setSubcontractorId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [totalPrice, setTotalPrice] = useState<number | "">("");
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
@@ -59,13 +74,23 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
   const treasuryAccounts = lookups?.accounts || [];
   const advanceAmount = typeof advancePayment === "number" ? advancePayment : 0;
   const requiresAdvanceAccount = advanceAmount > 0;
+  const selectedBom = useMemo(
+    () => (lookups?.boms || []).find((row) => row.id === bomId) || null,
+    [lookups?.boms, bomId]
+  );
+  const selectedSupplier = useMemo(
+    () => (lookups?.suppliers || []).find((row) => row.id === subcontractorId) || null,
+    [lookups?.suppliers, subcontractorId]
+  );
 
   if (!open) return null;
 
   const reset = () => {
     setProjectName("");
     setCustomerId("");
-    setProductionCategory("");
+    setProductionType("internal_custom");
+    setBomId("");
+    setSubcontractorId("");
     setWarehouseId("");
     setTotalPrice("");
     setExpectedDeliveryDate("");
@@ -80,60 +105,106 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
     onClose();
   };
 
-  const handleSave = async () => {
+  const handleProductionTypeChange = (value: ProductionCreationType) => {
+    setProductionType(value);
+    setBomId("");
+    setSubcontractorId("");
+  };
+
+  const buildPayload = (): CreateProductionOrderInput | { error: string } => {
     const name = projectName.trim();
-    if (!name) {
-      setError("Layihə adı tələb olunur");
-      return;
-    }
-    if (!customerId) {
-      setError("Müştəri seçilməlidir");
-      return;
-    }
+    if (!name) return { error: "Layihə adı tələb olunur" };
+    if (!customerId) return { error: "Müştəri seçilməlidir" };
+
     const price = typeof totalPrice === "number" ? totalPrice : Number(totalPrice);
     if (!Number.isFinite(price) || price <= 0) {
-      setError("Layihə qiyməti sıfırdan böyük olmalıdır");
-      return;
+      return { error: "Layihə qiyməti sıfırdan böyük olmalıdır" };
     }
-    if (requiresAdvanceAccount && !advanceAccountId) {
-      setError("İlkin ödəniş üçün kassa/bank hesabı seçilməlidir");
+    if (requiresAdvanceAccount && !advanceAccountId.trim()) {
+      return { error: "İlkin ödəniş üçün kassa/bank hesabı seçilməlidir" };
+    }
+    if (productionType === "bom_series" && !bomId) {
+      return { error: "BOM / Resept seçilməlidir" };
+    }
+    if (productionType === "contractor_outsource" && !subcontractorId) {
+      return { error: "Podratçı şirkət / usta seçilməlidir" };
+    }
+
+    const customer = lookups?.customers.find((row) => row.id === customerId);
+    const warehouse = destinationWarehouses.find((row) => row.id === warehouseId);
+    const model = productionCreationTypeToModel(productionType);
+    const legacy = legacyFromProductionModel(model);
+    const resolvedWarehouseId = nullIfEmpty(warehouseId);
+
+    const base: CreateProductionOrderInput = {
+      production_model: model,
+      type: legacy.type,
+      custom_workflow: legacy.custom_workflow,
+      project_name: name,
+      customer_id: customerId,
+      customer_name: customer ? customerLabel(customer) : null,
+      notes: notes.trim() || null,
+      total_project_price: price,
+      expected_delivery_date: nullIfEmpty(expectedDeliveryDate),
+      warehouse_id: resolvedWarehouseId,
+      warehouse_name: warehouse?.name || null,
+      raw_material_warehouse_id: resolvedWarehouseId,
+      furniture_warehouse_id: resolvedWarehouseId,
+      advance_payment: advanceAmount,
+      advance_account_id: requiresAdvanceAccount ? nullIfEmpty(advanceAccountId) : null,
+    };
+
+    if (productionType === "bom_series" && selectedBom) {
+      return {
+        ...base,
+        finished_product_id: selectedBom.finished_product_id,
+      };
+    }
+
+    if (productionType === "contractor_outsource" && selectedSupplier) {
+      const contractorName = supplierLabel(selectedSupplier);
+      return {
+        ...base,
+        subcontractor_id: subcontractorId,
+        contractor: {
+          contractor_id: subcontractorId,
+          contractor_name: contractorName,
+        },
+      };
+    }
+
+    return base;
+  };
+
+  const handleSave = async () => {
+    const payload = buildPayload();
+    if ("error" in payload) {
+      setError(payload.error);
       return;
     }
 
     setSaving(true);
     setError(null);
 
-    const customer = lookups?.customers.find((row) => row.id === customerId);
-    const warehouse = destinationWarehouses.find((row) => row.id === warehouseId);
-    const categoryLabel =
-      PRODUCTION_CATEGORIES.find((row) => row.value === productionCategory)?.label || null;
-
-    const result = await createProductionOrderAction({
-      production_model: PRODUCTION_MODEL_DEFAULT,
-      type: "Custom",
-      custom_workflow: "in_house",
-      project_name: name,
-      customer_id: customerId,
-      customer_name: customer ? customerLabel(customer) : null,
-      project_scope: categoryLabel,
-      notes: notes.trim() || null,
-      total_project_price: price,
-      expected_delivery_date: expectedDeliveryDate || null,
-      warehouse_id: warehouseId || null,
-      warehouse_name: warehouse?.name || null,
-      furniture_warehouse_id: warehouseId || null,
-      advance_payment: advanceAmount,
-      advance_account_id: requiresAdvanceAccount ? advanceAccountId : null,
-    });
-    setSaving(false);
-
-    if (!result.success || !result.data) {
-      setError(result.error || "Sənəd yaradılmadı");
-      return;
+    try {
+      const result = await createProductionOrderAction(payload);
+      if (!result.success || !result.data) {
+        setError(result.error || "Sənəd yaradılmadı");
+        return;
+      }
+      reset();
+      onCreated(result.data);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Naməlum xəta baş verdi";
+      setError(message);
+    } finally {
+      setSaving(false);
     }
-
-    reset();
-    onCreated(result.data);
   };
 
   return (
@@ -185,21 +256,56 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
               </select>
             </label>
 
-            <label className="block text-sm">
-              <FieldLabel>İstehsalat növü</FieldLabel>
+            <label className="block text-sm sm:col-span-2">
+              <FieldLabel required>İstehsalat növü</FieldLabel>
               <select
                 className="input-field w-full"
-                value={productionCategory}
-                onChange={(e) => setProductionCategory(e.target.value)}
+                value={productionType}
+                onChange={(e) => handleProductionTypeChange(e.target.value as ProductionCreationType)}
               >
-                <option value="">Seçin...</option>
-                {PRODUCTION_CATEGORIES.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
+                {PRODUCTION_CREATION_TYPES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
             </label>
+
+            {productionType === "bom_series" ? (
+              <label className="block text-sm sm:col-span-2">
+                <FieldLabel required>BOM / Resept seçin</FieldLabel>
+                <select
+                  className="input-field w-full"
+                  value={bomId}
+                  onChange={(e) => setBomId(e.target.value)}
+                >
+                  <option value="">Resept seçin...</option>
+                  {(lookups?.boms || []).map((bom) => (
+                    <option key={bom.id} value={bom.id}>
+                      {bom.name} ({bom.items.length} material)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            {productionType === "contractor_outsource" ? (
+              <label className="block text-sm sm:col-span-2">
+                <FieldLabel required>Podratçı şirkət / Usta</FieldLabel>
+                <select
+                  className="input-field w-full"
+                  value={subcontractorId}
+                  onChange={(e) => setSubcontractorId(e.target.value)}
+                >
+                  <option value="">Podratçı seçin...</option>
+                  {(lookups?.suppliers || []).map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplierLabel(supplier)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
 
             <label className="block text-sm">
               <FieldLabel>Məhsul anbarı</FieldLabel>
@@ -237,7 +343,7 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
               </div>
             </label>
 
-            <label className="block text-sm">
+            <label className="block text-sm sm:col-span-2">
               <FieldLabel>Gözlənilən təhvil tarixi</FieldLabel>
               <input
                 type="date"
