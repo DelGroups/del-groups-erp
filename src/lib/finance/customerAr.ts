@@ -92,7 +92,7 @@ export async function reconcileCustomerArBalances(
   };
 }
 
-/** Void/cancel open AR on a sale and resync the linked customer balance. */
+/** Void/cancel a sale invoice via `void_sale_atomic` (p_sale_id, p_reason). */
 export async function voidSaleInvoice(
   saleId: string,
   reason?: string
@@ -107,7 +107,10 @@ export async function voidSaleInvoice(
   }
 
   if (data && typeof data === "object" && (data as { success?: boolean }).success === false) {
-    return { success: false, error: String((data as { error?: string }).error || "Satış ləğv edilmədi") };
+    return {
+      success: false,
+      error: String((data as { error?: string }).error || "Satış ləğv edilmədi"),
+    };
   }
 
   return { success: true };

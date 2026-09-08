@@ -2712,6 +2712,10 @@ export type Database = {
         Args: { p_reason?: string; p_sale_id: string }
         Returns: Json
       }
+      void_purchase_atomic: {
+        Args: { p_purchase_id: string; p_reason?: string }
+        Returns: Json
+      }
     }
     Enums: {
       slip_status: "pending" | "approved" | "rejected"
