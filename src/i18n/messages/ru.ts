@@ -1461,7 +1461,11 @@ export const ruMessages: Messages = {
       addMaterial: "Добавить материал",
       selectWarehouseFirst: "Сначала выберите склад",
       productInWarehouse: "{name} (На складе: {stock} {unit})",
-      shortageAlert: "На выбранном складе недостаточно остатка!",
+      shortageConfirmTitle: "Нехватка на складе",
+      shortageConfirmMessage:
+        "На складе только {available} {unit}. По вашему запросу не хватает {deficit} {unit}. Создать заявку на закупку недостающих {deficit} {unit}?",
+      shortageConfirmYes: "Да",
+      shortageConfirmNo: "Нет",
       shortageDelta: "Нехватка: {qty} {unit}",
       totalMaterialCost: "Себестоимость",
       unitCostLabel: "Цена за ед.",

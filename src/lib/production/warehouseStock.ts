@@ -15,8 +15,8 @@ export function resolveStandardProductWarehouseStock(
   globalStock: number
 ): number {
   const movementStock = movementBalances.get(productId);
-  if (movementBalances.size > 0 && movementStock !== undefined) {
-    return Math.max(0, movementStock);
+  if (movementBalances.size > 0) {
+    return Math.max(0, movementStock !== undefined ? movementStock : 0);
   }
   return Math.max(0, num(globalStock));
 }

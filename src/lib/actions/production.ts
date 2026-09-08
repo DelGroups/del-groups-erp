@@ -497,6 +497,11 @@ async function updateMaterialOmittingMissingColumns(
   if (patch.issued_at !== undefined) payload.issued_at = patch.issued_at;
   if (patch.polywood_length_m !== undefined) payload.polywood_length_m = patch.polywood_length_m;
   if (patch.polywood_cut_details !== undefined) payload.polywood_cut_details = patch.polywood_cut_details;
+  if (patch.quantity !== undefined) payload.quantity = patch.quantity;
+  if (patch.unit_price !== undefined) payload.unit_price = patch.unit_price;
+  if (patch.total_price !== undefined) payload.total_price = patch.total_price;
+  if (patch.unit_cost !== undefined) payload.unit_cost = patch.unit_cost;
+  if (patch.line_cost !== undefined) payload.line_cost = patch.line_cost;
 
   for (let attempt = 0; attempt < 8; attempt++) {
     const { error } = await admin.from("production_materials").update(payload as never).eq("id", materialId);
@@ -1930,8 +1935,8 @@ export async function addProductionMaterialAction(
     if (order.status === "Delivered") return { success: false, error: "Təhvil verilmiş sənədə material əlavə edilə bilməz" };
 
     const safeInput = sanitizeAddProductionMaterialInput(input);
-    const qty = num(safeInput.quantity);
-    if (qty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
+    const addQty = num(safeInput.quantity);
+    if (addQty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
 
     const resolved = await resolveProductionProduct(admin, {
       product_id: safeInput.product_id,
@@ -1946,10 +1951,15 @@ export async function addProductionMaterialAction(
     const unitCost = safeInput.unit_cost > 0 ? safeInput.unit_cost : num(p.buy_price);
     const inventoryMode = p.inventory_mode === POLYWOOD_INVENTORY_MODE ? POLYWOOD_INVENTORY_MODE : "standard";
     const stageNo = Math.max(1, Math.round(num(safeInput.stage_no) || 1));
-    let issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
+    const issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
 
     const warehouseId = safeInput.warehouse_id || null;
-    let issueQty = qty;
+    const existingMaterials = await selectMaterialsForOrder(admin, { orderId });
+    const existingMaterial = existingMaterials.find(
+      (row) => row.product_id === p.id && (row.warehouse_id || null) === warehouseId
+    );
+
+    let issueQty = addQty;
     let deficitQty = 0;
 
     if (warehouseId) {
@@ -1959,8 +1969,12 @@ export async function addProductionMaterialAction(
         .eq("id", warehouseId)
         .maybeSingle();
 
-      const existingMaterials = await selectMaterialsForOrder(admin, { orderId });
-      const orderAllocated = sumOrderAllocatedQuantity(existingMaterials, p.id, warehouseId);
+      const orderAllocated = sumOrderAllocatedQuantity(
+        existingMaterials,
+        p.id,
+        warehouseId,
+        existingMaterial?.id
+      );
       const warehouseStock = await getWarehouseProductAvailableStock(admin, {
         warehouseId,
         productId: p.id,
@@ -1969,49 +1983,90 @@ export async function addProductionMaterialAction(
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
 
-      const allocation = computeMaterialAllocation(qty, warehouseStock, orderAllocated);
+      const allocation = computeMaterialAllocation(addQty, warehouseStock, orderAllocated);
       issueQty = allocation.issueQty;
       deficitQty = allocation.deficit;
     }
 
-    const insertedMaterial = await insertMaterialRow(admin, {
-      production_order_id: orderId,
-      product_id: p.id,
-      product_code: p.code,
-      product_name: p.name,
-      warehouse_id: safeInput.warehouse_id || null,
-      warehouse_name: safeInput.warehouse_name || null,
-      quantity: qty,
-      unit: inventoryMode === POLYWOOD_INVENTORY_MODE ? "Metr" : p.unit || "Ədəd",
-      unit_cost: unitCost,
-      polywood_sale_mode:
-        inventoryMode === POLYWOOD_INVENTORY_MODE ? safeInput.polywood_sale_mode || "linear_m" : null,
-      stage_no: stageNo,
-      stage_label: safeInput.stage_label?.trim() || null,
-      notes: safeInput.notes?.trim() || null,
-      issued: false,
-      created_by: user.id,
-      created_by_name: actorName(profile),
-    });
-
-    if (insertedMaterial.error || !insertedMaterial.material) {
-      const debug = `Product ID: ${p.id} | Warehouse: ${safeInput.warehouse_id || "null"} | Qty: ${qty}`;
+    if (deficitQty > 0 && !safeInput.confirm_deficit_purchase) {
       return {
         success: false,
-        error: `${formatProductionDbError(insertedMaterial.error || "Material əlavə edilmədi")} — ${debug}`,
+        error: "SHORTAGE_CONFIRMATION_REQUIRED",
       };
     }
-    let material = insertedMaterial.material;
+
+    const totalQty = existingMaterial ? num(existingMaterial.quantity) + addQty : addQty;
+    let material: ProductionMaterial;
+
+    if (existingMaterial) {
+      const updated = await updateMaterialOmittingMissingColumns(admin, existingMaterial.id, {
+        quantity: totalQty,
+        unit_price: unitCost,
+        total_price: totalQty * unitCost,
+        unit_cost: unitCost,
+        line_cost: totalQty * unitCost,
+      });
+      if (!updated.ok) {
+        return { success: false, error: updated.error || "Material yenilənmədi" };
+      }
+      const refreshed = await selectMaterialRowById(admin, existingMaterial.id);
+      if (!refreshed) {
+        return { success: false, error: "Material tapılmadı" };
+      }
+      material = refreshed;
+    } else {
+      const insertedMaterial = await insertMaterialRow(admin, {
+        production_order_id: orderId,
+        product_id: p.id,
+        product_code: p.code,
+        product_name: p.name,
+        warehouse_id: safeInput.warehouse_id || null,
+        warehouse_name: safeInput.warehouse_name || null,
+        quantity: addQty,
+        unit: inventoryMode === POLYWOOD_INVENTORY_MODE ? "Metr" : p.unit || "Ədəd",
+        unit_cost: unitCost,
+        polywood_sale_mode:
+          inventoryMode === POLYWOOD_INVENTORY_MODE ? safeInput.polywood_sale_mode || "linear_m" : null,
+        stage_no: stageNo,
+        stage_label: safeInput.stage_label?.trim() || null,
+        notes: safeInput.notes?.trim() || null,
+        issued: false,
+        created_by: user.id,
+        created_by_name: actorName(profile),
+      });
+
+      if (insertedMaterial.error || !insertedMaterial.material) {
+        const debug = `Product ID: ${p.id} | Warehouse: ${safeInput.warehouse_id || "null"} | Qty: ${addQty}`;
+        return {
+          success: false,
+          error: `${formatProductionDbError(insertedMaterial.error || "Material əlavə edilmədi")} — ${debug}`,
+        };
+      }
+      material = insertedMaterial.material;
+    }
+
     const reservationResult = await syncProductionReservations(admin, orderId);
     if (!reservationResult.ok) {
-      await admin.from("production_materials").delete().eq("id", material.id);
+      if (!existingMaterial) {
+        await admin.from("production_materials").delete().eq("id", material.id);
+      }
       return { success: false, error: reservationResult.error || "Material rezervasiyası yaradılmadı" };
     }
 
     if (issueNow && issueQty > 0) {
       const alloc = await issuePartialMaterialQuantity(admin, material, issueQty);
       if (!alloc.ok) {
-        await admin.from("production_materials").delete().eq("id", material.id);
+        if (!existingMaterial) {
+          await admin.from("production_materials").delete().eq("id", material.id);
+        } else {
+          await updateMaterialOmittingMissingColumns(admin, existingMaterial.id, {
+            quantity: num(existingMaterial.quantity),
+            unit_price: existingMaterial.unit_cost,
+            total_price: existingMaterial.line_cost,
+            unit_cost: existingMaterial.unit_cost,
+            line_cost: existingMaterial.line_cost,
+          });
+        }
         return { success: false, error: alloc.error || "Material çıxışı alınmadı" };
       }
       if (deficitQty === 0) {
@@ -2021,14 +2076,14 @@ export async function addProductionMaterialAction(
       }
     }
 
-    if (deficitQty > 0 && warehouseId) {
+    if (deficitQty > 0 && warehouseId && safeInput.confirm_deficit_purchase) {
       await createPurchaseRequestInternal(admin, {
         orderId,
         product: p,
         warehouseId,
         quantity: deficitQty,
         userId: user.id,
-        notes: `Stok çatışmır (tələb: ${qty}, anbardan verildi: ${issueQty}, çatışmayan: ${deficitQty})`,
+        notes: `Stok çatışmır (tələb: ${addQty}, anbardan verildi: ${issueQty}, çatışmayan: ${deficitQty})`,
       });
     }
 

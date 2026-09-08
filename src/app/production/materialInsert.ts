@@ -64,6 +64,8 @@ export interface AddProductionMaterialInput {
   stage_label?: string | null;
   notes?: string | null;
   issue_now?: boolean;
+  /** User confirmed creating a purchase request for the stock deficit. */
+  confirm_deficit_purchase?: boolean;
 }
 
 /** Remove leaked UI keys from a raw object (e.g. after `{ ...formRow }` spreads). */
@@ -203,6 +205,7 @@ export function sanitizeAddProductionMaterialInput(input: AddProductionMaterialI
     stage_label: input.stage_label?.trim() || null,
     notes: input.notes?.trim() || null,
     issue_now: Boolean(input.issue_now),
+    confirm_deficit_purchase: Boolean(input.confirm_deficit_purchase),
   };
 }
 

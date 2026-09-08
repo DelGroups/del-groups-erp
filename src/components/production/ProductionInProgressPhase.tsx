@@ -3,11 +3,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
+import MaterialShortageConfirmModal from "@/components/production/MaterialShortageConfirmModal";
 import {
   addProductionExpenseAction,
   addProductionMaterialAction,
   cancelPurchaseRequestAction,
-  createPurchaseRequestAction,
   fetchWarehouseProductsForProductionAction,
   listPurchaseRequestsAction,
   removeProductionExpenseAction,
@@ -105,6 +105,7 @@ export default function ProductionInProgressPhase({
   const [materialQty, setMaterialQty] = useState(1);
   const [warehouseProducts, setWarehouseProducts] = useState<WarehouseProductOption[]>([]);
   const [loadingWarehouseProducts, setLoadingWarehouseProducts] = useState(false);
+  const [shortageConfirmOpen, setShortageConfirmOpen] = useState(false);
 
   const [expenseCategory, setExpenseCategory] = useState<ProductionExpenseCategory>("other");
   const [expenseDescription, setExpenseDescription] = useState("");
@@ -257,17 +258,9 @@ export default function ProductionInProgressPhase({
     if (result.data !== undefined && onSuccess) onSuccess(result.data);
   };
 
-  const addMaterial = async () => {
-    if (!materialWarehouseId) {
-      setError(t("production.workflow.selectWarehouseFirst"));
-      return;
-    }
+  const submitAddMaterial = async (confirmDeficitPurchase = false) => {
     if (!materialSelection?.productId || !isValidUuid(materialSelection.productId)) {
       setError(`${t("production.workflow.selectProduct")} — ${formatMaterialPayloadDebug(materialSelection)}`);
-      return;
-    }
-    if (!isValidUuid(materialWarehouseId)) {
-      setError(`${t("production.workflow.selectWarehouseFirst")} — ${formatMaterialPayloadDebug(materialSelection)}`);
       return;
     }
     await runAction(
@@ -282,17 +275,19 @@ export default function ProductionInProgressPhase({
           unit_cost: materialSelection.unitPrice || selectedProduct?.buy_price || 0,
           quantity: materialQty,
           issue_now: true,
+          confirm_deficit_purchase: confirmDeficitPurchase,
         }),
       (data) => {
         applyOrder(mergeProductionOrder(order, data));
         setMaterialQty(1);
         clearMaterialProduct();
+        setShortageConfirmOpen(false);
         refreshPurchaseRequests();
       }
     );
   };
 
-  const createPurchaseRequest = async () => {
+  const addMaterial = async () => {
     if (!materialWarehouseId) {
       setError(t("production.workflow.selectWarehouseFirst"));
       return;
@@ -301,19 +296,19 @@ export default function ProductionInProgressPhase({
       setError(`${t("production.workflow.selectProduct")} — ${formatMaterialPayloadDebug(materialSelection)}`);
       return;
     }
-    const requestQty = materialQty;
-    await runAction(
-      () =>
-        createPurchaseRequestAction(order.id, {
-          product_id: materialSelection.productId,
-          product_name: materialSelection.productName || selectedProduct?.name || null,
-          product_code: materialSelection.productCode || selectedProduct?.code || null,
-          warehouse_id: materialSelection.warehouseId || materialWarehouseId,
-          quantity: requestQty,
-          notes: `Stok çatışmır (mövcud: ${availableStock}, tələb: ${materialQty}, çatışmayan: ${requestQty})`,
-        }),
-      (data) => setPurchaseRequests(data)
-    );
+    if (!isValidUuid(materialWarehouseId)) {
+      setError(`${t("production.workflow.selectWarehouseFirst")} — ${formatMaterialPayloadDebug(materialSelection)}`);
+      return;
+    }
+    if (stockShortage) {
+      setShortageConfirmOpen(true);
+      return;
+    }
+    await submitAddMaterial(false);
+  };
+
+  const confirmShortageAddMaterial = async () => {
+    await submitAddMaterial(true);
   };
 
   const deleteMaterial = async (materialId: string) => {
@@ -515,7 +510,7 @@ export default function ProductionInProgressPhase({
               <p className="mt-2 text-xs">
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 font-semibold ${
-                    stockShortage ? "bg-rose-500/15 text-rose-400" : "bg-emerald-500/15 text-emerald-400"
+                    stockShortage ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-400"
                   }`}
                 >
                   {t("production.workflow.stockAvailable", {
@@ -524,18 +519,6 @@ export default function ProductionInProgressPhase({
                   })}
                 </span>
               </p>
-            ) : null}
-
-            {stockShortage ? (
-              <div className="mt-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
-                <p className="font-semibold">{t("production.workflow.shortageAlert")}</p>
-                <p className="mt-1 text-xs">
-                  {t("production.workflow.shortageDelta", {
-                    qty: shortageDelta.toFixed(2).replace(/\.00$/, ""),
-                    unit: productUnit,
-                  })}
-                </p>
-              </div>
             ) : null}
 
             <div className={`mt-3 grid gap-3 ${isAdmin ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
@@ -583,18 +566,18 @@ export default function ProductionInProgressPhase({
               >
                 {t("production.workflow.addMaterial")}
               </button>
-              {stockShortage ? (
-                <button
-                  type="button"
-                  className="btn-secondary border-amber-500/40 text-amber-300"
-                  disabled={saving || !materialWarehouseId || !materialSelection?.productId}
-                  onClick={() => void createPurchaseRequest()}
-                >
-                  {t("production.workflow.createPurchaseRequest")}
-                </button>
-              ) : null}
             </div>
           </div>
+
+          <MaterialShortageConfirmModal
+            open={shortageConfirmOpen}
+            available={availableStock}
+            deficit={shortageDelta}
+            unit={productUnit}
+            loading={saving}
+            onConfirm={() => void confirmShortageAddMaterial()}
+            onCancel={() => setShortageConfirmOpen(false)}
+          />
 
           {fulfilledPurchaseRequests.length > 0 ? (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">

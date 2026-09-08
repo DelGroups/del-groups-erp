@@ -1465,7 +1465,11 @@ export const azMessages = {
       selectProduct: "Məhsul seçin",
       selectWarehouseFirst: "Öncə anbar seçin",
       productInWarehouse: "{name} (Anbarda: {stock} {unit})",
-      shortageAlert: "Seçilən anbarda kifayət qədər qalıq yoxdur!",
+      shortageConfirmTitle: "Stok çatışmazlığı",
+      shortageConfirmMessage:
+        "Anbarda yalnız {available} {unit} var. Tələbinizə əsasən {deficit} {unit} çatışmır. Çatışmayan {deficit} {unit} üçün Satın Alma Tələbi yaradılsın?",
+      shortageConfirmYes: "Bəli",
+      shortageConfirmNo: "Xeyr",
       shortageDelta: "Çatışmayan miqdar: {qty} {unit}",
       totalMaterialCost: "Cəmi maya",
       unitCostLabel: "Vahid maya",

@@ -1461,7 +1461,11 @@ export const enMessages: Messages = {
       addMaterial: "Add material",
       selectWarehouseFirst: "Select a warehouse first",
       productInWarehouse: "{name} (In stock: {stock} {unit})",
-      shortageAlert: "Insufficient stock in the selected warehouse!",
+      shortageConfirmTitle: "Stock shortage",
+      shortageConfirmMessage:
+        "Only {available} {unit} available in warehouse. Your request is short by {deficit} {unit}. Create a purchase request for the missing {deficit} {unit}?",
+      shortageConfirmYes: "Yes",
+      shortageConfirmNo: "No",
       shortageDelta: "Shortfall: {qty} {unit}",
       totalMaterialCost: "Total cost",
       unitCostLabel: "Unit cost",
