@@ -2676,6 +2676,72 @@ async function createPurchaseRequestInternal(
     .eq("id", requestRow.id);
 }
 
+export type WarehouseProductOption = {
+  id: string;
+  code: string | null;
+  name: string;
+  unit: string;
+  buy_price: number;
+  stock: number;
+  inventory_mode: string | null;
+};
+
+export async function fetchWarehouseProductsForProductionAction(
+  warehouseId: string
+): Promise<ProductionActionResult<WarehouseProductOption[]>> {
+  try {
+    await requirePermissionAction("can_view_production");
+    if (!warehouseId.trim()) {
+      return { success: true, data: [] };
+    }
+
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("products")
+      .select("id,code,name,unit,buy_price,stock,warehouse_id,inventory_mode")
+      .eq("warehouse_id", warehouseId)
+      .order("name")
+      .limit(500);
+
+    if (error) return { success: false, error: error.message };
+
+    const products = (data || []) as Product[];
+    const options: WarehouseProductOption[] = [];
+
+    for (const product of products) {
+      let stock = Number(product.stock) || 0;
+      if (product.inventory_mode === POLYWOOD_INVENTORY_MODE) {
+        const { data: pieces } = await admin
+          .from("polywood_pieces")
+          .select("length_m")
+          .eq("product_id", product.id)
+          .eq("warehouse_id", warehouseId)
+          .eq("status", "available");
+        stock = (pieces || []).reduce(
+          (sum, piece) => sum + (Number((piece as { length_m?: number }).length_m) || 0),
+          0
+        );
+        stock = Math.round(stock * 100) / 100;
+      }
+
+      options.push({
+        id: product.id,
+        code: product.code || null,
+        name: product.name,
+        unit: product.unit || "Ədəd",
+        buy_price: num(product.buy_price),
+        stock,
+        inventory_mode: product.inventory_mode || null,
+      });
+    }
+
+    return { success: true, data: options };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
 export async function createPurchaseRequestAction(
   orderId: string,
   input: { product_id: string; warehouse_id?: string | null; quantity: number; notes?: string | null }
