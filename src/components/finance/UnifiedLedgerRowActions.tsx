@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   deleteTransactionAction,
   fetchAccountLedgerBalancesAction,
+  fetchFinancialCategoriesAction,
   updateTransactionAction,
 } from "@/lib/actions/finance";
+import type { ExpenseCategoryOption } from "@/lib/finance/financialCategories";
 import {
   canDeleteLedgerTransaction,
   canEditLedgerTransaction,
@@ -88,8 +91,10 @@ export default function UnifiedLedgerRowActions({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
   const [form, setForm] = useState({
     amount: String(transaction.amount),
+    category_id: transaction.category_id || "",
     category: transaction.category,
     description: transaction.description || transaction.notes || "",
     account_id: transaction.account_id || "",
@@ -102,6 +107,7 @@ export default function UnifiedLedgerRowActions({
     if (!editOpen) return;
     setForm({
       amount: String(transaction.amount),
+      category_id: transaction.category_id || "",
       category: transaction.category,
       description: transaction.description || transaction.notes || "",
       account_id: transaction.account_id || "",
@@ -116,6 +122,28 @@ export default function UnifiedLedgerRowActions({
         );
       }
     });
+    if (transaction.type === "EXPENSE") {
+      void fetchFinancialCategoriesAction().then((result) => {
+        if (!result.success || !result.data?.length) return;
+        const options = result.data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          parent_id: row.parent_id,
+          parent_name: row.parent_name,
+        }));
+        setCategories(options);
+        if (!transaction.category_id) {
+          const match = options.find(
+            (row) =>
+              row.name === transaction.category ||
+              `${row.parent_name || ""} / ${row.name}` === transaction.category
+          );
+          if (match) {
+            setForm((prev) => ({ ...prev, category_id: match.id }));
+          }
+        }
+      });
+    }
   }, [editOpen, transaction]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -126,10 +154,15 @@ export default function UnifiedLedgerRowActions({
       return;
     }
     setSaving(true);
+    const selectedCategory = categories.find((row) => row.id === form.category_id);
+    const categoryLabel = selectedCategory?.parent_name
+      ? `${selectedCategory.parent_name} / ${selectedCategory.name}`
+      : selectedCategory?.name || form.category;
+
     const result = await updateTransactionAction({
       transactionId: transaction.id,
       amount,
-      category: form.category,
+      category: categoryLabel,
       description: form.description,
       accountId: form.account_id || null,
       notes: form.description,
@@ -259,12 +292,22 @@ export default function UnifiedLedgerRowActions({
             <form onSubmit={(e) => void handleSave(e)} className="space-y-4 p-6">
               <label className="block text-sm">
                 <span className="text-app-muted">{t("finance.columnCategory")}</span>
-                <input
-                  className="input-field mt-1 w-full"
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  required
-                />
+                {transaction.type === "EXPENSE" && categories.length > 0 ? (
+                  <ExpenseCategorySelect
+                    className="input-field mt-1 w-full"
+                    categories={categories}
+                    value={form.category_id}
+                    onChange={(categoryId) => setForm({ ...form, category_id: categoryId })}
+                    required
+                  />
+                ) : (
+                  <input
+                    className="input-field mt-1 w-full"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    required
+                  />
+                )}
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("finance.columnAmount")}</span>

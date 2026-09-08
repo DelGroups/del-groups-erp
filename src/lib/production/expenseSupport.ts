@@ -1,11 +1,14 @@
+import {
+  FINANCIAL_CATEGORY_SELECT_ATTEMPTS,
+  flattenExpenseCategoryOptions,
+  mapFinancialCategoryRow,
+  type ExpenseCategoryOption,
+} from "@/lib/finance/financialCategories";
 import { PRODUCTION_EXPENSE_CATEGORIES } from "@/lib/production/types";
 
 type DbClient = ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>;
 
-export type ExpenseCategoryOption = {
-  id: string;
-  name: string;
-};
+export type { ExpenseCategoryOption };
 
 export type ProductionPartyOption = {
   id: string;
@@ -46,19 +49,26 @@ function isExternalContractor(row: Record<string, unknown>): boolean {
 export async function fetchActiveExpenseCategories(
   admin: DbClient
 ): Promise<ExpenseCategoryOption[]> {
-  const { data, error } = await admin
-    .from("financial_categories")
-    .select("id,name,type,is_active")
-    .eq("type", "EXPENSE")
-    .eq("is_active", true)
-    .order("name")
-    .limit(200);
+  for (const fields of FINANCIAL_CATEGORY_SELECT_ATTEMPTS) {
+    let query = admin
+      .from("financial_categories")
+      .select(fields)
+      .eq("type", "EXPENSE")
+      .order("name")
+      .limit(500);
 
-  if (!error && data?.length) {
-    return data.map((row) => ({
-      id: String((row as { id: string }).id),
-      name: String((row as { name: string }).name),
-    }));
+    if (fields.includes("is_active")) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+    if (!error && data?.length) {
+      return flattenExpenseCategoryOptions(
+        (data as Record<string, unknown>[]).map(mapFinancialCategoryRow)
+      );
+    }
+
+    if (!/column|schema cache/i.test(error?.message || "")) break;
   }
 
   const legacy = await admin
@@ -147,7 +157,9 @@ export function resolveExpenseCategoryName(
   categories: ExpenseCategoryOption[]
 ): string {
   const match = categories.find((row) => row.id === category || row.name === category);
-  return match?.name || category;
+  if (!match) return category;
+  if (match.parent_name) return `${match.parent_name} / ${match.name}`;
+  return match.name;
 }
 
 const LEGACY_EXPENSE_CATEGORY_SLUGS = new Set([

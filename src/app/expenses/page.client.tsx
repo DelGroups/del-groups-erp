@@ -11,12 +11,17 @@ import {
   fetchUnifiedLedgerAction,
 } from "@/lib/actions/finance";
 import { formatReferenceTypeLabel } from "@/lib/finance/unifiedLedger";
+import type { ExpenseCategoryOption } from "@/lib/finance/financialCategories";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
+import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
-import { Plus, RefreshCw, X } from "lucide-react";
+import { FolderTree, Plus, RefreshCw, X } from "lucide-react";
 import type { UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
+
+type ExpensesTab = "records" | "categories";
 
 interface AccountOption {
   id: string;
@@ -26,15 +31,16 @@ interface AccountOption {
 
 export default function ExpensesPage() {
   const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<ExpensesTab>("records");
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalExpense, setTotalExpense] = useState(0);
   const [expenseRows, setExpenseRows] = useState<UnifiedLedgerTransaction[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
 
   const [formData, setFormData] = useState({
-    category: "",
+    category_id: "",
     amount: "0.00",
     account_id: "",
     notes: "",
@@ -73,11 +79,16 @@ export default function ExpensesPage() {
     }
 
     if (categoriesRes.success && categoriesRes.data?.length) {
-      const expenseCats = categoriesRes.data.filter((c) => c.type === "EXPENSE");
-      setCategories(expenseCats.map((c) => ({ id: c.id, name: c.name })));
+      const expenseCats = categoriesRes.data.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parent_id: c.parent_id,
+        parent_name: c.parent_name,
+      }));
+      setCategories(expenseCats);
       setFormData((prev) => ({
         ...prev,
-        category: prev.category || expenseCats[0]?.name || "",
+        category_id: prev.category_id || expenseCats[0]?.id || "",
       }));
     }
 
@@ -87,6 +98,8 @@ export default function ExpensesPage() {
   useEffect(() => {
     void fetchExpensesAndAccounts();
   }, [fetchExpensesAndAccounts]);
+
+  const selectedCategory = categories.find((c) => c.id === formData.category_id);
 
   const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +111,10 @@ export default function ExpensesPage() {
       showError(t("expenses.selectAccountAlert"));
       return;
     }
+    if (!formData.category_id) {
+      showError(t("expenses.selectCategoryAlert"));
+      return;
+    }
 
     const numericAmount = parseFloat(formData.amount) || 0;
     if (numericAmount <= 0) {
@@ -105,11 +122,16 @@ export default function ExpensesPage() {
       return;
     }
 
+    const categoryLabel = selectedCategory?.parent_name
+      ? `${selectedCategory.parent_name} / ${selectedCategory.name}`
+      : selectedCategory?.name || "";
+
     const result = await createExpenseAction({
-      category: formData.category,
+      category: categoryLabel || selectedCategory?.name || "",
       amount: numericAmount,
       accountId: formData.account_id,
       notes: formData.notes,
+      description: formData.notes || categoryLabel,
     });
 
     if (!result.success) {
@@ -120,7 +142,7 @@ export default function ExpensesPage() {
     showSuccess(t("expenses.successRecorded"));
     setIsModalOpen(false);
     setFormData({
-      category: categories[0]?.name || "",
+      category_id: categories[0]?.id || "",
       amount: "0.00",
       account_id: "",
       notes: "",
@@ -130,87 +152,130 @@ export default function ExpensesPage() {
 
   return (
     <PageLayout>
-      <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-app app-glass px-6 py-4">
         <div>
           <h2 className="text-xl font-bold text-app">{t("expenses.pageTitle")}</h2>
           <p className="text-sm text-app-muted">{t("expenses.pageDescription")}</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          disabled={!canManageExpenses}
-          className="flex items-center space-x-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t("expenses.createButton")}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {activeTab === "records" ? (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              disabled={!canManageExpenses}
+              className="flex items-center space-x-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{t("expenses.createButton")}</span>
+            </button>
+          ) : null}
+        </div>
       </header>
 
-      <main className="flex-1 space-y-6 overflow-y-auto p-6">
-        <div className="app-card app-card-elevated flex items-center justify-between p-5">
-          <div>
-            <span className="text-xs font-semibold uppercase text-app-muted">
-              {t("expenses.totalRecorded")}
-            </span>
-            <div className="mt-1 text-2xl font-bold text-rose-600">{totalExpense.toFixed(2)} AZN</div>
-          </div>
+      <div className="border-b border-app px-6">
+        <div className="flex gap-2 py-3">
           <button
-            onClick={() => void fetchExpensesAndAccounts()}
-            className="rounded-lg border p-2 hover:bg-app-card-hover"
+            type="button"
+            onClick={() => setActiveTab("records")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              activeTab === "records"
+                ? "bg-rose-600 text-white"
+                : "bg-app-card-hover text-app-muted hover:text-app"
+            }`}
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {t("expenses.tabRecords")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("categories")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
+              activeTab === "categories"
+                ? "bg-rose-600 text-white"
+                : "bg-app-card-hover text-app-muted hover:text-app"
+            }`}
+          >
+            <FolderTree className="h-4 w-4" />
+            {t("expenses.tabCategories")}
           </button>
         </div>
+      </div>
 
-        <div className="app-table-wrap">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
-          ) : expenseRows.length === 0 ? (
-            <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
-          ) : (
-            <table className="app-table">
-              <thead className="border-b border-app bg-app-card-hover text-xs uppercase text-app-muted">
-                <tr>
-                  <th className="px-6 py-3">{t("common.category")}</th>
-                  <th className="px-6 py-3">{t("expenses.paidAccount")}</th>
-                  <th className="px-6 py-3">{t("expenses.noteDescription")}</th>
-                  <th className="px-6 py-3">{t("finance.columnSource")}</th>
-                  <th className="px-6 py-3 text-right">{t("common.amount")}</th>
-                  <th className="px-6 py-3 text-right">{t("common.date")}</th>
-                  <th className="px-6 py-3 text-right">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenseRows.map((e) => (
-                  <tr key={e.id} className="hover:bg-app-card-hover">
-                    <td className="px-6 py-4 font-semibold text-app">{e.category}</td>
-                    <td className="px-6 py-4 text-app-muted">{e.account_name || "—"}</td>
-                    <td className="px-6 py-4 text-app-muted">{e.description || e.notes || "—"}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
-                        {formatReferenceTypeLabel(e.reference_type)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-rose-600">
-                      -{e.amount.toFixed(2)} AZN
-                    </td>
-                    <td className="px-6 py-4 text-right text-xs text-app-muted">
-                      {new Date(e.transaction_date || e.created_at).toLocaleDateString("az-AZ")}
-                    </td>
-                    <td className="px-6 py-4">
-                      <UnifiedLedgerRowActions
-                        transaction={e}
-                        canManage={canManage}
-                        onChanged={() => void fetchExpensesAndAccounts()}
-                        onError={showError}
-                        onSuccess={showSuccess}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      <main className="flex-1 space-y-6 overflow-y-auto p-6">
+        {activeTab === "records" ? (
+          <>
+            <div className="app-card app-card-elevated flex items-center justify-between p-5">
+              <div>
+                <span className="text-xs font-semibold uppercase text-app-muted">
+                  {t("expenses.totalRecorded")}
+                </span>
+                <div className="mt-1 text-2xl font-bold text-rose-600">{totalExpense.toFixed(2)} AZN</div>
+              </div>
+              <button
+                onClick={() => void fetchExpensesAndAccounts()}
+                className="rounded-lg border p-2 hover:bg-app-card-hover"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+
+            <div className="app-table-wrap">
+              {loading ? (
+                <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
+              ) : expenseRows.length === 0 ? (
+                <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
+              ) : (
+                <table className="app-table">
+                  <thead className="border-b border-app bg-app-card-hover text-xs uppercase text-app-muted">
+                    <tr>
+                      <th className="px-6 py-3">{t("common.category")}</th>
+                      <th className="px-6 py-3">{t("expenses.paidAccount")}</th>
+                      <th className="px-6 py-3">{t("expenses.noteDescription")}</th>
+                      <th className="px-6 py-3">{t("finance.columnSource")}</th>
+                      <th className="px-6 py-3 text-right">{t("common.amount")}</th>
+                      <th className="px-6 py-3 text-right">{t("common.date")}</th>
+                      <th className="px-6 py-3 text-right">{t("common.actions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenseRows.map((e) => (
+                      <tr key={e.id} className="hover:bg-app-card-hover">
+                        <td className="px-6 py-4 font-semibold text-app">{e.category}</td>
+                        <td className="px-6 py-4 text-app-muted">{e.account_name || "—"}</td>
+                        <td className="px-6 py-4 text-app-muted">{e.description || e.notes || "—"}</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
+                            {formatReferenceTypeLabel(e.reference_type)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-rose-600">
+                          -{e.amount.toFixed(2)} AZN
+                        </td>
+                        <td className="px-6 py-4 text-right text-xs text-app-muted">
+                          {new Date(e.transaction_date || e.created_at).toLocaleDateString("az-AZ")}
+                        </td>
+                        <td className="px-6 py-4">
+                          <UnifiedLedgerRowActions
+                            transaction={e}
+                            canManage={canManage}
+                            onChanged={() => void fetchExpensesAndAccounts()}
+                            onError={showError}
+                            onSuccess={showSuccess}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        ) : (
+          <ExpenseCategoriesManager
+            canManage={canManage}
+            onChanged={() => void fetchExpensesAndAccounts()}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
+        )}
       </main>
 
       {isModalOpen && (
@@ -231,28 +296,13 @@ export default function ExpensesPage() {
                 <label className="mb-1 block text-xs font-semibold text-app">
                   {t("expenses.categoryRequired")}
                 </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                <ExpenseCategorySelect
+                  categories={categories}
+                  value={formData.category_id}
+                  onChange={(categoryId) => setFormData({ ...formData, category_id: categoryId })}
                   className="app-input text-sm focus:ring-rose-500/40"
-                >
-                  {categories.length === 0 ? (
-                    <>
-                      <option value="İcarə">{t("expenses.categories.rent")}</option>
-                      <option value="Elektrik">{t("expenses.categories.utilities")}</option>
-                      <option value="Yanacaq">{t("expenses.categories.fuel")}</option>
-                      <option value="İnternet">{t("expenses.categories.internet")}</option>
-                      <option value="Reklam">{t("expenses.categories.marketing")}</option>
-                      <option value="Təmir">{t("expenses.categories.repair")}</option>
-                      <option value="Maaş">{t("expenses.categories.salary")}</option>
-                      <option value="Digər">{t("expenses.categories.other")}</option>
-                    </>
-                  ) : (
-                    categories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))
-                  )}
-                </select>
+                  required
+                />
               </div>
 
               <div>

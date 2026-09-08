@@ -28,6 +28,7 @@ import {
   parseProductionExpenseNotes,
   resolveExpenseCategoryName,
 } from "@/lib/production/expenseSupport";
+import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import {
   buildMaterialLineSelection,
   decodeMaterialLineSelection,
@@ -733,19 +734,13 @@ export default function ProductionInProgressPhase({
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("production.workflow.category")}</span>
-                <select
+                <ExpenseCategorySelect
                   className="input-field mt-1 w-full"
+                  categories={expenseCategories}
                   value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value)}
-                >
-                  {expenseCategories.length === 0 ? (
-                    <option value="">{t("common.noData")}</option>
-                  ) : (
-                    expenseCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))
-                  )}
-                </select>
+                  onChange={setExpenseCategory}
+                  required
+                />
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("production.workflow.contractor")}</span>

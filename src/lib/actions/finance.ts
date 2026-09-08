@@ -24,6 +24,14 @@ import {
   type UnifiedLedgerTransaction,
   type UnifiedTransactionType,
 } from "@/lib/finance/unifiedLedger";
+import {
+  buildFinancialCategoryTree,
+  FINANCIAL_CATEGORY_SELECT_ATTEMPTS,
+  flattenExpenseCategoryOptions,
+  mapFinancialCategoryRow,
+  type FinancialCategoryRecord,
+  type FinancialCategoryTreeNode,
+} from "@/lib/finance/financialCategories";
 
 export type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -155,26 +163,51 @@ async function fetchTransactionsRaw(
   return { rows: [], error: lastError || "transactions schema mismatch" };
 }
 
+async function fetchFinancialCategoryRows(
+  includeInactive = false
+): Promise<{ rows: FinancialCategoryRecord[]; error: string | null }> {
+  const admin = createSupabaseAdminClient();
+
+  for (const fields of FINANCIAL_CATEGORY_SELECT_ATTEMPTS) {
+    let query = admin.from("financial_categories").select(fields).order("name").limit(500);
+    if (!includeInactive && fields.includes("is_active")) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+    if (!error) {
+      return {
+        rows: ((data || []) as Record<string, unknown>[]).map(mapFinancialCategoryRow),
+        error: null,
+      };
+    }
+
+    if (!/column|schema cache/i.test(error.message || "")) {
+      return { rows: [], error: error.message };
+    }
+  }
+
+  return { rows: [], error: null };
+}
+
 export async function fetchFinancialCategoriesAction(): Promise<
   ActionResult<FinancialCategoryOption[]>
 > {
   try {
     await requirePermissionAction("can_view_finance");
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin
-      .from("financial_categories")
-      .select("id,name,type,is_active")
-      .eq("is_active", true)
-      .order("name")
-      .limit(200);
+    const { rows, error } = await fetchFinancialCategoryRows(false);
+    if (error) return { success: false, error };
 
-    if (!error && data?.length) {
+    if (rows.length) {
+      const flat = flattenExpenseCategoryOptions(rows);
       return {
         success: true,
-        data: data.map((row) => ({
-          id: String(row.id),
-          name: String(row.name),
-          type: String(row.type) as UnifiedTransactionType,
+        data: flat.map((row) => ({
+          id: row.id,
+          name: row.name,
+          type: "EXPENSE" as const,
+          parent_id: row.parent_id,
+          parent_name: row.parent_name,
         })),
       };
     }
@@ -193,6 +226,164 @@ export async function fetchFinancialCategoriesAction(): Promise<
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function fetchFinancialCategoryTreeAction(): Promise<
+  ActionResult<FinancialCategoryTreeNode[]>
+> {
+  try {
+    await requirePermissionAction("can_view_finance");
+    const { rows, error } = await fetchFinancialCategoryRows(true);
+    if (error) return { success: false, error };
+    const expenseRows = rows.filter((row) => row.type === "EXPENSE");
+    return { success: true, data: buildFinancialCategoryTree(expenseRows) };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function createFinancialCategoryAction(input: {
+  name: string;
+  parentId?: string | null;
+  type?: UnifiedTransactionType;
+}): Promise<ActionResult<{ categoryId: string }>> {
+  try {
+    await requireFinanceOrExpenseManageAction();
+
+    const name = clampString(input.name, 200);
+    const parentId = input.parentId?.trim() || null;
+    const type = input.type || "EXPENSE";
+
+    if (!name) return { success: false, error: "Kateqoriya adı tələb olunur" };
+    if (parentId && !isValidUuid(parentId)) {
+      return { success: false, error: "Etibarlı əsas kateqoriya seçin" };
+    }
+
+    const admin = createSupabaseAdminClient();
+    const payload: Record<string, unknown> = {
+      name,
+      type,
+      is_active: true,
+      parent_id: parentId,
+    };
+
+    let insert = await admin.from("financial_categories").insert([payload]).select("id").single();
+    if (insert.error && /column|parent_id|schema cache/i.test(insert.error.message || "")) {
+      delete payload.parent_id;
+      insert = await admin.from("financial_categories").insert([payload]).select("id").single();
+    }
+
+    if (insert.error || !insert.data) {
+      return { success: false, error: insert.error?.message || "Kateqoriya yaradılmadı" };
+    }
+
+    return { success: true, data: { categoryId: String(insert.data.id) } };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Kateqoriya yaradılmadı" };
+  }
+}
+
+export async function updateFinancialCategoryAction(input: {
+  categoryId: string;
+  name: string;
+  parentId?: string | null;
+  isActive?: boolean;
+}): Promise<ActionResult> {
+  try {
+    await requireFinanceOrExpenseManageAction();
+
+    const categoryId = input.categoryId?.trim() ?? "";
+    const name = clampString(input.name, 200);
+    const parentId = input.parentId?.trim() || null;
+
+    if (!isValidUuid(categoryId)) return { success: false, error: "Etibarlı kateqoriya seçin" };
+    if (!name) return { success: false, error: "Kateqoriya adı tələb olunur" };
+    if (parentId === categoryId) {
+      return { success: false, error: "Kateqoriya özünün alt kateqoriyası ola bilməz" };
+    }
+
+    const admin = createSupabaseAdminClient();
+    const patch: Record<string, unknown> = {
+      name,
+      parent_id: parentId,
+      ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+    };
+
+    let update = await admin.from("financial_categories").update(patch).eq("id", categoryId);
+    if (update.error && /column|parent_id|schema cache/i.test(update.error.message || "")) {
+      delete patch.parent_id;
+      update = await admin.from("financial_categories").update(patch).eq("id", categoryId);
+    }
+
+    if (update.error) return { success: false, error: update.error.message };
+    return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Kateqoriya yenilənmədi" };
+  }
+}
+
+export async function deleteFinancialCategoryAction(
+  categoryId: string
+): Promise<ActionResult<{ softDeleted: boolean }>> {
+  try {
+    await requireFinanceOrExpenseManageAction();
+    if (!isValidUuid(categoryId)) return { success: false, error: "Etibarlı kateqoriya seçin" };
+
+    const admin = createSupabaseAdminClient();
+    const { data: category, error: fetchError } = await admin
+      .from("financial_categories")
+      .select("id,name")
+      .eq("id", categoryId)
+      .single();
+
+    if (fetchError || !category) {
+      return { success: false, error: fetchError?.message || "Kateqoriya tapılmadı" };
+    }
+
+    const childrenQuery = await admin
+      .from("financial_categories")
+      .select("id", { count: "exact", head: true })
+      .eq("parent_id", categoryId)
+      .eq("is_active", true);
+
+    if ((childrenQuery.count ?? 0) > 0) {
+      return {
+        success: false,
+        error: "Alt kateqoriyaları olan kateqoriya silinə bilməz. Əvvəlcə alt kateqoriyaları silin və ya deaktiv edin.",
+      };
+    }
+
+    const txById = await admin
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", categoryId);
+
+    const txByName = await admin
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("category", category.name);
+
+    const hasTransactions = (txById.count ?? 0) > 0 || (txByName.count ?? 0) > 0;
+
+    if (hasTransactions) {
+      const { error } = await admin
+        .from("financial_categories")
+        .update({ is_active: false })
+        .eq("id", categoryId);
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: { softDeleted: true } };
+    }
+
+    const { error: deleteError } = await admin.from("financial_categories").delete().eq("id", categoryId);
+    if (deleteError) return { success: false, error: deleteError.message };
+    return { success: true, data: { softDeleted: false } };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Kateqoriya silinmədi" };
   }
 }
 

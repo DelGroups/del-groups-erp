@@ -4,6 +4,9 @@ export type FinancialCategoryOption = {
   id: string;
   name: string;
   type: UnifiedTransactionType;
+  parent_id?: string | null;
+  parent_name?: string | null;
+  is_active?: boolean;
 };
 
 export type UnifiedLedgerTransaction = {
