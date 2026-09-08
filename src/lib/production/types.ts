@@ -288,7 +288,9 @@ export function calcProductionCosting(order: ProductionOrder): ProductionCosting
   const resolveLineCost = (row: ProductionMaterial) => {
     const lineCost = Number(row.line_cost);
     if (Number.isFinite(lineCost) && lineCost > 0) return lineCost;
-    return num(row.quantity) * num(row.unit_cost);
+    const qty = Number(row.quantity);
+    const unitCost = Number(row.unit_cost);
+    return (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(unitCost) ? unitCost : 0);
   };
 
   const allMaterialCost = (order.materials || []).reduce((sum, row) => sum + resolveLineCost(row), 0);
