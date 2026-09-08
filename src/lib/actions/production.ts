@@ -1639,11 +1639,7 @@ async function allocateOrderMaterials(
 ): Promise<{ ok: boolean; error?: string }> {
   const pending = order.materials.filter((material) => !material.issued);
 
-  if (!order.materials.length) {
-    return { ok: false, error: "Material çıxışı: BOM material sətri tapılmadı" };
-  }
-
-  if (!pending.length) {
+  if (!order.materials.length || !pending.length) {
     return { ok: true };
   }
 
@@ -1728,8 +1724,22 @@ export async function updateProductionStatusAction(
     }
 
     if (next === "In-Progress") {
-      const alloc = await allocateOrderMaterials(admin, order);
-      if (!alloc.ok) return { success: false, error: alloc.error || "Material çıxışı alınmadı" };
+      const hasPendingMaterials = order.materials.some(
+        (material) => !material.issued && material.product_id && num(material.quantity) > 0
+      );
+      if (hasPendingMaterials) {
+        const alloc = await allocateOrderMaterials(admin, order);
+        if (!alloc.ok) return { success: false, error: alloc.error || "Material çıxışı alınmadı" };
+      }
+
+      const refreshed = await loadOrderBundle(admin, id);
+      if (!refreshed || refreshed.status !== "In-Progress") {
+        const { error } = await updateProductionOrders(admin, {
+          status: "In-Progress",
+          updated_at: new Date().toISOString(),
+        }).eq("id", id);
+        if (error) return { success: false, error: error.message };
+      }
     }
 
     if (next === "Ready" && order.type === "Series") {
