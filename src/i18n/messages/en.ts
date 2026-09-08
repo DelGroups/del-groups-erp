@@ -1476,6 +1476,8 @@ export const enMessages: Messages = {
     splitTreasury: "Split base and VAT payments",
     baseAmount: "Base Amount",
     paymentSplitBanner: "Base Amount: {base} AZN | VAT Amount: {vat} AZN",
+    remainingSplit: "Base: {base} AZN | VAT: {vat} AZN",
+    totalRemaining: "Total Remaining",
     vatAccount: "VAT account",
     vatAccountRequired: "A dedicated VAT bank account must be selected",
     noVatAccount: "No VAT account found",

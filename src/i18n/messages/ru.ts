@@ -1476,6 +1476,8 @@ export const ruMessages: Messages = {
     splitTreasury: "Разделить оплату: основа и НДС",
     baseAmount: "Основная сумма",
     paymentSplitBanner: "Основная сумма: {base} AZN | Сумма НДС: {vat} AZN",
+    remainingSplit: "Основа: {base} AZN | НДС: {vat} AZN",
+    totalRemaining: "Итого остаток",
     vatAccount: "Счёт НДС",
     vatAccountRequired: "Необходимо выбрать специальный счёт НДС",
     noVatAccount: "Счёт НДС не найден",

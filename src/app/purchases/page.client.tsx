@@ -28,6 +28,9 @@ import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrin
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { ShoppingBag } from "lucide-react";
+import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
+import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
+import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
@@ -46,6 +49,7 @@ export default function PurchasesPage() {
   const { t } = useI18n();
   const canCreatePurchase = can("can_create_purchase");
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
+  const vatAccountIds = useVatAccountIds();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -154,7 +158,21 @@ export default function PurchasesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-app">
-                    {filtered.map((row) => (
+                    {filtered.map((row) => {
+                      const debtBreakdown = computeInvoiceDebtBreakdown(
+                        {
+                          isOfficial: row.is_official,
+                          subtotalAmount: row.subtotal_amount,
+                          vatAmount: row.vat_amount,
+                          grandTotal: row.grand_total ?? row.total_amount,
+                          totalAmount: row.total_amount,
+                          paidAmount: row.paid_amount,
+                          remainingBalance: row.debt_amount,
+                        },
+                        vatAccountIds
+                      );
+
+                      return (
                       <tr key={row.id} className="transition-colors hover:bg-app-card-hover">
                         <td className="px-4 py-3 font-mono font-bold text-emerald-600">
                           {row.invoice_number}
@@ -171,8 +189,16 @@ export default function PurchasesPage() {
                         <td className="px-4 py-3 font-mono text-emerald-600">
                           {row.paid_amount.toFixed(2)} {t("common.currency")}
                         </td>
-                        <td className="px-4 py-3 font-mono text-rose-600">
-                          {row.debt_amount.toFixed(2)} {t("common.currency")}
+                        <td className="px-4 py-3">
+                          <InvoiceRemainingBalanceCell
+                            breakdown={debtBreakdown}
+                            currencyLabel={t("common.currency")}
+                            splitLabel={t("official.remainingSplit", {
+                              base: debtBreakdown.remainingBase.toFixed(2),
+                              vat: debtBreakdown.remainingVat.toFixed(2),
+                            })}
+                            totalRemainingLabel={t("official.totalRemaining")}
+                          />
                         </td>
                         <td className="px-4 py-3">{row.status || "-"}</td>
                         <td className="px-4 py-3">
@@ -186,7 +212,7 @@ export default function PurchasesPage() {
                             onView={() => void openView(row)}
                             onPrint={() => void openPrint(row)}
                             onPayment={() => void openPayment(row)}
-                            paymentDisabled={row.debt_amount <= 0}
+                            paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={() => void openEdit(row)}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}
                             sendToWarehouseDisabled={
@@ -206,7 +232,8 @@ export default function PurchasesPage() {
                           />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

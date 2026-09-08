@@ -24,6 +24,9 @@ import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrin
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
+import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
+import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
+import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 
 export default function SalesListPage() {
   const [sales, setSales] = useState<SaleRecord[]>([]);
@@ -34,6 +37,7 @@ export default function SalesListPage() {
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
   const invoicePrint = useInvoicePrintSystem();
+  const vatAccountIds = useVatAccountIds();
   const { can } = useAuth();
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
@@ -193,7 +197,25 @@ export default function SalesListPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-app">
-                    {filteredSales.map((sale) => (
+                    {filteredSales.map((sale) => {
+                      const debtBreakdown = computeInvoiceDebtBreakdown(
+                        {
+                          isOfficial: sale.is_official,
+                          subtotalAmount: sale.subtotal_amount,
+                          vatAmount: sale.vat_amount ?? sale.vat_total,
+                          grandTotal: sale.grand_total ?? sale.total_amount,
+                          totalAmount: sale.total_amount,
+                          paidAmount: sale.paid_amount,
+                          remainingBalance:
+                            sale.remaining_balance != null && Number(sale.remaining_balance) > 0
+                              ? sale.remaining_balance
+                              : getSaleRemaining(sale),
+                          payments: sale.payments,
+                        },
+                        vatAccountIds
+                      );
+
+                      return (
                       <tr key={sale.id} className="transition-colors hover:bg-app-card-hover">
                         <td className="px-4 py-3 font-mono font-bold text-app-accent">
                           {sale.doc_no ?? "-"}
@@ -211,13 +233,16 @@ export default function SalesListPage() {
                         <td className="px-4 py-3 font-mono text-emerald-600">
                           {formatSaleAmount(sale.paid_amount, t("common.currency"))}
                         </td>
-                        <td className="px-4 py-3 font-mono text-rose-600">
-                          {formatSaleAmount(
-                            sale.remaining_balance != null && Number(sale.remaining_balance) > 0
-                              ? sale.remaining_balance
-                              : getSaleRemaining(sale),
-                            t("common.currency")
-                          )}
+                        <td className="px-4 py-3">
+                          <InvoiceRemainingBalanceCell
+                            breakdown={debtBreakdown}
+                            currencyLabel={t("common.currency")}
+                            splitLabel={t("official.remainingSplit", {
+                              base: debtBreakdown.remainingBase.toFixed(2),
+                              vat: debtBreakdown.remainingVat.toFixed(2),
+                            })}
+                            totalRemainingLabel={t("official.totalRemaining")}
+                          />
                         </td>
                         <td className="px-4 py-3">
                           <WarehouseSendBadge
@@ -230,7 +255,7 @@ export default function SalesListPage() {
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
                             onPayment={() => void openPayment(sale)}
-                            paymentDisabled={getSaleRemaining(sale) <= 0}
+                            paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={() => setIsFormOpen(true)}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(sale).show}
                             sendToWarehouseDisabled={
@@ -250,7 +275,8 @@ export default function SalesListPage() {
                           />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
