@@ -824,6 +824,10 @@ ALTER TABLE production_orders
   ADD CONSTRAINT production_orders_type_check
   CHECK (type IN ('Custom', 'Series'));
 
+ALTER TABLE public.production_orders
+  ADD COLUMN IF NOT EXISTS contractor_id UUID REFERENCES public.suppliers(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS production_type VARCHAR(50) DEFAULT 'internal_custom';
+
 -- Atomic sale creation RPC: see types/sale-mutations.sql
 -- Atomic purchase creation RPC: see types/purchase-mutations.sql
 -- Atomic payment recording RPC: see types/payment-mutations.sql
