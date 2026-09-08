@@ -29,6 +29,8 @@ export const PRODUCTION_ORDER_CORE_COLUMNS = [
   "customer_name",
   "ousta_id",
   "subcontractor_id",
+  "contractor_id",
+  "production_type",
   "subcontractor_fee_percent",
   "subcontractor_fee_amount",
   "finished_product_id",

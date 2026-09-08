@@ -138,6 +138,7 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
 
     const base: CreateProductionOrderInput = {
       production_model: model,
+      production_type: productionType,
       type: legacy.type,
       custom_workflow: legacy.custom_workflow,
       project_name: name,

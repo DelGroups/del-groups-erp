@@ -64,6 +64,8 @@ import {
   legacyFromProductionModel,
   normalizeProductionModel,
   productionModelFromLegacy,
+  productionModelToCreationType,
+  type ProductionCreationType,
   type ProductionModel,
 } from "@/lib/production/models";
 import {
@@ -212,6 +214,8 @@ function asOrder(row: Record<string, unknown>, extras?: Partial<ProductionOrder>
     customer_name: (row.customer_name as string) || null,
     ousta_id: (row.ousta_id as string) || null,
     subcontractor_id: (row.subcontractor_id as string) || null,
+    contractor_id: (row.contractor_id as string) || (row.subcontractor_id as string) || null,
+    production_type: (row.production_type as string) || null,
     subcontractor_fee_percent: num(row.subcontractor_fee_percent) || DEFAULT_CONTRACTOR_COMMISSION,
     subcontractor_fee_amount: num(row.subcontractor_fee_amount),
     finished_product_id: (row.finished_product_id as string) || null,
@@ -1017,6 +1021,7 @@ export async function getProductionOrderAction(
 
 export interface CreateProductionOrderInput {
   production_model?: ProductionModel;
+  production_type?: ProductionCreationType;
   type: ProductionOrderType;
   custom_workflow?: CustomWorkflow | null;
   project_name: string;
@@ -1150,10 +1155,17 @@ export async function createProductionOrderAction(
       productionModel === "subcontractor_custom"
         ? (totalPrice * subcontractorFeePercent) / 100
         : 0;
+    const productionType =
+      input.production_type || productionModelToCreationType(productionModel);
+    const contractorId =
+      productionModel === "subcontractor_custom"
+        ? input.subcontractor_id || input.contractor?.contractor_id || null
+        : null;
 
     const insertPayload = omitEmptyOptionalText({
       order_no: createDocNo(resolvedType === "Series" ? "PRS" : "PRC"),
       production_model: productionModel,
+      production_type: productionType,
       type: resolvedType,
       custom_workflow: resolvedType === "Custom" ? resolvedWorkflow : null,
       status: normalizeStatus(PRODUCTION_STATUS_DEFAULT),
@@ -1162,7 +1174,8 @@ export async function createProductionOrderAction(
       customer_name: input.customer_name?.trim() || null,
       ousta_id: input.ousta_id || null,
       subcontractor_id:
-        productionModel === "subcontractor_custom" ? input.subcontractor_id || null : null,
+        productionModel === "subcontractor_custom" ? contractorId : null,
+      contractor_id: contractorId,
       subcontractor_fee_percent: subcontractorFeePercent,
       subcontractor_fee_amount: subcontractorFeeAmount,
       finished_product_id: resolvedType === "Series" ? input.finished_product_id || null : customProductId,

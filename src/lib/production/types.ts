@@ -197,6 +197,8 @@ export interface ProductionOrder {
   customer_name: string | null;
   ousta_id: string | null;
   subcontractor_id: string | null;
+  contractor_id: string | null;
+  production_type: string | null;
   subcontractor_fee_percent: number;
   subcontractor_fee_amount: number;
   finished_product_id: string | null;

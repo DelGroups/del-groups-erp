@@ -40,6 +40,17 @@ export function productionCreationTypeToModel(type: ProductionCreationType): Pro
   return PRODUCTION_CREATION_TYPES.find((row) => row.value === type)?.model ?? PRODUCTION_MODEL_DEFAULT;
 }
 
+export function productionModelToCreationType(model: ProductionModel): ProductionCreationType {
+  switch (model) {
+    case "series":
+      return "bom_series";
+    case "subcontractor_custom":
+      return "contractor_outsource";
+    default:
+      return "internal_custom";
+  }
+}
+
 export function isProductionModel(value: unknown): value is ProductionModel {
   return typeof value === "string" && (PRODUCTION_MODELS as readonly string[]).includes(value);
 }
