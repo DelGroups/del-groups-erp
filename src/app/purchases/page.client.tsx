@@ -7,7 +7,7 @@ import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import PurchaseForm from "@/components/purchases/PurchaseForm";
 import PurchaseViewModal from "@/components/purchases/PurchaseViewModal";
-import PurchasePrintTemplate from "@/components/purchases/PurchasePrintTemplate";
+import PurchaseRequisitionsPanel from "@/components/purchases/PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import {
   fetchPurchaseById,
@@ -56,6 +56,7 @@ export default function PurchasesPage() {
   const canEditPurchases = can("can_edit_purchases");
   const [deleteTarget, setDeleteTarget] = useState<PurchaseRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"invoices" | "requisitions">("invoices");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -83,6 +84,17 @@ export default function PurchasesPage() {
   const openCreate = () => {
     setEditingPurchase(null);
     setIsFormOpen(true);
+  };
+
+  const openEditById = async (purchaseId: string) => {
+    const full = await fetchPurchaseById(purchaseId);
+    if (!full) {
+      showError(t("common.notFound"));
+      return;
+    }
+    setEditingPurchase(full);
+    setIsFormOpen(true);
+    setActiveTab("invoices");
   };
 
   const openEdit = async (row: PurchaseRecord) => {
@@ -148,6 +160,35 @@ export default function PurchasesPage() {
         />
 
         <main className="flex-1 space-y-4 overflow-y-auto p-6">
+          <div className="flex flex-wrap gap-2 border-b border-app pb-2">
+            <button
+              type="button"
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                activeTab === "invoices"
+                  ? "bg-app-accent text-white"
+                  : "bg-app-card-hover text-app hover:bg-app-surface"
+              }`}
+              onClick={() => setActiveTab("invoices")}
+            >
+              {t("purchases.tabInvoices")}
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                activeTab === "requisitions"
+                  ? "bg-app-accent text-white"
+                  : "bg-app-card-hover text-app hover:bg-app-surface"
+              }`}
+              onClick={() => setActiveTab("requisitions")}
+            >
+              {t("purchases.tabRequisitions")}
+            </button>
+          </div>
+
+          {activeTab === "requisitions" ? (
+            <PurchaseRequisitionsPanel onOpenPurchase={(purchaseId) => void openEditById(purchaseId)} />
+          ) : (
+            <>
           <DocumentListSearchBar
             value={searchTerm}
             onChange={setSearchTerm}
@@ -265,6 +306,8 @@ export default function PurchasesPage() {
               </div>
             )}
           </div>
+            </>
+          )}
         </main>
 
       {isFormOpen && (

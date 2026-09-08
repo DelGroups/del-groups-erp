@@ -244,7 +244,7 @@ export interface ProductionOrder {
   installation_difficulty_notes?: string | null;
 }
 
-export type PurchaseRequestStatus = "pending" | "ordered" | "received" | "cancelled";
+export type PurchaseRequestStatus = "pending" | "ordered" | "received" | "fulfilled" | "cancelled";
 
 export interface PurchaseRequest {
   id: string;

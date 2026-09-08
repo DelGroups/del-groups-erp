@@ -86,13 +86,15 @@ import {
   sanitizeMaterialPayload,
   type AddProductionMaterialInput,
 } from "@/app/production/materialInsert";
+import {
+  computeMaterialAllocation,
+  sumOrderAllocatedQuantity,
+} from "@/lib/production/orderStock";
 import { resolveProductionProduct } from "@/lib/production/resolveProductId";
 import {
   getWarehouseProductAvailableStock,
-  hasWarehouseStockShortage,
   resolveStandardProductWarehouseStock,
   warehouseStockBalancesFromMovements,
-  warehouseStockShortageDelta,
 } from "@/lib/production/warehouseStock";
 import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
 import {
@@ -1633,6 +1635,61 @@ async function issueMaterialRow(
   return { ok: true };
 }
 
+async function issuePartialMaterialQuantity(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  material: ProductionMaterial,
+  issueQty: number
+): Promise<{ ok: boolean; error?: string }> {
+  const qty = Math.max(0, num(issueQty));
+  if (qty <= 0) return { ok: true };
+  if (qty >= num(material.quantity)) {
+    return issueMaterialRow(admin, material);
+  }
+
+  if (material.product_id && material.inventory_mode === POLYWOOD_INVENTORY_MODE) {
+    const polywood = await allocateProductionMaterialPolywood(admin, {
+      productId: material.product_id,
+      warehouseId: material.warehouse_id || "",
+      quantity: qty,
+      polywoodMode: material.polywood_sale_mode || "linear_m",
+      referenceId: material.id,
+    });
+    if (!polywood.ok) return { ok: false, error: polywood.error };
+
+    const polywoodQty = num(polywood.polywoodLengthM ?? qty);
+    if (polywoodQty > 0) {
+      await recordStockMovement(admin, {
+        productId: material.product_id,
+        warehouseId: material.warehouse_id || null,
+        movementType: "out",
+        quantity: polywoodQty,
+        unit: material.unit || "Metr",
+        referenceType: "production",
+        referenceId: material.production_order_id,
+        sourceLineId: material.id,
+        description: "İstehsalat üçün material (qismən)",
+      });
+    }
+    return { ok: true };
+  }
+
+  if (material.product_id) {
+    await recordStockMovement(admin, {
+      productId: material.product_id,
+      warehouseId: material.warehouse_id || null,
+      movementType: "out",
+      quantity: qty,
+      unit: material.unit || "Ədəd",
+      referenceType: "production",
+      referenceId: material.production_order_id,
+      sourceLineId: material.id,
+      description: "İstehsalat üçün material (qismən)",
+    });
+  }
+
+  return { ok: true };
+}
+
 async function syncProductionReservations(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   orderId: string
@@ -1892,14 +1949,19 @@ export async function addProductionMaterialAction(
     let issueNow = Boolean(safeInput.issue_now) || order.status !== "Draft";
 
     const warehouseId = safeInput.warehouse_id || null;
-    if (issueNow && warehouseId) {
+    let issueQty = qty;
+    let deficitQty = 0;
+
+    if (warehouseId) {
       const { data: warehouse } = await admin
         .from("warehouses")
         .select("warehouse_type")
         .eq("id", warehouseId)
         .maybeSingle();
 
-      const available = await getWarehouseProductAvailableStock(admin, {
+      const existingMaterials = await selectMaterialsForOrder(admin, { orderId });
+      const orderAllocated = sumOrderAllocatedQuantity(existingMaterials, p.id, warehouseId);
+      const warehouseStock = await getWarehouseProductAvailableStock(admin, {
         warehouseId,
         productId: p.id,
         globalStock: Number(p.stock) || 0,
@@ -1907,9 +1969,9 @@ export async function addProductionMaterialAction(
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
 
-      if (hasWarehouseStockShortage(qty, available)) {
-        issueNow = false;
-      }
+      const allocation = computeMaterialAllocation(qty, warehouseStock, orderAllocated);
+      issueQty = allocation.issueQty;
+      deficitQty = allocation.deficit;
     }
 
     const insertedMaterial = await insertMaterialRow(admin, {
@@ -1946,22 +2008,35 @@ export async function addProductionMaterialAction(
       return { success: false, error: reservationResult.error || "Material rezervasiyası yaradılmadı" };
     }
 
-    if (issueNow) {
-      const alloc = await issueMaterialRow(admin, material);
+    if (issueNow && issueQty > 0) {
+      const alloc = await issuePartialMaterialQuantity(admin, material, issueQty);
       if (!alloc.ok) {
         await admin.from("production_materials").delete().eq("id", material.id);
         return { success: false, error: alloc.error || "Material çıxışı alınmadı" };
       }
-      await updateProductionOrders(admin, { materials_allocated: true }).eq("id", orderId);
-      const issuedMaterial = await selectMaterialRowById(admin, material.id);
-      if (issuedMaterial) material = issuedMaterial;
+      if (deficitQty === 0) {
+        await updateProductionOrders(admin, { materials_allocated: true }).eq("id", orderId);
+        const issuedMaterial = await selectMaterialRowById(admin, material.id);
+        if (issuedMaterial) material = issuedMaterial;
+      }
+    }
+
+    if (deficitQty > 0 && warehouseId) {
+      await createPurchaseRequestInternal(admin, {
+        orderId,
+        product: p,
+        warehouseId,
+        quantity: deficitQty,
+        userId: user.id,
+        notes: `Stok çatışmır (tələb: ${qty}, anbardan verildi: ${issueQty}, çatışmayan: ${deficitQty})`,
+      });
     }
 
     return {
       success: true,
       data: orderCollectionDelta(order, {
         materials: [material],
-        materials_allocated: issueNow ? true : order.materials_allocated,
+        materials_allocated: deficitQty === 0 && issueNow ? true : order.materials_allocated,
       }),
     };
   } catch (err) {
@@ -2600,7 +2675,7 @@ function mapPurchaseRequest(row: Record<string, unknown>): PurchaseRequest {
     warehouse_id: (row.warehouse_id as string) || null,
     quantity: num(row.quantity),
     unit: (row.unit as string) || null,
-    status: (["pending", "ordered", "received", "cancelled"].includes(String(row.status))
+    status: (["pending", "ordered", "received", "fulfilled", "cancelled"].includes(String(row.status))
       ? String(row.status)
       : "pending") as PurchaseRequestStatus,
     purchase_id: (row.purchase_id as string) || null,
@@ -2895,7 +2970,13 @@ export async function createPurchaseRequestAction(
         .eq("id", input.warehouse_id)
         .maybeSingle();
 
-      const available = await getWarehouseProductAvailableStock(admin, {
+      const existingMaterials = await selectMaterialsForOrder(admin, { orderId });
+      const orderAllocated = sumOrderAllocatedQuantity(
+        existingMaterials,
+        product.id,
+        input.warehouse_id
+      );
+      const warehouseStock = await getWarehouseProductAvailableStock(admin, {
         warehouseId: input.warehouse_id,
         productId: product.id,
         globalStock: Number(product.stock) || 0,
@@ -2903,13 +2984,14 @@ export async function createPurchaseRequestAction(
         warehouseType: (warehouse as { warehouse_type?: string | null } | null)?.warehouse_type ?? null,
       });
 
-      if (!hasWarehouseStockShortage(qty, available)) {
+      const allocation = computeMaterialAllocation(qty, warehouseStock, orderAllocated);
+      if (allocation.deficit <= 0) {
         return {
           success: false,
-          error: `Anbarda kifayət qədər stok var (mövcud: ${available}, tələb: ${qty})`,
+          error: `Anbarda kifayət qədər stok var (mövcud: ${allocation.available}, tələb: ${qty})`,
         };
       }
-      requestQty = warehouseStockShortageDelta(qty, available);
+      requestQty = allocation.deficit;
     }
 
     await createPurchaseRequestInternal(admin, {
@@ -2953,8 +3035,8 @@ export async function cancelPurchaseRequestAction(
     if (status === "cancelled") {
       return { success: false, error: "Satınalma tələbi artıq ləğv edilib" };
     }
-    if (status === "received") {
-      return { success: false, error: "Qəbul edilmiş satınalma tələbi ləğv edilə bilməz" };
+    if (status === "received" || status === "fulfilled") {
+      return { success: false, error: "Yerinə yetirilmiş satınalma tələbi ləğv edilə bilməz" };
     }
 
     const { error: updateError } = await admin

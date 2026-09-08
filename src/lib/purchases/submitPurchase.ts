@@ -9,6 +9,7 @@ import { persistPurchaseOfficialFields } from "@/lib/finance/officialTransaction
 import { applyPurchaseStockDeltas } from "@/lib/inventory/stockAdjustment";
 import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
+import { fulfillProductionPurchaseRequestsByPurchaseId } from "@/lib/purchases/fulfillProductionRequests";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
 
 export interface SubmitPurchasePayload {
@@ -186,6 +187,8 @@ export async function submitPurchase(
     }
   }
 
+  await fulfillProductionPurchaseRequestsByPurchaseId(purchaseId);
+
   return { success: true, purchaseId };
 }
 
@@ -277,6 +280,8 @@ export async function updatePurchase(
       };
     }
   }
+
+  await fulfillProductionPurchaseRequestsByPurchaseId(purchaseId);
 
   return { success: true, purchaseId };
 }
