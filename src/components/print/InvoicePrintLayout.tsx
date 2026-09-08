@@ -16,12 +16,13 @@ interface InvoicePrintLayoutProps {
 }
 
 const INK = "#0f172a";
-const HEADER_TEXT = "#1e293b";
+const HEADER_TEXT = "#0f172a";
 const SLATE = "#64748b";
 const BORDER = "#e2e8f0";
 const CARD_BG = "#f8fafc";
 const HEADER_BG = "#f8fafc";
 const TH_BG = "#f1f5f9";
+const TH_BORDER = "#cbd5e1";
 const SUMMARY_BG = "#f1f5f9";
 const SUMMARY_BORDER = "#cbd5e1";
 const ACCENT_BORDER = "#cbd5e1";
@@ -41,8 +42,8 @@ const PRINT_STYLE = `
       background-color: ${TH_BG} !important;
       color: ${HEADER_TEXT} !important;
     }
-    .invoice-print-row-even { background-color: ${CARD_BG} !important; }
-    .invoice-print-row-odd { background-color: ${WHITE} !important; }
+    .invoice-print-row-even { background-color: ${WHITE} !important; }
+    .invoice-print-row-odd { background-color: ${CARD_BG} !important; }
     .invoice-print-info-card {
       background-color: ${CARD_BG} !important;
       border: 1px solid ${BORDER} !important;
@@ -72,89 +73,147 @@ function formatMoney(value: number, currency: string): string {
   return `${value.toFixed(2)} ${currency}`;
 }
 
-const cellBase: React.CSSProperties = {
-  padding: "7px 8px",
-  borderBottom: `1px solid ${BORDER}`,
-  color: INK,
-  fontSize: "10px",
-  verticalAlign: "top",
-};
+function formatPrice(value: number): string {
+  return value.toFixed(2);
+}
 
 const thStyle: React.CSSProperties = {
   backgroundColor: TH_BG,
   color: HEADER_TEXT,
-  padding: "9px 8px",
-  fontSize: "9px",
+  padding: "10px 12px",
+  fontSize: "12px",
   fontWeight: 700,
   textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  textAlign: "left",
-  borderBottom: `1px solid ${BORDER}`,
+  letterSpacing: "0.5px",
+  border: `1px solid ${TH_BORDER}`,
+  verticalAlign: "middle",
 };
 
-function rowBg(index: number): React.CSSProperties {
-  return { backgroundColor: index % 2 === 0 ? CARD_BG : WHITE };
+function rowBackground(index: number): string {
+  return index % 2 === 0 ? WHITE : CARD_BG;
 }
 
-function DimensionalRow({ line, index }: { line: InvoicePrintLine; index: number }) {
+function cellStyle(index: number, align: "left" | "center" | "right" = "left"): React.CSSProperties {
+  return {
+    padding: "10px 12px",
+    borderBottom: `1px solid ${BORDER}`,
+    color: INK,
+    fontSize: "13px",
+    verticalAlign: "top",
+    textAlign: align,
+    backgroundColor: rowBackground(index),
+    fontVariantNumeric: align === "right" ? "tabular-nums" : undefined,
+  };
+}
+
+function MetaLine({ children }: { children: React.ReactNode }) {
   return (
-    <tr className={index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd"} style={{ pageBreakInside: "avoid" }}>
-      <td style={{ ...cellBase, ...rowBg(index), width: "28px", textAlign: "center", fontWeight: 700 }}>{index}</td>
-      <td style={{ ...cellBase, ...rowBg(index) }}>
-        <div style={{ fontWeight: 700, color: INK }}>{line.productName}</div>
-        {line.productCode ? <div style={{ fontSize: "9px", color: SLATE, marginTop: "2px" }}>{line.productCode}</div> : null}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "center" }}>{line.saleTypeLabel || "—"}</td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.lengthM != null ? line.lengthM.toFixed(2) : "—"}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.pieceCount ?? line.quantity}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.totalMeterage != null ? line.totalMeterage.toFixed(2) : "—"}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.unitPrice.toFixed(2)}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-        {line.lineTotal.toFixed(2)}
-      </td>
-    </tr>
+    <div style={{ fontSize: "11px", color: SLATE, lineHeight: 1.45, marginTop: "2px" }}>
+      {children}
+    </div>
   );
 }
 
-function AccessoryRow({ line, index }: { line: InvoicePrintLine; index: number }) {
-  return (
-    <tr className={index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd"} style={{ pageBreakInside: "avoid" }}>
-      <td style={{ ...cellBase, ...rowBg(index), width: "28px", textAlign: "center", fontWeight: 700 }}>{index}</td>
-      <td style={{ ...cellBase, ...rowBg(index) }}>
-        <div style={{ fontWeight: 700, color: INK }}>{line.productName}</div>
-        {line.productCode ? <div style={{ fontSize: "9px", color: SLATE, marginTop: "2px" }}>{line.productCode}</div> : null}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "center" }}>{line.packaging || line.unit}</td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.unitPrice.toFixed(2)}
-      </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-        {line.lineTotal.toFixed(2)}
-      </td>
-    </tr>
-  );
+function renderSizeType(
+  line: InvoicePrintLine,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): React.ReactNode {
+  if (line.kind === "dimensional") {
+    if (line.saleTypeLabel === "Tam") {
+      return t("print.cols.fullSheet");
+    }
+    if (line.saleTypeLabel) {
+      return line.saleTypeLabel;
+    }
+    return "—";
+  }
+
+  if (line.kind === "service") {
+    return line.description?.trim() || t("print.cols.serviceType");
+  }
+
+  const value = line.packaging || line.unit;
+  return value?.trim() ? value : "—";
 }
 
-function ServiceRow({ line, index }: { line: InvoicePrintLine; index: number }) {
+function renderQuantityUnit(
+  line: InvoicePrintLine,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): React.ReactNode {
+  if (line.kind === "dimensional") {
+    const details: React.ReactNode[] = [];
+
+    if (line.totalMeterage != null && line.totalMeterage > 0) {
+      details.push(
+        <MetaLine key="meterage">
+          {t("print.cols.totalMeterageShort")}: {line.totalMeterage.toFixed(2)} m
+        </MetaLine>
+      );
+    }
+
+    if (line.saleTypeLabel === "Tam" && line.pieceCount != null && line.pieceCount > 0) {
+      details.push(
+        <MetaLine key="full-sheet">
+          {t("print.cols.fullSheet")}: {line.pieceCount}
+        </MetaLine>
+      );
+    }
+
+    if (line.saleTypeLabel === "Kəsim" && line.pieceCount != null && line.pieceCount > 0) {
+      details.push(
+        <MetaLine key="pieces">
+          {t("print.cols.pieceCount")}: {line.pieceCount}
+        </MetaLine>
+      );
+    }
+
+    if (line.lengthM != null && line.lengthM > 0) {
+      details.push(
+        <MetaLine key="length">
+          {t("print.cols.perPieceLength", { length: line.lengthM.toFixed(2) })}
+        </MetaLine>
+      );
+    }
+
+    if (details.length > 0) {
+      return <div>{details}</div>;
+    }
+
+    const unit = line.unit?.trim() || t("common.units");
+    return `${line.quantity} ${unit}`;
+  }
+
+  const unit = line.unit?.trim() || t("common.units");
+  return `${line.quantity} ${unit}`;
+}
+
+function InvoiceItemRow({
+  line,
+  index,
+  t,
+}: {
+  line: InvoicePrintLine;
+  index: number;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const rowClass = index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd";
+
   return (
-    <tr className={index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd"} style={{ pageBreakInside: "avoid" }}>
-      <td style={{ ...cellBase, ...rowBg(index), width: "28px", textAlign: "center", fontWeight: 700 }}>{index}</td>
-      <td style={{ ...cellBase, ...rowBg(index), fontWeight: 700 }}>{line.productName}</td>
-      <td style={{ ...cellBase, ...rowBg(index) }}>{line.description || "—"}</td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{line.quantity}</td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {line.unitPrice.toFixed(2)}
+    <tr className={rowClass} style={{ pageBreakInside: "avoid" }}>
+      <td style={{ ...cellStyle(index, "center"), width: "40px", fontWeight: 700 }}>{index}</td>
+      <td style={cellStyle(index, "left")}>
+        <div style={{ fontWeight: 700, color: INK, lineHeight: 1.35 }}>{line.productName}</div>
+        {line.productCode ? (
+          <div style={{ fontSize: "11px", color: SLATE, marginTop: "3px", lineHeight: 1.35 }}>
+            {line.productCode}
+          </div>
+        ) : null}
       </td>
-      <td style={{ ...cellBase, ...rowBg(index), textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-        {line.lineTotal.toFixed(2)}
+      <td style={{ ...cellStyle(index, "center"), width: "110px" }}>{renderSizeType(line, t)}</td>
+      <td style={{ ...cellStyle(index, "center"), width: "90px" }}>{renderQuantityUnit(line, t)}</td>
+      <td style={{ ...cellStyle(index, "right"), width: "100px" }}>{formatPrice(line.unitPrice)}</td>
+      <td style={{ ...cellStyle(index, "right"), width: "110px", fontWeight: 700 }}>
+        {formatPrice(line.lineTotal)}
       </td>
     </tr>
   );
@@ -210,41 +269,6 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
   const isOfficial = data.isOfficial === true || mode === "official";
   const companyName = branding.companyName || "DEL GROUPS MMC";
   const title = t("print.invoiceTitle");
-
-  const dimensionalLines = data.lines.filter((line) => line.kind === "dimensional");
-  const accessoryLines = data.lines.filter(
-    (line) => line.kind === "accessory" || line.kind === "standard"
-  );
-  const serviceLines = data.lines.filter((line) => line.kind === "service");
-
-  let rowCounter = 0;
-
-  const renderTable = (
-    sectionTitle: string,
-    headers: React.ReactNode,
-    rows: React.ReactNode
-  ) => (
-    <section style={{ marginBottom: "12px" }}>
-      <h2
-        style={{
-          margin: "0 0 6px",
-          fontSize: "10px",
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "#334155",
-        }}
-      >
-        {sectionTitle}
-      </h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${BORDER}` }}>
-        <thead>
-          <tr>{headers}</tr>
-        </thead>
-        <tbody>{rows}</tbody>
-      </table>
-    </section>
-  );
 
   return (
     <>
@@ -397,60 +421,59 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
           </InfoCard>
         </div>
 
-        {dimensionalLines.length > 0
-          ? renderTable(
-              t("print.sections.dimensional"),
-              <>
-                <th className="invoice-print-th" style={thStyle}>{t("print.rowNo")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.productName")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.type")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.lengthM")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.count")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.totalMeterage")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.price")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.lineTotal")}</th>
-              </>,
-              dimensionalLines.map((line) => {
-                rowCounter += 1;
-                return <DimensionalRow key={`d-${rowCounter}`} line={line} index={rowCounter} />;
-              })
-            )
-          : null}
-
-        {accessoryLines.length > 0
-          ? renderTable(
-              t("print.sections.accessory"),
-              <>
-                <th className="invoice-print-th" style={thStyle}>{t("print.rowNo")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.productName")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.packaging")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.price")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.lineTotal")}</th>
-              </>,
-              accessoryLines.map((line) => {
-                rowCounter += 1;
-                return <AccessoryRow key={`a-${rowCounter}`} line={line} index={rowCounter} />;
-              })
-            )
-          : null}
-
-        {serviceLines.length > 0
-          ? renderTable(
-              t("print.sections.service"),
-              <>
-                <th className="invoice-print-th" style={thStyle}>{t("print.rowNo")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.serviceName")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.cols.description")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.quantity")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.price")}</th>
-                <th className="invoice-print-th" style={thStyle}>{t("print.lineTotal")}</th>
-              </>,
-              serviceLines.map((line) => {
-                rowCounter += 1;
-                return <ServiceRow key={`s-${rowCounter}`} line={line} index={rowCounter} />;
-              })
-            )
-          : null}
+        {data.lines.length > 0 ? (
+          <section style={{ marginBottom: "14px" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                tableLayout: "fixed",
+                border: `1px solid ${TH_BORDER}`,
+              }}
+            >
+              <colgroup>
+                <col style={{ width: "40px" }} />
+                <col />
+                <col style={{ width: "110px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "110px" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "center" }}>
+                    {t("print.rowNo")}
+                  </th>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "left" }}>
+                    {t("print.cols.productNameCode")}
+                  </th>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "center" }}>
+                    {t("print.cols.sizeType")}
+                  </th>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "center" }}>
+                    {t("print.cols.quantityUnit")}
+                  </th>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "right" }}>
+                    {t("print.cols.unitPriceAzn")}
+                  </th>
+                  <th className="invoice-print-th" style={{ ...thStyle, textAlign: "right" }}>
+                    {t("print.cols.lineTotalAzn")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.lines.map((line, lineIndex) => (
+                  <InvoiceItemRow
+                    key={`${line.productCode}-${line.productName}-${lineIndex}`}
+                    line={line}
+                    index={lineIndex + 1}
+                    t={t}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", margin: "14px 0 16px" }}>
           <div
