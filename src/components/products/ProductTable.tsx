@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Pencil } from "lucide-react";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import type { Product, ProductColumnKey, Warehouse } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -13,6 +13,7 @@ interface ProductTableProps {
   loading?: boolean;
   canEdit?: boolean;
   onEdit?: (product: Product) => void;
+  onDelete?: (product: Product) => void;
 }
 
 function renderCell(key: ProductColumnKey, product: Product) {
@@ -71,6 +72,7 @@ export default function ProductTable({
   loading,
   canEdit,
   onEdit,
+  onDelete,
 }: ProductTableProps) {
   const { t } = useI18n();
   const columns = (Object.keys(visibleColumns) as ProductColumnKey[]).filter(
@@ -139,14 +141,26 @@ export default function ProductTable({
                   </td>
                   {canEdit ? (
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => onEdit?.(product)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        {t("common.edit")}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onEdit?.(product)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          {t("common.edit")}
+                        </button>
+                        {onDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(product)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {t("common.delete")}
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   ) : null}
                 </tr>

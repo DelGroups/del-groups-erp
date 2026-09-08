@@ -16,7 +16,10 @@ import {
   RefreshCw,
   X,
   Phone,
+  Trash2,
 } from "lucide-react";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import { deleteCustomerAction } from "@/lib/actions/entityDelete";
 
 export default function CustomersPage() {
   const { t } = useI18n();
@@ -28,7 +31,9 @@ export default function CustomersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { message: toastMessage, variant: toastVariant, showError } = useToast();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -147,6 +152,20 @@ export default function CustomersPage() {
       setViewBalance(0);
     }
     setSaving(false);
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteCustomerAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(result.error || t("common.error"));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("customers.deleteSuccess"));
+    void fetchCustomers();
   };
 
   const openCreateModal = () => {
@@ -285,14 +304,24 @@ export default function CustomersPage() {
                           </td>
                           {canManageCustomers ? (
                             <td className="px-6 py-4">
-                              <button
-                                type="button"
-                                onClick={() => openEditModal(c)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                {t("common.edit")}
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(c)}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  {t("common.edit")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteTarget(c)}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {t("common.delete")}
+                                </button>
+                              </div>
                             </td>
                           ) : null}
                         </tr>
@@ -464,6 +493,13 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        itemName={deleteTarget?.full_name}
+        loading={deleting}
+        onConfirm={() => void handleDeleteCustomer()}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

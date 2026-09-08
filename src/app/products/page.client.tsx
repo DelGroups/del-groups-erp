@@ -34,11 +34,18 @@ import {
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
+import { deleteProductAction } from "@/lib/actions/entityDelete";
 
 export default function ProductsPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageProducts = can("can_manage_products");
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -73,6 +80,20 @@ export default function ProductsPage() {
     () => filterProducts(products, filters, warehouses),
     [products, filters, warehouses]
   );
+
+  const handleDeleteProduct = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteProductAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(result.error || t("common.error"));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("products.deleteSuccess"));
+    void loadData();
+  };
 
   return (
     <PageLayout>
@@ -169,6 +190,7 @@ export default function ProductsPage() {
             loading={loading}
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
+            onDelete={canManageProducts ? setDeleteTarget : undefined}
           />
         </main>
 
@@ -213,6 +235,15 @@ export default function ProductsPage() {
           <ProductBarcodePrintTemplate products={printBarcodes} />
         </div>
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        itemName={deleteTarget?.name}
+        loading={deleting}
+        onConfirm={() => void handleDeleteProduct()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

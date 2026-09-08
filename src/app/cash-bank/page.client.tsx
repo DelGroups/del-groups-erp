@@ -5,15 +5,18 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { createAccountAction } from "@/lib/actions/finance";
+import { createAccountAction, deleteAccountAction, updateAccountAction } from "@/lib/actions/finance";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import {
   RefreshCw,
   Plus,
   X,
   Wallet,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface Account {
@@ -40,6 +43,9 @@ export default function CashBankPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     code: "",
@@ -49,7 +55,7 @@ export default function CashBankPage() {
   });
   const { can } = useAuth();
   const canManageFinance = can("can_manage_finance");
-  const { message: toastMessage, variant: toastVariant, showError } = useToast();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -75,6 +81,26 @@ export default function CashBankPage() {
       showError(t("cashBank.noPermission"));
       return;
     }
+
+    if (editingAccount) {
+      const result = await updateAccountAction({
+        accountId: editingAccount.id,
+        code: formData.code,
+        name: formData.name,
+        type: formData.type,
+      });
+      if (!result.success) {
+        showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
+        return;
+      }
+      setIsModalOpen(false);
+      setEditingAccount(null);
+      setFormData({ code: "", name: "", type: "Kassa", balance: "0.00" });
+      showSuccess(t("cashBank.updateSuccess"));
+      fetchData();
+      return;
+    }
+
     const result = await createAccountAction({
       code: formData.code,
       name: formData.name,
@@ -89,6 +115,37 @@ export default function CashBankPage() {
 
     setIsModalOpen(false);
     setFormData({ code: "", name: "", type: "Kassa", balance: "0.00" });
+    fetchData();
+  };
+
+  const openEditAccount = (account: Account) => {
+    setEditingAccount(account);
+    setFormData({
+      code: account.code,
+      name: account.name,
+      type: account.type,
+      balance: account.balance.toFixed(2),
+    });
+    setIsModalOpen(true);
+  };
+
+  const openCreateAccount = () => {
+    setEditingAccount(null);
+    setFormData({ code: "", name: "", type: "Kassa", balance: "0.00" });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteAccountAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("cashBank.deleteSuccess"));
     fetchData();
   };
 
@@ -108,7 +165,7 @@ export default function CashBankPage() {
             <p className="text-sm text-app-muted">{t("cashBank.pageDescription")}</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateAccount}
             disabled={!canManageFinance}
             className="btn-primary disabled:opacity-50"
           >
@@ -153,6 +210,7 @@ export default function CashBankPage() {
                     <th className="px-6 py-3">{t("cashBank.accountName")}</th>
                     <th className="px-6 py-3">{t("common.type")}</th>
                     <th className="px-6 py-3 text-right">{t("cashBank.currentBalance")}</th>
+                    {canManageFinance ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -168,6 +226,28 @@ export default function CashBankPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right font-bold text-app">{a.balance.toFixed(2)} AZN</td>
+                      {canManageFinance ? (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditAccount(a)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("common.edit")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(a)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t("common.delete")}
+                            </button>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -181,8 +261,16 @@ export default function CashBankPage() {
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex justify-between items-center">
-              <h3 className="font-bold text-app">{t("cashBank.addModalTitle")}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-app-muted hover:text-app-muted">
+              <h3 className="font-bold text-app">
+                {editingAccount ? t("cashBank.editModalTitle") : t("cashBank.addModalTitle")}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingAccount(null);
+                }}
+                className="text-app-muted hover:text-app-muted"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -226,8 +314,12 @@ export default function CashBankPage() {
                   step="0.01"
                   value={formData.balance}
                   onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
+                  disabled={Boolean(editingAccount)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--app-accent-ring)] disabled:bg-app-card-hover disabled:text-app-muted"
                 />
+                {editingAccount ? (
+                  <p className="mt-1 text-[11px] text-app-muted">{t("cashBank.balanceEditHint")}</p>
+                ) : null}
               </div>
               <div className="pt-2 flex justify-end space-x-2">
                 <button
@@ -249,6 +341,13 @@ export default function CashBankPage() {
           </div>
         </div>
       )}
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        itemName={deleteTarget?.name}
+        loading={deleting}
+        onConfirm={() => void handleDeleteAccount()}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

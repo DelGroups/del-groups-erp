@@ -1,18 +1,20 @@
 "use client";
 
 import React from "react";
-import { Banknote, Edit, Eye, Package, Printer } from "lucide-react";
+import { Banknote, Edit, Eye, Package, Printer, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface DocumentListActionsProps {
   onView?: () => void;
   onPrint?: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
   onPayment?: () => void;
   onSendToWarehouse?: () => void;
   viewTitle?: string;
   printTitle?: string;
   editTitle?: string;
+  deleteTitle?: string;
   paymentTitle?: string;
   paymentDisabled?: boolean;
   sendToWarehouseTitle?: string;
@@ -24,11 +26,13 @@ export default function DocumentListActions({
   onView,
   onPrint,
   onEdit,
+  onDelete,
   onPayment,
   onSendToWarehouse,
   viewTitle,
   printTitle,
   editTitle,
+  deleteTitle,
   paymentTitle,
   paymentDisabled = false,
   sendToWarehouseTitle,
@@ -39,6 +43,7 @@ export default function DocumentListActions({
   const resolvedViewTitle = viewTitle ?? t("common.view");
   const resolvedPrintTitle = printTitle ?? t("common.print");
   const resolvedEditTitle = editTitle ?? t("common.edit");
+  const resolvedDeleteTitle = deleteTitle ?? t("common.delete");
   const resolvedPaymentTitle = paymentTitle ?? t("common.payment");
   const resolvedSendTitle = sendToWarehouseTitle ?? t("warehouseSend.send");
 
@@ -95,6 +100,16 @@ export default function DocumentListActions({
           title={resolvedEditTitle}
         >
           <Edit className="h-4 w-4" />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/10"
+          title={resolvedDeleteTitle}
+        >
+          <Trash2 className="h-4 w-4" />
         </button>
       )}
     </div>

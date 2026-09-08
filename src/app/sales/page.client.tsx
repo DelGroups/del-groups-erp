@@ -22,7 +22,9 @@ import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
 import ToastMessage from "@/components/ui/ToastMessage";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
+import { voidSaleAction } from "@/lib/actions/entityDelete";
 import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -36,12 +38,15 @@ export default function SalesListPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
+  const [voidTarget, setVoidTarget] = useState<SaleRecord | null>(null);
+  const [voiding, setVoiding] = useState(false);
   const invoicePrint = useInvoicePrintSystem();
   const vatAccountIds = useVatAccountIds();
   const { can } = useAuth();
   const { t } = useI18n();
-  const { message: toastMessage, variant: toastVariant, showError } = useToast();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const canCreateInvoice = can("can_create_invoice");
+  const canDeleteSales = can("can_delete_sales");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -94,6 +99,20 @@ export default function SalesListPage() {
   const openPayment = async (row: SaleRecord) => {
     const full = await fetchSaleById(row.id);
     if (full) setPaymentSale(full);
+  };
+
+  const handleVoidSale = async () => {
+    if (!voidTarget) return;
+    setVoiding(true);
+    const result = await voidSaleAction(voidTarget.id, t("sales.voidReason"));
+    setVoiding(false);
+    if (!result.success) {
+      showError(result.error || t("common.error"));
+      return;
+    }
+    setVoidTarget(null);
+    showSuccess(t("sales.voidSuccess"));
+    void loadData();
   };
 
   const handleDownloadCSV = () => {
@@ -256,7 +275,12 @@ export default function SalesListPage() {
                             onPrint={() => void openPrint(sale)}
                             onPayment={() => void openPayment(sale)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
-                            onEdit={() => setIsFormOpen(true)}
+                            onDelete={
+                              canDeleteSales && debtBreakdown.totalRemaining > 0
+                                ? () => setVoidTarget(sale)
+                                : undefined
+                            }
+                            deleteTitle={t("common.void")}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(sale).show}
                             sendToWarehouseDisabled={
                               warehouseSend.getSendButtonProps(sale).disabled
@@ -347,6 +371,17 @@ export default function SalesListPage() {
           }}
         />
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(voidTarget)}
+        title={t("common.void")}
+        message={t("common.voidConfirmMessage")}
+        itemName={voidTarget?.doc_no || undefined}
+        confirmLabel={t("common.void")}
+        loading={voiding}
+        onConfirm={() => void handleVoidSale()}
+        onCancel={() => setVoidTarget(null)}
+      />
 
       <InvoicePrintSystem
         branding={invoicePrint.branding}

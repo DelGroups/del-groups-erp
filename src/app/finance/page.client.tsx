@@ -4,9 +4,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
-import { ArrowDownRight, ArrowUpRight, CircleDollarSign } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { deleteTransactionAction } from "@/lib/actions/finance";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { ArrowDownRight, ArrowUpRight, CircleDollarSign, Trash2 } from "lucide-react";
 
 interface FinanceTransaction {
   id: string;
@@ -33,9 +39,14 @@ function formatFinanceSourceLabel(sourceType: string | null, t: (key: string) =>
 
 export default function FinancePage() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManageFinance = can("can_manage_finance");
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<FinanceTransaction | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -72,6 +83,25 @@ export default function FinancePage() {
   const totalOut = filtered
     .filter((tx) => tx.type === "Məxaric")
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+  const canDeleteTransaction = (tx: FinanceTransaction) => {
+    const source = (tx.source_type || "").trim();
+    return !source || !["sale", "purchase", "production"].includes(source);
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteTransactionAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) }));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("finance.deleteSuccess"));
+    void loadData();
+  };
 
   return (
     <PageLayout>
@@ -132,6 +162,7 @@ export default function FinancePage() {
                       <th className="px-4 py-3">Mənbə</th>
                       <th className="px-4 py-3">{t("finance.note")}</th>
                       <th className="px-4 py-3 text-right">{t("common.amount")}</th>
+                      {canManageFinance ? <th className="px-4 py-3">{t("common.actions")}</th> : null}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-app">
@@ -179,6 +210,22 @@ export default function FinancePage() {
                             {isIncome ? "+" : "-"}
                             {Number(tx.amount || 0).toFixed(2)} AZN
                           </td>
+                          {canManageFinance ? (
+                            <td className="px-4 py-3">
+                              {canDeleteTransaction(tx) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteTarget(tx)}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {t("common.delete")}
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-app-muted">—</span>
+                              )}
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}
@@ -188,6 +235,14 @@ export default function FinancePage() {
             )}
           </div>
         </main>
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        loading={deleting}
+        onConfirm={() => void handleDeleteTransaction()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
       </PageLayout>
   );
 }

@@ -106,6 +106,11 @@ export const azMessages = {
     category: "Kateqoriya",
     description: "Açıqlama",
     confirmDelete: "{name} silinsin?",
+    deleteConfirmTitle: "Silmə təsdiqi",
+    deleteConfirmMessage: "Bu məlumatı silməyə əminsiniz?",
+    deleting: "Silinir...",
+    void: "Ləğv et",
+    voidConfirmMessage: "Bu sənədi ləğv etməyə əminsiniz? Borc sıfırlanacaq.",
     debtor: "Borclu",
     weOwe: "Borcluyuq",
     active: "Aktiv",
@@ -266,6 +271,8 @@ export const azMessages = {
     csvFilename: "Satis_Fakturalari",
     polywoodInvoice: "Polywood satış fakturası",
     polywoodCreateButton: "+ Polywood Satış Fakturası",
+    voidReason: "Satış fakturası ləğv edildi",
+    voidSuccess: "Satış fakturası ləğv edildi",
   },
   purchases: {
     title: "Alış Fakturaları",
@@ -281,6 +288,7 @@ export const azMessages = {
     paid: "Ödənilən",
     debt: "Borc",
     sendStatus: "Göndərilmə",
+    deleteSuccess: "Alış fakturası uğurla silindi",
   },
   warehouseSlips: {
     title: "Anbar Qaimələri",
@@ -357,6 +365,7 @@ export const azMessages = {
     subcategoryPlaceholder: "Alt kateqoriya...",
     barcodePlaceholder: "Barkod...",
     noFilterMatch: "Filtrə uyğun məhsul tapılmadı.",
+    deleteSuccess: "Məhsul uğurla silindi",
     lowStockBadge: "Az stok",
     sufficientStock: "Kafi",
     columnLabels: {
@@ -422,6 +431,7 @@ export const azMessages = {
     entityLegal: "Hüquqi şəxs",
     voenRequiredForLegal: "Hüquqi şəxs üçün VÖEN mütləqdir",
     companyRequiredForLegal: "Hüquqi şəxs üçün şirkət adı mütləqdir",
+    deleteSuccess: "Müştəri uğurla silindi",
   },
   suppliers: {
     title: "Təchizatçılar",
@@ -443,6 +453,7 @@ export const azMessages = {
     companyPlaceholder: "Məsələn: Bosch Distribution MMC",
     phonePlaceholder: "Məsələn: +994 12 400 00 00",
     initialDebt: "İlkin Qalıq Borcumuz (AZN)",
+    deleteSuccess: "Təchizatçı uğurla silindi",
   },
   finance: {
     title: "Maliyyə / Tranzaksiyalar",
@@ -459,6 +470,7 @@ export const azMessages = {
     sourcePurchase: "Alış",
     sourceProduction: "İstehsalat",
     sourceCash: "Kassa əməliyyatı",
+    deleteSuccess: "Tranzaksiya uğurla silindi",
   },
   cashBank: {
     title: "Kassa və Bank",
@@ -484,6 +496,10 @@ export const azMessages = {
     typeBank: "Bank Hesabı",
     initialBalance: "İlkin Qalıq Balans (AZN)",
     noPermission: "Kassa/bank hesabı yaratmaq üçün icazəniz yoxdur.",
+    editModalTitle: "Hesabı redaktə et",
+    updateSuccess: "Hesab uğurla yeniləndi",
+    deleteSuccess: "Hesab uğurla silindi",
+    balanceEditHint: "Balans tranzaksiyalar vasitəsilə idarə olunur; burada dəyişdirilmir.",
   },
   expenses: {
     title: "Xərclər",
@@ -1509,6 +1525,8 @@ export const azMessages = {
     totalInvoiced: "Ümumi faktura",
     remainingBalance: "Qalıq borc",
     cancelContract: "Ləğv et",
+    cancelConfirmMessage: "Bu müqavilənin statusunu dəyişməyə əminsiniz?",
+    deleteSuccess: "Müqavilə uğurla silindi",
     reactivateContract: "Aktiv et",
     contractPrintTitle: "Müqavilə Sənədi",
     contractDetails: "Müqavilə məlumatları",

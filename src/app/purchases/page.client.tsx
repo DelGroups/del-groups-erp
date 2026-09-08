@@ -26,7 +26,9 @@ import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
 import ToastMessage from "@/components/ui/ToastMessage";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
+import { deletePurchaseAction } from "@/lib/actions/entityDelete";
 import { ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -48,8 +50,12 @@ export default function PurchasesPage() {
   const { can } = useAuth();
   const { t } = useI18n();
   const canCreatePurchase = can("can_create_purchase");
-  const { message: toastMessage, variant: toastVariant, showError } = useToast();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const vatAccountIds = useVatAccountIds();
+  const canDeletePurchases = can("can_delete_purchases");
+  const canEditPurchases = can("can_edit_purchases");
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -111,6 +117,20 @@ export default function PurchasesPage() {
 
   const handleFormSuccess = () => {
     closeForm();
+    void loadData();
+  };
+
+  const handleDeletePurchase = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deletePurchaseAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(result.error || t("common.error"));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("purchases.deleteSuccess"));
     void loadData();
   };
 
@@ -213,7 +233,8 @@ export default function PurchasesPage() {
                             onPrint={() => void openPrint(row)}
                             onPayment={() => void openPayment(row)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
-                            onEdit={() => void openEdit(row)}
+                            onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
+                            onDelete={canDeletePurchases ? () => setDeleteTarget(row) : undefined}
                             showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}
                             sendToWarehouseDisabled={
                               warehouseSend.getSendButtonProps(row).disabled
@@ -297,6 +318,14 @@ export default function PurchasesPage() {
           }}
         />
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        itemName={deleteTarget?.invoice_number}
+        loading={deleting}
+        onConfirm={() => void handleDeletePurchase()}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       {printPurchase && (
         <div className="print-area">

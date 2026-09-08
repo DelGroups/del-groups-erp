@@ -108,6 +108,11 @@ export const enMessages: Messages = {
     category: "Category",
     description: "Description",
     confirmDelete: "Delete {name}?",
+    deleteConfirmTitle: "Confirm deletion",
+    deleteConfirmMessage: "Are you sure you want to delete this record?",
+    deleting: "Deleting...",
+    void: "Void",
+    voidConfirmMessage: "Are you sure you want to void this document? Outstanding balance will be cleared.",
     debtor: "Debtor",
     weOwe: "We owe",
     active: "Active",
@@ -268,6 +273,8 @@ export const enMessages: Messages = {
     csvFilename: "Sales_Invoices",
     polywoodInvoice: "Polywood Invoice",
     polywoodCreateButton: "+ Polywood Sales Invoice",
+    voidReason: "Sales invoice voided",
+    voidSuccess: "Sales invoice voided successfully",
   },
   purchases: {
     title: "Purchase Invoices",
@@ -283,6 +290,7 @@ export const enMessages: Messages = {
     paid: "Paid",
     debt: "Debt",
     sendStatus: "Send status",
+    deleteSuccess: "Purchase invoice deleted successfully",
   },
   warehouseSlips: {
     title: "Warehouse Slips",
@@ -359,6 +367,7 @@ export const enMessages: Messages = {
     subcategoryPlaceholder: "Subcategory...",
     barcodePlaceholder: "Barcode...",
     noFilterMatch: "No products match the filter.",
+    deleteSuccess: "Product deleted successfully",
     lowStockBadge: "Low stock",
     sufficientStock: "Sufficient",
     columnLabels: {
@@ -424,6 +433,7 @@ export const enMessages: Messages = {
     entityLegal: "Legal entity",
     voenRequiredForLegal: "TIN is required for legal entities",
     companyRequiredForLegal: "Company name is required for legal entities",
+    deleteSuccess: "Customer deleted successfully",
   },
   suppliers: {
     title: "Suppliers",
@@ -445,6 +455,7 @@ export const enMessages: Messages = {
     companyPlaceholder: "e.g. Bosch Distribution LLC",
     phonePlaceholder: "e.g. +994 12 400 00 00",
     initialDebt: "Initial outstanding debt (AZN)",
+    deleteSuccess: "Supplier deleted successfully",
   },
   finance: {
     title: "Finance / Transactions",
@@ -461,6 +472,7 @@ export const enMessages: Messages = {
     sourcePurchase: "Purchase",
     sourceProduction: "Production",
     sourceCash: "Cash transaction",
+    deleteSuccess: "Transaction deleted successfully",
   },
   cashBank: {
     title: "Cash & Bank",
@@ -486,6 +498,10 @@ export const enMessages: Messages = {
     typeBank: "Bank account",
     initialBalance: "Initial balance (AZN)",
     noPermission: "You don't have permission to create cash/bank accounts.",
+    editModalTitle: "Edit account",
+    updateSuccess: "Account updated successfully",
+    deleteSuccess: "Account deleted successfully",
+    balanceEditHint: "Balance is managed via transactions and cannot be changed here.",
   },
   expenses: {
     title: "Expenses",
@@ -1511,6 +1527,8 @@ export const enMessages: Messages = {
     totalInvoiced: "Total invoiced",
     remainingBalance: "Remaining balance",
     cancelContract: "Cancel",
+    cancelConfirmMessage: "Are you sure you want to change this contract's status?",
+    deleteSuccess: "Contract deleted successfully",
     reactivateContract: "Reactivate",
     contractPrintTitle: "Contract Document",
     contractDetails: "Contract details",

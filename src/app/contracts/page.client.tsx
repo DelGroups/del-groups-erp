@@ -16,8 +16,11 @@ import {
   Printer,
   RefreshCw,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import { deleteContractAction } from "@/lib/actions/entityDelete";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -67,6 +70,9 @@ export default function ContractsPageClient() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [linkedContract, setLinkedContract] = useState<Contract | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     contract_number: "",
@@ -237,22 +243,44 @@ export default function ContractsPageClient() {
     void loadData();
   };
 
-  const handleToggleStatus = async (contract: Contract) => {
+  const handleToggleStatus = (contract: Contract) => {
     if (!canManage) {
       showError(t("common.noPermission"));
       return;
     }
+    setCancelTarget(contract);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    setDeleting(true);
     const nextStatus: ContractStatus =
-      contract.status === "cancelled" ? "active" : "cancelled";
-    const result = await updateContract(contract.id, { status: nextStatus });
+      cancelTarget.status === "cancelled" ? "active" : "cancelled";
+    const result = await updateContract(cancelTarget.id, { status: nextStatus });
+    setDeleting(false);
     if (!result.ok) {
       showError(result.error);
       return;
     }
     showSuccess(t("common.success"));
+    setCancelTarget(null);
     setContracts((rows) =>
-      rows.map((row) => (row.id === contract.id ? result.contract : row))
+      rows.map((row) => (row.id === cancelTarget.id ? result.contract : row))
     );
+  };
+
+  const handleDeleteContract = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteContractAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(result.error || t("common.error"));
+      return;
+    }
+    setDeleteTarget(null);
+    showSuccess(t("official.deleteSuccess"));
+    void loadData();
   };
 
   const handlePrint = (contract: Contract) => {
@@ -426,7 +454,7 @@ export default function ContractsPageClient() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => void handleToggleStatus(c)}
+                                onClick={() => handleToggleStatus(c)}
                                 className="rounded p-1.5 text-rose-500 hover:bg-rose-500/10"
                                 title={
                                   c.status === "cancelled"
@@ -435,6 +463,14 @@ export default function ContractsPageClient() {
                                 }
                               >
                                 <Ban className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(c)}
+                                className="rounded p-1.5 text-rose-600 hover:bg-rose-500/10"
+                                title={t("common.delete")}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </>
                           )}
@@ -644,6 +680,33 @@ export default function ContractsPageClient() {
           <ContractPrintTemplate data={printData} />
         </div>
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(cancelTarget)}
+        title={
+          cancelTarget?.status === "cancelled"
+            ? t("official.reactivateContract")
+            : t("official.cancelContract")
+        }
+        message={t("official.cancelConfirmMessage")}
+        itemName={cancelTarget?.contract_number}
+        confirmLabel={
+          cancelTarget?.status === "cancelled"
+            ? t("official.reactivateContract")
+            : t("official.cancelContract")
+        }
+        loading={deleting}
+        onConfirm={() => void handleConfirmCancel()}
+        onCancel={() => setCancelTarget(null)}
+      />
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        itemName={deleteTarget?.contract_number}
+        loading={deleting}
+        onConfirm={() => void handleDeleteContract()}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>

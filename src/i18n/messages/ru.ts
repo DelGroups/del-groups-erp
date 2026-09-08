@@ -108,6 +108,11 @@ export const ruMessages: Messages = {
     category: "Категория",
     description: "Описание",
     confirmDelete: "Удалить {name}?",
+    deleteConfirmTitle: "Подтверждение удаления",
+    deleteConfirmMessage: "Вы уверены, что хотите удалить эту запись?",
+    deleting: "Удаление...",
+    void: "Аннулировать",
+    voidConfirmMessage: "Вы уверены, что хотите аннулировать этот документ? Остаток долга будет обнулён.",
     debtor: "Должник",
     weOwe: "Мы должны",
     active: "Активен",
@@ -268,6 +273,8 @@ export const ruMessages: Messages = {
     csvFilename: "Scheta_prodazh",
     polywoodInvoice: "Счёт Polywood",
     polywoodCreateButton: "+ Polywood счёт на продажу",
+    voidReason: "Счёт продажи аннулирован",
+    voidSuccess: "Счёт продажи успешно аннулирован",
   },
   purchases: {
     title: "Счета закупок",
@@ -283,6 +290,7 @@ export const ruMessages: Messages = {
     paid: "Оплачено",
     debt: "Долг",
     sendStatus: "Статус отправки",
+    deleteSuccess: "Счёт закупки успешно удалён",
   },
   warehouseSlips: {
     title: "Складские накладные",
@@ -359,6 +367,7 @@ export const ruMessages: Messages = {
     subcategoryPlaceholder: "Подкатегория...",
     barcodePlaceholder: "Штрихкод...",
     noFilterMatch: "Нет товаров по фильтру.",
+    deleteSuccess: "Товар успешно удалён",
     lowStockBadge: "Мало на складе",
     sufficientStock: "Достаточно",
     columnLabels: {
@@ -424,6 +433,7 @@ export const ruMessages: Messages = {
     entityLegal: "Юридическое лицо",
     voenRequiredForLegal: "Для юрлица обязателен ИНН",
     companyRequiredForLegal: "Для юрлица обязательно название компании",
+    deleteSuccess: "Клиент успешно удалён",
   },
   suppliers: {
     title: "Поставщики",
@@ -445,6 +455,7 @@ export const ruMessages: Messages = {
     companyPlaceholder: "Напр. Bosch Distribution MMC",
     phonePlaceholder: "Напр. +994 12 400 00 00",
     initialDebt: "Начальная задолженность (AZN)",
+    deleteSuccess: "Поставщик успешно удалён",
   },
   finance: {
     title: "Финансы / Транзакции",
@@ -461,6 +472,7 @@ export const ruMessages: Messages = {
     sourcePurchase: "Покупка",
     sourceProduction: "Производство",
     sourceCash: "Кассовая операция",
+    deleteSuccess: "Транзакция успешно удалена",
   },
   cashBank: {
     title: "Касса и банк",
@@ -486,6 +498,10 @@ export const ruMessages: Messages = {
     typeBank: "Банковский счёт",
     initialBalance: "Начальный баланс (AZN)",
     noPermission: "Нет права создавать кассу/банковские счета.",
+    editModalTitle: "Редактировать счёт",
+    updateSuccess: "Счёт успешно обновлён",
+    deleteSuccess: "Счёт успешно удалён",
+    balanceEditHint: "Баланс управляется через транзакции и здесь не изменяется.",
   },
   expenses: {
     title: "Расходы",
@@ -1511,6 +1527,8 @@ export const ruMessages: Messages = {
     totalInvoiced: "Всего по счетам",
     remainingBalance: "Остаток долга",
     cancelContract: "Отменить",
+    cancelConfirmMessage: "Вы уверены, что хотите изменить статус этого договора?",
+    deleteSuccess: "Договор успешно удалён",
     reactivateContract: "Активировать",
     contractPrintTitle: "Договор",
     contractDetails: "Данные договора",
