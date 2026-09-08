@@ -9,7 +9,9 @@ import {
 } from "@/lib/auth/serverActionAuth";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import {
+  attachAccountNamesToLedgerRows,
   computeAccountLedgerBalances,
+  isRetryableLedgerSelectError,
   mapUnifiedLedgerRow,
   summarizeUnifiedLedger,
   UNIFIED_LEDGER_SELECT_ATTEMPTS,
@@ -48,10 +50,39 @@ export interface UpdateAccountInput {
   type: string;
 }
 
+async function hydrateLedgerAccountNames(
+  rows: Record<string, unknown>[]
+): Promise<Record<string, unknown>[]> {
+  const accountIds = Array.from(
+    new Set(
+      rows
+        .map((row) => (row.account_id as string) || "")
+        .filter((id) => id.length > 0)
+    )
+  );
+
+  if (accountIds.length === 0) return rows;
+
+  const admin = createSupabaseAdminClient();
+  const { data: accounts, error } = await admin
+    .from("accounts")
+    .select("id,name")
+    .in("id", accountIds);
+
+  if (error || !accounts?.length) return rows;
+
+  const accountNamesById = new Map(
+    accounts.map((account) => [String(account.id), String(account.name || "")])
+  );
+
+  return attachAccountNamesToLedgerRows(rows, accountNamesById);
+}
+
 async function fetchTransactionsRaw(
   filter?: { type?: UnifiedTransactionType }
 ): Promise<{ rows: Record<string, unknown>[]; error: string | null }> {
   const admin = createSupabaseAdminClient();
+  let lastError: string | null = null;
 
   for (const fields of UNIFIED_LEDGER_SELECT_ATTEMPTS) {
     let query = admin.from("transactions").select(fields).order("created_at", { ascending: false }).limit(2000);
@@ -66,15 +97,19 @@ async function fetchTransactionsRaw(
       if (filter?.type && !fields.includes("unified_type")) {
         rows = rows.filter((row) => mapUnifiedLedgerRow(row).type === filter.type);
       }
+      if (!fields.includes("accounts!")) {
+        rows = await hydrateLedgerAccountNames(rows);
+      }
       return { rows, error: null };
     }
 
-    if (!/column|schema cache/i.test(error.message || "")) {
-      return { rows: [], error: error.message };
+    lastError = error.message || "Failed to load transactions";
+    if (!isRetryableLedgerSelectError(lastError)) {
+      return { rows: [], error: lastError };
     }
   }
 
-  return { rows: [], error: "transactions schema mismatch" };
+  return { rows: [], error: lastError || "transactions schema mismatch" };
 }
 
 export async function fetchFinancialCategoriesAction(): Promise<
@@ -131,7 +166,9 @@ export async function fetchUnifiedLedgerAction(input?: {
     const { rows, error } = await fetchTransactionsRaw(input);
     if (error) return { success: false, error };
 
-    const transactions = rows.map(mapUnifiedLedgerRow);
+    const transactions = rows
+      .map((row) => mapUnifiedLedgerRow(row))
+      .filter((tx) => Boolean(tx.id));
     return {
       success: true,
       data: {
@@ -158,6 +195,10 @@ export async function fetchAccountLedgerBalancesAction(): Promise<
       admin.from("accounts").select("id,code,name,type,balance").order("name"),
       fetchUnifiedLedgerAction(),
     ]);
+
+    if (accountsRes.error) {
+      return { success: false, error: accountsRes.error.message };
+    }
 
     if (!ledger.success || !ledger.data) {
       return { success: false, error: ledger.error || "Ledger yüklənmədi" };

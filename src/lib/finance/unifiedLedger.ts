@@ -65,21 +65,30 @@ export function normalizeUnifiedTransactionType(
   return "EXPENSE";
 }
 
+function extractAccountName(accounts: unknown): string | null {
+  if (!accounts) return null;
+  if (Array.isArray(accounts)) {
+    const first = accounts[0] as { name?: string } | undefined;
+    return first?.name?.trim() || null;
+  }
+  const name = (accounts as { name?: string }).name;
+  return name?.trim() || null;
+}
+
 export function mapUnifiedLedgerRow(row: Record<string, unknown>): UnifiedLedgerTransaction {
-  const accounts = row.accounts as { name?: string } | null | undefined;
-  const financialCategory = row.financial_categories as { name?: string } | null | undefined;
   const legacyType = String(row.type || "");
   const unifiedType = normalizeUnifiedTransactionType(row.unified_type, legacyType);
   const dateValue = String(row.transaction_date || row.created_at || "");
+  const financialCategory = row.financial_categories as { name?: string } | null | undefined;
 
   return {
-    id: String(row.id),
+    id: String(row.id || ""),
     transaction_date: dateValue,
     type: unifiedType,
     legacy_type: legacyType,
     amount: num(row.amount),
     account_id: (row.account_id as string) || null,
-    account_name: accounts?.name || null,
+    account_name: extractAccountName(row.accounts),
     category: String(row.category || financialCategory?.name || "—"),
     category_id: (row.category_id as string) || null,
     reference_type: String(row.reference_type || row.source_type || "") || null,
@@ -156,7 +165,31 @@ export function formatReferenceTypeLabel(referenceType: string | null | undefine
   return REFERENCE_LABELS_AZ[referenceType] || referenceType;
 }
 
+export function isRetryableLedgerSelectError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /column|schema cache|more than one relationship|could not embed|PGRST20/i.test(message);
+}
+
+export function attachAccountNamesToLedgerRows(
+  rows: Record<string, unknown>[],
+  accountNamesById: Map<string, string>
+): Record<string, unknown>[] {
+  return rows.map((row) => {
+    if (extractAccountName(row.accounts)) return row;
+    const accountId = (row.account_id as string) || "";
+    if (!accountId) return row;
+    const name = accountNamesById.get(accountId);
+    if (!name) return row;
+    return { ...row, accounts: { name } };
+  });
+}
+
 export const UNIFIED_LEDGER_SELECT_ATTEMPTS = [
-  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts(name), financial_categories(name)",
-  "id, type, amount, category, notes, created_at, account_id, source_type, source_id, accounts(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!account_id(name), financial_categories!category_id(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!transactions_account_id_fkey(name), financial_categories!category_id(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!fk_transactions_account(name), financial_categories!category_id(name)",
+  "id, type, amount, category, notes, created_at, account_id, source_type, source_id, accounts!account_id(name)",
+  "id, type, amount, category, notes, created_at, account_id, source_type, source_id, accounts!transactions_account_id_fkey(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id",
+  "id, type, amount, category, notes, created_at, account_id, source_type, source_id",
 ] as const;
