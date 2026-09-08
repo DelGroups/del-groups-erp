@@ -42,6 +42,8 @@ import { fetchProductByBarcode, findProductByBarcodeInList } from "@/lib/product
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
 import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
 import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import OfficialPaymentSplitBanner from "@/components/finance/OfficialPaymentSplitBanner";
+import { buildOfficialPaymentAccountPatch, formatTreasuryAccountLabel } from "@/lib/finance/officialPaymentAutoFill";
 import {
   buildOfficialDocumentFields,
   type OfficialTransactionState,
@@ -129,6 +131,7 @@ interface Account {
   id: string;
   name: string;
   type?: string;
+  is_vat_account?: boolean | null;
 }
 
 function customerLabel(c: Customer, t: (key: string) => string) {
@@ -561,11 +564,15 @@ export default function UniversalInvoiceForm({
   };
 
   const handleAccountChange = (paymentId: string, accountId: string) => {
-    const acc = accounts.find((a) => a.id === accountId);
-    updatePayment(paymentId, {
-      account_id: accountId,
-      method: acc?.name || "",
-    });
+    const patch = buildOfficialPaymentAccountPatch(
+      accountId,
+      paymentId,
+      accounts,
+      officialAmounts,
+      payments,
+      isOfficial
+    );
+    updatePayment(paymentId, patch);
   };
 
   const removePaymentRow = (id: string) => {
@@ -1339,6 +1346,7 @@ export default function UniversalInvoiceForm({
                 {t("invoice.addAccount")}
               </button>
             </div>
+            <OfficialPaymentSplitBanner amounts={officialAmounts} isOfficial={isOfficial} />
             {payments.map((p) => (
               <div key={p.id} className="flex items-center gap-2">
                 <select
@@ -1349,7 +1357,7 @@ export default function UniversalInvoiceForm({
                   <option value="">{t("invoice.accountOption")}</option>
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
-                      {acc.name}
+                      {formatTreasuryAccountLabel(acc, t)}
                     </option>
                   ))}
                 </select>

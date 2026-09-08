@@ -42,6 +42,8 @@ import {
 import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
 import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
 import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import OfficialPaymentSplitBanner from "@/components/finance/OfficialPaymentSplitBanner";
+import { buildOfficialPaymentAccountPatch, formatTreasuryAccountLabel } from "@/lib/finance/officialPaymentAutoFill";
 import {
   buildOfficialDocumentFields,
   type OfficialTransactionState,
@@ -421,6 +423,17 @@ export default function MixedDimensionalInvoiceForm({
     ]);
   const updatePayment = (id: string, patch: Partial<SalePayment>) =>
     setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const handleAccountChange = (paymentId: string, accountId: string) => {
+    const patch = buildOfficialPaymentAccountPatch(
+      accountId,
+      paymentId,
+      accounts,
+      officialAmounts,
+      payments,
+      isOfficial
+    );
+    updatePayment(paymentId, patch);
+  };
   const removePayment = (id: string) => setPayments((prev) => prev.filter((p) => p.id !== id));
 
   const handleSubmit = async () => {
@@ -873,6 +886,7 @@ export default function MixedDimensionalInvoiceForm({
                 {t("common.add")}
               </button>
             </div>
+            <OfficialPaymentSplitBanner amounts={officialAmounts} isOfficial={isOfficial} />
             {payments.length === 0 ? (
               <p className="text-xs text-app-muted">{t("forms.additionalExpensesEmpty")}</p>
             ) : (
@@ -880,13 +894,13 @@ export default function MixedDimensionalInvoiceForm({
                 <div key={pay.id} className="grid grid-cols-12 gap-2">
                   <select
                     value={pay.account_id}
-                    onChange={(e) => updatePayment(pay.id, { account_id: e.target.value })}
+                    onChange={(e) => handleAccountChange(pay.id, e.target.value)}
                     className="app-input col-span-7 text-xs"
                   >
                     <option value="">{t("modals.payment.selectAccount")}</option>
                     {accounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
-                        {acc.name}
+                        {formatTreasuryAccountLabel(acc, t)}
                       </option>
                     ))}
                   </select>
@@ -908,6 +922,20 @@ export default function MixedDimensionalInvoiceForm({
                 </div>
               ))
             )}
+            <div className="space-y-1 border-t border-app pt-2 text-xs">
+              <div className="flex justify-between font-semibold">
+                <span className="text-app-muted">{t("invoice.paidTotal")}</span>
+                <span className="font-mono text-emerald-600">
+                  {displayTotals.paid_amount.toFixed(2)} {t("common.currency")}
+                </span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
+                <span className="font-mono text-rose-600">
+                  {displayTotals.remaining_balance.toFixed(2)} {t("common.currency")}
+                </span>
+              </div>
+            </div>
           </section>
         </div>
 

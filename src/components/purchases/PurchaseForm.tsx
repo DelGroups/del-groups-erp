@@ -45,6 +45,8 @@ import { useToast } from "@/hooks/useToast";
 import { fetchProductByBarcode, findProductByBarcodeInList } from "@/lib/products/barcode";
 import OfficialTransactionSection from "@/components/finance/OfficialTransactionSection";
 import OfficialTotalsBreakdown from "@/components/finance/OfficialTotalsBreakdown";
+import OfficialPaymentSplitBanner from "@/components/finance/OfficialPaymentSplitBanner";
+import { buildOfficialPaymentAccountPatch, formatTreasuryAccountLabel } from "@/lib/finance/officialPaymentAutoFill";
 import {
   buildOfficialDocumentFields,
   type OfficialTransactionState,
@@ -61,6 +63,7 @@ interface Account {
   id: string;
   name: string;
   type: string;
+  is_vat_account?: boolean | null;
 }
 
 interface EmployeeOption {
@@ -152,7 +155,7 @@ export default function PurchaseForm({
   useEffect(() => {
     void supabase
       .from("accounts")
-      .select("id, name, type")
+      .select("id, name, type, is_vat_account")
       .order("name")
       .then(({ data }) => {
         const rows = (data as Account[]) || [];
@@ -358,6 +361,18 @@ export default function PurchaseForm({
 
   const updatePayment = (id: string, patch: Partial<PurchasePaymentRow>) => {
     setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
+  const handleAccountChange = (id: string, accountId: string) => {
+    const patch = buildOfficialPaymentAccountPatch(
+      accountId,
+      id,
+      accounts,
+      officialAmounts,
+      payments,
+      isOfficial
+    );
+    updatePayment(id, patch);
   };
 
   const removePaymentRow = (id: string) => {
@@ -708,6 +723,7 @@ export default function PurchaseForm({
             </button>
           </div>
           <div className="space-y-2 p-4">
+            <OfficialPaymentSplitBanner amounts={officialAmounts} isOfficial={isOfficial} />
             {isEdit && existingPaid > 0 && (
               <p className="rounded-lg bg-[color:var(--app-accent-soft)] px-3 py-2 text-[11px] text-app-accent">
                 {t("forms.existingPaymentsHint", {
@@ -721,13 +737,13 @@ export default function PurchaseForm({
                   {t("forms.paymentAccount")}
                   <select
                     value={pay.account_id}
-                    onChange={(e) => updatePayment(pay.id, { account_id: e.target.value })}
+                    onChange={(e) => handleAccountChange(pay.id, e.target.value)}
                     className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm"
                   >
                     <option value="">{t("common.select")}</option>
                     {accounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
-                        {acc.name} ({acc.type})
+                        {formatTreasuryAccountLabel(acc, t)}
                       </option>
                     ))}
                   </select>
@@ -774,6 +790,16 @@ export default function PurchaseForm({
                 </div>
               </div>
             ))}
+            <div className="space-y-1 border-t border-app pt-2 text-xs">
+              <div className="flex justify-between font-semibold">
+                <span className="text-app-muted">{t("forms.totalPaid")}</span>
+                <span className="font-mono text-emerald-600">{totalPaid.toFixed(2)} AZN</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
+                <span className="font-mono text-rose-600">{debt.toFixed(2)} AZN</span>
+              </div>
+            </div>
           </div>
         </div>
 

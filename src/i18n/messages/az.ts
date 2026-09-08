@@ -1471,6 +1471,7 @@ export const azMessages = {
     grandTotal: "Yekun Məbləğ",
     splitTreasury: "Əsas və ƏDV ödənişini ayır",
     baseAmount: "Əsas Məbləğ",
+    paymentSplitBanner: "Əsas Məbləğ: {base} AZN | ƏDV Məbləği: {vat} AZN",
     vatAccount: "ƏDV hesabı",
     vatAccountRequired: "ƏDV üçün xüsusi bank hesabı seçilməlidir",
     noVatAccount: "ƏDV hesabı tapılmadı",
