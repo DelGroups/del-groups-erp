@@ -972,7 +972,10 @@ export const azMessages = {
   },
   print: {
     salesInvoice: "Satış fakturası",
+    officialInvoiceTitle: "RƏSMİ SATIŞ FAKTURASI",
     unofficialTitle: "SATIŞ FAKTURASI",
+    salesManager: "Satış meneceri",
+    paidAmount: "Ödənilən məbləğ",
     purchaseInvoice: "Alış / mal qəbulu fakturası",
     invoiceNo: "Faktura №",
     docNo: "Sənəd №",
@@ -1007,6 +1010,7 @@ export const azMessages = {
     },
     cols: {
       productCodeName: "Məhsul kodu və adı",
+      productName: "Məhsulun adı",
       type: "Tipi",
       lengthM: "Uzunluq (m)",
       count: "Sayı",
@@ -1017,13 +1021,14 @@ export const azMessages = {
     },
     totals: {
       subtotal: "Ara cəmi",
+      vat: "ƏDV (18%)",
       additionalExpenses: "Əlavə xərclər",
       discount: "Endirim",
       grandTotal: "Yekun məbləğ",
     },
     signatures: {
-      handedOver: "Təhvil verdi",
-      receivedBy: "Təhvil aldı",
+      handedOver: "Təhvil verdi (Məsul şəxs)",
+      receivedBy: "Təhvil aldı (Müştəri)",
       signature: "İmza",
     },
   },

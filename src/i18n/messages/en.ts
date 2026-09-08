@@ -974,7 +974,10 @@ export const enMessages: Messages = {
   },
   print: {
     salesInvoice: "Sales invoice",
+    officialInvoiceTitle: "OFFICIAL INVOICE",
     unofficialTitle: "SALES INVOICE",
+    salesManager: "Sales manager",
+    paidAmount: "Paid amount",
     purchaseInvoice: "Purchase / goods receipt invoice",
     invoiceNo: "Invoice No.",
     docNo: "Document No.",
@@ -1009,6 +1012,7 @@ export const enMessages: Messages = {
     },
     cols: {
       productCodeName: "Product code & name",
+      productName: "Product name",
       type: "Type",
       lengthM: "Length (m)",
       count: "Count",
@@ -1019,13 +1023,14 @@ export const enMessages: Messages = {
     },
     totals: {
       subtotal: "Subtotal",
+      vat: "VAT (18%)",
       additionalExpenses: "Additional expenses",
       discount: "Discount",
       grandTotal: "Grand total",
     },
     signatures: {
-      handedOver: "Handed over by",
-      receivedBy: "Received by",
+      handedOver: "Handed over (Responsible person)",
+      receivedBy: "Received by (Customer)",
       signature: "Signature",
     },
   },

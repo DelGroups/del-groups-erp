@@ -28,74 +28,83 @@ function paymentStatusLabel(
   return t("print.paymentStatus.debt");
 }
 
-function DimensionalRow({
-  line,
-  index,
-  t,
-}: {
-  line: InvoicePrintLine;
-  index: number;
-  t: (key: string) => string;
-}) {
+function paymentStatusTone(status: InvoicePrintData["paymentStatus"]): string {
+  if (status === "paid") return "invoice-print-status-paid";
+  if (status === "partial") return "invoice-print-status-partial";
+  return "invoice-print-status-debt";
+}
+
+function AccessoryRow({ line, index }: { line: InvoicePrintLine; index: number }) {
+  const rowClass = index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd";
   return (
-    <tr className="invoice-print-row">
-      <td className="invoice-print-cell">{index}</td>
+    <tr className={`invoice-print-row ${rowClass}`}>
+      <td className="invoice-print-cell invoice-print-cell-no">{index}</td>
       <td className="invoice-print-cell">
-        <div className="font-semibold">{line.productName}</div>
-        {line.productCode ? <div className="text-[10px] text-gray-600">{line.productCode}</div> : null}
+        <div className="invoice-print-product-name">{line.productName}</div>
+        {line.productCode ? (
+          <div className="invoice-print-product-code">{line.productCode}</div>
+        ) : null}
       </td>
-      <td className="invoice-print-cell text-center">{line.saleTypeLabel || "-"}</td>
-      <td className="invoice-print-cell text-right">
+      <td className="invoice-print-cell invoice-print-cell-center">
+        {line.packaging || line.unit}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-num">
+        {line.unitPrice.toFixed(2)}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-num invoice-print-cell-strong">
+        {line.lineTotal.toFixed(2)}
+      </td>
+    </tr>
+  );
+}
+
+function ServiceRow({ line, index }: { line: InvoicePrintLine; index: number }) {
+  const rowClass = index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd";
+  return (
+    <tr className={`invoice-print-row ${rowClass}`}>
+      <td className="invoice-print-cell invoice-print-cell-no">{index}</td>
+      <td className="invoice-print-cell invoice-print-product-name">{line.productName}</td>
+      <td className="invoice-print-cell">{line.description || "—"}</td>
+      <td className="invoice-print-cell invoice-print-cell-num">{line.quantity}</td>
+      <td className="invoice-print-cell invoice-print-cell-num">
+        {line.unitPrice.toFixed(2)}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-num invoice-print-cell-strong">
+        {line.lineTotal.toFixed(2)}
+      </td>
+    </tr>
+  );
+}
+
+function DimensionalRow({ line, index }: { line: InvoicePrintLine; index: number }) {
+  const rowClass = index % 2 === 0 ? "invoice-print-row-even" : "invoice-print-row-odd";
+  return (
+    <tr className={`invoice-print-row ${rowClass}`}>
+      <td className="invoice-print-cell invoice-print-cell-no">{index}</td>
+      <td className="invoice-print-cell">
+        <div className="invoice-print-product-name">{line.productName}</div>
+        {line.productCode ? (
+          <div className="invoice-print-product-code">{line.productCode}</div>
+        ) : null}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-center">
+        {line.saleTypeLabel || "—"}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-num">
         {line.lengthM != null ? line.lengthM.toFixed(2) : "—"}
       </td>
-      <td className="invoice-print-cell text-right">{line.pieceCount ?? line.quantity}</td>
-      <td className="invoice-print-cell text-right">
+      <td className="invoice-print-cell invoice-print-cell-num">
+        {line.pieceCount ?? line.quantity}
+      </td>
+      <td className="invoice-print-cell invoice-print-cell-num">
         {line.totalMeterage != null ? line.totalMeterage.toFixed(2) : "—"}
       </td>
-      <td className="invoice-print-cell text-right">{line.unitPrice.toFixed(2)}</td>
-      <td className="invoice-print-cell text-right font-semibold">{line.lineTotal.toFixed(2)}</td>
-    </tr>
-  );
-}
-
-function AccessoryRow({
-  line,
-  index,
-  t,
-}: {
-  line: InvoicePrintLine;
-  index: number;
-  t: (key: string) => string;
-}) {
-  return (
-    <tr className="invoice-print-row">
-      <td className="invoice-print-cell">{index}</td>
-      <td className="invoice-print-cell">
-        <div className="font-semibold">{line.productName}</div>
-        {line.productCode ? <div className="text-[10px] text-gray-600">{line.productCode}</div> : null}
+      <td className="invoice-print-cell invoice-print-cell-num">
+        {line.unitPrice.toFixed(2)}
       </td>
-      <td className="invoice-print-cell text-center">{line.packaging || line.unit}</td>
-      <td className="invoice-print-cell text-right">{line.unitPrice.toFixed(2)}</td>
-      <td className="invoice-print-cell text-right font-semibold">{line.lineTotal.toFixed(2)}</td>
-    </tr>
-  );
-}
-
-function ServiceRow({
-  line,
-  index,
-}: {
-  line: InvoicePrintLine;
-  index: number;
-}) {
-  return (
-    <tr className="invoice-print-row">
-      <td className="invoice-print-cell">{index}</td>
-      <td className="invoice-print-cell font-semibold">{line.productName}</td>
-      <td className="invoice-print-cell">{line.description || "—"}</td>
-      <td className="invoice-print-cell text-right">{line.quantity}</td>
-      <td className="invoice-print-cell text-right">{line.unitPrice.toFixed(2)}</td>
-      <td className="invoice-print-cell text-right font-semibold">{line.lineTotal.toFixed(2)}</td>
+      <td className="invoice-print-cell invoice-print-cell-num invoice-print-cell-strong">
+        {line.lineTotal.toFixed(2)}
+      </td>
     </tr>
   );
 }
@@ -112,217 +121,269 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
 
   let rowCounter = 0;
 
+  const renderDimensionalSection = (lines: InvoicePrintLine[]) => {
+    if (lines.length === 0) return null;
+    return (
+      <section className="invoice-print-section">
+        <h2 className="invoice-print-section-title">{t("print.sections.dimensional")}</h2>
+        <table className="invoice-print-table">
+          <thead>
+            <tr>
+              <th className="invoice-print-th">{t("print.rowNo")}</th>
+              <th className="invoice-print-th">{t("print.cols.productName")}</th>
+              <th className="invoice-print-th">{t("print.cols.type")}</th>
+              <th className="invoice-print-th">{t("print.cols.lengthM")}</th>
+              <th className="invoice-print-th">{t("print.cols.count")}</th>
+              <th className="invoice-print-th">{t("print.cols.totalMeterage")}</th>
+              <th className="invoice-print-th">{t("print.price")}</th>
+              <th className="invoice-print-th">{t("print.lineTotal")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => {
+              rowCounter += 1;
+              return <DimensionalRow key={`d-${rowCounter}`} line={line} index={rowCounter} />;
+            })}
+          </tbody>
+        </table>
+      </section>
+    );
+  };
+
+  const renderAccessorySection = (lines: InvoicePrintLine[]) => {
+    if (lines.length === 0) return null;
+    return (
+      <section className="invoice-print-section">
+        <h2 className="invoice-print-section-title">{t("print.sections.accessory")}</h2>
+        <table className="invoice-print-table">
+          <thead>
+            <tr>
+              <th className="invoice-print-th">{t("print.rowNo")}</th>
+              <th className="invoice-print-th">{t("print.cols.productName")}</th>
+              <th className="invoice-print-th">{t("print.cols.packaging")}</th>
+              <th className="invoice-print-th">{t("print.price")}</th>
+              <th className="invoice-print-th">{t("print.lineTotal")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => {
+              rowCounter += 1;
+              return <AccessoryRow key={`a-${rowCounter}`} line={line} index={rowCounter} />;
+            })}
+          </tbody>
+        </table>
+      </section>
+    );
+  };
+
+  const renderServiceSection = (lines: InvoicePrintLine[]) => {
+    if (lines.length === 0) return null;
+    return (
+      <section className="invoice-print-section">
+        <h2 className="invoice-print-section-title">{t("print.sections.service")}</h2>
+        <table className="invoice-print-table">
+          <thead>
+            <tr>
+              <th className="invoice-print-th">{t("print.rowNo")}</th>
+              <th className="invoice-print-th">{t("print.cols.serviceName")}</th>
+              <th className="invoice-print-th">{t("print.cols.description")}</th>
+              <th className="invoice-print-th">{t("print.quantity")}</th>
+              <th className="invoice-print-th">{t("print.price")}</th>
+              <th className="invoice-print-th">{t("print.lineTotal")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => {
+              rowCounter += 1;
+              return <ServiceRow key={`s-${rowCounter}`} line={line} index={rowCounter} />;
+            })}
+          </tbody>
+        </table>
+      </section>
+    );
+  };
+
   return (
-    <div className="invoice-print-layout mx-auto w-[210mm] bg-white p-[12mm] font-sans text-[11px] leading-snug text-black">
+    <div className="invoice-print-layout">
       {isOfficial ? (
-        <header className="mb-6 border-b-2 border-black pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
+        <header className="invoice-print-header-official">
+          <div className="invoice-print-header-grid">
+            <div className="invoice-print-brand-block">
               {branding.logoUrl ? (
                 <img
                   src={branding.logoUrl}
                   alt=""
-                  className="h-16 w-16 object-contain"
+                  className="invoice-print-logo"
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center border border-black text-[10px] font-bold">
-                  LOGO
-                </div>
+                <div className="invoice-print-logo-fallback">DG</div>
               )}
               <div>
-                <h1 className="text-lg font-bold uppercase tracking-wide">{branding.companyName}</h1>
+                <h1 className="invoice-print-company-name">{branding.companyName}</h1>
                 {branding.voen ? (
-                  <p>
-                    <strong>{t("print.voen")}:</strong> {branding.voen}
+                  <p className="invoice-print-brand-meta">
+                    <span>{t("print.voen")}:</span> {branding.voen}
                   </p>
                 ) : null}
-                {branding.address ? <p>{branding.address}</p> : null}
-                {branding.phone ? (
-                  <p>
-                    <strong>{t("common.phone")}:</strong> {branding.phone}
+                {branding.address ? (
+                  <p className="invoice-print-brand-meta">{branding.address}</p>
+                ) : null}
+                {branding.phone || branding.email ? (
+                  <p className="invoice-print-brand-meta">
+                    {[branding.phone, branding.email].filter(Boolean).join(" · ")}
                   </p>
                 ) : null}
-                {branding.email ? <p>{branding.email}</p> : null}
               </div>
             </div>
-            <div className="text-right text-xs">
-              <p className="text-sm font-bold uppercase">{t("print.salesInvoice")}</p>
-              <p>
-                <strong>{t("print.docNo")}:</strong> {data.docNo}
+            <div className="invoice-print-doc-block">
+              <div className="invoice-print-official-badge">{t("print.officialInvoiceTitle")}</div>
+              <p className="invoice-print-doc-line">
+                <span>{t("print.docNo")}</span>
+                <strong>{data.docNo}</strong>
               </p>
-              <p>
-                <strong>{t("common.date")}:</strong> {data.docDate}
+              <p className="invoice-print-doc-line">
+                <span>{t("common.date")}</span>
+                <strong>{data.docDate}</strong>
+              </p>
+              <p className="invoice-print-doc-line">
+                <span>{t("print.paymentStatus.label")}</span>
+                <strong className={paymentStatusTone(data.paymentStatus)}>
+                  {paymentStatusLabel(data.paymentStatus, t)}
+                </strong>
               </p>
             </div>
           </div>
           {(branding.bankName || branding.iban) && (
-            <p className="mt-3 text-[10px]">
-              {branding.bankName ? `${branding.bankName}` : ""}
+            <p className="invoice-print-bank-line">
+              {branding.bankName ? branding.bankName : ""}
               {branding.iban ? ` · IBAN: ${branding.iban}` : ""}
             </p>
           )}
         </header>
       ) : (
-        <header className="mb-6 border-b border-black pb-3">
-          <div className="flex items-end justify-between">
-            <h1 className="text-xl font-bold tracking-wide">{t("print.unofficialTitle")}</h1>
-            <div className="text-right text-xs">
+        <header className="invoice-print-header-unofficial">
+          <div className="invoice-print-unofficial-grid">
+            <h1 className="invoice-print-unofficial-title">{t("print.unofficialTitle")}</h1>
+            <div className="invoice-print-unofficial-meta">
               <p>
-                <strong>{t("print.docNo")}:</strong> {data.docNo}
+                <span>{t("print.docNo")}</span> <strong>{data.docNo}</strong>
               </p>
               <p>
-                <strong>{t("common.date")}:</strong> {data.docDate}
+                <span>{t("common.date")}</span> <strong>{data.docDate}</strong>
+              </p>
+              <p>
+                <span>{t("print.paymentStatus.label")}</span>{" "}
+                <strong className={paymentStatusTone(data.paymentStatus)}>
+                  {paymentStatusLabel(data.paymentStatus, t)}
+                </strong>
               </p>
             </div>
           </div>
         </header>
       )}
 
-      <section className="mb-5 grid grid-cols-2 gap-3 rounded border border-black p-3 text-xs">
-        <div>
-          <p className="text-[10px] uppercase text-gray-600">{t("sales.customer")}</p>
-          <p className="font-bold">{data.customerName}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase text-gray-600">{t("modals.salesView.seller")}</p>
-          <p className="font-bold">{data.sellerName}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase text-gray-600">{t("sales.warehouse")}</p>
-          <p className="font-bold">{data.warehouseName}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase text-gray-600">{t("print.paymentStatus.label")}</p>
-          <p className="font-bold">{paymentStatusLabel(data.paymentStatus, t)}</p>
+      <section className="invoice-print-meta-card">
+        <div className="invoice-print-meta-grid">
+          <div className="invoice-print-meta-item">
+            <p className="invoice-print-meta-label">{t("sales.customer")}</p>
+            <p className="invoice-print-meta-value">{data.customerName}</p>
+          </div>
+          <div className="invoice-print-meta-item">
+            <p className="invoice-print-meta-label">{t("print.salesManager")}</p>
+            <p className="invoice-print-meta-value">{data.sellerName}</p>
+          </div>
+          <div className="invoice-print-meta-item">
+            <p className="invoice-print-meta-label">{t("sales.warehouse")}</p>
+            <p className="invoice-print-meta-value">{data.warehouseName}</p>
+          </div>
+          <div className="invoice-print-meta-item">
+            <p className="invoice-print-meta-label">{t("print.paymentStatus.label")}</p>
+            <p className={`invoice-print-meta-value ${paymentStatusTone(data.paymentStatus)}`}>
+              {paymentStatusLabel(data.paymentStatus, t)}
+            </p>
+          </div>
         </div>
       </section>
 
-      {dimensionalLines.length > 0 ? (
-        <section className="mb-4">
-          <h2 className="mb-2 text-xs font-bold uppercase">{t("print.sections.dimensional")}</h2>
-          <table className="invoice-print-table w-full border-collapse text-[10px]">
-            <thead>
-              <tr>
-                <th className="invoice-print-th">{t("print.rowNo")}</th>
-                <th className="invoice-print-th">{t("print.cols.productCodeName")}</th>
-                <th className="invoice-print-th">{t("print.cols.type")}</th>
-                <th className="invoice-print-th">{t("print.cols.lengthM")}</th>
-                <th className="invoice-print-th">{t("print.cols.count")}</th>
-                <th className="invoice-print-th">{t("print.cols.totalMeterage")}</th>
-                <th className="invoice-print-th">{t("print.price")}</th>
-                <th className="invoice-print-th">{t("print.lineTotal")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dimensionalLines.map((line) => {
-                rowCounter += 1;
-                return <DimensionalRow key={`d-${rowCounter}`} line={line} index={rowCounter} t={t} />;
-              })}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
+      {renderDimensionalSection(dimensionalLines)}
+      {renderAccessorySection(accessoryLines)}
+      {renderServiceSection(serviceLines)}
 
-      {accessoryLines.length > 0 ? (
-        <section className="mb-4">
-          <h2 className="mb-2 text-xs font-bold uppercase">{t("print.sections.accessory")}</h2>
-          <table className="invoice-print-table w-full border-collapse text-[10px]">
-            <thead>
-              <tr>
-                <th className="invoice-print-th">{t("print.rowNo")}</th>
-                <th className="invoice-print-th">{t("print.cols.productCodeName")}</th>
-                <th className="invoice-print-th">{t("print.cols.packaging")}</th>
-                <th className="invoice-print-th">{t("print.price")}</th>
-                <th className="invoice-print-th">{t("print.lineTotal")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accessoryLines.map((line) => {
-                rowCounter += 1;
-                return <AccessoryRow key={`a-${rowCounter}`} line={line} index={rowCounter} t={t} />;
-              })}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
-
-      {serviceLines.length > 0 ? (
-        <section className="mb-4">
-          <h2 className="mb-2 text-xs font-bold uppercase">{t("print.sections.service")}</h2>
-          <table className="invoice-print-table w-full border-collapse text-[10px]">
-            <thead>
-              <tr>
-                <th className="invoice-print-th">{t("print.rowNo")}</th>
-                <th className="invoice-print-th">{t("print.cols.serviceName")}</th>
-                <th className="invoice-print-th">{t("print.cols.description")}</th>
-                <th className="invoice-print-th">{t("print.quantity")}</th>
-                <th className="invoice-print-th">{t("print.price")}</th>
-                <th className="invoice-print-th">{t("print.lineTotal")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceLines.map((line) => {
-                rowCounter += 1;
-                return <ServiceRow key={`s-${rowCounter}`} line={line} index={rowCounter} />;
-              })}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
-
-      <section className="mb-8 ml-auto w-full max-w-sm space-y-1 text-xs">
-        <div className="flex justify-between border-b border-gray-300 py-1">
-          <span>{t("print.totals.subtotal")}</span>
-          <span className="font-mono font-semibold">{formatMoney(data.subtotal, data.currency)}</span>
-        </div>
-        {data.additionalExpenses > 0 ? (
-          <div className="flex justify-between border-b border-gray-300 py-1">
-            <span>{t("print.totals.additionalExpenses")}</span>
-            <span className="font-mono font-semibold">
-              {formatMoney(data.additionalExpenses, data.currency)}
+      <section className="invoice-print-totals-wrap">
+        <div className="invoice-print-totals-box">
+          <div className="invoice-print-total-row">
+            <span>{t("print.totals.subtotal")}</span>
+            <span className="invoice-print-total-value">
+              {formatMoney(data.subtotal, data.currency)}
             </span>
           </div>
-        ) : null}
-        {data.discountTotal > 0 ? (
-          <div className="flex justify-between border-b border-gray-300 py-1">
-            <span>{t("print.totals.discount")}</span>
-            <span className="font-mono font-semibold">
-              -{formatMoney(data.discountTotal, data.currency)}
+          {isOfficial && data.vatTotal > 0 ? (
+            <div className="invoice-print-total-row">
+              <span>{t("print.totals.vat")}</span>
+              <span className="invoice-print-total-value">
+                {formatMoney(data.vatTotal, data.currency)}
+              </span>
+            </div>
+          ) : null}
+          {data.discountTotal > 0 ? (
+            <div className="invoice-print-total-row">
+              <span>{t("print.totals.discount")}</span>
+              <span className="invoice-print-total-value invoice-print-total-discount">
+                -{formatMoney(data.discountTotal, data.currency)}
+              </span>
+            </div>
+          ) : null}
+          {data.additionalExpenses > 0 ? (
+            <div className="invoice-print-total-row">
+              <span>{t("print.totals.additionalExpenses")}</span>
+              <span className="invoice-print-total-value">
+                {formatMoney(data.additionalExpenses, data.currency)}
+              </span>
+            </div>
+          ) : null}
+          <div className="invoice-print-total-row invoice-print-grand-total">
+            <span>{t("print.totals.grandTotal")}</span>
+            <span className="invoice-print-total-value">
+              {formatMoney(data.grandTotal, data.currency)}
             </span>
           </div>
-        ) : null}
-        <div className="flex justify-between border-b-2 border-black py-2 text-sm font-bold">
-          <span>{t("print.totals.grandTotal")}</span>
-          <span className="font-mono">{formatMoney(data.grandTotal, data.currency)}</span>
-        </div>
-        <div className="flex justify-between py-1">
-          <span>{t("print.paid")}</span>
-          <span className="font-mono font-semibold">{formatMoney(data.paidAmount, data.currency)}</span>
-        </div>
-        <div className="flex justify-between py-1 font-bold text-rose-800">
-          <span>{t("print.remainingDebt")}</span>
-          <span className="font-mono">{formatMoney(data.remainingBalance, data.currency)}</span>
+          <div className="invoice-print-total-row">
+            <span>{t("print.paidAmount")}</span>
+            <span className="invoice-print-total-value">
+              {formatMoney(data.paidAmount, data.currency)}
+            </span>
+          </div>
+          <div className="invoice-print-total-row invoice-print-balance-due">
+            <span>{t("print.remainingDebt")}</span>
+            <span className="invoice-print-total-value">
+              {formatMoney(data.remainingBalance, data.currency)}
+            </span>
+          </div>
         </div>
       </section>
 
       {data.notes ? (
-        <p className="mb-6 text-[10px]">
+        <p className="invoice-print-notes">
           <strong>{t("common.notes")}:</strong> {data.notes}
         </p>
       ) : null}
 
-      <footer className="mt-10 grid grid-cols-2 gap-8 text-xs">
-        <div>
-          <p className="mb-8 font-bold">{t("print.signatures.handedOver")}</p>
-          <div className="border-t border-black pt-1">{t("print.signatures.signature")}</div>
-        </div>
-        <div>
-          <p className="mb-8 font-bold">{t("print.signatures.receivedBy")}</p>
-          <div className="border-t border-black pt-1">{t("print.signatures.signature")}</div>
+      <footer className="invoice-print-footer">
+        <div className="invoice-print-signature-grid">
+          <div className="invoice-print-signature-block">
+            <p className="invoice-print-signature-title">{t("print.signatures.handedOver")}</p>
+            <div className="invoice-print-signature-line" />
+            <p className="invoice-print-signature-caption">{t("print.signatures.signature")}</p>
+          </div>
+          <div className="invoice-print-signature-block">
+            <p className="invoice-print-signature-title">{t("print.signatures.receivedBy")}</p>
+            <div className="invoice-print-signature-line" />
+            <p className="invoice-print-signature-caption">{t("print.signatures.signature")}</p>
+          </div>
         </div>
         {isOfficial ? (
-          <div className="col-span-2 mt-4 rounded border border-dashed border-black p-6 text-center text-[10px] uppercase tracking-widest text-gray-500">
-            {t("print.stampArea")}
+          <div className="invoice-print-stamp-area">
+            <div className="invoice-print-stamp-circle">{t("print.stampArea")}</div>
           </div>
         ) : null}
       </footer>

@@ -974,7 +974,10 @@ export const ruMessages: Messages = {
   },
   print: {
     salesInvoice: "Счёт продажи",
+    officialInvoiceTitle: "ОФИЦИАЛЬНЫЙ СЧЁТ",
     unofficialTitle: "СЧЁТ ПРОДАЖИ",
+    salesManager: "Менеджер по продажам",
+    paidAmount: "Оплаченная сумма",
     purchaseInvoice: "Счёт закупки / приёмки товара",
     invoiceNo: "Счёт №",
     docNo: "Документ №",
@@ -1009,6 +1012,7 @@ export const ruMessages: Messages = {
     },
     cols: {
       productCodeName: "Код и название",
+      productName: "Название товара",
       type: "Тип",
       lengthM: "Длина (м)",
       count: "Кол-во",
@@ -1019,13 +1023,14 @@ export const ruMessages: Messages = {
     },
     totals: {
       subtotal: "Промежуточный итог",
+      vat: "НДС (18%)",
       additionalExpenses: "Доп. расходы",
       discount: "Скидка",
       grandTotal: "Итого к оплате",
     },
     signatures: {
-      handedOver: "Сдал",
-      receivedBy: "Принял",
+      handedOver: "Сдал (Ответственное лицо)",
+      receivedBy: "Принял (Клиент)",
       signature: "Подпись",
     },
   },
