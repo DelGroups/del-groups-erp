@@ -972,6 +972,7 @@ export const azMessages = {
   },
   print: {
     salesInvoice: "Satış fakturası",
+    invoiceTitle: "SATIŞ FAKTURASI",
     officialInvoiceTitle: "SATIŞ FAKTURASI",
     unofficialTitle: "SATIŞ FAKTURASI",
     salesManager: "Satış meneceri",
@@ -992,6 +993,7 @@ export const azMessages = {
     modal: {
       title: "Çap növünü seçin",
       subtitle: "Rəsmi çapda şirkət rekvizitləri göstərilir. Qeyri-rəsmi çapda brendinq olmur.",
+      officialOnlySubtitle: "Rəsmi faktura yalnız rəsmi çap formatında çap edilə bilər.",
       officialTitle: "Rəsmi Çap (Official)",
       officialDesc: "Logo, VÖEN, ünvan, bank rekvizitləri və möhür yeri ilə.",
       unofficialTitle: "Qeyri-rəsmi Çap (Unofficial)",

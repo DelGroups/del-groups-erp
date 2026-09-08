@@ -14,6 +14,10 @@ export function useInvoicePrint() {
   const [printPayload, setPrintPayload] = useState<InvoicePrintPayload | null>(null);
 
   const requestPrint = useCallback((data: InvoicePrintData) => {
+    if (data.isOfficial) {
+      setPrintPayload({ data, mode: "official" });
+      return;
+    }
     setPendingData(data);
     setModalOpen(true);
   }, []);
@@ -26,7 +30,8 @@ export function useInvoicePrint() {
   const confirmPrint = useCallback(
     (mode: PrintMode) => {
       if (!pendingData) return;
-      setPrintPayload({ data: pendingData, mode });
+      const effectiveMode: PrintMode = pendingData.isOfficial ? "official" : mode;
+      setPrintPayload({ data: pendingData, mode: effectiveMode });
       setModalOpen(false);
       setPendingData(null);
     },

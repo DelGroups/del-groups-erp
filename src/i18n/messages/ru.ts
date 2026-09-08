@@ -974,6 +974,7 @@ export const ruMessages: Messages = {
   },
   print: {
     salesInvoice: "Счёт продажи",
+    invoiceTitle: "СЧЁТ ПРОДАЖИ",
     officialInvoiceTitle: "СЧЁТ ПРОДАЖИ",
     unofficialTitle: "СЧЁТ ПРОДАЖИ",
     salesManager: "Менеджер по продажам",
@@ -994,6 +995,7 @@ export const ruMessages: Messages = {
     modal: {
       title: "Выберите тип печати",
       subtitle: "Официальная печать включает реквизиты компании. Неофициальная — без брендинга.",
+      officialOnlySubtitle: "Официальный счёт можно печатать только в официальном формате.",
       officialTitle: "Официальная печать",
       officialDesc: "Логотип, ИНН, адрес, банк и место для печати.",
       unofficialTitle: "Неофициальная печать",

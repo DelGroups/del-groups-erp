@@ -95,5 +95,6 @@ export function mapSaleToInvoicePrint(
     lines: items.map(mapLine),
     notes: sale.note,
     variant: options?.variant ?? detectVariant(items),
+    isOfficial: sale.is_official === true,
   };
 }

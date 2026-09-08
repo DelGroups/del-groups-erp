@@ -34,6 +34,7 @@ export function InvoicePrintSystem({
       <PrintInvoiceModal
         open={modalOpen}
         docNo={pendingData?.docNo}
+        officialOnly={pendingData?.isOfficial === true}
         onClose={closeModal}
         onSelect={confirmPrint}
       />
@@ -42,7 +43,7 @@ export function InvoicePrintSystem({
         <div className="print-area">
           <InvoicePrintLayout
             data={printPayload.data}
-            mode={printPayload.mode}
+            mode={printPayload.data.isOfficial ? "official" : printPayload.mode}
             branding={branding}
           />
         </div>

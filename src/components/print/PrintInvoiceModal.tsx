@@ -8,6 +8,7 @@ import type { PrintMode } from "@/lib/print/types";
 interface PrintInvoiceModalProps {
   open: boolean;
   docNo?: string;
+  officialOnly?: boolean;
   onClose: () => void;
   onSelect: (mode: PrintMode) => void;
 }
@@ -15,6 +16,7 @@ interface PrintInvoiceModalProps {
 export default function PrintInvoiceModal({
   open,
   docNo,
+  officialOnly = false,
   onClose,
   onSelect,
 }: PrintInvoiceModalProps) {
@@ -43,7 +45,9 @@ export default function PrintInvoiceModal({
         </div>
 
         <div className="space-y-3 p-5">
-          <p className="text-xs text-app-muted">{t("print.modal.subtitle")}</p>
+          <p className="text-xs text-app-muted">
+            {officialOnly ? t("print.modal.officialOnlySubtitle") : t("print.modal.subtitle")}
+          </p>
 
           <button
             type="button"
@@ -59,19 +63,21 @@ export default function PrintInvoiceModal({
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => onSelect("unofficial")}
-            className="flex w-full items-start gap-3 rounded-xl border border-app bg-white p-4 text-left transition hover:border-slate-400 hover:shadow-sm"
-          >
-            <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
-              <FileText className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-bold text-app">{t("print.modal.unofficialTitle")}</span>
-              <span className="mt-1 block text-xs text-app-muted">{t("print.modal.unofficialDesc")}</span>
-            </span>
-          </button>
+          {!officialOnly ? (
+            <button
+              type="button"
+              onClick={() => onSelect("unofficial")}
+              className="flex w-full items-start gap-3 rounded-xl border border-app bg-white p-4 text-left transition hover:border-slate-400 hover:shadow-sm"
+            >
+              <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                <FileText className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-app">{t("print.modal.unofficialTitle")}</span>
+                <span className="mt-1 block text-xs text-app-muted">{t("print.modal.unofficialDesc")}</span>
+              </span>
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

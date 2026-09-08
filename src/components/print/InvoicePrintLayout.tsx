@@ -72,15 +72,6 @@ function formatMoney(value: number, currency: string): string {
   return `${value.toFixed(2)} ${currency}`;
 }
 
-function paymentStatusLabel(
-  status: InvoicePrintData["paymentStatus"],
-  t: (key: string) => string
-): string {
-  if (status === "paid") return t("print.paymentStatus.paid");
-  if (status === "partial") return t("print.paymentStatus.partial");
-  return t("print.paymentStatus.debt");
-}
-
 const cellBase: React.CSSProperties = {
   padding: "7px 8px",
   borderBottom: `1px solid ${BORDER}`,
@@ -216,9 +207,9 @@ function InfoField({ label, value, valueColor = INK }: { label: string; value: s
 
 export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrintLayoutProps) {
   const { t } = useI18n();
-  const isOfficial = mode === "official";
+  const isOfficial = data.isOfficial === true || mode === "official";
   const companyName = branding.companyName || "DEL GROUPS MMC";
-  const title = isOfficial ? t("print.officialInvoiceTitle") : t("print.unofficialTitle");
+  const title = t("print.invoiceTitle");
 
   const dimensionalLines = data.lines.filter((line) => line.kind === "dimensional");
   const accessoryLines = data.lines.filter(
@@ -391,10 +382,6 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
             <p style={{ margin: "8px 0 0", fontSize: "10px", color: SLATE }}>
               <strong style={{ color: INK }}>{t("common.date")}:</strong> {data.docDate}
             </p>
-            <p style={{ margin: "4px 0 0", fontSize: "10px", color: SLATE }}>
-              <strong style={{ color: INK }}>{t("print.paymentStatus.label")}:</strong>{" "}
-              {paymentStatusLabel(data.paymentStatus, t)}
-            </p>
           </div>
         </header>
 
@@ -407,10 +394,6 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
             <InfoField label={t("print.docNo")} value={data.docNo} />
             <InfoField label={t("common.date")} value={data.docDate} />
             <InfoField label={t("sales.warehouse")} value={data.warehouseName} />
-            <InfoField
-              label={t("print.paymentStatus.label")}
-              value={paymentStatusLabel(data.paymentStatus, t)}
-            />
           </InfoCard>
         </div>
 

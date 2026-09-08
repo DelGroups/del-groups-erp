@@ -38,6 +38,7 @@ export interface InvoicePrintData {
   lines: InvoicePrintLine[];
   notes?: string | null;
   variant?: "standard" | "polywood" | "consignment";
+  isOfficial?: boolean;
 }
 
 export interface CompanyBranding {

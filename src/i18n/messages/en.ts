@@ -974,6 +974,7 @@ export const enMessages: Messages = {
   },
   print: {
     salesInvoice: "Sales invoice",
+    invoiceTitle: "SALES INVOICE",
     officialInvoiceTitle: "SALES INVOICE",
     unofficialTitle: "SALES INVOICE",
     salesManager: "Sales manager",
@@ -994,6 +995,7 @@ export const enMessages: Messages = {
     modal: {
       title: "Select print type",
       subtitle: "Official print includes company details. Unofficial omits branding.",
+      officialOnlySubtitle: "Official invoices can only be printed using the official template.",
       officialTitle: "Official Print",
       officialDesc: "Logo, TIN, address, bank details, and stamp area.",
       unofficialTitle: "Unofficial Print",
