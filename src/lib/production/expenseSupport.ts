@@ -1,7 +1,5 @@
 import {
-  FINANCIAL_CATEGORY_SELECT_ATTEMPTS,
-  flattenExpenseCategoryOptions,
-  mapFinancialCategoryRow,
+  fetchActiveExpenseCategoryOptions,
   type ExpenseCategoryOption,
 } from "@/lib/finance/financialCategories";
 import { PRODUCTION_EXPENSE_CATEGORIES } from "@/lib/production/types";
@@ -49,42 +47,8 @@ function isExternalContractor(row: Record<string, unknown>): boolean {
 export async function fetchActiveExpenseCategories(
   admin: DbClient
 ): Promise<ExpenseCategoryOption[]> {
-  for (const fields of FINANCIAL_CATEGORY_SELECT_ATTEMPTS) {
-    let query = admin
-      .from("financial_categories")
-      .select(fields)
-      .eq("type", "EXPENSE")
-      .order("name")
-      .limit(500);
-
-    if (fields.includes("is_active")) {
-      query = query.eq("is_active", true);
-    }
-
-    const { data, error } = await query;
-    if (!error && data?.length) {
-      return flattenExpenseCategoryOptions(
-        (data as Record<string, unknown>[]).map(mapFinancialCategoryRow)
-      );
-    }
-
-    if (!/column|schema cache/i.test(error?.message || "")) break;
-  }
-
-  const legacy = await admin
-    .from("expense_categories")
-    .select("id,name,is_active")
-    .eq("is_active", true)
-    .order("name")
-    .limit(200);
-
-  if (!legacy.error && legacy.data?.length) {
-    return legacy.data.map((row) => ({
-      id: String((row as { id: string }).id),
-      name: String((row as { name: string }).name),
-    }));
-  }
-
+  const options = await fetchActiveExpenseCategoryOptions(admin);
+  if (options.length) return options;
   return FALLBACK_EXPENSE_CATEGORIES;
 }
 

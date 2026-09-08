@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { FINANCIAL_REPORT_SELECT_ATTEMPTS } from "@/lib/finance/transactionQueries";
+import { isRetryableSelectError } from "@/lib/supabase/schemaFallback";
 import { checkCustomerArDiscrepancies } from "@/lib/finance/customerAr";
 import {
   getDateRangeBounds,
@@ -18,6 +20,25 @@ function monthLabel(year: number, month: number): string {
   return d.toLocaleDateString("az-AZ", { month: "short", year: "numeric" });
 }
 
+async function fetchRecentTransactionsForDashboard() {
+  for (const fields of FINANCIAL_REPORT_SELECT_ATTEMPTS) {
+    const result = await supabase
+      .from("transactions")
+      .select(fields)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (!result.error) return result.data || [];
+    if (!isRetryableSelectError(result.error.message)) break;
+  }
+
+  const fallback = await supabase
+    .from("transactions")
+    .select("id, type, amount, category, notes, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return fallback.data || [];
+}
+
 export async function fetchDashboardData(): Promise<DashboardData> {
   const monthRange = getDateRangeBounds("month");
   const now = new Date();
@@ -25,7 +46,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStart = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [salesRes, purchasesRes, transactionsRes, trendTxRes, productsRes, customersRes, arCheck] =
+  const [salesRes, purchasesRes, transactions, trendTxRes, productsRes, customersRes, arCheck] =
     await Promise.all([
     supabase
       .from("sales")
@@ -33,11 +54,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     supabase
       .from("purchases")
       .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount"),
-    supabase
-      .from("transactions")
-      .select("id, type, amount, category, notes, created_at, accounts(name)")
-      .order("created_at", { ascending: false })
-      .limit(100),
+    fetchRecentTransactionsForDashboard(),
     supabase
       .from("transactions")
       .select("type, amount, created_at")
@@ -51,7 +68,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
   const sales = salesRes.data || [];
   const purchases = purchasesRes.data || [];
-  const transactions = transactionsRes.data || [];
   const trendTransactions = trendTxRes.data || [];
   const products = productsRes.data || [];
   const customers = customersRes.data || [];

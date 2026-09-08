@@ -1,4 +1,5 @@
 import { DEFAULT_FULL_SHEET_LENGTH_M } from "@/lib/polywood/constants";
+import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
 import type { Database, SaleItemRow } from "@/types/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -162,33 +163,6 @@ export async function decrementProductStock(
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, previousStock: current };
-}
-
-export async function syncPolywoodProductStockFromPieces(
-  client: StockClient,
-  productId: string,
-  warehouseId: string
-): Promise<void> {
-  const { data: pieces, error } = await client
-    .from("polywood_pieces")
-    .select("length_m")
-    .eq("product_id", productId)
-    .eq("warehouse_id", warehouseId)
-    .eq("status", "available");
-
-  if (error) throw new Error(error.message);
-
-  const totalLength = (pieces || []).reduce(
-    (sum, piece) => sum + (Number(piece.length_m) || 0),
-    0
-  );
-
-  const { error: updateError } = await client
-    .from("products")
-    .update({ stock: Math.round(totalLength * 1000) / 1000 })
-    .eq("id", productId);
-
-  if (updateError) throw new Error(updateError.message);
 }
 
 async function rollbackDimensionalSaleItem(

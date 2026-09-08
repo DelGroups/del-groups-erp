@@ -1,3 +1,5 @@
+import { isRetryableSelectError } from "@/lib/supabase/schemaFallback";
+
 export type UnifiedTransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
 
 export type FinancialCategoryOption = {
@@ -169,8 +171,7 @@ export function formatReferenceTypeLabel(referenceType: string | null | undefine
 }
 
 export function isRetryableLedgerSelectError(message: string | undefined): boolean {
-  if (!message) return false;
-  return /column|schema cache|more than one relationship|could not embed|PGRST20/i.test(message);
+  return isRetryableSelectError(message);
 }
 
 export function attachAccountNamesToLedgerRows(

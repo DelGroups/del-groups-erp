@@ -1,5 +1,6 @@
 import { DEFAULT_FULL_SHEET_LENGTH_M, POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import { planPolywoodSaleCut } from "@/lib/polywood/cutting";
+import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
 import type { PolywoodPiece, PolywoodCutResult } from "@/lib/polywood/types";
 import type { Product } from "@/types/database.types";
 
@@ -44,19 +45,6 @@ async function fetchAvailablePieces(
     .order("length_m", { ascending: true });
   if (error) throw new Error(error.message);
   return (data as PolywoodPiece[]) || [];
-}
-
-async function syncPolywoodProductStock(
-  admin: DbClient,
-  productId: string,
-  warehouseId: string
-): Promise<void> {
-  const pieces = await fetchAvailablePieces(admin, productId, warehouseId);
-  const total = pieces.reduce((sum, piece) => sum + Number(piece.length_m || 0), 0);
-  await admin
-    .from("products")
-    .update({ stock: Math.round(total * 1000) / 1000 })
-    .eq("id", productId);
 }
 
 export async function allocatePolywoodForProduction(
@@ -143,7 +131,7 @@ export async function allocatePolywoodForProduction(
       }
     }
 
-    await syncPolywoodProductStock(admin, input.productId, input.warehouseId);
+    await syncPolywoodProductStockFromPieces(admin, input.productId, input.warehouseId);
     return {
       ok: true,
       cutResult: { ...cutResult, scrapCreated: cutResult.scrapCreated },

@@ -12,12 +12,9 @@ import { userHasPermission } from "@/lib/auth/routePermissions";
 import { getServerAuthContext } from "@/lib/supabaseServer";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import {
-  attachAccountNamesToLedgerRows,
   computeAccountLedgerBalances,
-  isRetryableLedgerSelectError,
   mapUnifiedLedgerRow,
   summarizeUnifiedLedger,
-  UNIFIED_LEDGER_SELECT_ATTEMPTS,
   type AccountLedgerBalance,
   type FinancialCategoryOption,
   type UnifiedLedgerSummary,
@@ -26,16 +23,14 @@ import {
 } from "@/lib/finance/unifiedLedger";
 import {
   buildFinancialCategoryTree,
-  FINANCIAL_CATEGORY_SELECT_ATTEMPTS,
+  fetchFinancialCategoryRows,
   flattenExpenseCategoryOptions,
-  mapFinancialCategoryRow,
-  type FinancialCategoryRecord,
   type FinancialCategoryTreeNode,
 } from "@/lib/finance/financialCategories";
+import { fetchTransactionsRaw } from "@/lib/finance/transactionQueries";
+import type { ActionResult } from "@/lib/supabase/actionResult";
 
-export type ActionResult<T = void> =
-  | { success: true; data?: T }
-  | { success: false; error: string };
+export type { ActionResult };
 
 export interface UpdateTransactionInput {
   transactionId: string;
@@ -101,101 +96,13 @@ export interface UpdateAccountInput {
   type: string;
 }
 
-async function hydrateLedgerAccountNames(
-  rows: Record<string, unknown>[]
-): Promise<Record<string, unknown>[]> {
-  const accountIds = Array.from(
-    new Set(
-      rows
-        .map((row) => (row.account_id as string) || "")
-        .filter((id) => id.length > 0)
-    )
-  );
-
-  if (accountIds.length === 0) return rows;
-
-  const admin = createSupabaseAdminClient();
-  const { data: accounts, error } = await admin
-    .from("accounts")
-    .select("id,name")
-    .in("id", accountIds);
-
-  if (error || !accounts?.length) return rows;
-
-  const accountNamesById = new Map(
-    accounts.map((account) => [String(account.id), String(account.name || "")])
-  );
-
-  return attachAccountNamesToLedgerRows(rows, accountNamesById);
-}
-
-async function fetchTransactionsRaw(
-  filter?: { type?: UnifiedTransactionType }
-): Promise<{ rows: Record<string, unknown>[]; error: string | null }> {
-  const admin = createSupabaseAdminClient();
-  let lastError: string | null = null;
-
-  for (const fields of UNIFIED_LEDGER_SELECT_ATTEMPTS) {
-    let query = admin.from("transactions").select(fields).order("created_at", { ascending: false }).limit(2000);
-
-    if (filter?.type && fields.includes("unified_type")) {
-      query = query.eq("unified_type", filter.type);
-    }
-
-    const { data, error } = await query;
-    if (!error) {
-      let rows = (data || []) as Record<string, unknown>[];
-      if (filter?.type && !fields.includes("unified_type")) {
-        rows = rows.filter((row) => mapUnifiedLedgerRow(row).type === filter.type);
-      }
-      if (!fields.includes("accounts!")) {
-        rows = await hydrateLedgerAccountNames(rows);
-      }
-      return { rows, error: null };
-    }
-
-    lastError = error.message || "Failed to load transactions";
-    if (!isRetryableLedgerSelectError(lastError)) {
-      return { rows: [], error: lastError };
-    }
-  }
-
-  return { rows: [], error: lastError || "transactions schema mismatch" };
-}
-
-async function fetchFinancialCategoryRows(
-  includeInactive = false
-): Promise<{ rows: FinancialCategoryRecord[]; error: string | null }> {
-  const admin = createSupabaseAdminClient();
-
-  for (const fields of FINANCIAL_CATEGORY_SELECT_ATTEMPTS) {
-    let query = admin.from("financial_categories").select(fields).order("name").limit(500);
-    if (!includeInactive && fields.includes("is_active")) {
-      query = query.eq("is_active", true);
-    }
-
-    const { data, error } = await query;
-    if (!error) {
-      return {
-        rows: ((data || []) as Record<string, unknown>[]).map(mapFinancialCategoryRow),
-        error: null,
-      };
-    }
-
-    if (!/column|schema cache/i.test(error.message || "")) {
-      return { rows: [], error: error.message };
-    }
-  }
-
-  return { rows: [], error: null };
-}
-
 export async function fetchFinancialCategoriesAction(): Promise<
   ActionResult<FinancialCategoryOption[]>
 > {
   try {
     await requirePermissionAction("can_view_finance");
-    const { rows, error } = await fetchFinancialCategoryRows(false);
+    const admin = createSupabaseAdminClient();
+    const { rows, error } = await fetchFinancialCategoryRows(admin, { includeInactive: false });
     if (error) return { success: false, error };
 
     if (rows.length) {
@@ -234,7 +141,8 @@ export async function fetchFinancialCategoryTreeAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_finance");
-    const { rows, error } = await fetchFinancialCategoryRows(true);
+    const admin = createSupabaseAdminClient();
+    const { rows, error } = await fetchFinancialCategoryRows(admin, { includeInactive: true });
     if (error) return { success: false, error };
     const expenseRows = rows.filter((row) => row.type === "EXPENSE");
     return { success: true, data: buildFinancialCategoryTree(expenseRows) };

@@ -15,6 +15,7 @@ import { addPolywoodStockFromLengths } from "@/lib/polywood/inventory";
 import type { PolywoodImportRow } from "@/lib/polywood/import";
 import type { PolywoodPiece } from "@/lib/polywood/types";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
+import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
 import type { Warehouse } from "@/types/database.types";
 
 export type PolywoodActionResult<T = void> =
@@ -205,45 +206,13 @@ export async function addPolywoodPiecesAction(input: {
     const { error } = await admin.from("polywood_pieces").insert(rows);
     if (error) return { success: false, error: error.message };
 
-    const { data: pieces } = await admin
-      .from("polywood_pieces")
-      .select("length_m")
-      .eq("product_id", input.productId)
-      .eq("warehouse_id", warehouse.id)
-      .eq("status", "available");
-
-    const totalLength = (pieces || []).reduce(
-      (sum, piece) => sum + (Number(piece.length_m) || 0),
-      0
-    );
-    await admin.from("products").update({ stock: totalLength }).eq("id", input.productId);
+    await syncPolywoodProductStockFromPieces(admin, input.productId, warehouse.id);
 
     return { success: true, data: { added: rows.length } };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
   }
-}
-
-async function syncPolywoodProductStockAdmin(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  productId: string,
-  warehouseId: string
-): Promise<number> {
-  const { data: pieces } = await admin
-    .from("polywood_pieces")
-    .select("length_m")
-    .eq("product_id", productId)
-    .eq("warehouse_id", warehouseId)
-    .eq("status", "available");
-
-  const totalLength = (pieces || []).reduce(
-    (sum, piece) => sum + (Number(piece.length_m) || 0),
-    0
-  );
-  const rounded = Math.round(totalLength * 1000) / 1000;
-  await admin.from("products").update({ stock: rounded }).eq("id", productId);
-  return rounded;
 }
 
 export async function deletePolywoodInventoryAction(input: {
@@ -289,7 +258,7 @@ export async function deletePolywoodInventoryAction(input: {
     const { error: deleteError } = await admin.from("polywood_pieces").delete().in("id", pieceIds);
     if (deleteError) return { success: false, error: deleteError.message };
 
-    await syncPolywoodProductStockAdmin(admin, input.productId, warehouse.id);
+    await syncPolywoodProductStockFromPieces(admin, input.productId, warehouse.id);
 
     await recordStockMovement(admin, {
       productId: input.productId,

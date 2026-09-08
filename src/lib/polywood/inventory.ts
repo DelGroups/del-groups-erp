@@ -1,3 +1,4 @@
+import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
 import { supabase } from "@/lib/supabase";
 import {
   DEFAULT_FULL_SHEET_LENGTH_M,
@@ -126,11 +127,7 @@ export async function fetchPolywoodInventorySummary(
 }
 
 export async function syncPolywoodProductStock(productId: string, warehouseId: string): Promise<void> {
-  const summary = await fetchPolywoodInventorySummary(productId, warehouseId);
-  await supabase
-    .from("products")
-    .update({ stock: summary.total_length_m })
-    .eq("id", productId);
+  await syncPolywoodProductStockFromPieces(supabase, productId, warehouseId);
 }
 
 export async function insertPolywoodPieces(rows: PolywoodPieceInsert[]): Promise<void> {

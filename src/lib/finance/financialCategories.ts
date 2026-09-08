@@ -1,4 +1,7 @@
 import type { UnifiedTransactionType } from "@/lib/finance/unifiedLedger";
+import { isSchemaColumnError } from "@/lib/supabase/schemaFallback";
+
+type DbClient = ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>;
 
 export type FinancialCategoryRecord = {
   id: string;
@@ -120,4 +123,64 @@ export function groupExpenseCategoriesForSelect(rows: ExpenseCategoryOption[]): 
   }
 
   return groups;
+}
+
+export async function fetchFinancialCategoryRows(
+  admin: DbClient,
+  options?: { includeInactive?: boolean; type?: UnifiedTransactionType }
+): Promise<{ rows: FinancialCategoryRecord[]; error: string | null }> {
+  for (const fields of FINANCIAL_CATEGORY_SELECT_ATTEMPTS) {
+    let query = admin.from("financial_categories").select(fields).order("name").limit(500);
+
+    if (options?.type) {
+      query = query.eq("type", options.type);
+    }
+
+    if (!options?.includeInactive && fields.includes("is_active")) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+    if (!error) {
+      return {
+        rows: ((data || []) as Record<string, unknown>[]).map(mapFinancialCategoryRow),
+        error: null,
+      };
+    }
+
+    if (!isSchemaColumnError(error.message)) {
+      return { rows: [], error: error.message };
+    }
+  }
+
+  return { rows: [], error: null };
+}
+
+export async function fetchActiveExpenseCategoryOptions(
+  admin: DbClient
+): Promise<ExpenseCategoryOption[]> {
+  const { rows, error } = await fetchFinancialCategoryRows(admin, {
+    includeInactive: false,
+    type: "EXPENSE",
+  });
+
+  if (!error && rows.length) {
+    return flattenExpenseCategoryOptions(rows);
+  }
+
+  const legacy = await admin
+    .from("expense_categories")
+    .select("id,name,is_active")
+    .eq("is_active", true)
+    .order("name")
+    .limit(200);
+
+  if (!legacy.error && legacy.data?.length) {
+    return legacy.data.map((row) => ({
+      id: String((row as { id: string }).id),
+      name: String((row as { name: string }).name),
+    }));
+  }
+
+  return [];
 }
