@@ -21,10 +21,13 @@ import {
   calcProductionCosting,
   mergeProductionOrder,
   remainingBalanceFromOrder,
-  type ProductionExpenseCategory,
   type ProductionOrder,
   type PurchaseRequest,
 } from "@/lib/production/types";
+import {
+  parseProductionExpenseNotes,
+  resolveExpenseCategoryName,
+} from "@/lib/production/expenseSupport";
 import {
   buildMaterialLineSelection,
   decodeMaterialLineSelection,
@@ -41,14 +44,6 @@ import {
 } from "@/lib/production/warehouseStock";
 
 type WorkflowTab = "materials" | "services" | "payments";
-
-const WORKFLOW_EXPENSE_CATEGORIES: { value: ProductionExpenseCategory; labelKey: string }[] = [
-  { value: "tools", labelKey: "production.workflow.expenseLaser" },
-  { value: "delivery", labelKey: "production.workflow.expensePaint" },
-  { value: "installation", labelKey: "production.workflow.expenseMaster" },
-  { value: "transport", labelKey: "production.workflow.expenseTransport" },
-  { value: "other", labelKey: "production.expenseCategory.other" },
-];
 
 function formatMoney(value: number, currency: string): string {
   return `${value.toFixed(2)} ${currency}`;
@@ -108,12 +103,12 @@ export default function ProductionInProgressPhase({
   const [loadingWarehouseProducts, setLoadingWarehouseProducts] = useState(false);
   const [shortageConfirmOpen, setShortageConfirmOpen] = useState(false);
 
-  const [expenseCategory, setExpenseCategory] = useState<ProductionExpenseCategory>("other");
+  const [expenseCategory, setExpenseCategory] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState(0);
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
   const [expenseAccountId, setExpenseAccountId] = useState("");
-  const [expenseSupplierId, setExpenseSupplierId] = useState("");
+  const [expensePartyId, setExpensePartyId] = useState("");
 
   const costing = useMemo(() => calcProductionCosting(order), [order]);
   const activePurchaseRequests = useMemo(
@@ -199,13 +194,32 @@ export default function ProductionInProgressPhase({
     setMaterialSelection(null);
   };
 
+  const expenseCategories = useMemo(
+    () => lookups?.expenseCategories || [],
+    [lookups?.expenseCategories]
+  );
+  const internalParties = useMemo(
+    () => (lookups?.productionParties || []).filter((row) => row.group === "internal"),
+    [lookups?.productionParties]
+  );
+  const externalParties = useMemo(
+    () => (lookups?.productionParties || []).filter((row) => row.group === "external"),
+    [lookups?.productionParties]
+  );
+  const partiesById = useMemo(
+    () => new Map((lookups?.productionParties || []).map((row) => [row.id, row])),
+    [lookups?.productionParties]
+  );
+
+  useEffect(() => {
+    if (!expenseCategory && expenseCategories.length > 0) {
+      setExpenseCategory(expenseCategories[0].id);
+    }
+  }, [expenseCategories, expenseCategory]);
+
   const accountsById = useMemo(
     () => new Map((lookups?.accounts || []).map((row) => [row.id, row])),
     [lookups?.accounts]
-  );
-  const suppliersById = useMemo(
-    () => new Map((lookups?.suppliers || []).map((row) => [row.id, row])),
-    [lookups?.suppliers]
   );
 
   useEffect(() => {
@@ -349,14 +363,19 @@ export default function ProductionInProgressPhase({
       setError(t("production.workflow.invalidAmount"));
       return;
     }
-    const supplier = expenseSupplierId ? suppliersById.get(expenseSupplierId) : null;
-    const supplierLabel = supplier?.full_name || supplier?.company_name || "";
-    const notes = supplierLabel ? `Podratçı: ${supplierLabel}` : null;
+    if (!expenseCategory) {
+      setError(t("production.workflow.category"));
+      return;
+    }
+    const selectedCategory = expenseCategories.find((row) => row.id === expenseCategory);
+    const party = expensePartyId ? partiesById.get(expensePartyId) : null;
+    const partyNotes = party ? `Podratçı: ${party.label}` : null;
 
     await runAction(
       () =>
         addProductionExpenseAction(order.id, {
           category: expenseCategory,
+          category_name: selectedCategory?.name || expenseCategory,
           description: expenseDescription.trim(),
           amount: expenseAmount,
           expense_date: expenseDate,
@@ -364,14 +383,14 @@ export default function ProductionInProgressPhase({
           account_name: expenseAccountId
             ? accountsById.get(expenseAccountId)?.name || null
             : null,
-          notes,
+          notes: partyNotes,
         }),
       (data) => {
         applyOrder(mergeProductionOrder(order, data));
         setExpenseDescription("");
         setExpenseAmount(0);
         setExpenseAccountId("");
-        setExpenseSupplierId("");
+        setExpensePartyId("");
       }
     );
   };
@@ -383,11 +402,8 @@ export default function ProductionInProgressPhase({
     );
   };
 
-  const expenseCategoryLabel = (category: ProductionExpenseCategory) => {
-    const mapped = WORKFLOW_EXPENSE_CATEGORIES.find((row) => row.value === category);
-    if (mapped) return t(mapped.labelKey);
-    return t(`production.expenseCategory.${category}`);
-  };
+  const expenseCategoryLabel = (category: string) =>
+    resolveExpenseCategoryName(category, expenseCategories);
 
   const paymentRows = useMemo(() => {
     const rows: { label: string; amount: number; account?: string; kind: string }[] = [];
@@ -718,26 +734,39 @@ export default function ProductionInProgressPhase({
                 <select
                   className="input-field mt-1 w-full"
                   value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value as ProductionExpenseCategory)}
+                  onChange={(e) => setExpenseCategory(e.target.value)}
                 >
-                  {WORKFLOW_EXPENSE_CATEGORIES.map((cat) => (
-                    <option key={cat.labelKey} value={cat.value}>{t(cat.labelKey)}</option>
-                  ))}
+                  {expenseCategories.length === 0 ? (
+                    <option value="">{t("common.noData")}</option>
+                  ) : (
+                    expenseCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))
+                  )}
                 </select>
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("production.workflow.contractor")}</span>
                 <select
                   className="input-field mt-1 w-full"
-                  value={expenseSupplierId}
-                  onChange={(e) => setExpenseSupplierId(e.target.value)}
+                  value={expensePartyId}
+                  onChange={(e) => setExpensePartyId(e.target.value)}
                 >
                   <option value="">—</option>
-                  {(lookups?.suppliers || []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.full_name || s.company_name}
-                    </option>
-                  ))}
+                  {internalParties.length > 0 ? (
+                    <optgroup label={t("production.workflow.internalMasters")}>
+                      {internalParties.map((party) => (
+                        <option key={party.id} value={party.id}>{party.label}</option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {externalParties.length > 0 ? (
+                    <optgroup label={t("production.workflow.externalContractors")}>
+                      {externalParties.map((party) => (
+                        <option key={party.id} value={party.id}>{party.label}</option>
+                      ))}
+                    </optgroup>
+                  ) : null}
                 </select>
               </label>
               <label className="block text-sm">
@@ -805,12 +834,13 @@ export default function ProductionInProgressPhase({
                   </tr>
                 ) : (
                   order.expenses.map((row) => {
-                    const contractorMatch = row.notes?.match(/Podratçı:\s*(.+)/);
+                    const parsed = parseProductionExpenseNotes(row.notes);
+                    const contractorName = parsed.contractor;
                     return (
-                      <tr key={row.id} className="border-t border-app">
-                        <td className="px-3 py-2">{row.description}</td>
-                        <td className="px-3 py-2">{expenseCategoryLabel(row.category)}</td>
-                        <td className="px-3 py-2">{contractorMatch?.[1] || "—"}</td>
+                    <tr key={row.id} className="border-t border-app">
+                      <td className="px-3 py-2">{row.description}</td>
+                      <td className="px-3 py-2">{expenseCategoryLabel(row.category)}</td>
+                      <td className="px-3 py-2">{contractorName || "—"}</td>
                         <td className="px-3 py-2 text-right font-semibold">{row.amount.toFixed(2)}</td>
                         <td className="px-3 py-2">
                           {row.account_name ||

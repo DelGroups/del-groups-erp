@@ -158,15 +158,22 @@ export function buildProductionOutsourcingInsertPayload(
 export const EXPENSE_INSERT_KEYS = [
   "production_order_id",
   "category",
-  "description",
   "amount",
+  "notes",
+  "is_posted_to_finance",
+  "finance_transaction_id",
+  "description",
   "expense_date",
   "account_id",
   "account_name",
   "finance_expense_id",
-  "notes",
   "created_by",
   "created_by_name",
+] as const;
+
+export const EXPENSE_SELECT_FIELD_ATTEMPTS = [
+  "id,production_order_id,category,description,amount,expense_date,account_id,account_name,finance_expense_id,notes,created_by_name,created_at",
+  "id,production_order_id,category,amount,notes,finance_transaction_id,is_posted_to_finance,created_at",
 ] as const;
 
 export type ProductionExpenseInsertSource = {
@@ -186,19 +193,87 @@ export type ProductionExpenseInsertSource = {
 export function buildProductionExpenseInsertPayload(
   source: ProductionExpenseInsertSource
 ): Record<string, unknown> {
-  return {
+  const description = source.description.trim();
+  const mergedNotes =
+    source.notes?.trim() ||
+    description;
+
+  const payload: Record<string, unknown> = {
     production_order_id: source.production_order_id,
     category: source.category,
-    description: source.description.trim(),
     amount: toNumber(source.amount),
+    notes: mergedNotes,
+    is_posted_to_finance: Boolean(source.finance_expense_id || source.account_id),
+    finance_transaction_id: source.finance_expense_id ?? null,
+    description,
     expense_date: source.expense_date || new Date().toISOString().slice(0, 10),
     account_id: source.account_id || null,
     account_name: source.account_name?.trim() || null,
     finance_expense_id: source.finance_expense_id ?? null,
-    notes: source.notes?.trim() || null,
     created_by: source.created_by || null,
     created_by_name: source.created_by_name?.trim() || null,
   };
+
+  return payload;
+}
+
+/** Insert with column-drop retry for mismatched production_expenses schemas. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function insertProductionExpenseRow(
+  admin: { from: (table: string) => any },
+  source: ProductionExpenseInsertSource
+): Promise<{ data: { id: string } | null; error: string | null }> {
+  let payload = { ...buildProductionExpenseInsertPayload(source) };
+
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const { data, error } = await admin
+      .from("production_expenses")
+      .insert([payload])
+      .select("id")
+      .single();
+
+    if (!error && data) {
+      return { data: data as { id: string }, error: null };
+    }
+
+    const blocked = productionSchemaColumnFromError(error);
+    if (blocked && blocked in payload) {
+      delete payload[blocked];
+      continue;
+    }
+
+    return {
+      data: null,
+      error: formatProductionDbError(error?.message || "Xərc əlavə edilmədi"),
+    };
+  }
+
+  return { data: null, error: "production_expenses schema mismatch" };
+}
+
+export async function selectProductionExpensesWithFallback(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: { from: (table: string) => any },
+  orderId: string
+): Promise<{ data: Record<string, unknown>[]; error: string | null }> {
+  for (const fields of EXPENSE_SELECT_FIELD_ATTEMPTS) {
+    const { data, error } = await admin
+      .from("production_expenses")
+      .select(fields)
+      .eq("production_order_id", orderId)
+      .order("created_at");
+
+    if (!error) {
+      return { data: (data || []) as Record<string, unknown>[], error: null };
+    }
+
+    const blocked = productionSchemaColumnFromError(error);
+    if (!blocked) {
+      return { data: [], error: error.message };
+    }
+  }
+
+  return { data: [], error: "production_expenses schema mismatch" };
 }
 
 export function productionSchemaColumnFromError(

@@ -1474,6 +1474,8 @@ export const enMessages: Messages = {
       serviceDescription: "Service / expense description",
       category: "Category",
       contractor: "Contractor / master",
+      internalMasters: "Internal masters (staff)",
+      externalContractors: "External contractors",
       amountAzn: "Amount (AZN)",
       date: "Date",
       payLater: "Pay later (project cost only)",

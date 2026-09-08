@@ -133,7 +133,7 @@ export interface ProductionMaterial {
 export interface ProductionExpense {
   id: string;
   production_order_id: string;
-  category: ProductionExpenseCategory;
+  category: string;
   description: string;
   amount: number;
   expense_date: string;

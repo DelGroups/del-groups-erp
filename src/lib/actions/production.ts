@@ -38,7 +38,6 @@ import { completeProductionDelivery } from "@/lib/production/delivery";
 import { recordProductionAdvancePayment, productionAdvanceIdempotencyKey } from "@/lib/production/advancePayment";
 import {
   DEFAULT_CONTRACTOR_COMMISSION,
-  PRODUCTION_EXPENSE_CATEGORIES,
   pickText,
   remainingBalanceFromOrder,
   PRODUCTION_STATUS_DEFAULT,
@@ -51,7 +50,6 @@ import {
   type ProductionContract,
   type ProductionContractor,
   type ProductionExpense,
-  type ProductionExpenseCategory,
   type ProductionMaterial,
   type ProductionOrder,
   type ProductionOrderType,
@@ -100,13 +98,24 @@ import {
 } from "@/lib/production/warehouseProductCatalog";
 import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
 import {
-  buildProductionExpenseInsertPayload,
   buildProductionOutsourcingInsertPayload,
+  EXPENSE_SELECT_FIELD_ATTEMPTS,
   formatProductionDbError,
+  insertProductionExpenseRow,
   PRODUCTION_MATERIAL_LIVE_COLUMNS,
   productionSchemaColumnFromError,
+  selectProductionExpensesWithFallback,
   selectProductionMaterialsWithFallback,
 } from "@/lib/production/payloads";
+import {
+  buildProductionExpenseNotes,
+  fetchActiveExpenseCategories,
+  fetchProductionPartyOptions,
+  parseProductionExpenseNotes,
+  resolveExpenseCategoryName,
+  type ExpenseCategoryOption,
+  type ProductionPartyOption,
+} from "@/lib/production/expenseSupport";
 import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
@@ -203,8 +212,7 @@ const OUTSOURCING_OPTIONAL_INSERT_COLUMNS = new Set([
 ]);
 const CONTRACTOR_FIELDS =
   "id,production_order_id,contractor_id,contractor_name,commission_percentage,calculated_fee,notes";
-const EXPENSE_FIELDS =
-  "id,production_order_id,category,description,amount,expense_date,account_id,account_name,finance_expense_id,notes,created_by_name,created_at";
+const EXPENSE_FIELDS = EXPENSE_SELECT_FIELD_ATTEMPTS[0];
 const BOM_FIELDS = "id,finished_product_id,name,notes";
 const BOM_ITEM_FIELDS =
   "id,bom_id,product_id,product_code,product_name,warehouse_id,warehouse_name,quantity,unit,unit_cost";
@@ -516,19 +524,24 @@ async function updateMaterialOmittingMissingColumns(
 }
 
 function mapExpense(row: Record<string, unknown>): ProductionExpense {
-  const category = row.category as ProductionExpenseCategory;
+  const parsedNotes = parseProductionExpenseNotes(row.notes as string | null | undefined);
+  const description = String(row.description || parsedNotes.description || "");
+  const category = String(row.category || "other");
+  const financeExpenseId =
+    (row.finance_expense_id as string) ||
+    (row.finance_transaction_id as string) ||
+    null;
+
   return {
     id: String(row.id),
     production_order_id: String(row.production_order_id),
-    category: ["transport", "delivery", "installation", "tools", "other"].includes(category)
-      ? category
-      : "other",
-    description: String(row.description || ""),
+    category,
+    description,
     amount: num(row.amount),
-    expense_date: String(row.expense_date || "").slice(0, 10),
+    expense_date: String(row.expense_date || row.created_at || "").slice(0, 10),
     account_id: (row.account_id as string) || null,
     account_name: (row.account_name as string) || null,
-    finance_expense_id: (row.finance_expense_id as string) || null,
+    finance_expense_id: financeExpenseId,
     notes: (row.notes as string) || null,
     created_by_name: (row.created_by_name as string) || null,
     created_at: (row.created_at as string) || null,
@@ -886,6 +899,8 @@ async function recastContractorFee(
     .eq("production_order_id", orderId);
 }
 
+export type { ExpenseCategoryOption, ProductionPartyOption } from "@/lib/production/expenseSupport";
+
 export interface ProductionLookups {
   customers: Customer[];
   products: Product[];
@@ -894,6 +909,8 @@ export interface ProductionLookups {
   employees: Employee[];
   accounts: { id: string; code?: string | null; name: string; type?: string | null; balance?: number | null }[];
   boms: ProductionBom[];
+  expenseCategories: ExpenseCategoryOption[];
+  productionParties: ProductionPartyOption[];
 }
 
 export async function fetchProductionLookupsAction(): Promise<
@@ -902,14 +919,17 @@ export async function fetchProductionLookupsAction(): Promise<
   try {
     await requirePermissionAction("can_view_production");
     const admin = createSupabaseAdminClient();
-    const [customers, products, warehouses, suppliers, employees, accounts, bomsRes] = await Promise.all([
+    const [customers, products, warehouses, suppliers, employees, accounts, bomsRes, expenseCategories, productionParties] =
+      await Promise.all([
       admin.from("customers").select("id,full_name,name,company_name").order("full_name").limit(250),
       admin.from("products").select("id,code,name,category,subcategory,unit,buy_price,sell_price,stock,min_stock,barcode,color,weight,extra_info,inventory_mode,full_sheet_length_m").order("name").limit(500),
       admin.from("warehouses").select("id,code,name,location,is_default,warehouse_type").order("name").limit(100),
       admin.from("suppliers").select("id,code,full_name,company_name,phone,balance").order("full_name").limit(250),
-      admin.from("employees").select("id,employee_code,full_name,role,department,phone,base_salary,default_commission,status").eq("status", "active").order("full_name").limit(250),
+      admin.from("employees").select("id,employee_code,full_name,role,department,position,phone,base_salary,default_commission,status").eq("status", "active").order("full_name").limit(250),
       admin.from("accounts").select("id,code,name,type,balance").order("name").limit(100),
       admin.from("production_boms").select(BOM_FIELDS).order("name").limit(250),
+      fetchActiveExpenseCategories(admin),
+      fetchProductionPartyOptions(admin),
     ]);
 
     const bomRows = (bomsRes.data || []) as Record<string, unknown>[];
@@ -930,6 +950,17 @@ export async function fetchProductionLookupsAction(): Promise<
       itemsByBom.set(item.bom_id, list);
     }
 
+    let employeeRows = employees.data;
+    if (employees.error) {
+      const fallback = await admin
+        .from("employees")
+        .select("id,employee_code,full_name,role,department,phone,base_salary,default_commission,status")
+        .eq("status", "active")
+        .order("full_name")
+        .limit(250);
+      employeeRows = fallback.data;
+    }
+
     return {
       success: true,
       data: {
@@ -937,7 +968,7 @@ export async function fetchProductionLookupsAction(): Promise<
         products: (products.data as Product[]) || [],
         warehouses: (warehouses.data as Warehouse[]) || [],
         suppliers: (suppliers.data as Supplier[]) || [],
-        employees: ((employees.data || []) as Record<string, unknown>[]).map(normalizeEmployee),
+        employees: ((employeeRows || []) as Record<string, unknown>[]).map(normalizeEmployee),
         accounts: ((accounts.data || []) as ProductionLookups["accounts"]),
         boms: bomRows.map((row) => ({
           id: String(row.id),
@@ -946,6 +977,8 @@ export async function fetchProductionLookupsAction(): Promise<
           notes: (row.notes as string) || null,
           items: itemsByBom.get(String(row.id)) || [],
         })),
+        expenseCategories,
+        productionParties,
       },
     };
   } catch (err) {
@@ -1081,7 +1114,7 @@ export interface CreateProductionOrderInput {
     notes?: string | null;
   }[];
   expenses?: {
-    category: ProductionExpenseCategory;
+    category: string;
     description: string;
     amount: number;
     expense_date?: string | null;
@@ -1366,13 +1399,12 @@ export async function createProductionOrderAction(
     for (const item of input.expenses || []) {
       const description = item.description?.trim();
       const amount = num(item.amount);
-      if (
-        !description ||
-        amount <= 0 ||
-        !(PRODUCTION_EXPENSE_CATEGORIES as readonly string[]).includes(item.category)
-      ) {
+      const category = String(item.category || "").trim();
+      if (!description || amount <= 0 || !category) {
         return failCreatedOrder("Yan xərc siyahısında etibarsız sətir var");
       }
+
+      const expenseNotes = buildProductionExpenseNotes(description, null, item.notes);
 
       if (item.account_id) {
         const posted = await postFinanceSideExpense({
@@ -1381,31 +1413,28 @@ export async function createProductionOrderAction(
           orderId,
           orderNo: String(orderRow.order_no),
           description,
-          category: item.category,
+          category,
           expenseDate: item.expense_date,
           accountName: item.account_name,
-          notes: item.notes,
+          notes: expenseNotes,
           actorName: actorName(profile),
         });
         if (!posted.ok) return failCreatedOrder(posted.error);
         continue;
       }
 
-      const expensePayload = buildProductionExpenseInsertPayload({
+      const inserted = await insertProductionExpenseRow(admin, {
         production_order_id: orderId,
-        category: item.category,
+        category,
         description,
         amount,
         expense_date: item.expense_date,
         account_id: item.account_id,
         account_name: item.account_name,
-        notes: item.notes,
+        notes: expenseNotes,
         created_by: user.id,
       });
-      const { error: expenseError } = await admin
-        .from("production_expenses")
-        .insert([expensePayload] as never);
-      if (expenseError) return failCreatedOrder(expenseError.message);
+      if (inserted.error) return failCreatedOrder(inserted.error);
     }
 
     const reservationResult = await syncProductionReservations(admin, orderId);
@@ -2289,7 +2318,7 @@ async function postFinanceSideExpense(
     orderId: string;
     orderNo: string;
     description: string;
-    category: ProductionExpenseCategory;
+    category: string;
     expenseDate?: string | null;
     accountName?: string | null;
     notes?: string | null;
@@ -2315,9 +2344,25 @@ async function postFinanceSideExpense(
     p_actor_name: input.actorName || null,
   });
   if (error || !data) {
+    const admin = createSupabaseAdminClient();
+    const inserted = await insertProductionExpenseRow(admin, {
+      production_order_id: input.orderId,
+      category: input.category,
+      description: input.description,
+      amount: input.amount,
+      expense_date: input.expenseDate,
+      account_id: input.accountId,
+      account_name: input.accountName,
+      notes,
+      created_by_name: input.actorName,
+    });
+    if (inserted.data) {
+      return { ok: true, expenseId: inserted.data.id };
+    }
     return {
       ok: false,
       error:
+        inserted.error ||
         error?.message ||
         "Atomik istehsalat xərci yaradılmadı. production-migration.sql skriptini yenidən işə salın.",
     };
@@ -2326,13 +2371,14 @@ async function postFinanceSideExpense(
 }
 
 export interface AddProductionExpenseInput {
-  category: ProductionExpenseCategory;
+  category: string;
   description: string;
   amount: number;
   expense_date?: string | null;
   account_id?: string | null;
   account_name?: string | null;
   notes?: string | null;
+  category_name?: string | null;
 }
 
 export async function addProductionExpenseAction(
@@ -2352,9 +2398,10 @@ export async function addProductionExpenseAction(
     const amount = num(input.amount);
     if (!description) return { success: false, error: "Xərc təsviri tələb olunur" };
     if (amount <= 0) return { success: false, error: "Məbləğ sıfırdan böyük olmalıdır" };
-    if (!(PRODUCTION_EXPENSE_CATEGORIES as readonly string[]).includes(input.category)) {
-      return { success: false, error: "Xərc kateqoriyası etibarsızdır" };
-    }
+    const categoryValue = String(input.category_name || input.category || "").trim();
+    if (!categoryValue) return { success: false, error: "Xərc kateqoriyası tələb olunur" };
+
+    const expenseNotes = buildProductionExpenseNotes(description, null, input.notes);
 
     if (input.account_id) {
       const posted = await postFinanceSideExpense({
@@ -2363,50 +2410,66 @@ export async function addProductionExpenseAction(
         orderId,
         orderNo: order.order_no,
         description,
-        category: input.category,
+        category: categoryValue,
         expenseDate: input.expense_date,
         accountName: input.account_name,
-        notes: input.notes,
+        notes: expenseNotes,
         actorName: actorName(profile),
       });
       if (!posted.ok) return { success: false, error: posted.error };
-      const { data: expenseRow } = await admin
-        .from("production_expenses")
-        .select(EXPENSE_FIELDS)
-        .eq("id", posted.expenseId)
-        .maybeSingle();
+      const expenseSelect = await selectProductionExpensesWithFallback(admin, orderId);
+      const expenseRow = expenseSelect.data.find((row) => String(row.id) === posted.expenseId);
       if (!expenseRow) return { success: true };
       return {
         success: true,
         data: orderCollectionDelta(order, {
-          expenses: [mapExpense(expenseRow as Record<string, unknown>)],
+          expenses: [mapExpense(expenseRow)],
         }),
       };
     }
 
-    const expensePayload = buildProductionExpenseInsertPayload({
+    const inserted = await insertProductionExpenseRow(admin, {
       production_order_id: orderId,
-      category: input.category,
+      category: categoryValue,
       description,
       amount,
       expense_date: input.expense_date,
       account_id: input.account_id,
       account_name: input.account_name,
-      notes: input.notes,
+      notes: expenseNotes,
       created_by: user.id,
       created_by_name: actorName(profile),
     });
-    const { data, error } = await admin
-      .from("production_expenses")
-      .insert([expensePayload] as never)
-      .select(EXPENSE_FIELDS)
-      .single();
-    if (error || !data) return { success: false, error: error?.message || "Xərc əlavə edilmədi" };
+    if (inserted.error || !inserted.data) {
+      return { success: false, error: inserted.error || "Xərc əlavə edilmədi" };
+    }
+
+    const expenseSelect = await selectProductionExpensesWithFallback(admin, orderId);
+    const expenseRow =
+      expenseSelect.data.find((row) => String(row.id) === inserted.data?.id) ||
+      expenseSelect.data[expenseSelect.data.length - 1];
+    if (!expenseRow) {
+      return {
+        success: true,
+        data: orderCollectionDelta(order, {
+          expenses: [
+            mapExpense({
+              id: inserted.data.id,
+              production_order_id: orderId,
+              category: categoryValue,
+              amount,
+              notes: expenseNotes,
+              created_at: new Date().toISOString(),
+            }),
+          ],
+        }),
+      };
+    }
 
     return {
       success: true,
       data: orderCollectionDelta(order, {
-        expenses: [mapExpense(data as Record<string, unknown>)],
+        expenses: [mapExpense(expenseRow)],
       }),
     };
   } catch (err) {

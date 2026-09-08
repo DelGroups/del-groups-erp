@@ -1477,6 +1477,8 @@ export const azMessages = {
       serviceDescription: "Xidmət / Xərc təsviri",
       category: "Kategoriya",
       contractor: "Podratçı / Usta",
+      internalMasters: "Daxili Ustalar (Personal)",
+      externalContractors: "Xarici Podratçılar",
       amountAzn: "Məbləğ (AZN)",
       date: "Tarix",
       payLater: "Sonra ödəniləcək (layihə mayası)",

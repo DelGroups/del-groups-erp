@@ -1474,6 +1474,8 @@ export const ruMessages: Messages = {
       serviceDescription: "Описание услуги / расхода",
       category: "Категория",
       contractor: "Подрядчик / мастер",
+      internalMasters: "Внутренние мастера (персонал)",
+      externalContractors: "Внешние подрядчики",
       amountAzn: "Сумма (AZN)",
       date: "Дата",
       payLater: "Оплатить позже (только в себестоимость)",
