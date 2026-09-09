@@ -112,6 +112,8 @@ export const GRANULAR_PERMISSION_MODULES: GranularPermissionModule[] = [
     permissions: [
       { key: "view_customers", label: "Müştəriləri görmək", legacyKey: "can_view_customers" },
       { key: "manage_customers", label: "Müştəriləri idarə etmək", legacyKey: "can_manage_customers" },
+      { key: "view_pipeline", label: "CRM boru xəttini görmək", legacyKey: "can_view_crm" },
+      { key: "manage_pipeline", label: "CRM boru xəttini idarə etmək", legacyKey: "can_manage_crm" },
       { key: "view_suppliers", label: "Təchizatçıları görmək", legacyKey: "can_view_suppliers" },
       { key: "manage_suppliers", label: "Təchizatçıları idarə etmək", legacyKey: "can_manage_suppliers" },
     ],
@@ -165,6 +167,8 @@ const LEGACY_ALIAS: Partial<Record<PermissionKey, PermissionKey>> = {
   can_manage_production: "can_manage_products",
   can_view_consignments: "can_view_sales",
   can_manage_consignments: "can_create_invoice",
+  can_view_crm: "can_view_customers",
+  can_manage_crm: "can_manage_customers",
 };
 
 const PATH_TO_LEGACY: Record<string, PermissionKey> = {};

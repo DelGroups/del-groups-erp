@@ -836,6 +836,8 @@ export const PERMISSION_MODULES = [
     permissions: [
       { key: "can_view_customers", label: "Müştəriləri görmək" },
       { key: "can_manage_customers", label: "Müştəriləri idarə etmək" },
+      { key: "can_view_crm", label: "CRM boru xəttini görmək" },
+      { key: "can_manage_crm", label: "CRM boru xəttini idarə etmək" },
       { key: "can_view_suppliers", label: "Təchizatçıları görmək" },
       { key: "can_manage_suppliers", label: "Təchizatçıları idarə etmək" },
     ],
@@ -1492,4 +1494,87 @@ export function calcPayrollNet(
   deductions: number
 ): number {
   return Math.max(0, baseSalary + commissionTotal - deductions);
+}
+
+// ─── CRM pipeline ───────────────────────────────────────────────────────────
+
+export const DEAL_STAGES = ["LEAD", "QUALIFIED", "PROPOSAL", "WON", "LOST"] as const;
+export type DealStage = (typeof DEAL_STAGES)[number];
+
+export const QUOTATION_STATUSES = [
+  "DRAFT",
+  "SENT",
+  "ACCEPTED",
+  "REJECTED",
+  "WON",
+  "CONVERTED",
+] as const;
+export type QuotationStatus = (typeof QUOTATION_STATUSES)[number];
+
+export interface QuotationItem {
+  product_id: string | null;
+  product_code: string;
+  product_name: string;
+  unit: string;
+  quantity: number;
+  cost_price: number;
+  margin_percent: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface CrmDeal {
+  id: string;
+  client_id: string | null;
+  title: string;
+  stage: DealStage;
+  expected_value: number;
+  assigned_to: string | null;
+  notes: string | null;
+  production_order_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  customers?: { full_name: string; company_name: string | null } | null;
+  profiles?: { full_name: string | null } | null;
+  quotations?: CrmQuotation[];
+}
+
+export interface CrmQuotation {
+  id: string;
+  deal_id: string;
+  quote_number: string;
+  total_amount: number;
+  discount: number;
+  tax: number;
+  valid_until: string | null;
+  status: QuotationStatus;
+  items_json: QuotationItem[];
+  notes: string | null;
+  production_order_id: string | null;
+  created_at: string | null;
+}
+
+export function calcQuotationLine(
+  quantity: number,
+  costPrice: number,
+  marginPercent: number
+): { unitPrice: number; lineTotal: number } {
+  const qty = Math.max(0, Number(quantity) || 0);
+  const cost = Math.max(0, Number(costPrice) || 0);
+  const margin = Number(marginPercent) || 0;
+  const unitPrice = cost * (1 + margin / 100);
+  return { unitPrice, lineTotal: qty * unitPrice };
+}
+
+export function calcQuotationTotals(items: QuotationItem[], discount: number, taxRate: number) {
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
+  const discountAmount = Math.max(0, Number(discount) || 0);
+  const taxable = Math.max(0, subtotal - discountAmount);
+  const tax = taxable * ((Number(taxRate) || 0) / 100);
+  return {
+    subtotal,
+    discount: discountAmount,
+    tax,
+    total: taxable + tax,
+  };
 }

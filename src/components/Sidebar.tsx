@@ -45,6 +45,7 @@ import {
   ClipboardCheck,
   Database,
   Factory,
+  KanbanSquare,
 } from "lucide-react";
 
 interface NavItem {
@@ -105,6 +106,7 @@ const NAV_SECTIONS: NavSection[] = [
     titleKey: "nav.sections.crm",
     icon: Contact,
     items: [
+      { titleKey: "nav.items.pipeline", path: "/crm", icon: KanbanSquare },
       { titleKey: "nav.items.customers", path: "/customers", icon: Users },
       { titleKey: "nav.items.suppliers", path: "/suppliers", icon: Truck },
     ],
