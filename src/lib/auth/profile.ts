@@ -7,7 +7,7 @@ import {
   type RoleScopes,
   type UserProfile,
 } from "@/types/database.types";
-import { DEFAULT_ROLE_SCOPES, parseStoredPermissions } from "@/lib/auth/permissionMatrix";
+import { DEFAULT_ROLE_SCOPES } from "@/lib/auth/permissionMatrix";
 import { resolveLocale } from "@/i18n/types";
 import { displayRoleName, parseJoinedRole } from "@/lib/auth/routePermissions";
 import { isSchemaColumnError } from "@/lib/supabase/schemaFallback";
@@ -47,7 +47,6 @@ function emptyScopes(): RoleScopes {
 
 export function toUserProfile(row: ProfileQueryRow): UserProfile {
   const joined = parseJoinedRole(row.roles);
-  const parsed = parseStoredPermissions(joined.permissions);
   const scopeOverrides = row.scope_overrides
     ? normalizeRoleScopes(row.scope_overrides)
     : emptyScopes();
@@ -68,7 +67,7 @@ export function toUserProfile(row: ProfileQueryRow): UserProfile {
       id: (row.role_id as string) ?? "",
       name: joined.name,
       description: null,
-      permissions: parsed.flat,
+      permissions: joined.permissions,
       scopes: joined.scopes || emptyScopes(),
       is_system: joined.isAdmin,
       created_at: typeof row.created_at === "string" ? row.created_at : "",

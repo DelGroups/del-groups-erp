@@ -2566,43 +2566,43 @@ export async function removeProductionExpenseAction(
     const admin = createSupabaseAdminClient();
     const { data: expense } = await admin
       .from("production_expenses")
-      .select("id,finance_expense_id,account_id,amount,description")
+      .select("id,finance_expense_id,finance_transaction_id,account_id,amount,description")
       .eq("id", expenseId)
       .eq("production_order_id", orderId)
       .maybeSingle();
     if (!expense) return { success: false, error: "Xərc tapılmadı" };
 
+    const financeTransactionId =
+      (expense as { finance_transaction_id?: string | null }).finance_transaction_id || null;
     const financeExpenseId = (expense as { finance_expense_id?: string | null }).finance_expense_id;
     const accountId = (expense as { account_id?: string | null }).account_id;
-    const amount = num((expense as { amount?: number }).amount);
-    const description = String((expense as { description?: string }).description || "");
 
-    if (financeExpenseId && accountId && amount > 0) {
-      const { data: transactions } = await admin
+    const linkedTransactionId =
+      (financeTransactionId && isValidUuid(financeTransactionId) ? financeTransactionId : null) ||
+      (financeExpenseId && isValidUuid(financeExpenseId) ? financeExpenseId : null);
+
+    if (linkedTransactionId) {
+      const { data: linkedTx } = await admin
         .from("transactions")
-        .select("id,account_id,notes")
-        .eq("production_order_id", orderId)
-        .eq("account_id", accountId)
-        .eq("amount", amount);
+        .select("id,account_id")
+        .eq("id", linkedTransactionId)
+        .maybeSingle();
 
-      const matched =
-        (transactions || []).find((row) => {
-          const notes = String((row as { notes?: string }).notes || "");
-          return notes.includes(description) || description.includes(notes.trim());
-        }) || (transactions || [])[0];
-
-      if (matched?.id) {
-        const txAccountId = (matched as { account_id?: string }).account_id;
-        const { error: txDeleteError } = await admin
-          .from("transactions")
-          .delete()
-          .eq("id", matched.id);
+      if (linkedTx?.id) {
+        const { error: txDeleteError } = await admin.from("transactions").delete().eq("id", linkedTx.id);
         if (txDeleteError) return { success: false, error: txDeleteError.message };
+        const txAccountId = (linkedTx.account_id as string | null) || accountId;
         if (txAccountId) {
           await admin.rpc("reconcile_account_balance_atomic", { p_account_id: txAccountId });
         }
       }
+    }
 
+    if (
+      financeExpenseId &&
+      isValidUuid(financeExpenseId) &&
+      financeExpenseId !== financeTransactionId
+    ) {
       await admin.from("expenses").delete().eq("id", financeExpenseId);
     }
 
@@ -2928,10 +2928,68 @@ async function createPurchaseRequestInternal(
     notes?: string | null;
   }
 ): Promise<void> {
-  const requestNo = createDocNo("PR");
   const unitPrice = Math.max(num(input.product.buy_price), 0);
-  const lineTotal = Math.round(unitPrice * input.quantity * 100) / 100;
-  const totalAmount = lineTotal > 0 ? lineTotal : input.quantity;
+  const addQty = num(input.quantity);
+  if (addQty <= 0) return;
+
+  let existingQuery = admin
+    .from("purchase_requests")
+    .select("id, quantity, purchase_id, status")
+    .eq("production_order_id", input.orderId)
+    .eq("product_id", input.product.id)
+    .in("status", ["pending", "ordered"])
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (input.warehouseId) {
+    existingQuery = existingQuery.eq("warehouse_id", input.warehouseId);
+  }
+
+  const { data: existingRows } = await existingQuery;
+  const existing = (existingRows || [])[0] as
+    | { id: string; quantity?: number | null; purchase_id?: string | null }
+    | undefined;
+
+  if (existing?.id) {
+    const nextQty = num(existing.quantity) + addQty;
+    const lineTotal = Math.round(unitPrice * nextQty * 100) / 100;
+    const totalAmount = lineTotal > 0 ? lineTotal : nextQty;
+    await admin
+      .from("purchase_requests")
+      .update({
+        quantity: nextQty,
+        notes: input.notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+
+    if (existing.purchase_id) {
+      const effectiveUnitPrice = unitPrice > 0 ? unitPrice : 1;
+      const effectiveLineTotal = lineTotal > 0 ? lineTotal : nextQty * effectiveUnitPrice;
+      await admin
+        .from("purchase_items")
+        .update({
+          quantity: nextQty,
+          unit_price: effectiveUnitPrice,
+          total_price: effectiveLineTotal,
+        })
+        .eq("purchase_id", existing.purchase_id)
+        .eq("product_id", input.product.id);
+      await admin
+        .from("purchases")
+        .update({
+          total_amount: totalAmount,
+          debt_amount: totalAmount,
+        })
+        .eq("id", existing.purchase_id)
+        .eq("status", "draft");
+    }
+    return;
+  }
+
+  const requestNo = createDocNo("PR");
+  const lineTotal = Math.round(unitPrice * addQty * 100) / 100;
+  const totalAmount = lineTotal > 0 ? lineTotal : addQty;
 
   const { data: requestRow, error } = await admin
     .from("purchase_requests")

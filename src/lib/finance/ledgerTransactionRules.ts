@@ -5,6 +5,8 @@ export const LOCKED_LEDGER_REFERENCE_TYPES = new Set([
   "purchase",
   "production",
   "production_expense",
+  "payroll",
+  "employee_advance",
 ]);
 
 export function getLedgerReferenceType(tx: UnifiedLedgerTransaction): string {

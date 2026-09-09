@@ -28,7 +28,7 @@ async function loadPurchaseForWarehouse(purchaseId: string) {
   const client = await createSupabaseServerClient();
   const { data: purchase, error } = await client
     .from("purchases")
-    .select("*, warehouses(name)")
+    .select("*")
     .eq("id", purchaseId)
     .single();
   if (error || !purchase) return null;
@@ -38,7 +38,18 @@ async function loadPurchaseForWarehouse(purchaseId: string) {
     .select("*")
     .eq("purchase_id", purchaseId);
 
-  return { purchase, items: items || [] };
+  let warehouseName: string | null = null;
+  const warehouseId = (purchase.warehouse_id as string | null) || null;
+  if (warehouseId && isValidUuid(warehouseId)) {
+    const { data: warehouse } = await client
+      .from("warehouses")
+      .select("name")
+      .eq("id", warehouseId)
+      .maybeSingle();
+    warehouseName = warehouse?.name || null;
+  }
+
+  return { purchase, items: items || [], warehouseName };
 }
 
 export async function sendSaleToWarehouseAction(
@@ -141,7 +152,7 @@ export async function sendPurchaseToWarehouseAction(
       return { success: false, error: "Alış fakturası tapılmadı" };
     }
 
-    const { purchase, items } = loaded;
+    const { purchase, items, warehouseName } = loaded;
     const warehouseSent = purchase.warehouse_sent === true;
 
     if (warehouseSent && !forceResend) {
@@ -162,7 +173,6 @@ export async function sendPurchaseToWarehouseAction(
         unit_price: Number(row.unit_price) || 0,
       }));
 
-    const warehouseJoin = purchase.warehouses as { name?: string } | null;
     const autoApprove = isAdminRole(profile?.role);
     const documentNo =
       String(purchase.invoice_number ?? "").trim() || String(purchaseId);
@@ -174,7 +184,7 @@ export async function sendPurchaseToWarehouseAction(
       slipType: "inbound",
       documentNo,
       warehouseId: (purchase.warehouse_id as string) || null,
-      warehouseName: warehouseJoin?.name || null,
+      warehouseName,
       items: slipItems,
       notes: (purchase.notes as string) || null,
       createdBy: user.id,

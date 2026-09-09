@@ -1015,11 +1015,15 @@ export function normalizeRoleScopes(raw: unknown): RoleScopes {
 }
 
 export function normalizeRole(row: Record<string, unknown>): Role {
+  const rawPermissions =
+    row.permissions && typeof row.permissions === "object" && !Array.isArray(row.permissions)
+      ? (row.permissions as PermissionMap)
+      : normalizePermissions(row.permissions);
   return {
     id: row.id as string,
     name: (row.name as string) || "",
     description: (row.description as string) ?? null,
-    permissions: normalizePermissions(row.permissions),
+    permissions: rawPermissions,
     scopes: normalizeRoleScopes(row.scopes),
     is_system: row.is_system === true,
     created_at: typeof row.created_at === "string" ? row.created_at : "",

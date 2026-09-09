@@ -102,11 +102,12 @@ function LoginForm() {
       .then(({ data }) => {
         if (data?.company_name) setCompanyName(data.company_name);
         if (data?.logo_url) setLogoUrl(data.logo_url);
-      });
+      })
+      .catch(() => undefined);
 
     void supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) router.replace(nextPath);
-    });
+    }).catch(() => undefined);
   }, [nextPath, router, configReady]);
 
   const configError = (() => {

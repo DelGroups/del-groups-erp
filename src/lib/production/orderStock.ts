@@ -78,7 +78,7 @@ export function computeMaterialWorkflow(
 }
 
 export function adjustWarehouseProductsForOrderAllocations<
-  T extends { product_id: string; stock: number }
+  T extends { product_id: string; stock: number; realStock?: number; stock_quantity?: number }
 >(products: T[], materials: ProductionMaterial[], warehouseId: string): T[] {
   const allocatedByProduct = new Map<string, number>();
   for (const material of materials) {
@@ -91,11 +91,16 @@ export function adjustWarehouseProductsForOrderAllocations<
     );
   }
 
-  return products.map((product) => ({
-    ...product,
-    stock: Math.max(
+  return products.map((product) => {
+    const nextStock = Math.max(
       0,
       Math.round((num(product.stock) - (allocatedByProduct.get(product.product_id) || 0)) * 100) / 100
-    ),
-  }));
+    );
+    return {
+      ...product,
+      stock: nextStock,
+      realStock: nextStock,
+      stock_quantity: nextStock,
+    };
+  });
 }

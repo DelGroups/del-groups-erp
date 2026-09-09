@@ -28,6 +28,7 @@ import {
   type ProductionOrder,
   type PurchaseRequest,
 } from "@/lib/production/types";
+import { adjustWarehouseProductsForOrderAllocations } from "@/lib/production/orderStock";
 import {
   parseProductionExpenseNotes,
   resolveExpenseCategoryName,
@@ -152,14 +153,26 @@ export default function ProductionInProgressPhase({
     if (preferred?.id) setMaterialWarehouseId(preferred.id);
   }, [lookups?.warehouses, materialWarehouseId]);
 
+  const catalogForOrder = useMemo(
+    () =>
+      materialWarehouseId
+        ? adjustWarehouseProductsForOrderAllocations(
+            warehouseProducts,
+            order.materials || [],
+            materialWarehouseId
+          )
+        : warehouseProducts,
+    [warehouseProducts, order.materials, materialWarehouseId]
+  );
+
   const selectedWarehouseProduct = useMemo(() => {
     if (!materialSelection?.productId) return null;
     return (
-      warehouseProducts.find(
+      catalogForOrder.find(
         (row) => row.product_id === materialSelection.productId || row.id === materialSelection.productId
       ) || null
     );
-  }, [warehouseProducts, materialSelection]);
+  }, [catalogForOrder, materialSelection]);
 
   const currentStock = useMemo(() => {
     if (selectedWarehouseProduct) {
@@ -201,7 +214,7 @@ export default function ProductionInProgressPhase({
 
   const handleMaterialProductChange = (value: string) => {
     setMaterialOptionValue(value);
-    const decoded = decodeMaterialLineSelection(value, materialWarehouseId, warehouseProducts);
+    const decoded = decodeMaterialLineSelection(value, materialWarehouseId, catalogForOrder);
     setMaterialSelection(decoded);
   };
 
@@ -293,6 +306,10 @@ export default function ProductionInProgressPhase({
     const result = await action();
     setSaving(false);
     if (!result.success) {
+      if (result.error === "SHORTAGE_CONFIRMATION_REQUIRED") {
+        setShortageConfirmOpen(true);
+        return;
+      }
       setError(result.error || t("common.error"));
       return;
     }
@@ -406,12 +423,12 @@ export default function ProductionInProgressPhase({
         setError(t("inventory.scan.selectWarehouse"));
         return;
       }
-      let product = findCatalogItemByScan(warehouseProducts, code);
+      let product = findCatalogItemByScan(catalogForOrder, code);
       if (!product) {
         const remote = await fetchProductByBarcode(code);
         if (remote) {
           product =
-            warehouseProducts.find(
+            catalogForOrder.find(
               (row) => row.product_id === remote.id || row.id === remote.id
             ) || null;
         }
@@ -631,7 +648,7 @@ export default function ProductionInProgressPhase({
                         ? t("production.workflow.loadingProducts")
                         : "—"}
                   </option>
-                  {warehouseProducts.map((p) => (
+                  {catalogForOrder.map((p) => (
                     <option key={p.product_id} value={productOptionValue(p)}>
                       {productOptionLabel(p)}
                     </option>

@@ -35,7 +35,7 @@ function mapItemRow(row: {
 export async function fetchPurchaseList(): Promise<PurchaseRecord[]> {
   const { data, error } = await supabase
     .from("purchases")
-    .select("*, suppliers(full_name, company_name)")
+    .select("*, suppliers!supplier_id(full_name, company_name)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -77,7 +77,7 @@ export async function fetchPurchaseList(): Promise<PurchaseRecord[]> {
 export async function fetchPurchaseById(id: string): Promise<PurchaseRecord | null> {
   const { data: purchase, error } = await supabase
     .from("purchases")
-    .select("*, suppliers(full_name, company_name)")
+    .select("*, suppliers!supplier_id(full_name, company_name)")
     .eq("id", id)
     .single();
 

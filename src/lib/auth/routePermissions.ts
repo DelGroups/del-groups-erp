@@ -3,7 +3,6 @@ import { DEFAULT_ROLE_SCOPES } from "@/lib/auth/permissionMatrix";
 import {
   ADMIN_ROLE_NAME,
   isAdminRole,
-  normalizePermissions,
   normalizeRoleScopes,
   type PermissionKey,
   type PermissionMap,
@@ -144,9 +143,13 @@ export function parseJoinedRole(roles: unknown): {
     | null
     | undefined;
   const name = source?.name?.trim() || "";
+  const rawPermissions =
+    source?.permissions && typeof source.permissions === "object" && !Array.isArray(source.permissions)
+      ? (source.permissions as PermissionMap)
+      : {};
   return {
     name,
-    permissions: normalizePermissions(source?.permissions),
+    permissions: rawPermissions,
     scopes: source?.scopes ? normalizeRoleScopes(source.scopes) : { ...DEFAULT_ROLE_SCOPES },
     isAdmin: name === ADMIN_ROLE_NAME,
   };

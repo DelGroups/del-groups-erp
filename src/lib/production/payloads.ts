@@ -173,7 +173,7 @@ export const EXPENSE_INSERT_KEYS = [
 ] as const;
 
 export const EXPENSE_SELECT_FIELD_ATTEMPTS = [
-  "id,production_order_id,category,description,amount,expense_date,account_id,account_name,finance_expense_id,notes,created_by_name,created_at",
+  "id,production_order_id,category,description,amount,expense_date,account_id,account_name,finance_expense_id,finance_transaction_id,notes,created_by_name,created_at",
   "id,production_order_id,category,amount,notes,finance_transaction_id,is_posted_to_finance,created_at",
 ] as const;
 

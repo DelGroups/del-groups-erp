@@ -8,7 +8,7 @@ import {
   requirePermissionAction,
   type ActionAuthContext,
 } from "@/lib/auth/serverActionAuth";
-import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
+import { userHasLegacyPermission, filterAccountsByScope, resolveEffectiveAccess } from "@/lib/auth/permissionMatrix";
 import { getServerAuthContext } from "@/lib/supabaseServer";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import {
@@ -304,13 +304,22 @@ export async function fetchUnifiedLedgerAction(input?: {
   }>
 > {
   try {
-    await requirePermissionAction("can_view_finance");
+    const { profile } = await requirePermissionAction("can_view_finance");
     const { rows, error } = await fetchTransactionsRaw(input);
     if (error) return { success: false, error };
 
-    const transactions = rows
+    let transactions = rows
       .map((row) => mapUnifiedLedgerRow(row))
       .filter((tx) => Boolean(tx.id));
+
+    const access = resolveEffectiveAccess(profile);
+    if (!access.isAdmin && access.scopes.allowed_financial_accounts.length > 0) {
+      const allowed = new Set(access.scopes.allowed_financial_accounts);
+      transactions = transactions.filter(
+        (tx) => Boolean(tx.account_id) && allowed.has(tx.account_id as string)
+      );
+    }
+
     return {
       success: true,
       data: {
@@ -331,7 +340,7 @@ export async function fetchAccountLedgerBalancesAction(): Promise<
   }>
 > {
   try {
-    await requirePermissionAction("can_view_finance");
+    const { profile } = await requirePermissionAction("can_view_finance");
     const admin = createSupabaseAdminClient();
     const [accountsRes, ledger] = await Promise.all([
       admin.from("accounts").select("id,code,name,type,balance").order("name"),
@@ -346,8 +355,20 @@ export async function fetchAccountLedgerBalancesAction(): Promise<
       return { success: false, error: ledger.error || "Ledger yüklənmədi" };
     }
 
+    const access = resolveEffectiveAccess(profile);
+    const scopedAccounts = filterAccountsByScope(
+      (accountsRes.data || []) as Array<{
+        id: string;
+        code?: string | null;
+        name?: string | null;
+        type?: string | null;
+        balance?: number | null;
+      }>,
+      access.scopes
+    );
+
     const balances = computeAccountLedgerBalances(
-      (accountsRes.data || []) as Record<string, unknown>[],
+      scopedAccounts as Record<string, unknown>[],
       ledger.data.transactions
     );
 
@@ -544,6 +565,8 @@ const LINKED_TRANSACTION_SOURCES = new Set([
   "purchase",
   "production",
   "production_expense",
+  "payroll",
+  "employee_advance",
 ]);
 
 export async function updateTransactionAction(

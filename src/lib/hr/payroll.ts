@@ -73,14 +73,18 @@ export async function fetchPayrollRuns(
     .select("*, employees(full_name, employee_code)")
     .eq("period_month", month)
     .eq("period_year", year)
-    .order("employees(full_name)");
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error("Payroll runs fetch error:", error.message);
     return [];
   }
 
-  return (data || []).map((row) => mapPayroll(row as Record<string, unknown>));
+  return (data || [])
+    .map((row) => mapPayroll(row as Record<string, unknown>))
+    .sort((a, b) =>
+      (a.employees?.full_name || "").localeCompare(b.employees?.full_name || "", "az")
+    );
 }
 
 export async function fetchEmployeeAdvances(): Promise<EmployeeAdvance[]> {
