@@ -2079,7 +2079,7 @@ export const enMessages: Messages = {
   },
   aiAssistant: {
     title: "AI Copilot",
-    subtitle: "n8n agent — text, voice, and files",
+    subtitle: "Del — ERP operations and finance assistant",
     placeholder: "Ask about a product, customer, or order...",
     send: "Send",
     open: "Open AI assistant",
@@ -2099,6 +2099,7 @@ export const enMessages: Messages = {
     voiceNote: "Voice message",
     voiceError: "Microphone permission was denied or recording failed.",
     fileTooLarge: "File must be smaller than 8 MB.",
+    selectAgent: "Select an agent",
   },
   aiSettings: {
     title: "AI Integration",

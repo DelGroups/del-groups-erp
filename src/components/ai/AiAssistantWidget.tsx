@@ -12,6 +12,13 @@ import {
   isSafeInternalHref,
 } from "@/components/ai/AiAssistantMarkdown";
 import type { AssistantLink } from "@/lib/ai/context";
+import {
+  DEFAULT_ERP_AGENT,
+  ERP_AI_AGENTS,
+  formatAgentOption,
+  resolveTargetAgent,
+  type ErpAiAgentId,
+} from "@/lib/ai/agents";
 
 type DynamicButton = { label: string; href?: string; message?: string };
 type DataTable = { headers: string[]; rows: string[][] };
@@ -33,16 +40,7 @@ type BridgeResponse = {
   configured?: boolean;
 };
 
-const SESSION_KEY = "del-erp-ai-session";
-
-function getSessionId(): string {
-  if (typeof window === "undefined") return crypto.randomUUID();
-  const existing = sessionStorage.getItem(SESSION_KEY);
-  if (existing) return existing;
-  const created = crypto.randomUUID();
-  sessionStorage.setItem(SESSION_KEY, created);
-  return created;
-}
+const AGENT_KEY = "del-erp-ai-agent";
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -68,6 +66,7 @@ export default function AiAssistantWidget() {
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [agent, setAgent] = useState<ErpAiAgentId>(DEFAULT_ERP_AGENT);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -123,6 +122,11 @@ export default function AiAssistantWidget() {
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, sending, open]);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(AGENT_KEY);
+    setAgent(resolveTargetAgent(stored));
+  }, []);
 
   useEffect(() => () => stopMedia(), [stopMedia]);
 
@@ -190,9 +194,9 @@ export default function AiAssistantWidget() {
         if (response.status === 503) {
           setConfigured(false);
           if (init.method === "POST" && init.body && typeof init.body === "string") {
-            const parsed = JSON.parse(init.body) as { type?: string; message?: string };
-            if ((parsed.type || "text") === "text" && parsed.message) {
-              await fallbackText(parsed.message);
+            const parsed = JSON.parse(init.body) as { type?: string; content?: string; message?: string };
+            if ((parsed.type || "text") === "text" && (parsed.content || parsed.message)) {
+              await fallbackText(parsed.content || parsed.message || "");
               return;
             }
           }
@@ -225,15 +229,14 @@ export default function AiAssistantWidget() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "text",
-            message,
-            session_id: getSessionId(),
-            current_page: pathname || "/",
+            target_agent: agent,
+            content: message,
           }),
         },
         message
       );
     },
-    [pathname, postBridge, recording, sending]
+    [agent, postBridge, recording, sending]
   );
 
   const sendVoice = useCallback(
@@ -244,8 +247,8 @@ export default function AiAssistantWidget() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "voice",
+            target_agent: agent,
             audio_base64: audioBase64,
-            session_id: getSessionId(),
             current_page: pathname || "/",
           }),
         },
@@ -253,7 +256,7 @@ export default function AiAssistantWidget() {
         "voice"
       );
     },
-    [pathname, postBridge, t]
+    [agent, pathname, postBridge, t]
   );
 
   const sendFile = useCallback(
@@ -264,12 +267,12 @@ export default function AiAssistantWidget() {
       }
       const form = new FormData();
       form.set("type", "file");
-      form.set("session_id", getSessionId());
+      form.set("target_agent", agent);
       form.set("current_page", pathname || "/");
       form.set("file", file);
       await postBridge({ method: "POST", body: form }, `📎 ${file.name}`, file.name);
     },
-    [pathname, postBridge, t]
+    [agent, pathname, postBridge, t]
   );
 
   const toggleRecording = useCallback(async () => {
@@ -345,9 +348,28 @@ export default function AiAssistantWidget() {
                 <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-app-card-hover text-sky-500">
                   <Bot className="h-5 w-5" />
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h2 className="text-sm font-bold text-app">{t("aiAssistant.title")}</h2>
                   <p className="text-[11px] text-app-muted">{t("aiAssistant.subtitle")}</p>
+                  <label className="mt-2 block">
+                    <span className="sr-only">{t("aiAssistant.selectAgent")}</span>
+                    <select
+                      aria-label={t("aiAssistant.selectAgent")}
+                      value={agent}
+                      onChange={(event) => {
+                        const next = resolveTargetAgent(event.target.value);
+                        setAgent(next);
+                        sessionStorage.setItem(AGENT_KEY, next);
+                      }}
+                      className="app-input mt-1 w-full py-1.5 text-[11px] leading-tight"
+                    >
+                      {ERP_AI_AGENTS.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {formatAgentOption(item)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               </div>
               <button

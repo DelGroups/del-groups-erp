@@ -2077,7 +2077,7 @@ export const azMessages = {
   },
   aiAssistant: {
     title: "AI Köməkçi",
-    subtitle: "n8n agent — mətn, səs və sənəd",
+    subtitle: "Del — ERP əməliyyat və maliyyə köməkçisi",
     placeholder: "Məhsul, müştəri və ya sifariş soruşun...",
     send: "Göndər",
     open: "AI köməkçini aç",
@@ -2097,6 +2097,7 @@ export const azMessages = {
     voiceNote: "Səs mesajı",
     voiceError: "Mikrofona icazə verilmədi və ya səs yazıla bilmədi.",
     fileTooLarge: "Fayl 8 MB-dan kiçik olmalıdır.",
+    selectAgent: "Agent seçin",
   },
   aiSettings: {
     title: "AI İnteqrasiyası",

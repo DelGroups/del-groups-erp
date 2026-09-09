@@ -15,8 +15,8 @@ import {
 import {
   parseN8nWebhookResponse,
   sanitizeCurrentPage,
-  sanitizeSessionId,
 } from "@/lib/ai/n8nClient";
+import { erpAgentSessionId, resolveTargetAgent } from "@/lib/ai/agents";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -143,12 +143,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function switchPayload(
+  userId: string,
+  targetAgent: unknown,
+  content: string,
+  extra?: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    target_agent: resolveTargetAgent(targetAgent),
+    content,
+    session_id: erpAgentSessionId(userId),
+    ...extra,
+  };
+}
+
 async function buildN8nPayload(request: NextRequest, userId: string): Promise<Record<string, unknown>> {
   const contentType = request.headers.get("content-type") || "";
   if (contentType.includes("multipart/form-data")) {
     const form = await request.formData();
     const type = String(form.get("type") || "file");
-    const sessionId = sanitizeSessionId(String(form.get("session_id") || ""));
+    const targetAgent = form.get("target_agent");
     const currentPage = sanitizeCurrentPage(String(form.get("current_page") || "/"));
     const file = form.get("file");
     if (!(file instanceof File) || file.size <= 0) {
@@ -159,31 +173,27 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     }
     if (type === "voice") {
       const audioBase64 = await fileToBase64(file);
-      return {
-        user_id: userId,
+      return switchPayload(userId, targetAgent, "", {
         audio_base64: audioBase64,
-        session_id: sessionId,
-        current_page: currentPage,
         file_type: file.type || "audio/webm",
-      };
+        current_page: currentPage,
+      });
     }
-    return buildFilePayload(userId, sessionId, currentPage, file);
+    return buildFilePayload(userId, targetAgent, currentPage, file);
   }
 
   const body = (await request.json()) as Record<string, unknown>;
   const type = String(body.type || "text");
-  const sessionId = sanitizeSessionId(String(body.session_id || ""));
+  const targetAgent = body.target_agent;
   const currentPage = sanitizeCurrentPage(String(body.current_page || "/"));
 
   if (type === "voice") {
     const audio = clampString(String(body.audio_base64 || ""), Math.ceil(MAX_N8N_FILE_BYTES * 1.4));
     if (!audio) throw new Error("Səs faylı tələb olunur");
-    return {
-      user_id: userId,
+    return switchPayload(userId, targetAgent, "", {
       audio_base64: stripDataUrl(audio),
-      session_id: sessionId,
       current_page: currentPage,
-    };
+    });
   }
 
   if (type === "file") {
@@ -193,29 +203,22 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     const buffer = Buffer.from(stripDataUrl(fileBase64), "base64");
     if (buffer.length > MAX_N8N_FILE_BYTES) throw new Error("Fayl 8 MB-dan kiçik olmalıdır");
     const fileUrl = await uploadAssistantFile(userId, buffer, fileType, "upload");
-    return {
-      user_id: userId,
+    return switchPayload(userId, targetAgent, String(body.content || ""), {
       file_url: fileUrl || "",
       file_type: fileType,
-      session_id: sessionId,
       current_page: currentPage,
       ...(fileUrl ? {} : { file_base64: stripDataUrl(fileBase64) }),
-    };
+    });
   }
 
-  const message = clampString(String(body.message || ""), MAX_N8N_MESSAGE);
-  if (!message) throw new Error("Mesaj tələb olunur");
-  return {
-    user_id: userId,
-    message,
-    session_id: sessionId,
-    current_page: currentPage,
-  };
+  const content = clampString(String(body.content || body.message || ""), MAX_N8N_MESSAGE);
+  if (!content) throw new Error("Mesaj tələb olunur");
+  return switchPayload(userId, targetAgent, content);
 }
 
 async function buildFilePayload(
   userId: string,
-  sessionId: string,
+  targetAgent: unknown,
   currentPage: string,
   file: File
 ): Promise<Record<string, unknown>> {
@@ -226,18 +229,16 @@ async function buildFilePayload(
   }
   const buffer = Buffer.from(await file.arrayBuffer());
   const fileUrl = await uploadAssistantFile(userId, buffer, resolvedType, file.name);
-  const payload: Record<string, unknown> = {
-    user_id: userId,
+  const extra: Record<string, unknown> = {
     file_url: fileUrl || "",
     file_type: resolvedType,
-    session_id: sessionId,
     current_page: currentPage,
     file_name: file.name.slice(0, 120),
   };
   if (!fileUrl) {
-    payload.file_base64 = buffer.toString("base64");
+    extra.file_base64 = buffer.toString("base64");
   }
-  return payload;
+  return switchPayload(userId, targetAgent, file.name.slice(0, 120), extra);
 }
 
 async function uploadAssistantFile(

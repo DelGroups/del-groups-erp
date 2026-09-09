@@ -2079,7 +2079,7 @@ export const ruMessages: Messages = {
   },
   aiAssistant: {
     title: "AI-помощник",
-    subtitle: "n8n агент — текст, голос и файлы",
+    subtitle: "Del — помощник по операциям и финансам ERP",
     placeholder: "Спросите о товаре, клиенте или заказе...",
     send: "Отправить",
     open: "Открыть AI-помощника",
@@ -2099,6 +2099,7 @@ export const ruMessages: Messages = {
     voiceNote: "Голосовое сообщение",
     voiceError: "Нет доступа к микрофону или запись не удалась.",
     fileTooLarge: "Файл должен быть меньше 8 МБ.",
+    selectAgent: "Выберите агента",
   },
   aiSettings: {
     title: "AI-интеграция",
