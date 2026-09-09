@@ -826,6 +826,8 @@ export const PERMISSION_MODULES = [
     permissions: [
       { key: "can_view_production", label: "İstehsalatı görmək" },
       { key: "can_manage_production", label: "İstehsalatı idarə etmək" },
+      { key: "can_view_production_financials", label: "Maliyyə məlumatlarını görmək" },
+      { key: "can_approve_purchase_requests", label: "Satın alma tələbi təsdiqləmək" },
     ],
   },
   {
@@ -883,6 +885,14 @@ export type PermissionKey =
 
 export type PermissionMap = Partial<Record<PermissionKey, boolean>>;
 
+export type RecordAccessScope = "OWN_ONLY" | "ALL_RECORDS";
+
+export type RoleScopes = {
+  allowed_warehouses: string[];
+  allowed_financial_accounts: string[];
+  record_access: RecordAccessScope;
+};
+
 /** Role name that bypasses the "own documents only" constraint. */
 export const ADMIN_ROLE_NAME = "Admin";
 
@@ -891,6 +901,7 @@ export interface Role {
   name: string;
   description: string | null;
   permissions: PermissionMap;
+  scopes: RoleScopes;
   is_system: boolean;
   created_at: string;
 }
@@ -898,7 +909,8 @@ export interface Role {
 export type RoleInsert = {
   name: string;
   description?: string | null;
-  permissions: PermissionMap;
+  permissions: PermissionMap | Record<string, unknown>;
+  scopes?: RoleScopes;
   is_system?: boolean;
   created_at?: string;
 };
@@ -909,6 +921,7 @@ export type RoleDbRow = {
   name: string;
   description: string | null;
   permissions: Json;
+  scopes?: Json;
   is_system: boolean;
   created_at: string;
 };
@@ -932,6 +945,8 @@ export interface ProfileRow {
   employee_id: string | null;
   is_active: boolean | null;
   locale?: string | null;
+  permission_overrides?: Json | null;
+  scope_overrides?: Json | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -954,6 +969,8 @@ export type ProfileUpdate = Partial<Omit<ProfileInsert, "id">>;
 export interface UserProfile extends Omit<ProfileRow, "is_active"> {
   is_active: boolean;
   role: Role | null;
+  permission_overrides?: Record<string, unknown> | null;
+  scope_overrides?: RoleScopes | null;
 }
 
 export function allPermissionKeys(): PermissionKey[] {
@@ -971,8 +988,23 @@ export function createPermissionMap(value: boolean): PermissionMap {
 export function normalizePermissions(raw: unknown): PermissionMap {
   const source = (raw ?? {}) as Record<string, unknown>;
   const map: PermissionMap = {};
-  for (const key of allPermissionKeys()) map[key] = source[key] === true;
+  for (const key of allPermissionKeys()) {
+    map[key] = source[key] === true;
+  }
   return map;
+}
+
+export function normalizeRoleScopes(raw: unknown): RoleScopes {
+  const source = (raw ?? {}) as Record<string, unknown>;
+  return {
+    allowed_warehouses: Array.isArray(source.allowed_warehouses)
+      ? source.allowed_warehouses.map(String).filter(Boolean)
+      : [],
+    allowed_financial_accounts: Array.isArray(source.allowed_financial_accounts)
+      ? source.allowed_financial_accounts.map(String).filter(Boolean)
+      : [],
+    record_access: source.record_access === "OWN_ONLY" ? "OWN_ONLY" : "ALL_RECORDS",
+  };
 }
 
 export function normalizeRole(row: Record<string, unknown>): Role {
@@ -981,6 +1013,7 @@ export function normalizeRole(row: Record<string, unknown>): Role {
     name: (row.name as string) || "",
     description: (row.description as string) ?? null,
     permissions: normalizePermissions(row.permissions),
+    scopes: normalizeRoleScopes(row.scopes),
     is_system: row.is_system === true,
     created_at: typeof row.created_at === "string" ? row.created_at : "",
   };

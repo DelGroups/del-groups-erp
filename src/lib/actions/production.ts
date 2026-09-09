@@ -4,6 +4,12 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { isValidUuid } from "@/lib/auth/validate";
 import { userHasPermission } from "@/lib/auth/routePermissions";
+import {
+  filterAccountsByScope,
+  filterWarehousesByScope,
+  resolveEffectiveAccess,
+} from "@/lib/auth/permissionMatrix";
+import { fetchUserProfile } from "@/lib/auth/profile";
 import { createSupabaseServerClient, getServerAuthContext } from "@/lib/supabaseServer";
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
 import { DEFAULT_CONTRACT_TERMS_AZ } from "@/lib/production/constants";
@@ -921,7 +927,10 @@ export async function fetchProductionLookupsAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_production");
+    const { user } = await getServerAuthContext();
     const admin = createSupabaseAdminClient();
+    const profile = user ? await fetchUserProfile(admin, user.id) : null;
+    const access = resolveEffectiveAccess(profile);
     const [customers, products, warehouses, suppliers, employees, accounts, bomsRes, expenseCategories, productionParties] =
       await Promise.all([
       admin.from("customers").select("id,full_name,name,company_name").order("full_name").limit(250),
@@ -964,15 +973,24 @@ export async function fetchProductionLookupsAction(): Promise<
       employeeRows = fallback.data;
     }
 
+    const warehouseRows = filterWarehousesByScope(
+      ((warehouses.data as Warehouse[]) || []),
+      access.scopes
+    );
+    const accountRows = filterAccountsByScope(
+      ((accounts.data || []) as ProductionLookups["accounts"]),
+      access.scopes
+    );
+
     return {
       success: true,
       data: {
         customers: (customers.data as Customer[]) || [],
         products: (products.data as Product[]) || [],
-        warehouses: (warehouses.data as Warehouse[]) || [],
+        warehouses: warehouseRows,
         suppliers: (suppliers.data as Supplier[]) || [],
         employees: ((employeeRows || []) as Record<string, unknown>[]).map(normalizeEmployee),
-        accounts: ((accounts.data || []) as ProductionLookups["accounts"]),
+        accounts: accountRows,
         boms: bomRows.map((row) => ({
           id: String(row.id),
           finished_product_id: String(row.finished_product_id),

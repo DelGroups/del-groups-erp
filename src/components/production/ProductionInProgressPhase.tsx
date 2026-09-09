@@ -16,7 +16,7 @@ import {
   type WarehouseProductOption,
 } from "@/lib/actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   calcProductionCosting,
   mergeProductionOrder,
@@ -91,7 +91,8 @@ export default function ProductionInProgressPhase({
   onUpdated,
 }: Props) {
   const { t } = useI18n();
-  const { isAdmin } = useAuth();
+  const { canViewProductionFinancials } = usePermissions();
+  const showFinancials = canViewProductionFinancials();
   const currency = t("common.currency");
   const [tab, setTab] = useState<WorkflowTab>("materials");
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
@@ -444,8 +445,8 @@ export default function ProductionInProgressPhase({
     order.outsourcing.reduce((sum, row) => sum + row.total_cost, 0);
 
   const visibleTabs = useMemo(
-    () => (isAdmin ? (["materials", "services", "payments"] as WorkflowTab[]) : (["materials", "services"] as WorkflowTab[])),
-    [isAdmin]
+    () => (showFinancials ? (["materials", "services", "payments"] as WorkflowTab[]) : (["materials", "services"] as WorkflowTab[])),
+    [showFinancials]
   );
 
   useEffect(() => {
@@ -454,7 +455,7 @@ export default function ProductionInProgressPhase({
 
   return (
     <div className="space-y-4">
-      {isAdmin ? (
+      {showFinancials ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             label={t("production.workflow.projectBudget")}
@@ -554,7 +555,7 @@ export default function ProductionInProgressPhase({
               </p>
             ) : null}
 
-            <div className={`mt-3 grid gap-3 ${isAdmin ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+            <div className={`mt-3 grid gap-3 ${showFinancials ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
               <label className="block text-sm">
                 <span className="text-app-muted">{t("forms.quantity")}</span>
                 <input
@@ -567,7 +568,7 @@ export default function ProductionInProgressPhase({
                   disabled={!materialSelection?.productId}
                 />
               </label>
-              {isAdmin ? (
+              {showFinancials ? (
                 <>
                   <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-app-muted">
@@ -663,7 +664,7 @@ export default function ProductionInProgressPhase({
                   <th className="px-3 py-2">{t("forms.selectProduct")}</th>
                   <th className="px-3 py-2">{t("production.warehouse")}</th>
                   <th className="px-3 py-2 text-right">{t("forms.quantity")}</th>
-                  {isAdmin ? (
+                  {showFinancials ? (
                     <>
                       <th className="px-3 py-2 text-right">{t("production.unitCost")}</th>
                       <th className="px-3 py-2 text-right">{t("forms.lineTotal")}</th>
@@ -675,7 +676,7 @@ export default function ProductionInProgressPhase({
               <tbody>
                 {order.materials.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 7 : 5} className="px-3 py-6 text-center text-app-muted">
+                    <td colSpan={showFinancials ? 7 : 5} className="px-3 py-6 text-center text-app-muted">
                       {t("common.noData")}
                     </td>
                   </tr>
@@ -692,7 +693,7 @@ export default function ProductionInProgressPhase({
                       <td className="px-3 py-2 text-right">
                         {row.quantity} {row.unit}
                       </td>
-                      {isAdmin ? (
+                      {showFinancials ? (
                         <>
                           <td className="px-3 py-2 text-right">{rowUnitCost.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right font-semibold">{rowLineTotal.toFixed(2)}</td>
@@ -865,7 +866,7 @@ export default function ProductionInProgressPhase({
         </div>
       ) : null}
 
-      {tab === "payments" && isAdmin ? (
+      {tab === "payments" && showFinancials ? (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <SummaryCard

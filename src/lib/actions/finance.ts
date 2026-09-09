@@ -8,7 +8,7 @@ import {
   requirePermissionAction,
   type ActionAuthContext,
 } from "@/lib/auth/serverActionAuth";
-import { userHasPermission } from "@/lib/auth/routePermissions";
+import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import { getServerAuthContext } from "@/lib/supabaseServer";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import {
@@ -50,8 +50,8 @@ async function requireFinanceOrExpenseManageAction(): Promise<ActionAuthContext>
     throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
   }
   if (
-    userHasPermission(profile, "can_manage_finance") ||
-    userHasPermission(profile, "can_manage_expenses")
+    userHasLegacyPermission(profile, "can_manage_finance") ||
+    userHasLegacyPermission(profile, "can_manage_expenses")
   ) {
     return { user, profile };
   }

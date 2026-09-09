@@ -1,11 +1,13 @@
+import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import {
   ADMIN_ROLE_NAME,
-  hasPermission,
   isAdminRole,
+  normalizePermissions,
+  normalizeRoleScopes,
   type PermissionKey,
   type PermissionMap,
+  type RoleScopes,
   type UserProfile,
-  normalizePermissions,
 } from "@/types/database.types";
 
 /** Longest-prefix-first route rules for page access. */
@@ -98,27 +100,9 @@ export function getNavItemPermission(path: string): PermissionKey | null {
 export function userHasPermission(
   profile: UserProfile | null | undefined,
   permission: PermissionKey,
-  permissions?: PermissionMap | null
+  _permissions?: PermissionMap | null
 ): boolean {
-  if (isAdminRole(profile?.role)) return true;
-  const map = permissions ?? profile?.role?.permissions;
-  if (hasPermission(map, permission)) return true;
-
-  // Roles saved before these modules existed have no JSON keys for them.
-  if (permission === "can_view_production") {
-    return hasPermission(map, "can_view_products");
-  }
-  if (permission === "can_manage_production") {
-    return hasPermission(map, "can_manage_products");
-  }
-  if (permission === "can_view_consignments") {
-    return hasPermission(map, "can_view_sales");
-  }
-  if (permission === "can_manage_consignments") {
-    return hasPermission(map, "can_create_invoice");
-  }
-
-  return false;
+  return userHasLegacyPermission(profile, permission);
 }
 
 export function userCanAccessPath(
@@ -138,14 +122,21 @@ export function displayRoleName(name: string | null | undefined): string {
 export function parseJoinedRole(roles: unknown): {
   name: string;
   permissions: PermissionMap;
+  scopes: RoleScopes;
   isAdmin: boolean;
 } {
   const row = Array.isArray(roles) ? roles[0] : roles;
-  const source = row as { name?: string | null; permissions?: unknown } | null | undefined;
+  const source = row as
+    | { name?: string | null; permissions?: unknown; scopes?: unknown }
+    | null
+    | undefined;
   const name = source?.name?.trim() || "";
   return {
     name,
     permissions: normalizePermissions(source?.permissions),
+    scopes: normalizeRoleScopes(source?.scopes),
     isAdmin: name === ADMIN_ROLE_NAME,
   };
 }
+
+export { isAdminRole };

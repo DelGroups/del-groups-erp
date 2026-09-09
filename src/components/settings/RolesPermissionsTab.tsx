@@ -14,49 +14,45 @@ import { supabase } from "@/lib/supabase";
 import { fetchRoles } from "@/lib/auth/profile";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import {
-  PERMISSION_MODULES,
-  createPermissionMap,
-  normalizePermissions,
-  type Json,
-  type PermissionKey,
-  type PermissionMap,
-  type Role,
-} from "@/types/database.types";
+import GranularPermissionEditor from "@/components/settings/GranularPermissionEditor";
+import { fetchRbacLookupsAction } from "@/lib/actions/rbac";
+import { countGrantedInMatrix, createEmptyMatrix, DEFAULT_ROLE_SCOPES, parseStoredPermissions, permissionsToDbPayload, type PermissionMatrix } from "@/lib/auth/permissionMatrix";
+import { type Json, type Role, type RoleScopes } from "@/types/database.types";
 
 interface RoleDraft {
   name: string;
   description: string;
-  permissions: PermissionMap;
+  matrix: PermissionMatrix;
+  scopes: RoleScopes;
 }
 
 function toDraft(role: Role): RoleDraft {
+  const parsed = parseStoredPermissions(role.permissions);
   return {
     name: role.name,
     description: role.description || "",
-    permissions: { ...role.permissions },
+    matrix: parsed.matrix,
+    scopes: role.scopes || DEFAULT_ROLE_SCOPES,
   };
-}
-
-function countGranted(permissions: PermissionMap): number {
-  return Object.values(permissions).filter(Boolean).length;
 }
 
 export default function RolesPermissionsTab() {
   const { refresh: refreshAuth } = useAuth();
   const { t } = useI18n();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string }>>([]);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [draft, setDraft] = useState<RoleDraft>({
     name: "",
     description: "",
-    permissions: createPermissionMap(false),
+    matrix: createEmptyMatrix(),
+    scopes: DEFAULT_ROLE_SCOPES,
   });
 
   const selectedRole = useMemo(
@@ -68,8 +64,15 @@ export default function RolesPermissionsTab() {
     setLoading(true);
     setError("");
     try {
-      const rows = await fetchRoles(supabase);
+      const [rows, lookups] = await Promise.all([
+        fetchRoles(supabase),
+        fetchRbacLookupsAction(),
+      ]);
       setRoles(rows);
+      if (lookups.success && lookups.data) {
+        setWarehouses(lookups.data.warehouses);
+        setAccounts(lookups.data.accounts);
+      }
       const target = selectId
         ? rows.find((role) => role.id === selectId)
         : rows.find((role) => role.id === selectedRoleId) ?? rows[0];
@@ -104,27 +107,13 @@ export default function RolesPermissionsTab() {
   const startCreating = () => {
     setIsCreating(true);
     setSelectedRoleId(null);
-    setDraft({ name: "", description: "", permissions: createPermissionMap(false) });
-    setError("");
-  };
-
-  const togglePermission = (key: PermissionKey) => {
-    setDraft((prev) => ({
-      ...prev,
-      permissions: { ...prev.permissions, [key]: !prev.permissions[key] },
-    }));
-  };
-
-  const toggleModule = (moduleKeys: PermissionKey[], value: boolean) => {
-    setDraft((prev) => {
-      const next = { ...prev.permissions };
-      for (const key of moduleKeys) next[key] = value;
-      return { ...prev, permissions: next };
+    setDraft({
+      name: "",
+      description: "",
+      matrix: createEmptyMatrix(),
+      scopes: DEFAULT_ROLE_SCOPES,
     });
-  };
-
-  const setAll = (value: boolean) => {
-    setDraft((prev) => ({ ...prev, permissions: createPermissionMap(value) }));
+    setError("");
   };
 
   const handleSave = async () => {
@@ -136,7 +125,7 @@ export default function RolesPermissionsTab() {
 
     setSaving(true);
     setError("");
-    const permissions = normalizePermissions(draft.permissions);
+    const payload = permissionsToDbPayload(draft.matrix);
 
     if (isCreating) {
       const { data, error: insertError } = await supabase
@@ -145,7 +134,8 @@ export default function RolesPermissionsTab() {
           {
             name,
             description: draft.description.trim() || null,
-            permissions: permissions as Json,
+            permissions: payload as Json,
+            scopes: draft.scopes as Json,
           },
         ])
         .select("id")
@@ -171,7 +161,8 @@ export default function RolesPermissionsTab() {
       .update({
         name,
         description: draft.description.trim() || null,
-        permissions: permissions as Json,
+        permissions: payload as Json,
+        scopes: draft.scopes as Json,
       })
       .eq("id", selectedRole.id);
 
@@ -187,15 +178,9 @@ export default function RolesPermissionsTab() {
 
   const handleDelete = async () => {
     if (!selectedRole || selectedRole.is_system) return;
-    if (!confirm(t("settings.deleteRoleConfirm", { name: selectedRole.name }))) {
-      return;
-    }
+    if (!confirm(t("settings.deleteRoleConfirm", { name: selectedRole.name }))) return;
 
-    const { error: deleteError } = await supabase
-      .from("roles")
-      .delete()
-      .eq("id", selectedRole.id);
-
+    const { error: deleteError } = await supabase.from("roles").delete().eq("id", selectedRole.id);
     if (deleteError) {
       setError(deleteError.message);
       return;
@@ -206,22 +191,22 @@ export default function RolesPermissionsTab() {
   };
 
   const editingSystemAdmin = !isCreating && selectedRole?.name === "Admin";
+  const grantedCount = countGrantedInMatrix(draft.matrix);
 
   return (
     <div className="space-y-4 p-6">
-      {successMsg && (
-        <div className="flex items-center gap-2 rounded-xl alert-success rounded-xl p-4 text-xs font-bold">
+      {successMsg ? (
+        <div className="flex items-center gap-2 rounded-xl alert-success p-4 text-xs font-bold">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           {successMsg}
         </div>
-      )}
-
-      {error && (
-        <div className="flex items-start gap-2 rounded-xl alert-danger rounded-xl p-4 text-xs font-bold">
+      ) : null}
+      {error ? (
+        <div className="flex items-start gap-2 rounded-xl alert-danger p-4 text-xs font-bold">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
           {error}
         </div>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
         <div className="app-card space-y-2 p-4">
@@ -250,14 +235,18 @@ export default function RolesPermissionsTab() {
                 >
                   <span className="flex items-center gap-1.5 text-xs font-semibold">
                     {role.name}
-                    {role.is_system && <Lock className="h-3 w-3 opacity-70" />}
+                    {role.is_system ? <Lock className="h-3 w-3 opacity-70" /> : null}
                   </span>
                   <span
                     className={`text-[10px] ${
                       role.id === selectedRoleId ? "text-blue-100" : "text-app-muted"
                     }`}
                   >
-                    {t("settings.permissionCount", { count: countGranted(role.permissions) })}
+                    {t("settings.permissionCount", {
+                      count: countGrantedInMatrix(
+                        parseStoredPermissions(role.permissions).matrix
+                      ),
+                    })}
                   </span>
                 </button>
               ))}
@@ -280,9 +269,7 @@ export default function RolesPermissionsTab() {
 
         <div className="app-card space-y-4 p-5">
           {!isCreating && !selectedRole ? (
-            <p className="py-12 text-center text-xs text-app-muted">
-              {t("settings.selectRoleHint")}
-            </p>
+            <p className="py-12 text-center text-xs text-app-muted">{t("settings.selectRoleHint")}</p>
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4 border-b border-app pb-4 md:grid-cols-2">
@@ -311,79 +298,29 @@ export default function RolesPermissionsTab() {
                 </label>
               </div>
 
-              {editingSystemAdmin && (
+              {editingSystemAdmin ? (
                 <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-semibold text-amber-800">
                   <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
                   {t("settings.adminRoleNotice")}
                 </div>
-              )}
+              ) : null}
 
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">
-                  {t("settings.permissionPoints", { count: countGranted(draft.permissions) })}
-                </p>
-                <div className="flex gap-2 text-[11px] font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setAll(true)}
-                    className="rounded-lg border border-app px-2.5 py-1 text-app-muted hover:bg-app-card-hover"
-                  >
-                    {t("settings.selectAll")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAll(false)}
-                    className="rounded-lg border border-app px-2.5 py-1 text-app-muted hover:bg-app-card-hover"
-                  >
-                    {t("settings.resetAll")}
-                  </button>
-                </div>
-              </div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">
+                {t("settings.permissionPoints", { count: grantedCount })}
+              </p>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {PERMISSION_MODULES.map((module) => {
-                  const moduleKeys = module.permissions.map(
-                    (perm) => perm.key as PermissionKey
-                  );
-                  const allChecked = moduleKeys.every((key) => draft.permissions[key]);
-                  return (
-                    <div
-                      key={module.id}
-                      className="space-y-2 rounded-xl border border-app bg-app-card-hover p-3"
-                    >
-                      <div className="flex items-center justify-between border-b border-app pb-1.5">
-                        <h3 className="text-[11px] font-bold uppercase tracking-wide text-app">
-                          {module.title}
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={() => toggleModule(moduleKeys, !allChecked)}
-                          className="text-[10px] font-bold text-app-accent hover:underline"
-                        >
-                          {allChecked ? t("settings.resetModule") : t("settings.selectModule")}
-                        </button>
-                      </div>
-                      {module.permissions.map((perm) => (
-                        <label
-                          key={perm.key}
-                          className="flex cursor-pointer items-start gap-2 text-[11px] font-medium text-app"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!draft.permissions[perm.key as PermissionKey]}
-                            onChange={() => togglePermission(perm.key as PermissionKey)}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-app text-app-accent focus:ring-[color:var(--app-accent-ring)]"
-                          />
-                          <span>{perm.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
+              <GranularPermissionEditor
+                matrix={draft.matrix}
+                scopes={draft.scopes}
+                warehouses={warehouses}
+                accounts={accounts}
+                disabled={editingSystemAdmin}
+                onMatrixChange={(matrix) => setDraft((prev) => ({ ...prev, matrix }))}
+                onScopesChange={(scopes) => setDraft((prev) => ({ ...prev, scopes }))}
+              />
 
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-app pt-4">
-                {selectedRole && !selectedRole.is_system && (
+                {selectedRole && !selectedRole.is_system ? (
                   <button
                     type="button"
                     onClick={() => void handleDelete()}
@@ -392,11 +329,11 @@ export default function RolesPermissionsTab() {
                     <Trash2 className="h-4 w-4" />
                     {t("settings.deleteRole")}
                   </button>
-                )}
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={saving}
+                  disabled={saving || editingSystemAdmin}
                   className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-6 py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" />

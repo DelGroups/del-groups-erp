@@ -1,24 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   normalizeRole,
+  normalizeRoleScopes,
   type Database,
   type Role,
   type UserProfile,
 } from "@/types/database.types";
+import { parseStoredPermissions } from "@/lib/auth/permissionMatrix";
 import { resolveLocale } from "@/i18n/types";
 import { displayRoleName, parseJoinedRole } from "@/lib/auth/routePermissions";
 
-export const PROFILE_SELECT = "*, roles(name, permissions)";
+export const PROFILE_SELECT = "*, roles(name, permissions, scopes)";
 
 export type ProfileQueryRow = Record<string, unknown> & {
   roles?:
-    | { name?: string | null; permissions?: unknown }
-    | { name?: string | null; permissions?: unknown }[]
+    | { name?: string | null; permissions?: unknown; scopes?: unknown }
+    | { name?: string | null; permissions?: unknown; scopes?: unknown }[]
     | null;
+  permission_overrides?: unknown;
+  scope_overrides?: unknown;
 };
 
 export function toUserProfile(row: ProfileQueryRow): UserProfile {
   const joined = parseJoinedRole(row.roles);
+  const parsed = parseStoredPermissions(joined.permissions);
   return {
     id: row.id as string,
     email: (row.email as string) ?? null,
@@ -29,11 +34,14 @@ export function toUserProfile(row: ProfileQueryRow): UserProfile {
     locale: resolveLocale(typeof row.locale === "string" ? row.locale : null),
     created_at: (row.created_at as string) ?? null,
     updated_at: (row.updated_at as string) ?? null,
+    permission_overrides: (row.permission_overrides as Record<string, unknown>) ?? null,
+    scope_overrides: normalizeRoleScopes(row.scope_overrides),
     role: {
       id: (row.role_id as string) ?? "",
       name: joined.name,
       description: null,
-      permissions: joined.permissions,
+      permissions: parsed.flat,
+      scopes: joined.scopes,
       is_system: joined.isAdmin,
       created_at: typeof row.created_at === "string" ? row.created_at : "",
     },
