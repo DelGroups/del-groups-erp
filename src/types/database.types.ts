@@ -1125,7 +1125,12 @@ export interface ProjectProfitabilityRow {
   laborCost: number;
   generalExpenses: number;
   grossProfit: number;
+  netProfit: number;
   marginPercent: number;
+  estimatedProfit: number;
+  actualProfit: number;
+  estimatedMarginPercent: number;
+  actualMarginPercent: number;
 }
 
 export interface CashFlowDayPoint {
@@ -1134,6 +1139,7 @@ export interface CashFlowDayPoint {
   inflows: number;
   outflows: number;
   net: number;
+  balance: number;
 }
 
 export interface MaterialUsageRow {
@@ -1146,6 +1152,7 @@ export interface MaterialUsageRow {
   stock: number;
   minStock: number;
   belowMin: boolean;
+  daysIdle?: number;
 }
 
 export interface ExecutiveDashboardData {
@@ -1155,9 +1162,12 @@ export interface ExecutiveDashboardData {
     totalInflows: number;
     totalOutflows: number;
     netPosition: number;
+    openingCash: number;
+    closingCash: number;
   };
   topMaterials: MaterialUsageRow[];
   deficitAlerts: MaterialUsageRow[];
+  deadstock: MaterialUsageRow[];
 }
 
 export interface TopSellingProduct {

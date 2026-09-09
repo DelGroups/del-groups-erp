@@ -21,9 +21,16 @@ import { useI18n } from "@/i18n/I18nProvider";
 const emptyDashboard: ExecutiveDashboardData = {
   projectProfitability: [],
   cashFlowForecast: [],
-  cashFlowSummary: { totalInflows: 0, totalOutflows: 0, netPosition: 0 },
+  cashFlowSummary: {
+    totalInflows: 0,
+    totalOutflows: 0,
+    netPosition: 0,
+    openingCash: 0,
+    closingCash: 0,
+  },
   topMaterials: [],
   deficitAlerts: [],
+  deadstock: [],
 };
 
 export default function ReportsHubPage() {
@@ -91,16 +98,17 @@ export default function ReportsHubPage() {
           </div>
         ) : (
           <>
+            <ProjectProfitabilitySection rows={data.projectProfitability} />
+
             <CashFlowForecastChart
               data={data.cashFlowForecast}
               summary={data.cashFlowSummary}
             />
 
-            <ProjectProfitabilitySection rows={data.projectProfitability} />
-
             <InventoryInsightsSection
               topMaterials={data.topMaterials}
               deficitAlerts={data.deficitAlerts}
+              deadstock={data.deadstock}
             />
           </>
         )}

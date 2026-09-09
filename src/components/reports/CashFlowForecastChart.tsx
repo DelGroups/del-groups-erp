@@ -2,11 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Bar,
   CartesianGrid,
-  ComposedChart,
   Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +21,8 @@ interface CashFlowForecastChartProps {
     totalInflows: number;
     totalOutflows: number;
     netPosition: number;
+    openingCash: number;
+    closingCash: number;
   };
 }
 
@@ -42,7 +43,7 @@ export default function CashFlowForecastChart({ data, summary }: CashFlowForecas
     text: "#f1f5f9",
     inflow: "#10b981",
     outflow: "#f43f5e",
-    net: "#6366f1",
+    balance: "#6366f1",
   });
 
   useEffect(() => {
@@ -54,13 +55,11 @@ export default function CashFlowForecastChart({ data, summary }: CashFlowForecas
       text: readCssColor("--app-text", "#f1f5f9"),
       inflow: readCssColor("--app-success-text", "#10b981"),
       outflow: "#f43f5e",
-      net: readCssColor("--app-accent", "#6366f1"),
+      balance: readCssColor("--app-accent", "#6366f1"),
     });
   }, [theme]);
 
   const formatAzn = (value: number) => `${value.toFixed(0)} ${t("common.currency")}`;
-
-  const chartData = data.filter((_, idx) => idx % 3 === 0 || idx === data.length - 1);
 
   return (
     <div className="app-card app-card-elevated p-5">
@@ -70,15 +69,16 @@ export default function CashFlowForecastChart({ data, summary }: CashFlowForecas
           <p className="text-[11px] text-app-muted">{t("reports.executive.cashFlowSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-3 text-xs">
+          <SummaryPill label={t("reports.executive.openingCash")} value={formatAzn(summary.openingCash)} tone="accent" />
           <SummaryPill label={t("reports.executive.inflows")} value={formatAzn(summary.totalInflows)} tone="success" />
           <SummaryPill label={t("reports.executive.outflows")} value={formatAzn(summary.totalOutflows)} tone="danger" />
-          <SummaryPill label={t("reports.executive.netPosition")} value={formatAzn(summary.netPosition)} tone="accent" />
+          <SummaryPill label={t("reports.executive.closingCash")} value={formatAzn(summary.closingCash)} tone="accent" />
         </div>
       </div>
 
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: colors.muted }} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 10, fill: colors.muted }} tickFormatter={(v) => `${v}`} />
@@ -93,17 +93,33 @@ export default function CashFlowForecastChart({ data, summary }: CashFlowForecas
               }}
             />
             <Legend wrapperStyle={{ fontSize: "12px", color: colors.muted }} />
-            <Bar dataKey="inflows" name={t("reports.executive.inflows")} fill={colors.inflow} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="outflows" name={t("reports.executive.outflows")} fill={colors.outflow} radius={[4, 4, 0, 0]} />
             <Line
               type="monotone"
-              dataKey="net"
-              name={t("reports.executive.dailyNet")}
-              stroke={colors.net}
-              strokeWidth={2}
+              dataKey="balance"
+              name={t("reports.executive.projectedBalance")}
+              stroke={colors.balance}
+              strokeWidth={2.5}
               dot={false}
             />
-          </ComposedChart>
+            <Line
+              type="monotone"
+              dataKey="inflows"
+              name={t("reports.executive.inflows")}
+              stroke={colors.inflow}
+              strokeWidth={1.5}
+              dot={false}
+              strokeDasharray="4 4"
+            />
+            <Line
+              type="monotone"
+              dataKey="outflows"
+              name={t("reports.executive.outflows")}
+              stroke={colors.outflow}
+              strokeWidth={1.5}
+              dot={false}
+              strokeDasharray="4 4"
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>

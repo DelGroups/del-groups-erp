@@ -1,23 +1,25 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Package } from "lucide-react";
+import { AlertTriangle, Archive, Package } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { MaterialUsageRow } from "@/types/database.types";
 
 interface InventoryInsightsSectionProps {
   topMaterials: MaterialUsageRow[];
   deficitAlerts: MaterialUsageRow[];
+  deadstock: MaterialUsageRow[];
 }
 
 export default function InventoryInsightsSection({
   topMaterials,
   deficitAlerts,
+  deadstock,
 }: InventoryInsightsSectionProps) {
   const { t } = useI18n();
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
       <div className="app-card app-card-elevated p-5">
         <div className="mb-4">
           <h3 className="flex items-center gap-2 text-sm font-bold text-app">
@@ -51,6 +53,41 @@ export default function InventoryInsightsSection({
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      <div className="app-card app-card-elevated p-5">
+        <div className="mb-4">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-app">
+            <Archive className="h-4 w-4 text-sky-500" />
+            {t("reports.executive.deadstockTitle")}
+          </h3>
+          <p className="text-[11px] text-app-muted">{t("reports.executive.deadstockSubtitle")}</p>
+        </div>
+        {deadstock.length === 0 ? (
+          <p className="py-6 text-center text-xs text-emerald-600">{t("reports.executive.noDeadstock")}</p>
+        ) : (
+          <div className="space-y-2">
+            {deadstock.map((row) => (
+              <div
+                key={row.productId}
+                className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-500/10 px-3 py-2.5"
+              >
+                <div>
+                  <p className="font-mono text-[11px] font-bold text-sky-800">{row.code}</p>
+                  <p className="text-sm font-semibold text-app">{row.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-sm font-bold text-app">
+                    {row.stock.toFixed(2)} {row.unit}
+                  </p>
+                  <p className="text-[10px] text-app-muted">
+                    {t("reports.executive.daysIdle")}: {row.daysIdle ?? 90}+
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

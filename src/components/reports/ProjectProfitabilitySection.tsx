@@ -1,115 +1,179 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Factory } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import type { ProjectProfitabilityRow } from "@/types/database.types";
 
 interface ProjectProfitabilitySectionProps {
   rows: ProjectProfitabilityRow[];
 }
 
-function marginBarColor(margin: number): string {
-  if (margin < 0) return "bg-rose-500";
-  if (margin < 15) return "bg-amber-500";
-  return "bg-emerald-500";
+function readCssColor(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function money(value: number, currency: string): string {
+  return `${value.toFixed(2)} ${currency}`;
 }
 
 export default function ProjectProfitabilitySection({ rows }: ProjectProfitabilitySectionProps) {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const currency = t("common.currency");
+  const [colors, setColors] = useState({
+    grid: "#334155",
+    muted: "#94a3b8",
+    border: "rgba(255,255,255,0.1)",
+    card: "#1e293b",
+    text: "#f1f5f9",
+    estimated: "#6366f1",
+    actual: "#10b981",
+  });
+
+  useEffect(() => {
+    setColors({
+      grid: readCssColor("--app-border", "#334155"),
+      muted: readCssColor("--app-text-muted", "#94a3b8"),
+      border: readCssColor("--app-border", "rgba(255,255,255,0.1)"),
+      card: readCssColor("--app-card", "#1e293b"),
+      text: readCssColor("--app-text", "#f1f5f9"),
+      estimated: readCssColor("--app-accent", "#6366f1"),
+      actual: readCssColor("--app-success-text", "#10b981"),
+    });
+  }, [theme]);
+
+  const chartData = useMemo(
+    () =>
+      rows.slice(0, 12).map((row) => ({
+        name: row.orderNo.length > 10 ? row.orderNo.slice(-8) : row.orderNo,
+        estimated: Math.round(row.estimatedProfit),
+        actual: Math.round(row.actualProfit),
+      })),
+    [rows]
+  );
 
   return (
     <div className="app-card app-card-elevated p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-bold text-app">
-            <Factory className="h-4 w-4 text-app-accent" />
-            {t("reports.executive.profitabilityTitle")}
-          </h3>
-          <p className="text-[11px] text-app-muted">{t("reports.executive.profitabilitySubtitle")}</p>
-        </div>
+      <div className="mb-4">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-app">
+          <Factory className="h-4 w-4 text-app-accent" />
+          {t("reports.executive.profitabilityTitle")}
+        </h3>
+        <p className="text-[11px] text-app-muted">{t("reports.executive.profitabilitySubtitle")}</p>
       </div>
 
       {rows.length === 0 ? (
         <p className="py-8 text-center text-xs text-app-muted">{t("reports.executive.noProjects")}</p>
       ) : (
-        <div className="space-y-3">
-          {rows.slice(0, 12).map((row) => {
-            const clampedMargin = Math.max(-100, Math.min(100, row.marginPercent));
-            const barWidth = Math.abs(clampedMargin);
+        <div className="space-y-5">
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: colors.muted }} interval={0} />
+                <YAxis tick={{ fontSize: 10, fill: colors.muted }} />
+                <Tooltip
+                  formatter={(value) => money(Number(value ?? 0), currency)}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: colors.card,
+                    color: colors.text,
+                    fontSize: "12px",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px", color: colors.muted }} />
+                <Bar
+                  dataKey="estimated"
+                  name={t("reports.executive.estimatedProfit")}
+                  fill={colors.estimated}
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="actual"
+                  name={t("reports.executive.actualProfit")}
+                  fill={colors.actual}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-            return (
-              <div
-                key={row.orderId}
-                className="rounded-xl border border-app bg-app-card-hover p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <Link
-                      href={`/production/${row.orderId}`}
-                      className="font-mono text-xs font-bold text-app-accent hover:underline"
-                    >
-                      {row.orderNo}
-                    </Link>
-                    <p className="mt-0.5 text-sm font-semibold text-app">{row.customerName}</p>
-                    <p className="text-[10px] text-app-muted">{row.status}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase text-app-muted">
-                      {t("reports.executive.grossMargin")}
-                    </p>
-                    <p
-                      className={`font-mono text-lg font-bold ${
-                        row.marginPercent < 0 ? "text-rose-600" : "text-emerald-600"
+          <div className="app-table-wrap">
+            <table className="app-table text-xs">
+              <thead className="border-b border-app bg-app-card-hover text-[10px] uppercase text-app-muted">
+                <tr>
+                  <th className="px-3 py-2 font-bold">{t("reports.executive.orderNo")}</th>
+                  <th className="px-3 py-2 font-bold">{t("reports.executive.customer")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.netRevenue")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.rawMaterial")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.labor")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.generalExpenses")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.estimatedProfit")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.netProfit")}</th>
+                  <th className="px-3 py-2 text-right font-bold">{t("reports.executive.actualMargin")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-app">
+                {rows.map((row) => (
+                  <tr key={row.orderId} className="hover:bg-app-card-hover">
+                    <td className="px-3 py-2">
+                      <Link
+                        href={`/production/${row.orderId}`}
+                        className="font-mono font-bold text-app-accent hover:underline"
+                      >
+                        {row.orderNo}
+                      </Link>
+                      <p className="text-[10px] text-app-muted">{row.status}</p>
+                    </td>
+                    <td className="px-3 py-2 font-semibold text-app">{row.customerName}</td>
+                    <td className="px-3 py-2 text-right font-mono">{row.netRevenue.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                      −{row.rawMaterialCost.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                      −{row.laborCost.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                      −{row.generalExpenses.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">{row.estimatedProfit.toFixed(2)}</td>
+                    <td
+                      className={`px-3 py-2 text-right font-mono font-bold ${
+                        row.netProfit < 0 ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >
-                      {row.marginPercent.toFixed(1)}%
-                    </p>
-                    <p className="font-mono text-xs text-app-muted">
-                      {row.grossProfit.toFixed(2)} {t("common.currency")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-app-card">
-                  <div
-                    className={`h-full rounded-full transition-all ${marginBarColor(row.marginPercent)}`}
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] md:grid-cols-4">
-                  <CostCell label={t("reports.executive.netRevenue")} value={row.netRevenue} />
-                  <CostCell label={t("reports.executive.rawMaterial")} value={row.rawMaterialCost} negative />
-                  <CostCell label={t("reports.executive.labor")} value={row.laborCost} negative />
-                  <CostCell label={t("reports.executive.generalExpenses")} value={row.generalExpenses} negative />
-                </div>
-              </div>
-            );
-          })}
+                      {row.netProfit.toFixed(2)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-mono font-bold ${
+                        row.actualMarginPercent < 0 ? "text-rose-600" : "text-emerald-600"
+                      }`}
+                    >
+                      {row.actualMarginPercent.toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function CostCell({
-  label,
-  value,
-  negative,
-}: {
-  label: string;
-  value: number;
-  negative?: boolean;
-}) {
-  return (
-    <div>
-      <p className="font-bold uppercase text-app-muted">{label}</p>
-      <p className={`font-mono font-semibold ${negative ? "text-rose-600" : "text-app"}`}>
-        {negative ? "−" : ""}
-        {value.toFixed(2)}
-      </p>
     </div>
   );
 }
