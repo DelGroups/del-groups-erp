@@ -8,6 +8,7 @@ import FinancialReportView from "@/components/reports/FinancialReportView";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
 import { fetchFinancialReport } from "@/lib/reports/fetchFinancialReport";
+import { logAuditReadEventAction } from "@/lib/actions/audit";
 import type {
   Category,
   FinancialReportData,
@@ -44,6 +45,16 @@ export default function FinancialReportPage() {
     setLoading(true);
     setReport(await fetchFinancialReport(filters));
     setLoading(false);
+    void logAuditReadEventAction({
+      module: "FINANCE",
+      tableName: "transactions",
+      meta: {
+        path: "/reports/financial",
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        datePreset: filters.datePreset,
+      },
+    });
   }, [filters]);
 
   useEffect(() => {

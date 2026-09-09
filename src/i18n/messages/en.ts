@@ -1937,7 +1937,23 @@ export const enMessages: Messages = {
       CREATE: "Create",
       UPDATE: "Update",
       DELETE: "Delete",
+      READ: "View",
     },
+  },
+  auditSettings: {
+    rulesTitle: "Audit trail and high-risk alerts",
+    retention: "Log retention",
+    retentionDays: "{days} days",
+    retentionUnlimited: "Unlimited",
+    trackReads: "Track financial report views",
+    trackReadsHint: "Write a READ entry when a user opens the financial report.",
+    alertDeletion: "Alert on permanent deletion",
+    alertDeletionHint:
+      "Create a system alert (and log company email) when finance or inventory records are deleted.",
+    alertsTitle: "High-risk deletion alerts",
+    emailLogged: "Alert logged for {email}",
+    emailSkipped: "No company email configured",
+    saved: "Audit rules saved",
   },
   barcodeSettings: {
     title: "Barcode and thermal labels",

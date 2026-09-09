@@ -99,6 +99,53 @@ export type Database = {
           },
         ]
       }
+      audit_alerts: {
+        Row: {
+          audit_log_id: string | null
+          created_at: string
+          email_status: string
+          email_to: string | null
+          id: string
+          message: string
+          module: string
+          record_id: string | null
+          table_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          audit_log_id?: string | null
+          created_at?: string
+          email_status?: string
+          email_to?: string | null
+          id?: string
+          message: string
+          module: string
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          audit_log_id?: string | null
+          created_at?: string
+          email_status?: string
+          email_to?: string | null
+          id?: string
+          message?: string
+          module?: string
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_alerts_audit_log_id_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -2661,6 +2708,11 @@ export type Database = {
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      audit_log_read_event: {
+        Args: { p_meta?: Json; p_module: string; p_table?: string }
+        Returns: string
+      }
+      purge_expired_audit_logs: { Args: never; Returns: number }
       next_quotation_number: { Args: never; Returns: string }
       log_erp_event: {
         Args: {

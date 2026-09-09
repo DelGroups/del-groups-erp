@@ -1937,7 +1937,23 @@ export const ruMessages: Messages = {
       CREATE: "Создание",
       UPDATE: "Изменение",
       DELETE: "Удаление",
+      READ: "Просмотр",
     },
+  },
+  auditSettings: {
+    rulesTitle: "Журнал аудита и оповещения о риске",
+    retention: "Срок хранения журнала",
+    retentionDays: "{days} дн.",
+    retentionUnlimited: "Без ограничения",
+    trackReads: "Отслеживать просмотр финансовых отчётов",
+    trackReadsHint: "Писать READ-запись, когда пользователь открывает финансовый отчёт.",
+    alertDeletion: "Оповещение при безвозвратном удалении",
+    alertDeletionHint:
+      "Создавать системное оповещение (и фиксировать email компании) при удалении финансов или склада.",
+    alertsTitle: "Оповещения об удалении",
+    emailLogged: "Оповещение записано для {email}",
+    emailSkipped: "Email компании не задан",
+    saved: "Правила аудита сохранены",
   },
   barcodeSettings: {
     title: "Штрихкод и термоэтикетки",

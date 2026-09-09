@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { catchActionError, type ActionResult } from "@/lib/supabase/actionResult";
 import { isValidUuid } from "@/lib/auth/validate";
@@ -14,6 +15,7 @@ import {
   type AuditModule,
 } from "@/lib/audit/types";
 import type { Json } from "@/types/database.types";
+import { parseAuditConfig, AUDIT_CONFIG_KEY, auditRetentionCutoffIso } from "@/lib/audit/config";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -36,6 +38,17 @@ export async function listAuditLogsAction(
   try {
     await requirePermissionAction("can_manage_settings");
     const admin = createSupabaseAdminClient();
+
+    const { data: configRow } = await admin
+      .from("system_settings")
+      .select("value")
+      .eq("key", AUDIT_CONFIG_KEY)
+      .maybeSingle();
+    const cutoff = auditRetentionCutoffIso(parseAuditConfig(configRow?.value).log_retention_days);
+    if (cutoff) {
+      await admin.from("audit_logs").delete().lt("created_at", cutoff);
+      await admin.from("audit_alerts").delete().lt("created_at", cutoff);
+    }
 
     const limit = Math.min(Math.max(Number(filters.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
     const offset = Math.max(Number(filters.offset) || 0, 0);
@@ -130,5 +143,25 @@ export async function listAuditLogsAction(
     return { success: true, data: { rows: mapped, total: count ?? mapped.length } };
   } catch (err) {
     return catchActionError(err, "Audit jurnalı yüklənmədi");
+  }
+}
+
+export async function logAuditReadEventAction(input?: {
+  module?: AuditModule;
+  tableName?: string;
+  meta?: Json;
+}): Promise<ActionResult<{ id: string | null }>> {
+  try {
+    await requirePermissionAction("can_view_financial_reports");
+    const client = await createSupabaseServerClient();
+    const { data, error } = await client.rpc("audit_log_read_event", {
+      p_module: input?.module || "FINANCE",
+      p_table: input?.tableName || "transactions",
+      p_meta: input?.meta ?? {},
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: { id: (data as string | null) ?? null } };
+  } catch (err) {
+    return catchActionError(err, "Oxunma qeydə alınmadı");
   }
 }

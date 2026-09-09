@@ -1,6 +1,6 @@
 import type { Json } from "@/types/database.types";
 
-export const AUDIT_ACTIONS = ["CREATE", "UPDATE", "DELETE"] as const;
+export const AUDIT_ACTIONS = ["CREATE", "UPDATE", "DELETE", "READ"] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export const AUDIT_MODULES = [

@@ -854,7 +854,7 @@ ALTER TABLE public.production_orders
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  action TEXT NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+  action TEXT NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE', 'READ')),
   module TEXT NOT NULL CHECK (module IN ('FINANCE', 'PRODUCTION', 'INVENTORY', 'PAYROLL', 'SECURITY')),
   table_name TEXT,
   record_id UUID,
@@ -867,6 +867,20 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at D
 CREATE INDEX IF NOT EXISTS idx_audit_logs_module_action ON audit_logs (module, action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs (user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_record_id ON audit_logs (record_id);
+
+-- Audit rules (retention, read tracking, deletion alerts) stored as system_settings.audit_config
+CREATE TABLE IF NOT EXISTS audit_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  audit_log_id UUID REFERENCES audit_logs(id) ON DELETE SET NULL,
+  module TEXT NOT NULL,
+  table_name TEXT,
+  record_id UUID,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  message TEXT NOT NULL,
+  email_to TEXT,
+  email_status TEXT NOT NULL DEFAULT 'logged',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- ─── System settings (supabase/migrations/20260909170000_system_settings_barcode_label.sql)
 CREATE TABLE IF NOT EXISTS system_settings (

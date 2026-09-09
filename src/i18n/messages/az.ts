@@ -1935,7 +1935,23 @@ export const azMessages = {
       CREATE: "Yaratma",
       UPDATE: "Yeniləmə",
       DELETE: "Silmə",
+      READ: "Baxış",
     },
+  },
+  auditSettings: {
+    rulesTitle: "Audit izi və yüksək risk xəbərdarlıqları",
+    retention: "Jurnal saxlama müddəti",
+    retentionDays: "{days} gün",
+    retentionUnlimited: "Limitsiz",
+    trackReads: "Maliyyə hesabatına baxışları izlə",
+    trackReadsHint: "İstifadəçi maliyyə hesabatını açanda READ qeydi yazılır.",
+    alertDeletion: "Həmişəlik silinmədə xəbərdarlıq",
+    alertDeletionHint:
+      "Maliyyə və ya anbar qeydi silinəndə sistem xəbərdarlığı (və şirkət e-poçtu) yazılır.",
+    alertsTitle: "Yüksək riskli silinmə xəbərdarlıqları",
+    emailLogged: "{email} üçün xəbərdarlıq qeydə alındı",
+    emailSkipped: "Şirkət e-poçtu təyin olunmayıb",
+    saved: "Audit qaydaları yadda saxlanıldı",
   },
   barcodeSettings: {
     title: "Barkod və termal etiket",
