@@ -87,29 +87,30 @@ CREATE INDEX IF NOT EXISTS idx_payrolls_status
 -- ─── 5. RLS ──────────────────────────────────────────────────────────────────
 
 DO $$
+DECLARE
+  v_nargs int;
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = '_apply_table_rls') THEN
-    PERFORM public._apply_table_rls(
-      'employee_advances',
-      'can_view_hr',
-      'can_manage_hr',
-      'can_manage_hr',
-      'can_manage_hr'
-    );
-    PERFORM public._apply_table_rls(
-      'employee_leaves',
-      'can_view_hr',
-      'can_manage_hr',
-      'can_manage_hr',
-      'can_manage_hr'
-    );
-    PERFORM public._apply_table_rls(
-      'payrolls',
-      'can_view_hr',
-      'can_manage_hr',
-      'can_manage_hr',
-      'can_manage_hr'
-    );
+  SELECT p.pronargs INTO v_nargs
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = '_apply_table_rls'
+  ORDER BY p.pronargs DESC
+  LIMIT 1;
+
+  IF v_nargs = 5 THEN
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4,$5)'
+      USING 'employee_advances', 'can_view_hr', 'can_manage_hr', 'can_manage_hr', 'can_manage_hr';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4,$5)'
+      USING 'employee_leaves', 'can_view_hr', 'can_manage_hr', 'can_manage_hr', 'can_manage_hr';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4,$5)'
+      USING 'payrolls', 'can_view_hr', 'can_manage_hr', 'can_manage_hr', 'can_manage_hr';
+  ELSIF v_nargs = 4 THEN
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4)'
+      USING 'employee_advances', 'can_view_hr', 'can_manage_hr', 'can_manage_hr';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4)'
+      USING 'employee_leaves', 'can_view_hr', 'can_manage_hr', 'can_manage_hr';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4)'
+      USING 'payrolls', 'can_view_hr', 'can_manage_hr', 'can_manage_hr';
   END IF;
 END $$;
 

@@ -237,6 +237,9 @@ export default function ProductsPage() {
             onPrintLabel={(product) =>
               setPrintJob({ items: toLabelItems([product]), config: printConfig })
             }
+            emptyMessage={
+              products.length === 0 ? t("products.empty") : t("products.noFilterMatch")
+            }
           />
         </main>
 

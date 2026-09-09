@@ -16,6 +16,7 @@ interface ProductTableProps {
   onEdit?: (product: Product) => void;
   onDelete?: (product: Product) => void;
   onPrintLabel?: (product: Product) => void;
+  emptyMessage?: string;
 }
 
 function renderCell(key: ProductColumnKey, product: Product) {
@@ -76,6 +77,7 @@ export default function ProductTable({
   onEdit,
   onDelete,
   onPrintLabel,
+  emptyMessage,
 }: ProductTableProps) {
   const { t } = useI18n();
   const columns = (Object.keys(visibleColumns) as ProductColumnKey[]).filter(
@@ -93,7 +95,7 @@ export default function ProductTable({
   if (products.length === 0) {
     return (
       <div className="app-card p-12 text-center text-sm text-app-muted">
-        {t("products.noFilterMatch")}
+        {emptyMessage || t("products.empty")}
       </div>
     );
   }

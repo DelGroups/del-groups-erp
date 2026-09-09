@@ -206,19 +206,32 @@ BEGIN
 END $$;
 
 DO $$
+DECLARE
+  v_orphans int := 0;
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'production_contractors_contractor_id_fkey'
-  ) AND EXISTS (
+  ) THEN
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'production_contractors'
       AND column_name = 'contractor_id'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM production_contractors pc
+  ) THEN
+    RETURN;
+  END IF;
+
+  EXECUTE $q$
+    SELECT COUNT(*)::int
+    FROM production_contractors pc
     LEFT JOIN suppliers s ON s.id = pc.contractor_id
     WHERE pc.contractor_id IS NOT NULL AND s.id IS NULL
-  ) THEN
+  $q$ INTO v_orphans;
+
+  IF v_orphans = 0 THEN
     ALTER TABLE public.production_contractors
       ADD CONSTRAINT production_contractors_contractor_id_fkey
       FOREIGN KEY (contractor_id)
@@ -314,8 +327,18 @@ CREATE INDEX IF NOT EXISTS idx_accounts_coa_id
   ON public.accounts (coa_id)
   WHERE coa_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_profiles_employee_id
-  ON public.profiles (employee_id)
-  WHERE employee_id IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'profiles'
+      AND column_name = 'employee_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_profiles_employee_id
+      ON public.profiles (employee_id)
+      WHERE employee_id IS NOT NULL;
+  END IF;
+END $$;
 
 NOTIFY pgrst, 'reload schema';

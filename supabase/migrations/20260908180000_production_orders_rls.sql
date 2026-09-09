@@ -1,5 +1,6 @@
 -- Production orders RLS: permissive policies for authenticated users
 -- Also fixes advance-payment RPC failing with "İcazəniz yoxdur" when called via service_role
+-- NOTE: permissive USING(true) policies are revoked in 20260909230000_revoke_permissive_rls.sql
 
 -- ─── Service-role bypass for permission checks in SECURITY DEFINER RPCs ────────
 

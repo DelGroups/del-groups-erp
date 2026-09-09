@@ -86,21 +86,25 @@ GRANT EXECUTE ON FUNCTION public.next_quotation_number() TO authenticated;
 -- ─── 4. RLS ──────────────────────────────────────────────────────────────────
 
 DO $$
+DECLARE
+  v_nargs int;
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = '_apply_table_rls') THEN
-    PERFORM public._apply_table_rls(
-      'deals',
-      'can_view_crm',
-      'can_manage_crm',
-      'can_manage_crm',
-      'can_manage_crm'
-    );
-    PERFORM public._apply_table_rls(
-      'quotations',
-      'can_view_crm',
-      'can_manage_crm',
-      'can_manage_crm',
-      'can_manage_crm'
-    );
+  SELECT p.pronargs INTO v_nargs
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = '_apply_table_rls'
+  ORDER BY p.pronargs DESC
+  LIMIT 1;
+
+  IF v_nargs = 5 THEN
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4,$5)'
+      USING 'deals', 'can_view_crm', 'can_manage_crm', 'can_manage_crm', 'can_manage_crm';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4,$5)'
+      USING 'quotations', 'can_view_crm', 'can_manage_crm', 'can_manage_crm', 'can_manage_crm';
+  ELSIF v_nargs = 4 THEN
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4)'
+      USING 'deals', 'can_view_crm', 'can_manage_crm', 'can_manage_crm';
+    EXECUTE 'SELECT public._apply_table_rls($1,$2,$3,$4)'
+      USING 'quotations', 'can_view_crm', 'can_manage_crm', 'can_manage_crm';
   END IF;
 END $$;
