@@ -1196,6 +1196,13 @@ export interface Employee {
   base_salary: number;
   default_commission: number;
   status: string;
+  fin_code: string | null;
+  iban: string | null;
+  bank_name: string | null;
+  hire_date: string | null;
+  contract_end_date: string | null;
+  emergency_phone: string | null;
+  documents_json: Record<string, unknown>;
   created_at?: string | null;
 }
 
@@ -1209,6 +1216,13 @@ export type EmployeeDbInsert = {
   base_salary: number;
   default_commission: number;
   status: string;
+  fin_code?: string | null;
+  iban?: string | null;
+  bank_name?: string | null;
+  hire_date?: string | null;
+  contract_end_date?: string | null;
+  emergency_phone?: string | null;
+  documents_json?: Record<string, unknown>;
 };
 
 export type EmployeeInsert = EmployeeDbInsert;
@@ -1223,8 +1237,68 @@ export function toEmployeeDbRow(payload: EmployeeInsert): EmployeeDbInsert {
     base_salary: Number(payload.base_salary) || 0,
     default_commission: Number(payload.default_commission) || 0,
     status: payload.status.trim() || "active",
+    fin_code: payload.fin_code?.trim() || null,
+    iban: payload.iban?.trim() || null,
+    bank_name: payload.bank_name?.trim() || null,
+    hire_date: payload.hire_date || null,
+    contract_end_date: payload.contract_end_date || null,
+    emergency_phone: payload.emergency_phone?.trim() || null,
+    documents_json: payload.documents_json ?? {},
   };
 }
+
+export type AdvanceStatus = "PENDING" | "PAID" | "DEDUCTED";
+export type LeaveType = "PAID" | "UNPAID" | "SICK";
+export type LeaveStatus = "APPROVED" | "PENDING" | "REJECTED";
+export type PayrollRunStatus = "DRAFT" | "APPROVED" | "PAID";
+
+export interface EmployeeAdvance {
+  id: string;
+  employee_id: string;
+  amount: number;
+  request_date: string;
+  status: AdvanceStatus;
+  account_id: string | null;
+  transaction_id: string | null;
+  description: string | null;
+  created_at: string | null;
+  employees?: { full_name: string } | null;
+  accounts?: { name: string } | null;
+}
+
+export interface EmployeeLeave {
+  id: string;
+  employee_id: string;
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  days_count: number;
+  status: LeaveStatus;
+  notes: string | null;
+  created_at: string | null;
+  employees?: { full_name: string } | null;
+}
+
+export interface PayrollRun {
+  id: string;
+  period_month: number;
+  period_year: number;
+  employee_id: string;
+  base_salary: number;
+  bonuses_commissions: number;
+  advances_deducted: number;
+  other_deductions: number;
+  net_salary: number;
+  status: PayrollRunStatus;
+  paid_at: string | null;
+  account_id: string | null;
+  transaction_id: string | null;
+  notes: string | null;
+  created_at: string | null;
+  employees?: { full_name: string; employee_code?: string } | null;
+}
+
+export const ANNUAL_PAID_LEAVE_DAYS = 21;
 
 export interface EmployeeCommissionRule {
   id: string;
@@ -1324,6 +1398,7 @@ export function generateEmployeeCode(): string {
 }
 
 export function normalizeEmployee(row: Record<string, unknown>): Employee {
+  const docs = row.documents_json;
   return {
     id: row.id as string,
     employee_code:
@@ -1338,8 +1413,32 @@ export function normalizeEmployee(row: Record<string, unknown>): Employee {
     default_commission:
       Number(row.default_commission ?? row.default_commission_rate) || 0,
     status: (row.status as string) || "active",
+    fin_code: (row.fin_code as string) || null,
+    iban: (row.iban as string) || null,
+    bank_name: (row.bank_name as string) || null,
+    hire_date: (row.hire_date as string) || null,
+    contract_end_date: (row.contract_end_date as string) || null,
+    emergency_phone: (row.emergency_phone as string) || null,
+    documents_json:
+      docs && typeof docs === "object" && !Array.isArray(docs)
+        ? (docs as Record<string, unknown>)
+        : {},
     created_at: (row.created_at as string) || null,
   };
+}
+
+export function calcLeaveDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return 0;
+  }
+  const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return diff + 1;
+}
+
+export function calcRemainingPaidLeave(usedDays: number): number {
+  return Math.max(0, ANNUAL_PAID_LEAVE_DAYS - usedDays);
 }
 
 export function calcPayrollNet(

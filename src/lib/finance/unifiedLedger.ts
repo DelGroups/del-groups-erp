@@ -161,6 +161,8 @@ const REFERENCE_LABELS_AZ: Record<string, string> = {
   purchase_invoice: "Satın alma fakturası",
   purchase: "Satın alma",
   customer_advance: "Müştəri avansı",
+  employee_advance: "İşçi avansı",
+  payroll: "Maaş bordrosu",
   sale: "Satış fakturası",
   cash_transaction: "Kassa əməliyyatı",
 };

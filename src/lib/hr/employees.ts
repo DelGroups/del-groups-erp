@@ -41,6 +41,19 @@ export async function updateEmployee(
     patch.default_commission = Number(payload.default_commission) || 0;
   }
   if (payload.status != null) patch.status = payload.status.trim();
+  if (payload.fin_code !== undefined) patch.fin_code = payload.fin_code?.trim() || null;
+  if (payload.iban !== undefined) patch.iban = payload.iban?.trim() || null;
+  if (payload.bank_name !== undefined) patch.bank_name = payload.bank_name?.trim() || null;
+  if (payload.hire_date !== undefined) patch.hire_date = payload.hire_date || null;
+  if (payload.contract_end_date !== undefined) {
+    patch.contract_end_date = payload.contract_end_date || null;
+  }
+  if (payload.emergency_phone !== undefined) {
+    patch.emergency_phone = payload.emergency_phone?.trim() || null;
+  }
+  if (payload.documents_json !== undefined) {
+    patch.documents_json = payload.documents_json ?? {};
+  }
 
   const { error } = await supabase
     .from("employees")

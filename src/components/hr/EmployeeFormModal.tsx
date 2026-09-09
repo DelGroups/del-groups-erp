@@ -28,6 +28,13 @@ const emptyForm = (): EmployeeFormValues => ({
   base_salary: 0,
   default_commission: 0,
   status: "active",
+  fin_code: null,
+  iban: null,
+  bank_name: null,
+  hire_date: null,
+  contract_end_date: null,
+  emergency_phone: null,
+  documents_json: {},
 });
 
 export default function EmployeeFormModal({
@@ -52,6 +59,13 @@ export default function EmployeeFormModal({
         base_salary: initial.base_salary,
         default_commission: initial.default_commission,
         status: initial.status,
+        fin_code: initial.fin_code,
+        iban: initial.iban,
+        bank_name: initial.bank_name,
+        hire_date: initial.hire_date,
+        contract_end_date: initial.contract_end_date,
+        emergency_phone: initial.emergency_phone,
+        documents_json: initial.documents_json ?? {},
       });
     } else {
       setForm(emptyForm());
@@ -64,7 +78,7 @@ export default function EmployeeFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl app-card shadow-xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl app-card shadow-xl">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <h3 className="font-bold text-app">
             {initial ? t("modals.employee.editTitle") : t("modals.employee.newTitle")}
@@ -163,6 +177,56 @@ export default function EmployeeFormModal({
                 value={form.default_commission}
                 onChange={(e) => set({ default_commission: Number(e.target.value) || 0 })}
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("employees.finCode")}
+              <input
+                value={form.fin_code || ""}
+                onChange={(e) => set({ fin_code: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm uppercase"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("employees.emergencyPhone")}
+              <input
+                value={form.emergency_phone || ""}
+                onChange={(e) => set({ emergency_phone: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app md:col-span-2">
+              {t("employees.iban")}
+              <input
+                value={form.iban || ""}
+                onChange={(e) => set({ iban: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app md:col-span-2">
+              {t("employees.bankName")}
+              <input
+                value={form.bank_name || ""}
+                onChange={(e) => set({ bank_name: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("employees.hireDate")}
+              <input
+                type="date"
+                value={form.hire_date || ""}
+                onChange={(e) => set({ hire_date: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("employees.contractEnd")}
+              <input
+                type="date"
+                value={form.contract_end_date || ""}
+                onChange={(e) => set({ contract_end_date: e.target.value || null })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               />
             </label>
           </div>
