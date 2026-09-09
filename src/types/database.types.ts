@@ -1112,6 +1112,51 @@ export interface DashboardData {
   arDiscrepancies?: CustomerArDiscrepancyRow[];
 }
 
+export interface ProjectProfitabilityRow {
+  orderId: string;
+  orderNo: string;
+  customerName: string;
+  status: string;
+  netRevenue: number;
+  rawMaterialCost: number;
+  laborCost: number;
+  generalExpenses: number;
+  grossProfit: number;
+  marginPercent: number;
+}
+
+export interface CashFlowDayPoint {
+  date: string;
+  label: string;
+  inflows: number;
+  outflows: number;
+  net: number;
+}
+
+export interface MaterialUsageRow {
+  productId: string;
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
+  totalUsed: number;
+  stock: number;
+  minStock: number;
+  belowMin: boolean;
+}
+
+export interface ExecutiveDashboardData {
+  projectProfitability: ProjectProfitabilityRow[];
+  cashFlowForecast: CashFlowDayPoint[];
+  cashFlowSummary: {
+    totalInflows: number;
+    totalOutflows: number;
+    netPosition: number;
+  };
+  topMaterials: MaterialUsageRow[];
+  deficitAlerts: MaterialUsageRow[];
+}
+
 export interface TopSellingProduct {
   product_id: string;
   product_name: string;
