@@ -892,6 +892,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 -- CRM config (quote_prefix, stages) stored as system_settings.crm_config
 -- Tax/payroll/e-Qaimə config stored as system_settings.tax_payroll_config
 -- Procurement reorder + supplier score weights stored as system_settings.procurement_config
+-- n8n AI webhook URL + secret stored as system_settings.n8n_ai_config (admin-only SELECT)
 -- Unified ledger categories: financial_categories (id, name, type, parent_id, is_active)
 -- Payroll: payrolls + employee_advances; paid runs post EXPENSE rows on transactions
 -- production_expenses.finance_transaction_id links to transactions; delete reconciles accounts

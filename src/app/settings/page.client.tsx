@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
+import AiN8nSettingsCard from "@/components/settings/AiN8nSettingsCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -308,6 +309,8 @@ export default function SettingsPage() {
               </div>
             </form>
           )}
+
+          <AiN8nSettingsCard />
         </div>
         </PermissionGuard>
       <ToastMessage message={toastMessage} variant={toastVariant} />

@@ -2,17 +2,11 @@
 
 import React from "react";
 import Link from "next/link";
+import { isSafeInternalHref } from "@/lib/ai/links";
+
+export { isSafeInternalHref };
 
 const TOKEN_RE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
-
-export function isSafeInternalHref(href: string): boolean {
-  return (
-    href.startsWith("/") &&
-    !href.startsWith("//") &&
-    !href.includes(":") &&
-    /^\/[a-zA-Z0-9/_-]*$/.test(href)
-  );
-}
 
 function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
@@ -65,6 +59,57 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   return nodes;
 }
 
+function isSeparatorRow(cells: string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s/g, "")));
+}
+
+function parseMarkdownTable(lines: string[]): { headers: string[]; rows: string[][] } | null {
+  const rows = lines
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("|"))
+    .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+  if (rows.length < 2) return null;
+  const headers = rows[0];
+  const body = rows.slice(1).filter((row) => !isSeparatorRow(row));
+  if (!headers.length) return null;
+  return { headers, rows: body };
+}
+
+export function AiAssistantTable({
+  headers,
+  rows,
+}: {
+  headers: string[];
+  rows: string[][];
+}) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-app">
+      <table className="min-w-full text-left text-[12px]">
+        <thead className="bg-app-card-hover text-app-muted">
+          <tr>
+            {headers.map((header, index) => (
+              <th key={`${header}-${index}`} className="px-2 py-1.5 font-semibold">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="border-t border-app">
+              {headers.map((_, cellIndex) => (
+                <td key={cellIndex} className="px-2 py-1.5 text-app">
+                  {renderInline(row[cellIndex] || "", `t-${rowIndex}-${cellIndex}`)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function AiAssistantMarkdown({ content }: { content: string }) {
   const blocks = content.replace(/\r\n/g, "\n").split(/\n{2,}/);
 
@@ -72,6 +117,10 @@ export function AiAssistantMarkdown({ content }: { content: string }) {
     <div className="space-y-2 text-[13px] leading-relaxed text-app">
       {blocks.map((block, blockIndex) => {
         const lines = block.split("\n").filter((line) => line.trim().length > 0);
+        const table = parseMarkdownTable(lines);
+        if (table) {
+          return <AiAssistantTable key={blockIndex} headers={table.headers} rows={table.rows} />;
+        }
         const isList = lines.length > 0 && lines.every((line) => /^[-*]\s+/.test(line.trim()));
         if (isList) {
           return (
