@@ -2075,4 +2075,19 @@ export const enMessages: Messages = {
     pitRate:
       "Income tax: 3% up to 2500 AZN, 10% up to 8000, 14% above (after DSMF and İTŞ). Tax-free threshold {limit} AZN.",
   },
+  aiAssistant: {
+    title: "AI Copilot",
+    subtitle: "Finance, inventory, and production — read only",
+    placeholder: "Ask about a product, customer, or order...",
+    send: "Send",
+    open: "Open AI assistant",
+    close: "Close",
+    chipFinance: "Finance summary",
+    chipStock: "Critical stock",
+    chipProduction: "Production status",
+    empty: "Type a short question or pick a prompt below.",
+    thinking: "Thinking...",
+    notConfigured: "No LLM key — answers use a live ERP snapshot.",
+    error: "Could not send the request. Try again.",
+  },
 };

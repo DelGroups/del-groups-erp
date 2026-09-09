@@ -2073,6 +2073,21 @@ export const azMessages = {
     pitRate:
       "Gəlir vergisi: 2500 AZN-ə qədər 3%, 8000-ə qədər 10%, üstü 14% (DSMF və İTŞ çıxıldıqdan sonra). Azad hədd {limit} AZN.",
   },
+  aiAssistant: {
+    title: "AI Köməkçi",
+    subtitle: "Maliyyə, anbar və istehsalat — yalnız oxuma",
+    placeholder: "Məhsul, müştəri və ya sifariş soruşun...",
+    send: "Göndər",
+    open: "AI köməkçini aç",
+    close: "Bağla",
+    chipFinance: "Maliyyə xülasəsi",
+    chipStock: "Kritik anbar qalıqları",
+    chipProduction: "İstehsalat statusu",
+    empty: "Qısa sual yazın və ya aşağıdakı əmrlərdən birini seçin.",
+    thinking: "Cavab hazırlanır...",
+    notConfigured: "LLM açarı yoxdur — cavablar ERP məlumat xülasəsindən gəlir.",
+    error: "Sorğu göndərilmədi. Yenidən cəhd edin.",
+  },
 } as const;
 
 export type Messages = {
