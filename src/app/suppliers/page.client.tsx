@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/useToast";
 import type { Supplier } from "@/types/database.types";
 import type { EntityType } from "@/lib/customers/entityType";
 import { entityTypeLabel } from "@/lib/customers/entityType";
+import { useProcurementConfig } from "@/hooks/useProcurementConfig";
+import { formatSupplierScore, weightedSupplierScore } from "@/lib/purchases/supplierScore";
 import {
   Plus,
   Pencil,
@@ -25,6 +27,7 @@ export default function SuppliersPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageSuppliers = can("can_manage_suppliers");
+  const { config: procurementConfig } = useProcurementConfig();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -231,6 +234,7 @@ export default function SuppliersPage() {
                       <th className="px-6 py-3">{t("common.phone")}</th>
                       <th className="px-6 py-3">{t("purchases.qualityScore")}</th>
                       <th className="px-6 py-3">{t("purchases.deliverySpeedScore")}</th>
+                      <th className="px-6 py-3">{t("purchases.totalScore")}</th>
                       <th className="px-6 py-3">{t("suppliers.ourDebt")}</th>
                       {canManageSuppliers ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
                     </tr>
@@ -264,6 +268,12 @@ export default function SuppliersPage() {
                           {s.delivery_speed_score
                             ? `★ ${Number(s.delivery_speed_score).toFixed(1)}`
                             : "—"}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-sm font-semibold">
+                          {(() => {
+                            const total = weightedSupplierScore(s, procurementConfig);
+                            return total != null ? `★ ${formatSupplierScore(total)}` : "—";
+                          })()}
                         </td>
                         <td className="px-6 py-4 font-bold">
                           {(s.balance ?? 0) > 0 ? (

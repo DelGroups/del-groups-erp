@@ -14,6 +14,10 @@ import type {
   MonthlyTrendPoint,
   RecentActivityRow,
 } from "@/types/database.types";
+import {
+  PROCUREMENT_CONFIG_KEY,
+  parseProcurementConfig,
+} from "@/lib/procurement/config";
 
 function monthLabel(year: number, month: number): string {
   const d = new Date(year, month, 1);
@@ -46,7 +50,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStart = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [salesRes, purchasesRes, transactions, trendTxRes, productsRes, customersRes, arCheck] =
+  const [salesRes, purchasesRes, transactions, trendTxRes, productsRes, customersRes, arCheck, procurementRes] =
     await Promise.all([
     supabase
       .from("sales")
@@ -64,6 +68,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       .select("id, code, name, stock, min_stock, min_stock_level, is_service, unit, category, buy_price, sell_price"),
     supabase.from("customers").select("balance"),
     checkCustomerArDiscrepancies(),
+    supabase.from("system_settings").select("value").eq("key", PROCUREMENT_CONFIG_KEY).maybeSingle(),
   ]);
 
   const sales = salesRes.data || [];
@@ -71,6 +76,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const trendTransactions = trendTxRes.data || [];
   const products = productsRes.data || [];
   const customers = customersRes.data || [];
+  const procurementConfig = parseProcurementConfig(procurementRes.data?.value);
 
   let monthlyRevenue = 0;
   let salesOpenAr = 0;
@@ -104,24 +110,26 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
   const netProfit = monthlyRevenue - monthlyExpenses;
 
-  const lowStockAlerts: LowStockProduct[] = products
-    .filter((p) => {
-      if (p.is_service) return false;
-      const stock = Number(p.stock) || 0;
-      const min = Number(p.min_stock_level ?? p.min_stock) || 0;
-      return min > 0 && stock <= min;
-    })
-    .map((p) => ({
-      id: p.id as string,
-      code: (p.code as string) || "",
-      name: (p.name as string) || "",
-      stock: Number(p.stock) || 0,
-      min_stock: Number(p.min_stock) || 0,
-      unit: (p.unit as string) || "Ədəd",
-      category: (p.category as string) || "",
-    }))
-    .sort((a, b) => a.stock - b.stock)
-    .slice(0, 12);
+  const lowStockAlerts: LowStockProduct[] = procurementConfig.critical_stock_notification
+    ? products
+        .filter((p) => {
+          if (p.is_service) return false;
+          const stock = Number(p.stock) || 0;
+          const min = Number(p.min_stock_level ?? p.min_stock) || 0;
+          return min > 0 && stock <= min;
+        })
+        .map((p) => ({
+          id: p.id as string,
+          code: (p.code as string) || "",
+          name: (p.name as string) || "",
+          stock: Number(p.stock) || 0,
+          min_stock: Number(p.min_stock) || 0,
+          unit: (p.unit as string) || "Ədəd",
+          category: (p.category as string) || "",
+        }))
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 12)
+    : [];
 
   const recentActivities: RecentActivityRow[] = [];
 

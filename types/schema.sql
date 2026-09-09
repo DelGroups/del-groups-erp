@@ -877,3 +877,4 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- CRM config (quote_prefix, stages) stored as system_settings.crm_config
 -- Tax/payroll/e-Qaimə config stored as system_settings.tax_payroll_config
+-- Procurement reorder + supplier score weights stored as system_settings.procurement_config

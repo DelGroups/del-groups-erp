@@ -64,6 +64,7 @@ import SupplierRatingModal from "@/components/purchases/SupplierRatingModal";
 import { rateSupplierDeliveryAction } from "@/lib/actions/supplierRating";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { formatSupplierOptionLabel, supplierDisplayName } from "@/lib/purchases/supplierScore";
+import { useProcurementConfig } from "@/hooks/useProcurementConfig";
 
 interface Account {
   id: string;
@@ -150,6 +151,7 @@ export default function PurchaseForm({
   const { can } = useAuth();
   const { t } = useI18n();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
+  const { config: procurementConfig } = useProcurementConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const appliedDefaultVat = useRef(Boolean(initialPurchase));
   const canSavePurchase = isEdit ? can("can_edit_purchases") : can("can_create_purchase");
@@ -578,7 +580,7 @@ export default function PurchaseForm({
                 <option value="">{t("common.select")}</option>
                 {supplierOptions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {formatSupplierOptionLabel(s)}
+                    {formatSupplierOptionLabel(s, procurementConfig)}
                   </option>
                 ))}
               </select>
