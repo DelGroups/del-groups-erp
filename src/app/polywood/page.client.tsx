@@ -15,17 +15,19 @@ import type { Warehouse } from "@/types/database.types";
 import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import { useBarcodeLabelConfig } from "@/hooks/useBarcodeLabelConfig";
 import ThermalLabelPrintTemplate, {
   productToThermalLabel,
   type ThermalLabelItem,
-  type ThermalLabelSize,
 } from "@/components/products/ThermalLabelPrintTemplate";
+import type { BarcodeLabelConfig } from "@/lib/barcode/labelConfig";
 
 export default function PolywoodPageClient() {
   const { t } = useI18n();
   const branding = useCompanyBranding();
+  const { config: labelConfig } = useBarcodeLabelConfig();
   const { printData: printJob, setPrintData: setPrintJob } =
-    useDocumentPrint<{ items: ThermalLabelItem[]; size: ThermalLabelSize }>(450);
+    useDocumentPrint<{ items: ThermalLabelItem[]; config: BarcodeLabelConfig }>(450);
   const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
   const [rows, setRows] = useState<PolywoodProductInventoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -312,7 +314,7 @@ export default function PolywoodPageClient() {
                                       dimensions: `${summary.full_sheet_count} × ${summary.full_sheet_length_m}m`,
                                     }),
                                   ],
-                                  size: "80mm",
+                                  config: labelConfig,
                                 })
                               }
                             >
@@ -387,7 +389,7 @@ export default function PolywoodPageClient() {
         <div className="print-area">
           <ThermalLabelPrintTemplate
             items={printJob.items}
-            size={printJob.size}
+            config={printJob.config}
             branding={branding}
           />
         </div>

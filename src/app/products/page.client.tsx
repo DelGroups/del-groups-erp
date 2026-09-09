@@ -9,7 +9,6 @@ import ProductTable from "@/components/products/ProductTable";
 import ThermalLabelPrintTemplate, {
   productToThermalLabel,
   type ThermalLabelItem,
-  type ThermalLabelSize,
 } from "@/components/products/ThermalLabelPrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 import ProductForm from "@/components/products/ProductForm";
@@ -37,6 +36,13 @@ import {
 } from "lucide-react";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import { useBarcodeLabelConfig } from "@/hooks/useBarcodeLabelConfig";
+import {
+  BARCODE_PAPER_SIZES,
+  overridePaperSize,
+  type BarcodeLabelConfig,
+  type BarcodePaperSize,
+} from "@/lib/barcode/labelConfig";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
@@ -62,9 +68,16 @@ export default function ProductsPage() {
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const branding = useCompanyBranding();
-  const [labelSize, setLabelSize] = useState<ThermalLabelSize>("80mm");
+  const { config: labelConfig } = useBarcodeLabelConfig();
+  const [paperSize, setPaperSize] = useState<BarcodePaperSize>(labelConfig.paper_size);
   const { printData: printJob, setPrintData: setPrintJob } =
-    useDocumentPrint<{ items: ThermalLabelItem[]; size: ThermalLabelSize }>(450);
+    useDocumentPrint<{ items: ThermalLabelItem[]; config: BarcodeLabelConfig }>(450);
+
+  useEffect(() => {
+    setPaperSize(labelConfig.paper_size);
+  }, [labelConfig.paper_size]);
+
+  const printConfig = overridePaperSize(labelConfig, paperSize);
 
   const defaultWarehouseName =
     warehouses.find((row) => row.is_default)?.name || warehouses[0]?.name || null;
@@ -134,19 +147,23 @@ export default function ProductsPage() {
             ) : null}
 
             <select
-              value={labelSize}
-              onChange={(e) => setLabelSize(e.target.value as ThermalLabelSize)}
+              value={paperSize}
+              onChange={(e) => setPaperSize(e.target.value as BarcodePaperSize)}
               className="rounded-lg border border-app bg-app-card px-3 py-2 text-sm font-semibold text-app"
               title={t("inventory.labelSize")}
             >
-              <option value="58mm">{t("inventory.size58")}</option>
-              <option value="80mm">{t("inventory.size80")}</option>
-              <option value="sticker">{t("inventory.sticker")}</option>
+              {BARCODE_PAPER_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {t(`barcodeSettings.paperSizes.${size}`)}
+                </option>
+              ))}
             </select>
 
             <button
               type="button"
-              onClick={() => setPrintJob({ items: toLabelItems(filteredProducts), size: labelSize })}
+              onClick={() =>
+                setPrintJob({ items: toLabelItems(filteredProducts), config: printConfig })
+              }
               disabled={loading || filteredProducts.length === 0}
               className="flex items-center gap-2 rounded-lg app-card px-4 py-2 text-sm font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
             >
@@ -218,7 +235,7 @@ export default function ProductsPage() {
             onEdit={setEditingProduct}
             onDelete={canManageProducts ? setDeleteTarget : undefined}
             onPrintLabel={(product) =>
-              setPrintJob({ items: toLabelItems([product]), size: labelSize })
+              setPrintJob({ items: toLabelItems([product]), config: printConfig })
             }
           />
         </main>
@@ -263,7 +280,7 @@ export default function ProductsPage() {
         <div className="print-area">
           <ThermalLabelPrintTemplate
             items={printJob.items}
-            size={printJob.size}
+            config={printJob.config}
             branding={branding}
           />
         </div>

@@ -1081,11 +1081,28 @@ textarea:focus {
   }
 
   .thermal-label {
-    break-after: page;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     padding: 2mm;
     color: #0f172a;
     background: #ffffff;
+  }
+
+  .thermal-print-configured .thermal-label {
+    break-after: page;
+  }
+
+  .thermal-print-a4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 50mm);
+    gap: 3mm;
+    align-items: start;
+  }
+
+  .thermal-print-a4 .thermal-label {
+    break-inside: avoid;
+    break-after: auto;
   }
 
   .thermal-label-58 {
@@ -1130,10 +1147,16 @@ textarea:focus {
   }
 
   .thermal-label-code,
-  .thermal-label-meta {
+  .thermal-label-meta,
+  .thermal-label-price {
     margin: 0;
     font-size: 9px;
     color: #334155;
+  }
+
+  .thermal-label-price {
+    font-weight: 800;
+    color: #0f172a;
   }
 
   .thermal-label-code {
@@ -1143,9 +1166,16 @@ textarea:focus {
   .thermal-label-codes {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 3mm;
-    margin-top: 2mm;
+    margin-top: auto;
+    padding-top: 2mm;
+  }
+
+  .thermal-label-codes svg,
+  .thermal-label-codes img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
@@ -1175,3 +1205,78 @@ textarea:focus {
 .thermal-print-sticker {
   page: thermal-sticker;
 }
+
+.thermal-label-live {
+  color: #0f172a;
+  background: transparent;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+.thermal-label-live .thermal-label {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px dashed #94a3b8;
+}
+
+.thermal-label-live .thermal-label-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2mm;
+}
+
+.thermal-label-live .thermal-label-logo {
+  max-height: 10mm;
+  max-width: 22mm;
+  object-fit: contain;
+}
+
+.thermal-label-live .thermal-label-company {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.thermal-label-live .thermal-label-name {
+  margin: 0 0 1mm;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.thermal-label-live .thermal-label-code,
+.thermal-label-live .thermal-label-meta,
+.thermal-label-live .thermal-label-price {
+  margin: 0;
+  font-size: 9px;
+  color: #334155;
+}
+
+.thermal-label-live .thermal-label-price {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.thermal-label-live .thermal-label-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.thermal-label-live .thermal-label-codes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 2mm;
+}
+
+.thermal-label-live svg,
+.thermal-label-live img {
+  max-width: 100%;
+  height: auto;
+}
+

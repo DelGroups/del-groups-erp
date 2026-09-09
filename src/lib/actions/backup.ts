@@ -89,7 +89,10 @@ export async function restoreFullBackupAction(
     const warnings: string[] = [];
 
     for (const table of BACKUP_DELETE_ORDER) {
-      const { error } = await admin.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error } =
+        table === "system_settings"
+          ? await admin.from(table).delete().neq("key", "")
+          : await admin.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
       if (error) {
         warnings.push(`Delete ${table}: ${error.message}`);
       }

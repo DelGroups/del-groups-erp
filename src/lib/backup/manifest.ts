@@ -11,6 +11,7 @@ export const BACKUP_TABLES = [
   "employees",
   "company_settings",
   "settings",
+  "system_settings",
   "commission_rules",
   "production_boms",
   "production_bom_items",
