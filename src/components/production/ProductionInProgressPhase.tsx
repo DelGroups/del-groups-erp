@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import MaterialShortageConfirmModal from "@/components/production/MaterialShortageConfirmModal";
+import BarcodeScanField from "@/components/documents/BarcodeScanField";
+import CameraBarcodeScanner from "@/components/inventory/CameraBarcodeScanner";
 import {
   addProductionExpenseAction,
   addProductionMaterialAction,
@@ -17,6 +19,8 @@ import {
 } from "@/lib/actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { fetchProductByBarcode, findCatalogItemByScan } from "@/lib/products/barcode";
 import {
   calcProductionCosting,
   mergeProductionOrder,
@@ -104,6 +108,9 @@ export default function ProductionInProgressPhase({
   const [warehouseProducts, setWarehouseProducts] = useState<WarehouseProductOption[]>([]);
   const [loadingWarehouseProducts, setLoadingWarehouseProducts] = useState(false);
   const [shortageConfirmOpen, setShortageConfirmOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const scanLockRef = useRef(false);
 
   const [expenseCategory, setExpenseCategory] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
@@ -137,6 +144,13 @@ export default function ProductionInProgressPhase({
   const servicesAndOverhead = costing.outsourcingCost + costing.sideExpenseCost;
   const estimatedProfit = order.total_project_price - (costing.materialCost + servicesAndOverhead);
   const remaining = useMemo(() => remainingBalanceFromOrder(order), [order]);
+
+  useEffect(() => {
+    const list = lookups?.warehouses || [];
+    if (materialWarehouseId || list.length === 0) return;
+    const preferred = list.find((row) => row.is_default) || (list.length === 1 ? list[0] : null);
+    if (preferred?.id) setMaterialWarehouseId(preferred.id);
+  }, [lookups?.warehouses, materialWarehouseId]);
 
   const selectedWarehouseProduct = useMemo(() => {
     if (!materialSelection?.productId) return null;
@@ -339,6 +353,92 @@ export default function ProductionInProgressPhase({
     await submitAddMaterial(true);
   };
 
+  const issueScannedMaterial = async (product: WarehouseProductOption) => {
+    const warehouseId = materialWarehouseId;
+    if (!warehouseId || !isValidUuid(warehouseId)) {
+      setError(t("inventory.scan.selectWarehouse"));
+      return;
+    }
+    const selection = buildMaterialLineSelection(product, warehouseId);
+    setMaterialOptionValue(encodeMaterialLineSelection(selection));
+    setMaterialSelection(selection);
+    setMaterialQty(1);
+    const qty = 1;
+    const cost = resolveProductUnitCost(product);
+    const stock = resolveProductRealStock(product);
+    if (hasWarehouseStockShortage(qty, stock)) {
+      setShortageConfirmOpen(true);
+      return;
+    }
+    await runAction(
+      () =>
+        addProductionMaterialAction(order.id, {
+          product_id: selection.productId,
+          product_name: selection.productName || product.name || null,
+          product_code: selection.productCode || product.code || null,
+          warehouse_id: warehouseId,
+          warehouse_name: lookups?.warehouses.find((row) => row.id === warehouseId)?.name || null,
+          unit_cost: cost,
+          quantity: qty,
+          issue_now: true,
+          confirm_deficit_purchase: false,
+        }),
+      (data) => {
+        applyOrder(mergeProductionOrder(order, data));
+        setMaterialQty(1);
+        clearMaterialProduct();
+        setShortageConfirmOpen(false);
+        refreshPurchaseRequests();
+        refreshWarehouseProducts();
+        setScanNotice(t("inventory.scan.added", { name: product.name }));
+        window.setTimeout(() => setScanNotice(null), 2500);
+      }
+    );
+  };
+
+  const handleScannedCode = async (raw: string) => {
+    const code = raw.trim();
+    if (!code || scanLockRef.current || saving) return;
+    scanLockRef.current = true;
+    setCameraOpen(false);
+    try {
+      if (!materialWarehouseId) {
+        setError(t("inventory.scan.selectWarehouse"));
+        return;
+      }
+      let product = findCatalogItemByScan(warehouseProducts, code);
+      if (!product) {
+        const remote = await fetchProductByBarcode(code);
+        if (remote) {
+          product =
+            warehouseProducts.find(
+              (row) => row.product_id === remote.id || row.id === remote.id
+            ) || null;
+        }
+      }
+      if (!product) {
+        setError(t("inventory.scan.notFound", { barcode: code }));
+        return;
+      }
+      setError(null);
+      await issueScannedMaterial(product);
+    } finally {
+      window.setTimeout(() => {
+        scanLockRef.current = false;
+      }, 700);
+    }
+  };
+
+  const scanHandlerRef = useRef(handleScannedCode);
+  scanHandlerRef.current = handleScannedCode;
+
+  useBarcodeScanner(
+    (barcode) => {
+      void scanHandlerRef.current(barcode);
+    },
+    { enabled: tab === "materials" && !cameraOpen && !saving }
+  );
+
   const deleteMaterial = async (materialId: string) => {
     await runAction(
       () => removeProductionMaterialAction(order.id, materialId),
@@ -540,6 +640,21 @@ export default function ProductionInProgressPhase({
               </label>
             </div>
 
+            <div className="mt-3">
+              <BarcodeScanField
+                onScan={handleScannedCode}
+                disabled={saving || !materialWarehouseId || loadingWarehouseProducts}
+                autoFocus={Boolean(materialWarehouseId) && tab === "materials"}
+                label={t("inventory.scan.title")}
+                placeholder={t("inventory.scan.placeholder")}
+                onOpenCamera={() => setCameraOpen(true)}
+                cameraLabel={t("inventory.scan.cameraOpen")}
+              />
+              {scanNotice ? (
+                <p className="mt-2 text-xs font-semibold text-emerald-400">{scanNotice}</p>
+              ) : null}
+            </div>
+
             {materialSelection?.productId ? (
               <p className="mt-2 text-xs">
                 <span
@@ -611,6 +726,14 @@ export default function ProductionInProgressPhase({
             loading={saving}
             onConfirm={() => void confirmShortageAddMaterial()}
             onCancel={() => setShortageConfirmOpen(false)}
+          />
+
+          <CameraBarcodeScanner
+            open={cameraOpen}
+            onDetected={(code) => {
+              void handleScannedCode(code);
+            }}
+            onClose={() => setCameraOpen(false)}
           />
 
           {fulfilledPurchaseRequests.length > 0 ? (

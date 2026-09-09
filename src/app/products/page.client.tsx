@@ -6,7 +6,11 @@ import PageLayout from "@/components/layout/PageLayout";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
 import ColumnVisibilityPanel from "@/components/products/ColumnVisibilityPanel";
 import ProductTable from "@/components/products/ProductTable";
-import ProductBarcodePrintTemplate from "@/components/products/ProductBarcodePrintTemplate";
+import ThermalLabelPrintTemplate, {
+  productToThermalLabel,
+  type ThermalLabelItem,
+  type ThermalLabelSize,
+} from "@/components/products/ThermalLabelPrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 import ProductForm from "@/components/products/ProductForm";
 import { fetchProductsCatalog } from "@/lib/products/api";
@@ -32,6 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
@@ -56,8 +61,18 @@ export default function ProductsPage() {
   );
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const { printData: printBarcodes, setPrintData: setPrintBarcodes } =
-    useDocumentPrint<Product[]>();
+  const branding = useCompanyBranding();
+  const [labelSize, setLabelSize] = useState<ThermalLabelSize>("80mm");
+  const { printData: printJob, setPrintData: setPrintJob } =
+    useDocumentPrint<{ items: ThermalLabelItem[]; size: ThermalLabelSize }>(450);
+
+  const defaultWarehouseName =
+    warehouses.find((row) => row.is_default)?.name || warehouses[0]?.name || null;
+
+  const toLabelItems = (rows: Product[]): ThermalLabelItem[] =>
+    rows.map((product) =>
+      productToThermalLabel(product, { warehouseName: defaultWarehouseName })
+    );
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -118,14 +133,25 @@ export default function ProductsPage() {
               </button>
             ) : null}
 
+            <select
+              value={labelSize}
+              onChange={(e) => setLabelSize(e.target.value as ThermalLabelSize)}
+              className="rounded-lg border border-app bg-app-card px-3 py-2 text-sm font-semibold text-app"
+              title={t("inventory.labelSize")}
+            >
+              <option value="58mm">{t("inventory.size58")}</option>
+              <option value="80mm">{t("inventory.size80")}</option>
+              <option value="sticker">{t("inventory.sticker")}</option>
+            </select>
+
             <button
               type="button"
-              onClick={() => setPrintBarcodes(filteredProducts)}
+              onClick={() => setPrintJob({ items: toLabelItems(filteredProducts), size: labelSize })}
               disabled={loading || filteredProducts.length === 0}
               className="flex items-center gap-2 rounded-lg app-card px-4 py-2 text-sm font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
             >
               <Printer className="h-4 w-4" />
-              {t("products.barcodeLabels")}
+              {t("inventory.printLabel")}
             </button>
 
             <Link
@@ -191,6 +217,9 @@ export default function ProductsPage() {
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
             onDelete={canManageProducts ? setDeleteTarget : undefined}
+            onPrintLabel={(product) =>
+              setPrintJob({ items: toLabelItems([product]), size: labelSize })
+            }
           />
         </main>
 
@@ -230,11 +259,15 @@ export default function ProductsPage() {
         </div>
       ) : null}
 
-      {printBarcodes && (
+      {printJob ? (
         <div className="print-area">
-          <ProductBarcodePrintTemplate products={printBarcodes} />
+          <ThermalLabelPrintTemplate
+            items={printJob.items}
+            size={printJob.size}
+            branding={branding}
+          />
         </div>
-      )}
+      ) : null}
 
       <ConfirmDeleteModal
         open={Boolean(deleteTarget)}

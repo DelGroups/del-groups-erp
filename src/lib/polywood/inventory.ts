@@ -6,13 +6,9 @@ import {
   POLYWOOD_INVENTORY_MODE,
   POLYWOOD_WAREHOUSE_TYPE,
 } from "@/lib/polywood/constants";
-import type {
-  PolywoodCutPieceSummary,
-  PolywoodInventorySummary,
-  PolywoodPiece,
-  PolywoodPieceInsert,
-} from "@/lib/polywood/types";
+import { generatePieceBarcode } from "@/lib/products/generateBarcode";
 import type { Product, Warehouse } from "@/types/database.types";
+import type { PolywoodPieceInsert } from "@/lib/polywood/types";
 
 export function isPolywoodWarehouse(warehouse: Pick<Warehouse, "warehouse_type"> | null | undefined): boolean {
   return warehouse?.warehouse_type === POLYWOOD_WAREHOUSE_TYPE;
@@ -132,7 +128,15 @@ export async function syncPolywoodProductStock(productId: string, warehouseId: s
 
 export async function insertPolywoodPieces(rows: PolywoodPieceInsert[]): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await supabase.from("polywood_pieces").insert(rows);
+  const withCodes = rows.map((row) => {
+    const barcode = row.barcode || generatePieceBarcode();
+    return {
+      ...row,
+      barcode,
+      qr_code: row.qr_code || barcode,
+    };
+  });
+  const { error } = await supabase.from("polywood_pieces").insert(withCodes);
   if (error) throw new Error(error.message);
 }
 

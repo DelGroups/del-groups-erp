@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
+import { generateProductBarcode } from "@/lib/products/generateBarcode";
 import type { Category, Product } from "@/types/database.types";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
@@ -27,7 +28,7 @@ export default function QuickAddProductModal({
   const [unit, setUnit] = useState("Ədəd");
   const [buyPrice, setBuyPrice] = useState("0");
   const [sellPrice, setSellPrice] = useState("0");
-  const [barcode, setBarcode] = useState("");
+  const [barcode, setBarcode] = useState(() => generateProductBarcode());
   const [color, setColor] = useState("");
   const [weight, setWeight] = useState("0");
   const [extraInfo, setExtraInfo] = useState("");
@@ -153,15 +154,24 @@ export default function QuickAddProductModal({
           </label>
           <label className="block font-semibold text-app">
             Barkod
-            <input
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.preventDefault();
-              }}
-              placeholder="Skan edin və ya daxil edin"
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
-            />
+            <div className="mt-1 flex gap-2">
+              <input
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.preventDefault();
+                }}
+                placeholder="Avtomatik / skan"
+                className="w-full rounded-lg border px-3 py-2 text-sm font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setBarcode(generateProductBarcode())}
+                className="shrink-0 rounded-lg border border-app px-2 py-2 text-[10px] font-bold uppercase text-app hover:bg-app-card-hover"
+              >
+                EAN-13
+              </button>
+            </div>
           </label>
           <label className="block font-semibold text-app">
             Alış qiyməti

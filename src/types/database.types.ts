@@ -234,6 +234,7 @@ export interface Product {
   stock: number | null;
   min_stock?: number | null;
   barcode?: string | null;
+  qr_code?: string | null;
   color?: string | null;
   weight?: number | null;
   extra_info?: string | null;

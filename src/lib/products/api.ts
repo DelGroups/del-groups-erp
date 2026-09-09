@@ -4,6 +4,7 @@ import { resolveServicesCategoryId } from "@/lib/products/serviceCategory";
 import { supabase } from "@/lib/supabase";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import { generateProductCode } from "@/types/database.types";
+import { generatePieceBarcode, generateProductBarcode } from "@/lib/products/generateBarcode";
 
 export interface DimensionalOffCutInput {
   length_m: number;
@@ -39,6 +40,7 @@ function buildDimensionalPieceRows(
   const rows: PolywoodPieceInsert[] = [];
 
   for (let i = 0; i < Math.max(0, Math.floor(initialStock.fullSheetCount)); i += 1) {
+    const barcode = generatePieceBarcode();
     rows.push({
       product_id: productId,
       warehouse_id: warehouseId,
@@ -47,6 +49,8 @@ function buildDimensionalPieceRows(
       status: "available",
       notes: null,
       sale_item_id: null,
+      barcode,
+      qr_code: barcode,
       updated_at: now,
     });
   }
@@ -57,6 +61,7 @@ function buildDimensionalPieceRows(
     if (lengthM <= 0 || count <= 0) continue;
 
     for (let i = 0; i < count; i += 1) {
+      const barcode = generatePieceBarcode();
       rows.push({
         product_id: productId,
         warehouse_id: warehouseId,
@@ -65,6 +70,8 @@ function buildDimensionalPieceRows(
         status: "available",
         notes: null,
         sale_item_id: null,
+        barcode,
+        qr_code: barcode,
         updated_at: now,
       });
     }
@@ -79,6 +86,7 @@ export function buildProductInsert(
 ): ProductInsert {
   const isDimensional = Boolean(input.is_dimensional);
   const isService = Boolean(input.is_service);
+  const barcode = input.barcode?.trim() || generateProductBarcode();
   return {
     code: input.code?.trim() || generateProductCode(),
     name: input.name.trim(),
@@ -89,7 +97,8 @@ export function buildProductInsert(
     sell_price: Number(input.sell_price) || 0,
     stock: isService ? 0 : Number(input.stock) || 0,
     min_stock: isService ? 0 : Number(input.min_stock) || 0,
-    barcode: input.barcode?.trim() || null,
+    barcode,
+    qr_code: input.qr_code?.trim() || barcode,
     color: input.color?.trim() || null,
     weight: Number(input.weight) || 0,
     extra_info: input.extra_info?.trim() || null,

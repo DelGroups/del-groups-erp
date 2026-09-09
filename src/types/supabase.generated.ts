@@ -948,6 +948,8 @@ export type Database = {
           status: string
           updated_at: string
           warehouse_id: string
+          barcode: string | null
+          qr_code: string | null
         }
         Insert: {
           created_at?: string
@@ -960,6 +962,8 @@ export type Database = {
           status?: string
           updated_at?: string
           warehouse_id: string
+          barcode?: string | null
+          qr_code?: string | null
         }
         Update: {
           created_at?: string
@@ -972,6 +976,8 @@ export type Database = {
           status?: string
           updated_at?: string
           warehouse_id?: string
+          barcode?: string | null
+          qr_code?: string | null
         }
         Relationships: [
           {
@@ -1646,6 +1652,7 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          qr_code: string | null
           base_length: number | null
           base_width: number | null
           buy_price: number | null
@@ -1669,6 +1676,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          qr_code?: string | null
           base_length?: number | null
           base_width?: number | null
           buy_price?: number | null
@@ -1692,6 +1700,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          qr_code?: string | null
           base_length?: number | null
           base_width?: number | null
           buy_price?: number | null

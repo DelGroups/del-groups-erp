@@ -13,9 +13,19 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Warehouse } from "@/types/database.types";
 import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Trash2, Upload } from "lucide-react";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import ThermalLabelPrintTemplate, {
+  productToThermalLabel,
+  type ThermalLabelItem,
+  type ThermalLabelSize,
+} from "@/components/products/ThermalLabelPrintTemplate";
 
 export default function PolywoodPageClient() {
   const { t } = useI18n();
+  const branding = useCompanyBranding();
+  const { printData: printJob, setPrintData: setPrintJob } =
+    useDocumentPrint<{ items: ThermalLabelItem[]; size: ThermalLabelSize }>(450);
   const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
   const [rows, setRows] = useState<PolywoodProductInventoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,11 +303,18 @@ export default function PolywoodPageClient() {
                             <button
                               type="button"
                               className="rounded p-1.5 hover:bg-app-card-hover"
-                              title={t("common.print")}
-                              onClick={() => {
-                                setExpandedProductId(product.id);
-                                window.setTimeout(() => window.print(), 200);
-                              }}
+                              title={t("inventory.printLabel")}
+                              onClick={() =>
+                                setPrintJob({
+                                  items: [
+                                    productToThermalLabel(product, {
+                                      warehouseName: warehouse?.name || warehouse?.location || null,
+                                      dimensions: `${summary.full_sheet_count} × ${summary.full_sheet_length_m}m`,
+                                    }),
+                                  ],
+                                  size: "80mm",
+                                })
+                              }
                             >
                               <Printer className="h-3.5 w-3.5" />
                             </button>
@@ -366,6 +383,15 @@ export default function PolywoodPageClient() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
       />
+      {printJob ? (
+        <div className="print-area">
+          <ThermalLabelPrintTemplate
+            items={printJob.items}
+            size={printJob.size}
+            branding={branding}
+          />
+        </div>
+      ) : null}
     </PageLayout>
   );
 }

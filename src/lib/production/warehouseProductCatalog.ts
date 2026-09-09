@@ -10,6 +10,8 @@ type StockAdminClient = ReturnType<
 >;
 
 const CATALOG_SELECT_ATTEMPTS = [
+  "id,code,name,unit,buy_price,stock,inventory_mode,barcode,qr_code",
+  "id,code,name,unit,buy_price,stock,inventory_mode,barcode",
   "id,code,name,unit,buy_price,stock,inventory_mode",
   "id,code,name,unit,buy_price,stock",
   "id,name,unit,buy_price,stock",
@@ -73,6 +75,8 @@ export type WarehouseCatalogItem = {
   stock: number;
   stock_quantity: number;
   inventory_mode: string | null;
+  barcode: string | null;
+  qr_code: string | null;
 };
 
 export function mapCatalogProduct(
@@ -97,6 +101,8 @@ export function mapCatalogProduct(
     stock: stockQty,
     stock_quantity: stockQty,
     inventory_mode: product.inventory_mode || null,
+    barcode: product.barcode || null,
+    qr_code: product.qr_code || product.barcode || null,
   };
 }
 

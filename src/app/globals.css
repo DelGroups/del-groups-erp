@@ -1063,9 +1063,115 @@ textarea:focus {
 
   nav,
   aside,
-  header:not(.invoice-print-layout header),
+  header:not(.invoice-print-layout header):not(.thermal-label-header),
   button,
   .app-scrim {
     display: none !important;
   }
+
+  .print-area header {
+    display: flex !important;
+  }
+
+  .thermal-print-root {
+    width: 100%;
+    color: #0f172a;
+    background: #ffffff;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  }
+
+  .thermal-label {
+    break-after: page;
+    box-sizing: border-box;
+    padding: 2mm;
+    color: #0f172a;
+    background: #ffffff;
+  }
+
+  .thermal-label-58 {
+    width: 54mm;
+  }
+
+  .thermal-label-80 {
+    width: 74mm;
+  }
+
+  .thermal-label-sticker {
+    width: 48mm;
+    min-height: 28mm;
+  }
+
+  .thermal-label-header {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2mm;
+  }
+
+  .thermal-label-logo {
+    max-height: 10mm;
+    max-width: 22mm;
+    object-fit: contain;
+  }
+
+  .thermal-label-company {
+    margin: 0;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .thermal-label-name {
+    margin: 0 0 1mm;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .thermal-label-code,
+  .thermal-label-meta {
+    margin: 0;
+    font-size: 9px;
+    color: #334155;
+  }
+
+  .thermal-label-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .thermal-label-codes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3mm;
+    margin-top: 2mm;
+  }
+}
+
+@page thermal-58 {
+  size: 58mm auto;
+  margin: 2mm;
+}
+
+@page thermal-80 {
+  size: 80mm auto;
+  margin: 3mm;
+}
+
+@page thermal-sticker {
+  size: 50mm 30mm;
+  margin: 1.5mm;
+}
+
+.thermal-print-58 {
+  page: thermal-58;
+}
+
+.thermal-print-80 {
+  page: thermal-80;
+}
+
+.thermal-print-sticker {
+  page: thermal-sticker;
 }

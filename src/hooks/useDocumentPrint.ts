@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export function useDocumentPrint<T>() {
+export function useDocumentPrint<T>(delayMs = 150) {
   const [printData, setPrintData] = useState<T | null>(null);
 
   useEffect(() => {
@@ -10,7 +10,7 @@ export function useDocumentPrint<T>() {
 
     const timer = window.setTimeout(() => {
       window.print();
-    }, 150);
+    }, delayMs);
 
     const onAfterPrint = () => setPrintData(null);
     window.addEventListener("afterprint", onAfterPrint);
@@ -19,7 +19,7 @@ export function useDocumentPrint<T>() {
       window.clearTimeout(timer);
       window.removeEventListener("afterprint", onAfterPrint);
     };
-  }, [printData]);
+  }, [printData, delayMs]);
 
   return { printData, setPrintData };
 }
