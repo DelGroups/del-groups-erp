@@ -68,6 +68,7 @@ export default function AiAssistantWidget() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [agent, setAgent] = useState<ErpAiAgentId>(DEFAULT_ERP_AGENT);
   const listRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -120,13 +121,20 @@ export default function AiAssistantWidget() {
   }, [open]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending, open]);
+    if (!open) return;
+    setAgent(DEFAULT_ERP_AGENT);
+    const frame = window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(AGENT_KEY);
-    setAgent(resolveTargetAgent(stored));
-  }, []);
+    const frame = window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, sending]);
 
   useEffect(() => () => stopMedia(), [stopMedia]);
 
@@ -473,6 +481,7 @@ export default function AiAssistantWidget() {
                 <p className="text-xs font-semibold text-red-500">{t("aiAssistant.recording")}</p>
               )}
               {error && <p className="text-xs text-red-500">{error}</p>}
+              <div ref={bottomRef} />
             </div>
 
             {chips.length > 0 && (

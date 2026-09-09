@@ -7,13 +7,14 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { getN8nAiConfigAction, saveN8nAiConfigAction } from "@/lib/actions/aiSettings";
+import { DEFAULT_N8N_PRODUCTION_WEBHOOK_URL } from "@/lib/ai/n8nConfig";
 
 export default function AiN8nSettingsCard() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
-  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState(DEFAULT_N8N_PRODUCTION_WEBHOOK_URL);
   const [secretToken, setSecretToken] = useState("");
   const [hasSecret, setHasSecret] = useState(false);
   const [envConfigured, setEnvConfigured] = useState(false);
@@ -32,7 +33,7 @@ export default function AiN8nSettingsCard() {
         return;
       }
       if (result.data) {
-        setWebhookUrl(result.data.webhook_url);
+        setWebhookUrl(result.data.webhook_url || DEFAULT_N8N_PRODUCTION_WEBHOOK_URL);
         setHasSecret(result.data.has_secret);
         setEnvConfigured(result.data.env_webhook_configured);
       }
@@ -52,7 +53,7 @@ export default function AiN8nSettingsCard() {
       return;
     }
     if (result.data) {
-      setWebhookUrl(result.data.webhook_url);
+      setWebhookUrl(result.data.webhook_url || DEFAULT_N8N_PRODUCTION_WEBHOOK_URL);
       setHasSecret(result.data.has_secret);
       setEnvConfigured(result.data.env_webhook_configured);
       setSecretToken("");
@@ -90,7 +91,7 @@ export default function AiN8nSettingsCard() {
         <input
           type="url"
           className="app-input mt-1 w-full font-mono text-sm"
-          placeholder="https://n8n.example.com/webhook/erp-ai"
+          placeholder="https://ai.del-groups.com/webhook/del-erp-webhook"
           value={webhookUrl}
           disabled={loading}
           onChange={(event) => setWebhookUrl(event.target.value)}

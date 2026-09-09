@@ -4,7 +4,9 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { catchActionError, type ActionResult } from "@/lib/supabase/actionResult";
 import {
+  DEFAULT_N8N_PRODUCTION_WEBHOOK_URL,
   N8N_AI_CONFIG_KEY,
+  normalizeN8nWebhookUrl,
   parseN8nAiConfig,
   toPublicN8nConfig,
   validateN8nWebhookUrl,
@@ -47,7 +49,7 @@ export async function saveN8nAiConfigAction(input: {
     const previous = parseN8nAiConfig(existing.data?.value);
     const nextSecret = (input.secret_token || "").trim();
     const config = parseN8nAiConfig({
-      webhook_url: checked.url,
+      webhook_url: normalizeN8nWebhookUrl(checked.url || DEFAULT_N8N_PRODUCTION_WEBHOOK_URL),
       secret_token: nextSecret || previous.secret_token,
     });
 

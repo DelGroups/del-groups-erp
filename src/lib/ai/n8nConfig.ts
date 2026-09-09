@@ -21,14 +21,25 @@ function cleanEnv(value: string | undefined): string {
   return (value || "").trim().replace(/^["']|["']$/g, "");
 }
 
-const DEFAULT_N8N_PRODUCTION_WEBHOOK_URL =
+const LEGACY_SHARED_N8N_WEBHOOK_URL =
   "https://ai.del-groups.com/webhook/e6576363-eebf-461a-b93f-1240b0159593";
 
+export const DEFAULT_N8N_PRODUCTION_WEBHOOK_URL =
+  "https://ai.del-groups.com/webhook/del-erp-webhook";
+
+export function normalizeN8nWebhookUrl(url: string): string {
+  const cleaned = clampString(url, 500).replace(/\/$/, "");
+  if (!cleaned || cleaned === LEGACY_SHARED_N8N_WEBHOOK_URL.replace(/\/$/, "")) {
+    return DEFAULT_N8N_PRODUCTION_WEBHOOK_URL;
+  }
+  return cleaned;
+}
+
 export function envN8nWebhookUrl(): string {
-  return (
+  return normalizeN8nWebhookUrl(
     cleanEnv(process.env.NEXT_PUBLIC_N8N_AI_WEBHOOK_URL) ||
-    cleanEnv(process.env.N8N_AI_WEBHOOK_URL) ||
-    DEFAULT_N8N_PRODUCTION_WEBHOOK_URL
+      cleanEnv(process.env.N8N_AI_WEBHOOK_URL) ||
+      DEFAULT_N8N_PRODUCTION_WEBHOOK_URL
   );
 }
 
@@ -47,7 +58,7 @@ export function parseN8nAiConfig(raw: unknown): N8nAiStoredConfig {
 
 export function toPublicN8nConfig(stored: N8nAiStoredConfig): N8nAiPublicConfig {
   return {
-    webhook_url: stored.webhook_url,
+    webhook_url: normalizeN8nWebhookUrl(stored.webhook_url || envN8nWebhookUrl()),
     secret_token: "",
     has_secret: Boolean(stored.secret_token || envN8nWebhookSecret()),
     env_webhook_configured: Boolean(envN8nWebhookUrl()),
@@ -87,7 +98,7 @@ export function validateN8nWebhookUrl(raw: string): { ok: true; url: string } | 
 }
 
 export function resolveN8nRuntime(stored: N8nAiStoredConfig): { url: string; secret: string } | null {
-  const url = stored.webhook_url || envN8nWebhookUrl();
+  const url = normalizeN8nWebhookUrl(stored.webhook_url || envN8nWebhookUrl());
   if (!url) return null;
   const checked = validateN8nWebhookUrl(url);
   if (!checked.ok || !checked.url) return null;

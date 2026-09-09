@@ -14,16 +14,15 @@ import {
 } from "@/lib/ai/n8nConfig";
 import {
   parseN8nWebhookResponse,
-  sanitizeCurrentPage,
 } from "@/lib/ai/n8nClient";
-import { erpAgentSessionId, resolveTargetAgent } from "@/lib/ai/agents";
+import { erpAgentSessionId } from "@/lib/ai/agents";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
-const N8N_TIMEOUT_MS = 50_000;
+const N8N_TIMEOUT_MS = 60_000;
 const ALLOWED_FILE_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -129,8 +128,15 @@ export async function POST(request: NextRequest) {
     }
 
     const result = parseN8nWebhookResponse(parsed);
+    const reply =
+      (parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      typeof (parsed as { reply?: unknown }).reply === "string"
+        ? (parsed as { reply: string }).reply.trim()
+        : "") || result.reply;
     return NextResponse.json({
-      reply: result.reply,
+      reply,
       buttons: result.buttons,
       table: result.table,
       links: result.links,
@@ -145,12 +151,10 @@ export async function POST(request: NextRequest) {
 
 function switchPayload(
   userId: string,
-  targetAgent: unknown,
   content: string,
   extra?: Record<string, unknown>
 ): Record<string, unknown> {
   return {
-    target_agent: resolveTargetAgent(targetAgent),
     content,
     session_id: erpAgentSessionId(userId),
     ...extra,
@@ -162,8 +166,6 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
   if (contentType.includes("multipart/form-data")) {
     const form = await request.formData();
     const type = String(form.get("type") || "file");
-    const targetAgent = form.get("target_agent");
-    const currentPage = sanitizeCurrentPage(String(form.get("current_page") || "/"));
     const file = form.get("file");
     if (!(file instanceof File) || file.size <= 0) {
       throw new Error("Fayl tələb olunur");
@@ -173,26 +175,22 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     }
     if (type === "voice") {
       const audioBase64 = await fileToBase64(file);
-      return switchPayload(userId, targetAgent, "", {
+      return switchPayload(userId, "", {
         audio_base64: audioBase64,
         file_type: file.type || "audio/webm",
-        current_page: currentPage,
       });
     }
-    return buildFilePayload(userId, targetAgent, currentPage, file);
+    return buildFilePayload(userId, file);
   }
 
   const body = (await request.json()) as Record<string, unknown>;
   const type = String(body.type || "text");
-  const targetAgent = body.target_agent;
-  const currentPage = sanitizeCurrentPage(String(body.current_page || "/"));
 
   if (type === "voice") {
     const audio = clampString(String(body.audio_base64 || ""), Math.ceil(MAX_N8N_FILE_BYTES * 1.4));
     if (!audio) throw new Error("Səs faylı tələb olunur");
-    return switchPayload(userId, targetAgent, "", {
+    return switchPayload(userId, "", {
       audio_base64: stripDataUrl(audio),
-      current_page: currentPage,
     });
   }
 
@@ -203,10 +201,9 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     const buffer = Buffer.from(stripDataUrl(fileBase64), "base64");
     if (buffer.length > MAX_N8N_FILE_BYTES) throw new Error("Fayl 8 MB-dan kiçik olmalıdır");
     const fileUrl = await uploadAssistantFile(userId, buffer, fileType, "upload");
-    return switchPayload(userId, targetAgent, String(body.content || ""), {
+    return switchPayload(userId, String(body.content || ""), {
       file_url: fileUrl || "",
       file_type: fileType,
-      current_page: currentPage,
       ...(fileUrl ? {} : { file_base64: stripDataUrl(fileBase64) }),
     });
   }
@@ -214,18 +211,12 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
   const content = clampString(String(body.content || body.message || ""), MAX_N8N_MESSAGE);
   if (!content) throw new Error("Mesaj tələb olunur");
   return {
-    target_agent: resolveTargetAgent(targetAgent),
     content,
     session_id: erpAgentSessionId(userId),
   };
 }
 
-async function buildFilePayload(
-  userId: string,
-  targetAgent: unknown,
-  currentPage: string,
-  file: File
-): Promise<Record<string, unknown>> {
+async function buildFilePayload(userId: string, file: File): Promise<Record<string, unknown>> {
   const mime = (file.type || "").toLowerCase();
   const resolvedType = mime || guessFileType(file.name);
   if (!ALLOWED_FILE_TYPES.has(resolvedType) && !resolvedType.startsWith("image/")) {
@@ -236,13 +227,12 @@ async function buildFilePayload(
   const extra: Record<string, unknown> = {
     file_url: fileUrl || "",
     file_type: resolvedType,
-    current_page: currentPage,
     file_name: file.name.slice(0, 120),
   };
   if (!fileUrl) {
     extra.file_base64 = buffer.toString("base64");
   }
-  return switchPayload(userId, targetAgent, file.name.slice(0, 120), extra);
+  return switchPayload(userId, file.name.slice(0, 120), extra);
 }
 
 async function uploadAssistantFile(
