@@ -44,6 +44,7 @@ import {
   ClipboardList,
   ClipboardCheck,
   Database,
+  ScrollText,
   Factory,
   KanbanSquare,
 } from "lucide-react";
@@ -147,6 +148,7 @@ const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.commissionRules", path: "/settings/commissions", icon: Percent },
       { titleKey: "nav.items.initialSetup", path: "/settings/initial-setup", icon: Landmark },
       { titleKey: "nav.items.backup", path: "/settings/backup", icon: Database },
+      { titleKey: "nav.items.audit", path: "/settings/audit", icon: ScrollText },
     ],
   },
 ];

@@ -1402,6 +1402,22 @@ export type SalesCommissionInsert = Omit<SalesCommission, "id" | "created_at"> &
   id?: string;
 };
 
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE";
+export type AuditModule = "FINANCE" | "PRODUCTION" | "INVENTORY" | "PAYROLL" | "SECURITY";
+
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  action: AuditAction;
+  module: AuditModule;
+  table_name: string | null;
+  record_id: string | null;
+  old_values_json: Json | null;
+  new_values_json: Json | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
 export interface PayrollRecord {
   id: string;
   employee_id: string;

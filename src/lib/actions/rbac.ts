@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import {
   permissionOverridesToDb,
   permissionsToDbPayload,
@@ -66,15 +67,33 @@ export async function updateUserPermissionOverridesAction(input: {
 }): Promise<ActionResult> {
   try {
     await requirePermissionAction("can_manage_roles");
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin
+    const patch = {
+      permission_overrides: permissionOverridesToDb(input.permissionOverrides),
+      scope_overrides: input.scopeOverrides,
+      updated_at: new Date().toISOString(),
+    };
+    const userClient = await createSupabaseServerClient();
+    const userUpdate = await userClient
       .from("profiles")
-      .update({
-        permission_overrides: permissionOverridesToDb(input.permissionOverrides),
-        scope_overrides: input.scopeOverrides,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", input.userId);
+      .update(patch as never)
+      .eq("id", input.userId)
+      .select("id")
+      .maybeSingle();
+
+    let error = userUpdate.error;
+    if (error || !userUpdate.data) {
+      const admin = createSupabaseAdminClient();
+      const adminResult = await admin
+        .from("profiles")
+        .update(patch as never)
+        .eq("id", input.userId)
+        .select("id")
+        .maybeSingle();
+      error = adminResult.error;
+      if (!error && !adminResult.data) {
+        return { success: false, error: "İstifadəçi tapılmadı" };
+      }
+    }
 
     if (error) return { success: false, error: error.message };
     return { success: true };

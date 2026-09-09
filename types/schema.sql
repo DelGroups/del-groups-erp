@@ -849,3 +849,21 @@ ALTER TABLE public.production_orders
 -- journal_entries: id, entry_no, entry_date, source_type, source_id, idempotency_key, memo, posted_at
 -- journal_entry_lines: id, journal_entry_id, coa_id, debit, credit, partner_type, partner_id, account_id
 -- transactions.journal_entry_id links operational cash rows to journal_entries
+
+-- ─── System audit trail (supabase/migrations/20260909160000_audit_logs.sql) ──
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+  module TEXT NOT NULL CHECK (module IN ('FINANCE', 'PRODUCTION', 'INVENTORY', 'PAYROLL', 'SECURITY')),
+  table_name TEXT,
+  record_id UUID,
+  old_values_json JSONB,
+  new_values_json JSONB,
+  ip_address INET,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_module_action ON audit_logs (module, action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_record_id ON audit_logs (record_id);
