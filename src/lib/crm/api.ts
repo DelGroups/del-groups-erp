@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase";
 import type {
   CrmDeal,
   CrmQuotation,
-  DealStage,
   QuotationItem,
   QuotationStatus,
 } from "@/types/database.types";
@@ -50,7 +49,7 @@ function mapDeal(row: Record<string, unknown>): CrmDeal {
     id: row.id as string,
     client_id: (row.client_id as string) || null,
     title: (row.title as string) || "",
-    stage: ((row.stage as DealStage) || "LEAD") as DealStage,
+        stage: String(row.stage || "LEAD"),
     expected_value: Number(row.expected_value) || 0,
     assigned_to: (row.assigned_to as string) || null,
     notes: (row.notes as string) || null,

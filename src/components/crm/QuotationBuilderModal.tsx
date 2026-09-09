@@ -26,6 +26,7 @@ interface QuotationBuilderModalProps {
   quotation?: CrmQuotation | null;
   products: CatalogProduct[];
   saving?: boolean;
+  defaultValidityDays?: number;
   onClose: () => void;
   onSubmit: (payload: {
     items: QuotationItem[];
@@ -62,6 +63,7 @@ export default function QuotationBuilderModal({
   quotation,
   products,
   saving,
+  defaultValidityDays = 14,
   onClose,
   onSubmit,
 }: QuotationBuilderModalProps) {
@@ -85,13 +87,13 @@ export default function QuotationBuilderModal({
       return;
     }
     const until = new Date();
-    until.setDate(until.getDate() + 14);
+    until.setDate(until.getDate() + Math.max(1, defaultValidityDays));
     setItems([emptyItem()]);
     setDiscount("0");
     setTaxRate("0");
     setValidUntil(until.toISOString().slice(0, 10));
     setNotes("");
-  }, [isOpen, quotation]);
+  }, [defaultValidityDays, isOpen, quotation]);
 
   const totals = useMemo(
     () => calcQuotationTotals(items, Number(discount) || 0, Number(taxRate) || 0),

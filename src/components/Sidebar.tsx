@@ -150,6 +150,7 @@ const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.initialSetup", path: "/settings/initial-setup", icon: Landmark },
       { titleKey: "nav.items.backup", path: "/settings/backup", icon: Database },
       { titleKey: "nav.items.barcode", path: "/settings/barcode", icon: Barcode },
+      { titleKey: "nav.items.crmSettings", path: "/settings/crm", icon: KanbanSquare },
       { titleKey: "nav.items.audit", path: "/settings/audit", icon: ScrollText },
     ],
   },

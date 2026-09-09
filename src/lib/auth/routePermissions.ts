@@ -15,6 +15,7 @@ import {
 const ROUTE_RULES: { prefix: string; permission: PermissionKey; exact?: boolean }[] = [
   { prefix: "/settings/audit", permission: "can_manage_settings" },
   { prefix: "/settings/barcode", permission: "can_manage_settings" },
+  { prefix: "/settings/crm", permission: "can_manage_settings" },
   { prefix: "/settings/backup", permission: "can_manage_settings" },
   { prefix: "/settings/initial-setup", permission: "can_manage_settings" },
   { prefix: "/settings/roles", permission: "can_manage_roles" },
@@ -84,6 +85,7 @@ export const NAV_PATH_PERMISSIONS: Record<string, PermissionKey> = {
   "/settings/initial-setup": "can_manage_settings",
   "/settings/backup": "can_manage_settings",
   "/settings/barcode": "can_manage_settings",
+  "/settings/crm": "can_manage_settings",
   "/settings/audit": "can_manage_settings",
 };
 

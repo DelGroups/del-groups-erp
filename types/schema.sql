@@ -874,3 +874,5 @@ CREATE TABLE IF NOT EXISTS system_settings (
   value JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- CRM config (quote_prefix, stages) stored as system_settings.crm_config

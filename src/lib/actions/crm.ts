@@ -10,11 +10,17 @@ import { userHasPermission } from "@/lib/auth/routePermissions";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
 import { createProductionOrderAction } from "@/lib/actions/production";
 import {
+  CRM_CONFIG_KEY,
+  defaultDealStageId,
+  isKnownStageId,
+  parseCrmConfig,
+  stageIdByKind,
+  type CrmConfig,
+} from "@/lib/crm/config";
+import {
   calcQuotationLine,
   calcQuotationTotals,
-  DEAL_STAGES,
   QUOTATION_STATUSES,
-  type DealStage,
   type QuotationItem,
   type QuotationStatus,
 } from "@/types/database.types";
@@ -45,28 +51,41 @@ function normalizeItems(raw: unknown): QuotationItem[] {
     .filter((item) => item.product_name && item.quantity > 0);
 }
 
-function asDealStage(value: string): DealStage | null {
-  return (DEAL_STAGES as readonly string[]).includes(value) ? (value as DealStage) : null;
-}
-
 function asQuoteStatus(value: string): QuotationStatus | null {
   return (QUOTATION_STATUSES as readonly string[]).includes(value)
     ? (value as QuotationStatus)
     : null;
 }
 
+async function loadCrmConfig(
+  client: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<CrmConfig> {
+  const { data } = await client
+    .from("system_settings")
+    .select("value")
+    .eq("key", CRM_CONFIG_KEY)
+    .maybeSingle();
+  return parseCrmConfig(data?.value);
+}
+
 async function syncDealFromQuotation(
   client: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   dealId: string,
   status: QuotationStatus,
-  total: number
+  total: number,
+  config: CrmConfig
 ) {
   const patch: Record<string, unknown> = {
     expected_value: total,
     updated_at: new Date().toISOString(),
   };
-  if (status === "WON" || status === "ACCEPTED") patch.stage = "WON";
-  else if (status === "SENT") patch.stage = "PROPOSAL";
+  if (status === "WON" || status === "ACCEPTED") {
+    const won = stageIdByKind(config, "won");
+    if (won) patch.stage = won;
+  } else if (status === "SENT") {
+    const proposal = stageIdByKind(config, "proposal");
+    if (proposal) patch.stage = proposal;
+  }
   await client.from("deals").update(patch).eq("id", dealId);
 }
 
@@ -87,6 +106,7 @@ export async function createDealAction(payload: {
     }
 
     const client = await createSupabaseServerClient();
+    const config = await loadCrmConfig(client);
     const { data, error } = await client
       .from("deals")
       .insert([
@@ -96,7 +116,7 @@ export async function createDealAction(payload: {
           expected_value: Math.max(0, Number(payload.expectedValue) || 0),
           notes: clampString(payload.notes || "", 2000) || null,
           assigned_to: user.id,
-          stage: "LEAD",
+          stage: defaultDealStageId(config),
         },
       ])
       .select("id")
@@ -112,15 +132,16 @@ export async function createDealAction(payload: {
 
 export async function updateDealStageAction(
   dealId: string,
-  stage: DealStage
+  stage: string
 ): Promise<ActionResult> {
   try {
     await requirePermissionAction("can_manage_crm");
     if (!isValidUuid(dealId)) return { success: false, error: "Etibarlı sövdələşmə seçin" };
-    const nextStage = asDealStage(stage);
-    if (!nextStage) return { success: false, error: "Etibarsız mərhələ" };
-
     const client = await createSupabaseServerClient();
+    const config = await loadCrmConfig(client);
+    const nextStage = String(stage || "").trim().toUpperCase();
+    if (!isKnownStageId(config, nextStage)) return { success: false, error: "Etibarsız mərhələ" };
+
     const { error } = await client
       .from("deals")
       .update({ stage: nextStage, updated_at: new Date().toISOString() })
@@ -155,6 +176,8 @@ export async function saveQuotationAction(payload: {
     const status = asQuoteStatus(payload.status || "DRAFT") || "DRAFT";
     const client = await createSupabaseServerClient();
 
+    const config = await loadCrmConfig(client);
+
     if (payload.quotationId) {
       if (!isValidUuid(payload.quotationId)) {
         return { success: false, error: "Etibarlı təklif seçin" };
@@ -176,7 +199,7 @@ export async function saveQuotationAction(payload: {
         .single();
 
       if (error) return { success: false, error: mapRpcError(error.message) };
-      await syncDealFromQuotation(client, payload.dealId, status, totals.total);
+      await syncDealFromQuotation(client, payload.dealId, status, totals.total, config);
       return {
         success: true,
         data: { id: data.id as string, quoteNumber: data.quote_number as string },
@@ -187,7 +210,7 @@ export async function saveQuotationAction(payload: {
     const quoteNumber =
       !numberError && typeof numberRow === "string" && numberRow
         ? numberRow
-        : `TKL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        : `${config.quote_prefix}${String(Math.floor(1000 + Math.random() * 9000)).padStart(4, "0")}`;
 
     const { data, error } = await client
       .from("quotations")
@@ -210,7 +233,7 @@ export async function saveQuotationAction(payload: {
 
     if (error) return { success: false, error: mapRpcError(error.message) };
 
-    await syncDealFromQuotation(client, payload.dealId, status, totals.total);
+    await syncDealFromQuotation(client, payload.dealId, status, totals.total, config);
 
     return {
       success: true,

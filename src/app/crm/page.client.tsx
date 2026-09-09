@@ -12,6 +12,7 @@ import QuotationPrintTemplate, {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import { useCrmConfig } from "@/hooks/useCrmConfig";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -24,21 +25,11 @@ import {
 import { fetchCrmCustomers, fetchCrmDeals, fetchCrmProducts } from "@/lib/crm/api";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import {
-  DEAL_STAGES,
   type CrmDeal,
   type CrmQuotation,
-  type DealStage,
   type QuotationItem,
 } from "@/types/database.types";
 import { Factory, FileText, KanbanSquare, Printer } from "lucide-react";
-
-const STAGE_TONE: Record<DealStage, string> = {
-  LEAD: "border-sky-300",
-  QUALIFIED: "border-indigo-300",
-  PROPOSAL: "border-amber-300",
-  WON: "border-emerald-300",
-  LOST: "border-rose-300",
-};
 
 export default function CrmPipelinePage() {
   const { t } = useI18n();
@@ -46,6 +37,7 @@ export default function CrmPipelinePage() {
   const canManage = can("can_manage_crm");
   const canConvert = canManage && can("can_manage_production");
   const branding = useCompanyBranding();
+  const { config: crmConfig } = useCrmConfig();
   const { printData, setPrintData } = useDocumentPrint<QuotationPrintData>();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
@@ -81,14 +73,15 @@ export default function CrmPipelinePage() {
   }, [load]);
 
   const grouped = useMemo(() => {
-    const map = new Map<DealStage, CrmDeal[]>();
-    for (const stage of DEAL_STAGES) map.set(stage, []);
+    const map = new Map<string, CrmDeal[]>();
+    for (const stage of crmConfig.stages) map.set(stage.id, []);
+    const fallback = crmConfig.stages[0]?.id || "LEAD";
     for (const deal of deals) {
-      const list = map.get(deal.stage) || map.get("LEAD")!;
-      list.push(deal);
+      const key = map.has(deal.stage) ? deal.stage : fallback;
+      map.get(key)!.push(deal);
     }
     return map;
-  }, [deals]);
+  }, [crmConfig.stages, deals]);
 
   const handleCreateDeal = async (payload: {
     title: string;
@@ -108,7 +101,7 @@ export default function CrmPipelinePage() {
     void load();
   };
 
-  const moveDeal = async (dealId: string, stage: DealStage) => {
+  const moveDeal = async (dealId: string, stage: string) => {
     const current = deals.find((d) => d.id === dealId);
     if (!current || current.stage === stage) return;
     setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, stage } : d)));
@@ -177,10 +170,11 @@ export default function CrmPipelinePage() {
           <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
         ) : (
           <div className="flex min-w-max gap-4">
-            {DEAL_STAGES.map((stage) => (
+            {crmConfig.stages.map((stage) => (
               <section
-                key={stage}
-                className={`w-72 shrink-0 rounded-2xl border-t-4 bg-app-card p-3 ${STAGE_TONE[stage]}`}
+                key={stage.id}
+                className="w-72 shrink-0 rounded-2xl border-t-4 bg-app-card p-3"
+                style={{ borderTopColor: stage.color }}
                 onDragOver={(e) => {
                   if (!canManage) return;
                   e.preventDefault();
@@ -189,18 +183,18 @@ export default function CrmPipelinePage() {
                   if (!canManage) return;
                   e.preventDefault();
                   const dealId = e.dataTransfer.getData("text/deal-id") || draggingId;
-                  if (dealId) void moveDeal(dealId, stage);
+                  if (dealId) void moveDeal(dealId, stage.id);
                   setDraggingId(null);
                 }}
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase text-app">{t(`crm.stages.${stage}`)}</h3>
+                  <h3 className="text-xs font-bold uppercase text-app">{stage.label}</h3>
                   <span className="rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-bold">
-                    {(grouped.get(stage) || []).length}
+                    {(grouped.get(stage.id) || []).length}
                   </span>
                 </div>
                 <div className="space-y-3">
-                  {(grouped.get(stage) || []).map((deal) => {
+                  {(grouped.get(stage.id) || []).map((deal) => {
                     const latestQuote = [...(deal.quotations || [])].sort((a, b) =>
                       String(b.created_at).localeCompare(String(a.created_at))
                     )[0];
@@ -248,7 +242,7 @@ export default function CrmPipelinePage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setPrintData({ quotation: latestQuote, deal, branding })
+                                  setPrintData({ quotation: latestQuote, deal, branding, crmConfig })
                                 }
                                 className="rounded border px-2 py-1 text-[10px] font-bold"
                               >
@@ -301,6 +295,7 @@ export default function CrmPipelinePage() {
         quotation={activeQuote}
         products={products}
         saving={saving}
+        defaultValidityDays={crmConfig.default_validity_days}
         onClose={() => {
           setQuoteDeal(null);
           setActiveQuote(null);

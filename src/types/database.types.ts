@@ -1537,7 +1537,7 @@ export function calcPayrollNet(
 // ─── CRM pipeline ───────────────────────────────────────────────────────────
 
 export const DEAL_STAGES = ["LEAD", "QUALIFIED", "PROPOSAL", "WON", "LOST"] as const;
-export type DealStage = (typeof DEAL_STAGES)[number];
+export type DealStage = string;
 
 export const QUOTATION_STATUSES = [
   "DRAFT",

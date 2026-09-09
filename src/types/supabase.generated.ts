@@ -2661,6 +2661,7 @@ export type Database = {
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      next_quotation_number: { Args: never; Returns: string }
       log_erp_event: {
         Args: {
           p_event_type: string

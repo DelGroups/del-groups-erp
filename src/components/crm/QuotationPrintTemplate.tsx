@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { CompanyBranding } from "@/lib/print/types";
+import type { CrmConfig } from "@/lib/crm/config";
 import type { CrmDeal, CrmQuotation } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -9,6 +10,7 @@ export interface QuotationPrintData {
   quotation: CrmQuotation;
   deal: CrmDeal;
   branding: CompanyBranding;
+  crmConfig?: CrmConfig;
 }
 
 function money(value: number, currency: string) {
@@ -17,10 +19,13 @@ function money(value: number, currency: string) {
 
 export default function QuotationPrintTemplate({ data }: { data: QuotationPrintData }) {
   const { t, formatDate } = useI18n();
-  const { quotation, deal, branding } = data;
+  const { quotation, deal, branding, crmConfig } = data;
   const customerName =
     deal.customers?.full_name || deal.customers?.company_name || t("crm.unnamedClient");
   const subtotal = quotation.items_json.reduce((sum, item) => sum + item.line_total, 0);
+  const terms = crmConfig?.terms_and_conditions?.trim() || "";
+  const showBank = Boolean(crmConfig?.show_bank_details_on_quote);
+  const sealUrl = crmConfig?.company_seal_signature_url || null;
 
   return (
     <div className="mx-auto w-[210mm] bg-white p-10 font-sans text-black">
@@ -100,12 +105,37 @@ export default function QuotationPrintTemplate({ data }: { data: QuotationPrintD
       </div>
 
       {quotation.notes && (
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 whitespace-pre-wrap text-sm text-slate-600">
           <strong>{t("common.notes")}:</strong> {quotation.notes}
         </p>
       )}
 
-      <p className="mt-10 text-center text-xs text-slate-500">{t("crm.print.footer")}</p>
+      {terms ? (
+        <section className="mt-6 rounded border border-slate-300 p-3 text-sm text-slate-700">
+          <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
+            {t("crm.print.terms")}
+          </p>
+          <p className="whitespace-pre-wrap">{terms}</p>
+        </section>
+      ) : null}
+
+      {showBank && (branding.bankName || branding.iban) ? (
+        <section className="mt-4 text-sm text-slate-700">
+          <p className="text-xs font-semibold uppercase text-slate-500">
+            {t("crm.print.bankDetails")}
+          </p>
+          {branding.bankName ? <p>{branding.bankName}</p> : null}
+          {branding.iban ? <p className="font-mono">{branding.iban}</p> : null}
+        </section>
+      ) : null}
+
+      <div className="mt-10 flex items-end justify-between gap-6">
+        <p className="text-center text-xs text-slate-500">{t("crm.print.footer")}</p>
+        {sealUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={sealUrl} alt="" className="h-24 w-24 object-contain" />
+        ) : null}
+      </div>
     </div>
   );
 }
