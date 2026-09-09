@@ -1,4 +1,5 @@
 import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
+import { DEFAULT_ROLE_SCOPES } from "@/lib/auth/permissionMatrix";
 import {
   ADMIN_ROLE_NAME,
   isAdminRole,
@@ -134,7 +135,7 @@ export function parseJoinedRole(roles: unknown): {
   return {
     name,
     permissions: normalizePermissions(source?.permissions),
-    scopes: normalizeRoleScopes(source?.scopes),
+    scopes: source?.scopes ? normalizeRoleScopes(source.scopes) : { ...DEFAULT_ROLE_SCOPES },
     isAdmin: name === ADMIN_ROLE_NAME,
   };
 }

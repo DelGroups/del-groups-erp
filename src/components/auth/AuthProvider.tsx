@@ -19,7 +19,7 @@ import {
   userHasPermission,
 } from "@/lib/auth/routePermissions";
 import {
-  PROFILE_SELECT,
+  fetchProfileQueryRow,
   toUserProfile,
   type ProfileQueryRow,
 } from "@/lib/auth/profile";
@@ -69,28 +69,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const loadProfile = useCallback(
     async (nextUser: User) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(PROFILE_SELECT)
-        .eq("id", nextUser.id)
-        .single();
+      const { row, error } = await fetchProfileQueryRow(supabase, nextUser.id);
 
-      if (error || !data) {
-        console.warn("[auth] Profile missing or fetch failed:", error?.message);
+      if (error || !row) {
+        console.warn("[auth] Profile missing or fetch failed:", error);
         await signOutAndRedirect("/login?error=no_profile");
         return false;
       }
 
-      const row = data as ProfileQueryRow;
+      const data = row as ProfileQueryRow;
 
-      if (row.is_active === false) {
+      if (data.is_active === false) {
         await signOutAndRedirect("/login?error=account_inactive");
         return false;
       }
 
-      const joined = parseJoinedRole(row.roles);
+      const joined = parseJoinedRole(data.roles);
       const resolvedFullName =
-        (typeof row.full_name === "string" ? row.full_name.trim() : "") ||
+        (typeof data.full_name === "string" ? data.full_name.trim() : "") ||
         (typeof nextUser.user_metadata?.full_name === "string"
           ? nextUser.user_metadata.full_name.trim()
           : "") ||
@@ -100,7 +96,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setUser(nextUser);
       setRoleName(displayRoleName(joined.name));
       setDisplayName(resolvedFullName);
-      setProfile(toUserProfile(row));
+      setProfile(toUserProfile(data));
       return true;
     },
     []
