@@ -1,18 +1,24 @@
 /** Azerbaijan statutory payroll deductions for 2026 (non-oil private sector). */
 
+import {
+  DEFAULT_TAX_PAYROLL_CONFIG,
+  percentToRate,
+  type TaxPayrollConfig,
+} from "@/lib/tax/payrollConfig";
+
 export const AZ_PAYROLL_YEAR = 2026;
 
 export const AZ_DSMF_BAND_AZN = 200;
 export const AZ_PIT_MID_AZN = 2500;
 export const AZ_PIT_HIGH_AZN = 8000;
 
-export const AZ_DSMF_EE_LOW = 0.03;
+export const AZ_DSMF_EE_LOW = percentToRate(DEFAULT_TAX_PAYROLL_CONFIG.dsmf_employee_rate);
 export const AZ_DSMF_EE_HIGH = 0.1;
-export const AZ_DSMF_ER_LOW = 0.22;
+export const AZ_DSMF_ER_LOW = percentToRate(DEFAULT_TAX_PAYROLL_CONFIG.dsmf_employer_rate);
 export const AZ_DSMF_ER_HIGH = 0.15;
 export const AZ_DSMF_ER_OVER_8000 = 0.11;
 
-export const AZ_ITS_RATE = 0.005;
+export const AZ_ITS_RATE = percentToRate(DEFAULT_TAX_PAYROLL_CONFIG.its_rate);
 
 export const AZ_PIT_LOW_RATE_2026 = 0.03;
 export const AZ_PIT_MID_RATE = 0.1;
@@ -36,28 +42,41 @@ function money(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function calcDsmf(gross: number): { employee: number; employer: number } {
+export function calcDsmf(
+  gross: number,
+  config: TaxPayrollConfig = DEFAULT_TAX_PAYROLL_CONFIG
+): { employee: number; employer: number } {
   const g = Math.max(0, Number(gross) || 0);
   const first = Math.min(g, AZ_DSMF_BAND_AZN);
   const mid = Math.min(Math.max(g - AZ_DSMF_BAND_AZN, 0), AZ_PIT_HIGH_AZN - AZ_DSMF_BAND_AZN);
   const above = Math.max(g - AZ_PIT_HIGH_AZN, 0);
+  const eeLow = percentToRate(config.dsmf_employee_rate);
+  const erLow = percentToRate(config.dsmf_employer_rate);
   return {
-    employee: money(first * AZ_DSMF_EE_LOW + mid * AZ_DSMF_EE_HIGH + above * AZ_DSMF_EE_HIGH),
-    employer: money(first * AZ_DSMF_ER_LOW + mid * AZ_DSMF_ER_HIGH + above * AZ_DSMF_ER_OVER_8000),
+    employee: money(first * eeLow + mid * AZ_DSMF_EE_HIGH + above * AZ_DSMF_EE_HIGH),
+    employer: money(first * erLow + mid * AZ_DSMF_ER_HIGH + above * AZ_DSMF_ER_OVER_8000),
   };
 }
 
-export function calcIts(gross: number): { employee: number; employer: number } {
+export function calcIts(
+  gross: number,
+  config: TaxPayrollConfig = DEFAULT_TAX_PAYROLL_CONFIG
+): { employee: number; employer: number } {
   const g = Math.max(0, Number(gross) || 0);
+  const rate = percentToRate(config.its_rate);
   return {
-    employee: money(g * AZ_ITS_RATE),
-    employer: money(g * AZ_ITS_RATE),
+    employee: money(g * rate),
+    employer: money(g * rate),
   };
 }
 
 /** 2026 non-oil private PIT: 3% ≤ 2500; 75 + 10% of excess ≤ 8000; 625 + 14% above 8000. */
-export function calcIncomeTax(taxable: number, year = AZ_PAYROLL_YEAR): number {
-  const amount = Math.max(0, Number(taxable) || 0);
+export function calcIncomeTax(
+  taxable: number,
+  year = AZ_PAYROLL_YEAR,
+  config: TaxPayrollConfig = DEFAULT_TAX_PAYROLL_CONFIG
+): number {
+  const amount = Math.max(0, (Number(taxable) || 0) - Math.max(0, config.non_taxable_salary_limit));
   const lowRate = year >= 2028 ? 0.07 : year >= 2027 ? 0.05 : AZ_PIT_LOW_RATE_2026;
   const lowBracketTax = money(AZ_PIT_MID_AZN * lowRate);
 
@@ -77,14 +96,16 @@ export function calcAzPayroll(input: {
   advancesDeducted?: number;
   otherDeductions?: number;
   year?: number;
+  config?: TaxPayrollConfig;
 }): AzPayrollBreakdown {
+  const config = input.config || DEFAULT_TAX_PAYROLL_CONFIG;
   const grossSalary = money(
     Math.max(0, (Number(input.baseSalary) || 0) + (Number(input.bonusesCommissions) || 0))
   );
-  const dsmf = calcDsmf(grossSalary);
-  const its = calcIts(grossSalary);
+  const dsmf = calcDsmf(grossSalary, config);
+  const its = calcIts(grossSalary, config);
   const taxableIncome = money(Math.max(0, grossSalary - dsmf.employee - its.employee));
-  const incomeTax = calcIncomeTax(taxableIncome, input.year ?? AZ_PAYROLL_YEAR);
+  const incomeTax = calcIncomeTax(taxableIncome, input.year ?? AZ_PAYROLL_YEAR, config);
   const employeeDeductions = money(dsmf.employee + its.employee + incomeTax);
   const advances = money(Number(input.advancesDeducted) || 0);
   const other = money(Number(input.otherDeductions) || 0);
@@ -104,27 +125,31 @@ export function calcAzPayroll(input: {
   };
 }
 
-export function payrollRunToBreakdown(row: {
-  base_salary: number;
-  bonuses_commissions: number;
-  advances_deducted: number;
-  other_deductions: number;
-  net_salary: number;
-  period_year?: number;
-  gross_salary?: number | null;
-  dsmf_employee?: number | null;
-  dsmf_employer?: number | null;
-  its_employee?: number | null;
-  its_employer?: number | null;
-  income_tax?: number | null;
-  taxable_income?: number | null;
-}): AzPayrollBreakdown {
+export function payrollRunToBreakdown(
+  row: {
+    base_salary: number;
+    bonuses_commissions: number;
+    advances_deducted: number;
+    other_deductions: number;
+    net_salary: number;
+    period_year?: number;
+    gross_salary?: number | null;
+    dsmf_employee?: number | null;
+    dsmf_employer?: number | null;
+    its_employee?: number | null;
+    its_employer?: number | null;
+    income_tax?: number | null;
+    taxable_income?: number | null;
+  },
+  config: TaxPayrollConfig = DEFAULT_TAX_PAYROLL_CONFIG
+): AzPayrollBreakdown {
   const computed = calcAzPayroll({
     baseSalary: row.base_salary,
     bonusesCommissions: row.bonuses_commissions,
     advancesDeducted: row.advances_deducted,
     otherDeductions: row.other_deductions,
     year: row.period_year,
+    config,
   });
   const storedGross = Number(row.gross_salary) || 0;
   const storedDsmf = Number(row.dsmf_employee) || 0;

@@ -44,6 +44,7 @@ export const azMessages = {
       audit: "Audit jurnalı",
       barcode: "Barkod etiketləri",
       crmSettings: "CRM ayarları",
+      taxPayroll: "Vergi və əməkhaqqı",
     },
     signOut: "Çıxış",
     loading: "Yüklənir...",
@@ -693,7 +694,7 @@ export const azMessages = {
       otherDeductions: "Digər tutulmalar",
       netSalary: "Xalis Maaş",
       ratesHint:
-        "2026: DSMF (işçi 3%/10%, işəgötürən 22%/15%/11%), İTŞ 0.5%+0.5%, gəlir vergisi 3%/10%/14% (vergisiz baza DSMF+İTŞ çıxıldıqdan sonra).",
+        "DSMF işçi {dsmfEmployee}% (ilk 200 AZN) + 10%; işəgötürən {dsmfEmployer}% / 15% / 11%. İTŞ {its}% + {its}%. Gəlir vergisi azad həddi {limit} AZN.",
     },
     advance: {
       newTitle: "Yeni avans",
@@ -1064,6 +1065,7 @@ export const azMessages = {
     auditTab: "Audit jurnalı",
     barcodeTab: "Barkod etiketləri",
     crmTab: "CRM Pipeline",
+    taxPayrollTab: "Vergi və əməkhaqqı",
   },
   initialSetup: {
     title: "İlkin Quraşdırma və Məhsul İdxalı",
@@ -1991,6 +1993,32 @@ export const azMessages = {
       lost: "Uduzuldu",
     },
   },
+  taxPayrollSettings: {
+    title: "Vergi, əməkhaqqı və e-Qaimə",
+    description: "Şirkət VÖEN, standart ƏDV, e-Qaimə formatı və Azərbaycan əməkhaqqı tutulmaları.",
+    eQaimeTitle: "e-Qaimə və şirkət vergi profili",
+    companyVoen: "Şirkət VÖEN",
+    voenPlaceholder: "10 rəqəmli VÖEN",
+    defaultVat: "Standart ƏDV dərəcəsi",
+    exportFormat: "e-Qaimə eksport formatı",
+    payrollTitle: "Əməkhaqqı tutulmaları (Əmək Məcəlləsi)",
+    payrollHint:
+      "İşçi DSMF ilk 200 AZN-ə tətbiq olunur; qalan hissə qanuni 10% qalır. İşəgötürən DSMF birinci zolaq dərəcəsi, sonra 15% / 11%. İTŞ hər iki tərəfə şamil edilir.",
+    dsmfEmployer: "DSMF işəgötürən dərəcəsi (%)",
+    dsmfEmployee: "DSMF işçi dərəcəsi (%)",
+    itsRate: "İşsizlikdən sığorta İTŞ (%)",
+    taxFreeLimit: "Gəlir vergisi azad həddi (AZN)",
+    saved: "Vergi və əməkhaqqı ayarları yadda saxlanıldı",
+    vatRates: {
+      "18": "18%",
+      "0": "0%",
+      exempt: "Azad",
+    },
+    formats: {
+      XML_ETAXES: "XML_ETAXES",
+      JSON_STANDARD: "JSON_STANDARD",
+    },
+  },
   tax: {
     grossSalary: "Brüt Maaş",
     dsmfEmployee: "DSMF (işçi)",
@@ -2002,9 +2030,11 @@ export const azMessages = {
     exporting: "Hazırlanır...",
     exportSuccess: "e-Qaimə faylı yükləndi.",
     ratesTitle: "Qanuni tutulma dərəcələri (2026)",
-    dsmfRate: "DSMF: işçi 3% (ilk 200 AZN) + 10%; işəgötürən 22% / 15% / 11% (8000 AZN-dən yuxarı).",
-    itsRate: "İTŞ (işsizlikdən sığorta): 0.5% işçi + 0.5% işəgötürən.",
-    pitRate: "Gəlir vergisi: 2500 AZN-ə qədər 3%, 8000-ə qədər 10%, üstü 14% (DSMF və İTŞ çıxıldıqdan sonra).",
+    dsmfRate:
+      "DSMF: işçi {dsmfEmployee}% (ilk 200 AZN) + 10%; işəgötürən {dsmfEmployer}% / 15% / 11% (8000 AZN-dən yuxarı).",
+    itsRate: "İTŞ (işsizlikdən sığorta): {its}% işçi + {its}% işəgötürən.",
+    pitRate:
+      "Gəlir vergisi: 2500 AZN-ə qədər 3%, 8000-ə qədər 10%, üstü 14% (DSMF və İTŞ çıxıldıqdan sonra). Azad hədd {limit} AZN.",
   },
 } as const;
 

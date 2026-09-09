@@ -46,6 +46,7 @@ export const enMessages: Messages = {
       audit: "Audit log",
       barcode: "Barcode labels",
       crmSettings: "CRM settings",
+      taxPayroll: "Tax & payroll",
     },
     signOut: "Sign out",
     loading: "Loading...",
@@ -695,7 +696,7 @@ export const enMessages: Messages = {
       otherDeductions: "Other deductions",
       netSalary: "Net salary",
       ratesHint:
-        "2026: DSMF (employee 3%/10%, employer 22%/15%/11%), İTŞ 0.5%+0.5%, income tax 3%/10%/14% after DSMF+İTŞ.",
+        "DSMF employee {dsmfEmployee}% (first 200 AZN) + 10%; employer {dsmfEmployer}% / 15% / 11%. İTŞ {its}% + {its}%. Income-tax free threshold {limit} AZN.",
     },
     advance: {
       newTitle: "New advance",
@@ -1066,6 +1067,7 @@ export const enMessages: Messages = {
     auditTab: "Audit log",
     barcodeTab: "Barcode labels",
     crmTab: "CRM Pipeline",
+    taxPayrollTab: "Tax & payroll",
   },
   initialSetup: {
     title: "Initial Setup & Product Import",
@@ -1993,6 +1995,32 @@ export const enMessages: Messages = {
       lost: "Lost",
     },
   },
+  taxPayrollSettings: {
+    title: "Tax, payroll and e-Qaimə",
+    description: "Company VÖEN, default VAT, e-Qaimə export format, and Azerbaijan payroll deductions.",
+    eQaimeTitle: "e-Qaimə and company tax profile",
+    companyVoen: "Company VÖEN",
+    voenPlaceholder: "10-digit tax ID",
+    defaultVat: "Default VAT rate",
+    exportFormat: "e-Qaimə export format",
+    payrollTitle: "Payroll deductions (Labour Code)",
+    payrollHint:
+      "Employee DSMF applies to the first 200 AZN; the remainder stays at the statutory 10%. Employer DSMF uses the first-band rate, then 15% / 11%. İTŞ applies to both sides.",
+    dsmfEmployer: "DSMF employer rate (%)",
+    dsmfEmployee: "DSMF employee rate (%)",
+    itsRate: "Unemployment insurance İTŞ (%)",
+    taxFreeLimit: "Income-tax free threshold (AZN)",
+    saved: "Tax and payroll settings saved",
+    vatRates: {
+      "18": "18%",
+      "0": "0%",
+      exempt: "Exempt",
+    },
+    formats: {
+      XML_ETAXES: "XML_ETAXES",
+      JSON_STANDARD: "JSON_STANDARD",
+    },
+  },
   tax: {
     grossSalary: "Gross salary",
     dsmfEmployee: "SSF employee (DSMF)",
@@ -2004,8 +2032,10 @@ export const enMessages: Messages = {
     exporting: "Preparing...",
     exportSuccess: "e-Qaimə file downloaded.",
     ratesTitle: "Statutory rates (2026)",
-    dsmfRate: "DSMF: employee 3% (first 200 AZN) + 10%; employer 22% / 15% / 11% above 8000 AZN.",
-    itsRate: "Unemployment insurance (İTŞ): 0.5% employee + 0.5% employer.",
-    pitRate: "Income tax: 3% up to 2500 AZN, 10% up to 8000, 14% above (after DSMF and İTŞ).",
+    dsmfRate:
+      "DSMF: employee {dsmfEmployee}% (first 200 AZN) + 10%; employer {dsmfEmployer}% / 15% / 11% above 8000 AZN.",
+    itsRate: "Unemployment insurance (İTŞ): {its}% employee + {its}% employer.",
+    pitRate:
+      "Income tax: 3% up to 2500 AZN, 10% up to 8000, 14% above (after DSMF and İTŞ). Tax-free threshold {limit} AZN.",
   },
 };

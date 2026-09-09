@@ -49,6 +49,8 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
+import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import {
   filterLegalCustomers,
   isLegalEntityWithVoen,
@@ -199,6 +201,8 @@ export default function UniversalInvoiceForm({
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
+  const { config: taxConfig } = useTaxPayrollConfig();
+  const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const canSaveInvoice = can("can_create_invoice");
   const polywoodOnly = invoiceMode === "polywood";
 
@@ -249,7 +253,9 @@ export default function UniversalInvoiceForm({
     setItems(createEmptySaleItems(5));
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
+    setVatMode(defaultVatMode(taxConfig.default_vat_rate));
     void fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when the modal opens
   }, [isOpen, polywoodOnly]);
 
   const fetchInitialData = async () => {
@@ -596,10 +602,11 @@ export default function UniversalInvoiceForm({
       calcOfficialTransactionTotals(itemsNetTotal, {
         isOfficial,
         vatMode,
+        vatRate: defaultVatRate,
         deliveryCost: totals.delivery_cost,
         additionalExpensesTotal,
       }),
-    [itemsNetTotal, isOfficial, vatMode, totals.delivery_cost, additionalExpensesTotal]
+    [itemsNetTotal, isOfficial, vatMode, defaultVatRate, totals.delivery_cost, additionalExpensesTotal]
   );
 
   const displayTotals = useMemo(

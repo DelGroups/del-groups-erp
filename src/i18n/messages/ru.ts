@@ -46,6 +46,7 @@ export const ruMessages: Messages = {
       audit: "Журнал аудита",
       barcode: "Этикетки штрихкода",
       crmSettings: "Настройки CRM",
+      taxPayroll: "Налоги и зарплата",
     },
     signOut: "Выход",
     loading: "Загрузка...",
@@ -695,7 +696,7 @@ export const ruMessages: Messages = {
       otherDeductions: "Прочие удержания",
       netSalary: "Чистая зарплата",
       ratesHint:
-        "2026: DSMF (работник 3%/10%, работодатель 22%/15%/11%), İTŞ 0.5%+0.5%, НДФЛ 3%/10%/14% после DSMF+İTŞ.",
+        "DSMF работник {dsmfEmployee}% (первые 200 AZN) + 10%; работодатель {dsmfEmployer}% / 15% / 11%. İTŞ {its}% + {its}%. Необлагаемый порог {limit} AZN.",
     },
     advance: {
       newTitle: "Новый аванс",
@@ -1066,6 +1067,7 @@ export const ruMessages: Messages = {
     auditTab: "Журнал аудита",
     barcodeTab: "Этикетки штрихкода",
     crmTab: "CRM Pipeline",
+    taxPayrollTab: "Налоги и зарплата",
   },
   initialSetup: {
     title: "Начальная настройка и импорт товаров",
@@ -1993,6 +1995,32 @@ export const ruMessages: Messages = {
       lost: "Проиграно",
     },
   },
+  taxPayrollSettings: {
+    title: "Налоги, зарплата и e-Qaimə",
+    description: "ИНН компании, НДС по умолчанию, формат e-Qaimə и удержания по Трудовому кодексу.",
+    eQaimeTitle: "e-Qaimə и налоговый профиль компании",
+    companyVoen: "ИНН компании (VÖEN)",
+    voenPlaceholder: "10-значный ИНН",
+    defaultVat: "Ставка НДС по умолчанию",
+    exportFormat: "Формат экспорта e-Qaimə",
+    payrollTitle: "Удержания из зарплаты (Трудовой кодекс)",
+    payrollHint:
+      "DSMF работника применяется к первым 200 AZN; остаток остаётся 10%. DSMF работодателя — ставка первого диапазона, затем 15% / 11%. İTŞ начисляется обеим сторонам.",
+    dsmfEmployer: "DSMF работодателя (%)",
+    dsmfEmployee: "DSMF работника (%)",
+    itsRate: "Страхование от безработицы İTŞ (%)",
+    taxFreeLimit: "Необлагаемый порог НДФЛ (AZN)",
+    saved: "Настройки налогов и зарплаты сохранены",
+    vatRates: {
+      "18": "18%",
+      "0": "0%",
+      exempt: "Освобождено",
+    },
+    formats: {
+      XML_ETAXES: "XML_ETAXES",
+      JSON_STANDARD: "JSON_STANDARD",
+    },
+  },
   tax: {
     grossSalary: "Брутто",
     dsmfEmployee: "ДСМФ (работник)",
@@ -2004,8 +2032,10 @@ export const ruMessages: Messages = {
     exporting: "Подготовка...",
     exportSuccess: "Файл e-Qaimə скачан.",
     ratesTitle: "Законные ставки (2026)",
-    dsmfRate: "DSMF: работник 3% (первые 200 AZN) + 10%; работодатель 22% / 15% / 11% свыше 8000 AZN.",
-    itsRate: "Страхование от безработицы (İTŞ): 0.5% работник + 0.5% работодатель.",
-    pitRate: "Подоходный налог: 3% до 2500 AZN, 10% до 8000, 14% свыше (после DSMF и İTŞ).",
+    dsmfRate:
+      "DSMF: работник {dsmfEmployee}% (первые 200 AZN) + 10%; работодатель {dsmfEmployer}% / 15% / 11% свыше 8000 AZN.",
+    itsRate: "Страхование от безработицы (İTŞ): {its}% работник + {its}% работодатель.",
+    pitRate:
+      "Подоходный налог: 3% до 2500 AZN, 10% до 8000, 14% свыше (после DSMF и İTŞ). Необлагаемый порог {limit} AZN.",
   },
 };

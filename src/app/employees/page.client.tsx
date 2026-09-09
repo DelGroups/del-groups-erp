@@ -41,6 +41,7 @@ import {
   getEmployeeStatusLabel,
 } from "@/types/database.types";
 import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import {
   Banknote,
   CalendarDays,
@@ -66,6 +67,7 @@ export default function EmployeesPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageHr = can("can_manage_hr");
+  const { config: taxConfig } = useTaxPayrollConfig();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const [activeTab, setActiveTab] = useState<HrTab>("directory");
@@ -422,7 +424,12 @@ export default function EmployeesPage() {
             </div>
 
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">
-              {t("employees.payroll.ratesHint")}
+              {t("employees.payroll.ratesHint", {
+                dsmfEmployee: taxConfig.dsmf_employee_rate,
+                dsmfEmployer: taxConfig.dsmf_employer_rate,
+                its: taxConfig.its_rate,
+                limit: taxConfig.non_taxable_salary_limit,
+              })}
             </p>
 
             <div className="app-table-wrap">
@@ -448,7 +455,7 @@ export default function EmployeesPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {payrollRuns.map((row) => {
-                        const tax = payrollRunToBreakdown(row);
+                        const tax = payrollRunToBreakdown(row, taxConfig);
                         const other = row.advances_deducted + row.other_deductions;
                         return (
                         <tr key={row.id} className="hover:bg-app-card-hover">

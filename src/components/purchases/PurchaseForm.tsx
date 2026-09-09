@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CreditCard, Plus, Save, Trash2, User, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type {
@@ -52,6 +52,8 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
+import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT, createEmptyPurchaseLineItems } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import {
@@ -147,6 +149,9 @@ export default function PurchaseForm({
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
+  const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
+  const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
+  const appliedDefaultVat = useRef(Boolean(initialPurchase));
   const canSavePurchase = isEdit ? can("can_edit_purchases") : can("can_create_purchase");
 
   useEffect(() => {
@@ -156,6 +161,12 @@ export default function PurchaseForm({
   useEffect(() => {
     setProductList(productsProp);
   }, [productsProp]);
+
+  useEffect(() => {
+    if (appliedDefaultVat.current || taxConfigLoading) return;
+    appliedDefaultVat.current = true;
+    setVatMode(defaultVatMode(taxConfig.default_vat_rate));
+  }, [taxConfig.default_vat_rate, taxConfigLoading]);
 
   useEffect(() => {
     if (warehouses[0] && !warehouseId) setWarehouseId(warehouses[0].id);
@@ -207,9 +218,10 @@ export default function PurchaseForm({
       calcOfficialTransactionTotals(itemsSubtotal, {
         isOfficial,
         vatMode,
+        vatRate: defaultVatRate,
         additionalExpensesTotal,
       }),
-    [itemsSubtotal, isOfficial, vatMode, additionalExpensesTotal]
+    [itemsSubtotal, isOfficial, vatMode, defaultVatRate, additionalExpensesTotal]
   );
   const grandTotal = useMemo(
     () => (isOfficial ? officialAmounts.grand_total : itemsSubtotal + additionalExpensesTotal),

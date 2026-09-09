@@ -3,6 +3,10 @@ import type { CompanyBranding } from "@/lib/print/types";
 import type { SaleRecord } from "@/lib/sales/fetchSales";
 import type { PurchaseRecord } from "@/types/database.types";
 import {
+  TAX_PAYROLL_CONFIG_KEY,
+  parseTaxPayrollConfig,
+} from "@/lib/tax/payrollConfig";
+import {
   buildEQaimeJson,
   buildEQaimeXml,
   classifyVatRate,
@@ -25,10 +29,12 @@ async function fetchPartyVoen(table: "customers" | "suppliers", id: string | nul
 
 async function resolveBranding(branding: CompanyBranding): Promise<CompanyBranding> {
   if (branding.voen && branding.companyName) return branding;
-  const [{ data: settings }, { data: company }] = await Promise.all([
+  const [{ data: settings }, { data: company }, { data: taxRow }] = await Promise.all([
     supabase.from("settings").select("company_name, voen, address, phone").limit(1).maybeSingle(),
     supabase.from("company_settings").select("company_name, voen, address, phone").limit(1).maybeSingle(),
+    supabase.from("system_settings").select("value").eq("key", TAX_PAYROLL_CONFIG_KEY).maybeSingle(),
   ]);
+  const taxConfig = parseTaxPayrollConfig(taxRow?.value);
   return {
     ...branding,
     companyName:
@@ -36,7 +42,7 @@ async function resolveBranding(branding: CompanyBranding): Promise<CompanyBrandi
       company?.company_name ||
       settings?.company_name ||
       branding.companyName,
-    voen: branding.voen || company?.voen || settings?.voen || null,
+    voen: branding.voen || taxConfig.company_voen || company?.voen || settings?.voen || null,
     address: branding.address || company?.address || settings?.address || null,
     phone: branding.phone || company?.phone || settings?.phone || null,
   };

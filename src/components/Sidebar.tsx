@@ -48,6 +48,7 @@ import {
   ScrollText,
   Factory,
   KanbanSquare,
+  Scale,
 } from "lucide-react";
 
 interface NavItem {
@@ -151,6 +152,7 @@ const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.backup", path: "/settings/backup", icon: Database },
       { titleKey: "nav.items.barcode", path: "/settings/barcode", icon: Barcode },
       { titleKey: "nav.items.crmSettings", path: "/settings/crm", icon: KanbanSquare },
+      { titleKey: "nav.items.taxPayroll", path: "/settings/tax-payroll", icon: Scale },
       { titleKey: "nav.items.audit", path: "/settings/audit", icon: ScrollText },
     ],
   },

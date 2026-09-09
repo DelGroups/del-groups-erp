@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchUnifiedLedgerAction } from "@/lib/actions/finance";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { formatReferenceTypeLabel, type UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
 import { ArrowDownRight, ArrowUpRight, CircleDollarSign } from "lucide-react";
 
@@ -27,6 +28,13 @@ export default function FinancePage() {
   const canManageExpenses = can("can_manage_expenses");
   const canManage = canManageFinance || canManageExpenses;
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+  const { config: taxConfig } = useTaxPayrollConfig();
+  const taxRateParams = {
+    dsmfEmployee: taxConfig.dsmf_employee_rate,
+    dsmfEmployer: taxConfig.dsmf_employer_rate,
+    its: taxConfig.its_rate,
+    limit: taxConfig.non_taxable_salary_limit,
+  };
   const [transactions, setTransactions] = useState<UnifiedLedgerTransaction[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netBalance: 0 });
   const [loading, setLoading] = useState(true);
@@ -100,9 +108,9 @@ export default function FinancePage() {
             <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.taxEngineTitle")}</p>
             <p className="mt-1 text-xs text-app">{t("finance.taxEngineHint")}</p>
             <ul className="mt-2 space-y-1 text-[11px] text-app-muted">
-              <li>{t("tax.dsmfRate")}</li>
-              <li>{t("tax.itsRate")}</li>
-              <li>{t("tax.pitRate")}</li>
+              <li>{t("tax.dsmfRate", taxRateParams)}</li>
+              <li>{t("tax.itsRate", taxRateParams)}</li>
+              <li>{t("tax.pitRate", taxRateParams)}</li>
             </ul>
           </div>
         </div>

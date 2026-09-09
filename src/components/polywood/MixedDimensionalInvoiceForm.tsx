@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Save, Trash2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -50,6 +50,8 @@ import {
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals } from "@/lib/finance/vatEngine";
 import type { VatMode } from "@/lib/finance/vatEngine";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
+import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import {
@@ -157,6 +159,8 @@ export default function MixedDimensionalInvoiceForm({
 }: MixedDimensionalInvoiceFormProps) {
   const { t } = useI18n();
   const { profile } = useAuth();
+  const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
+  const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -185,6 +189,13 @@ export default function MixedDimensionalInvoiceForm({
   const [vatMode, setVatMode] = useState<VatMode>("none");
   const [contractId, setContractId] = useState<string | null>(null);
   const [voenVerification, setVoenVerification] = useState("");
+  const appliedDefaultVat = useRef(false);
+
+  useEffect(() => {
+    if (appliedDefaultVat.current || taxConfigLoading) return;
+    appliedDefaultVat.current = true;
+    setVatMode(defaultVatMode(taxConfig.default_vat_rate));
+  }, [taxConfig.default_vat_rate, taxConfigLoading]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -381,9 +392,10 @@ export default function MixedDimensionalInvoiceForm({
       calcOfficialTransactionTotals(itemsNetTotal, {
         isOfficial,
         vatMode,
+        vatRate: defaultVatRate,
         additionalExpensesTotal,
       }),
-    [itemsNetTotal, isOfficial, vatMode, additionalExpensesTotal]
+    [itemsNetTotal, isOfficial, vatMode, defaultVatRate, additionalExpensesTotal]
   );
 
   const displayTotals = useMemo(
@@ -508,6 +520,7 @@ export default function MixedDimensionalInvoiceForm({
     const officialForSubmit = calcOfficialTransactionTotals(netForSubmit, {
       isOfficial,
       vatMode,
+      vatRate: defaultVatRate,
       additionalExpensesTotal,
     });
     const finalGrandTotal = isOfficial ? officialForSubmit.grand_total : totalsForSubmit.grand_total;

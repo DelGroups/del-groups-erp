@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Calculator, X } from "lucide-react";
 import type { Employee, SalesCommission } from "@/types/database.types";
 import { calcAzPayroll } from "@/lib/tax/azPayroll";
+import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
 import { fetchPendingCommissionsForEmployee } from "@/lib/commissions/api";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -34,6 +35,7 @@ export default function PayrollModal({
   onSubmit,
 }: PayrollModalProps) {
   const { t, intlTag } = useI18n();
+  const { config: taxConfig } = useTaxPayrollConfig();
   const [pending, setPending] = useState<SalesCommission[]>([]);
   const [loadingCommissions, setLoadingCommissions] = useState(false);
   const [accountId, setAccountId] = useState("");
@@ -71,6 +73,7 @@ export default function PayrollModal({
     baseSalary,
     bonusesCommissions: commissionTotal,
     otherDeductions: deductionNum,
+    config: taxConfig,
   });
   const netPay = taxBreakdown.netSalary;
   const totalDeductions = taxBreakdown.employeeDeductions + deductionNum;
