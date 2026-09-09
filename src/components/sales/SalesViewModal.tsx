@@ -4,6 +4,9 @@ import React from "react";
 import { Banknote, Printer, X } from "lucide-react";
 import type { SaleRecord } from "@/lib/sales/fetchSales";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
+import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
 interface SalesViewModalProps {
   sale: SaleRecord;
@@ -14,6 +17,7 @@ interface SalesViewModalProps {
 
 export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: SalesViewModalProps) {
   const { t } = useI18n();
+  const branding = useCompanyBranding();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
@@ -85,6 +89,9 @@ export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: Sa
               <span className="text-rose-600">{t("modals.salesView.remaining")}: {sale.remaining_balance.toFixed(2)}</span>
             </div>
             <div className="flex gap-2">
+              <EQaimeExportButton
+                onExport={(format) => exportSaleEQaime(sale, branding, format)}
+              />
               {onPrint ? (
                 <button
                   type="button"

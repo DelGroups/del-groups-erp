@@ -96,6 +96,15 @@ export default function FinancePage() {
               {summary.netBalance.toFixed(2)} AZN
             </p>
           </div>
+          <div className="app-card app-card-elevated p-4 md:col-span-3">
+            <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.taxEngineTitle")}</p>
+            <p className="mt-1 text-xs text-app">{t("finance.taxEngineHint")}</p>
+            <ul className="mt-2 space-y-1 text-[11px] text-app-muted">
+              <li>{t("tax.dsmfRate")}</li>
+              <li>{t("tax.itsRate")}</li>
+              <li>{t("tax.pitRate")}</li>
+            </ul>
+          </div>
         </div>
 
         <DocumentListSearchBar

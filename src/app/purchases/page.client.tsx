@@ -33,6 +33,9 @@ import { ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
+import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
@@ -52,6 +55,7 @@ export default function PurchasesPage() {
   const canCreatePurchase = can("can_create_purchase");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const vatAccountIds = useVatAccountIds();
+  const branding = useCompanyBranding();
   const canDeletePurchases = can("can_delete_purchases");
   const canEditPurchases = can("can_edit_purchases");
   const [deleteTarget, setDeleteTarget] = useState<PurchaseRecord | null>(null);
@@ -120,6 +124,16 @@ export default function PurchasesPage() {
   const openPayment = async (row: PurchaseRecord) => {
     const full = await fetchPurchaseById(row.id);
     if (full) setPaymentPurchase(full);
+  };
+
+  const exportEQaime = async (row: PurchaseRecord, format: "xml" | "json") => {
+    try {
+      const full = (await fetchPurchaseById(row.id)) || row;
+      await exportPurchaseEQaime(full, branding, format);
+      showSuccess(t("tax.exportSuccess"));
+    } catch (err) {
+      showError(err instanceof Error ? err.message : t("common.error"));
+    }
   };
 
   const closeForm = () => {
@@ -275,6 +289,12 @@ export default function PurchasesPage() {
                             onView={() => void openView(row)}
                             onPrint={() => void openPrint(row)}
                             onPayment={() => void openPayment(row)}
+                            extra={
+                              <EQaimeExportButton
+                                compact
+                                onExport={(format) => exportEQaime(row, format)}
+                              />
+                            }
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
                             onDelete={

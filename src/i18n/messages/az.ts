@@ -521,6 +521,9 @@ export const azMessages = {
     editTitle: "Tranzaksiyanı redaktə et",
     receiptTitle: "Maliyyə Qəbzi",
     transactionId: "Tranzaksiya ID",
+    taxEngineTitle: "Azərbaycan vergi və sığorta qaydaları",
+    taxEngineHint:
+      "Bordro DSMF, İTŞ və gəlir vergisi tutmalarını avtomatik hesablayır. e-Qaimə XML/JSON satış və alış fakturalarından export olunur.",
   },
   cashBank: {
     title: "Kassa və Bank",
@@ -669,6 +672,14 @@ export const azMessages = {
       statusDRAFT: "Qaralama",
       statusAPPROVED: "Təsdiqlənib",
       statusPAID: "Ödənilib",
+      gross: "Brüt Maaş",
+      dsmf: "DSMF",
+      its: "İTŞ",
+      incomeTax: "Gəlir vergisi",
+      otherDeductions: "Digər tutulmalar",
+      netSalary: "Xalis Maaş",
+      ratesHint:
+        "2026: DSMF (işçi 3%/10%, işəgötürən 22%/15%/11%), İTŞ 0.5%+0.5%, gəlir vergisi 3%/10%/14% (vergisiz baza DSMF+İTŞ çıxıldıqdan sonra).",
     },
     advance: {
       newTitle: "Yeni avans",
@@ -1235,7 +1246,7 @@ export const azMessages = {
     },
     payroll: {
       title: "Maaş hesabla — {name}",
-      subtitle: "Əsas maaş + komissiya − tutulmalar",
+      subtitle: "Brüt maaş − DSMF / İTŞ / gəlir vergisi − digər tutulmalar",
       netPay: "Net ödəniş",
       paymentAccount: "Ödəniş hesabı *",
       period: "Dövr (Ay / İl)",
@@ -1865,6 +1876,21 @@ export const azMessages = {
     attachmentDownloadFailed: "Fayl yüklənmədi",
     searchContractsPlaceholder: "Müqavilə №, tərəf və ya VÖEN",
     filterStatusAll: "Hamısı",
+  },
+  tax: {
+    grossSalary: "Brüt Maaş",
+    dsmfEmployee: "DSMF (işçi)",
+    itsEmployee: "İTŞ (işçi)",
+    incomeTax: "Gəlir vergisi",
+    netSalary: "Xalis Maaş (Net)",
+    employerNote: "İşəgötürən öhdəliyi: DSMF {dsmf} + İTŞ {its} = {total} AZN (xalis maaşdan tutulmur).",
+    eQaimeExport: "e-Qaimə Eksport",
+    exporting: "Hazırlanır...",
+    exportSuccess: "e-Qaimə faylı yükləndi.",
+    ratesTitle: "Qanuni tutulma dərəcələri (2026)",
+    dsmfRate: "DSMF: işçi 3% (ilk 200 AZN) + 10%; işəgötürən 22% / 15% / 11% (8000 AZN-dən yuxarı).",
+    itsRate: "İTŞ (işsizlikdən sığorta): 0.5% işçi + 0.5% işəgötürən.",
+    pitRate: "Gəlir vergisi: 2500 AZN-ə qədər 3%, 8000-ə qədər 10%, üstü 14% (DSMF və İTŞ çıxıldıqdan sonra).",
   },
 } as const;
 

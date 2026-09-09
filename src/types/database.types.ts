@@ -1346,6 +1346,13 @@ export interface PayrollRun {
   bonuses_commissions: number;
   advances_deducted: number;
   other_deductions: number;
+  gross_salary: number;
+  dsmf_employee: number;
+  dsmf_employer: number;
+  its_employee: number;
+  its_employer: number;
+  income_tax: number;
+  taxable_income: number;
   net_salary: number;
   status: PayrollRunStatus;
   paid_at: string | null;

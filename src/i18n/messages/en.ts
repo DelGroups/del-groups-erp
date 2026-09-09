@@ -523,6 +523,9 @@ export const enMessages: Messages = {
     editTitle: "Edit transaction",
     receiptTitle: "Financial Receipt",
     transactionId: "Transaction ID",
+    taxEngineTitle: "Azerbaijan tax and insurance rules",
+    taxEngineHint:
+      "Payroll automatically applies DSMF, unemployment insurance and income tax. e-Qaimə XML/JSON can be exported from sales and purchase invoices.",
   },
   cashBank: {
     title: "Cash & Bank",
@@ -671,6 +674,14 @@ export const enMessages: Messages = {
       statusDRAFT: "Draft",
       statusAPPROVED: "Approved",
       statusPAID: "Paid",
+      gross: "Gross salary",
+      dsmf: "SSF (DSMF)",
+      its: "Unemployment (İTŞ)",
+      incomeTax: "Income tax",
+      otherDeductions: "Other deductions",
+      netSalary: "Net salary",
+      ratesHint:
+        "2026: DSMF (employee 3%/10%, employer 22%/15%/11%), İTŞ 0.5%+0.5%, income tax 3%/10%/14% after DSMF+İTŞ.",
     },
     advance: {
       newTitle: "New advance",
@@ -1237,7 +1248,7 @@ export const enMessages: Messages = {
     },
     payroll: {
       title: "Calculate payroll — {name}",
-      subtitle: "Base salary + commission − deductions",
+      subtitle: "Gross − DSMF / İTŞ / income tax − other deductions",
       netPay: "Net pay",
       paymentAccount: "Payment account *",
       period: "Period (Month / Year)",
@@ -1867,5 +1878,20 @@ export const enMessages: Messages = {
     attachmentDownloadFailed: "Failed to download file",
     searchContractsPlaceholder: "Contract no., party or TIN",
     filterStatusAll: "All",
+  },
+  tax: {
+    grossSalary: "Gross salary",
+    dsmfEmployee: "SSF employee (DSMF)",
+    itsEmployee: "Unemployment employee (İTŞ)",
+    incomeTax: "Income tax",
+    netSalary: "Net salary",
+    employerNote: "Employer cost: DSMF {dsmf} + İTŞ {its} = {total} AZN (not deducted from net).",
+    eQaimeExport: "e-Qaimə export",
+    exporting: "Preparing...",
+    exportSuccess: "e-Qaimə file downloaded.",
+    ratesTitle: "Statutory rates (2026)",
+    dsmfRate: "DSMF: employee 3% (first 200 AZN) + 10%; employer 22% / 15% / 11% above 8000 AZN.",
+    itsRate: "Unemployment insurance (İTŞ): 0.5% employee + 0.5% employer.",
+    pitRate: "Income tax: 3% up to 2500 AZN, 10% up to 8000, 14% above (after DSMF and İTŞ).",
   },
 };

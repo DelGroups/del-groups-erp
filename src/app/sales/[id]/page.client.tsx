@@ -9,6 +9,11 @@ import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/In
 import { fetchSaleById, getSaleRemaining, type SaleRecord } from "@/lib/sales/fetchSales";
 import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import { useToast } from "@/hooks/useToast";
+import ToastMessage from "@/components/ui/ToastMessage";
+import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
+import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
 interface SaleDetailPageClientProps {
   saleId: string;
@@ -18,6 +23,8 @@ export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientPro
   const router = useRouter();
   const { t } = useI18n();
   const invoicePrint = useInvoicePrintSystem();
+  const branding = useCompanyBranding();
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [sale, setSale] = useState<SaleRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,15 +56,29 @@ export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientPro
             <h2 className="text-xl font-bold text-app">{t("modals.salesView.title")}</h2>
             <p className="font-mono text-sm text-app-accent">{sale?.doc_no || "-"}</p>
           </div>
-          <button
-            type="button"
-            disabled={!sale}
-            onClick={handlePrint}
-            className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-          >
-            <Printer className="h-4 w-4" />
-            {t("common.print")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <EQaimeExportButton
+              disabled={!sale}
+              onExport={async (format) => {
+                if (!sale) return;
+                try {
+                  await exportSaleEQaime(sale, branding, format);
+                  showSuccess(t("tax.exportSuccess"));
+                } catch (err) {
+                  showError(err instanceof Error ? err.message : t("common.error"));
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={!sale}
+              onClick={handlePrint}
+              className="flex items-center gap-2 rounded-xl bg-[image:var(--app-gradient)] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+            >
+              <Printer className="h-4 w-4" />
+              {t("common.print")}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -125,6 +146,7 @@ export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientPro
         closeModal={invoicePrint.closeModal}
         confirmPrint={invoicePrint.confirmPrint}
       />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

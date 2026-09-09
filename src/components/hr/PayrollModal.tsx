@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Calculator, X } from "lucide-react";
 import type { Employee, SalesCommission } from "@/types/database.types";
-import { calcPayrollNet } from "@/types/database.types";
+import { calcAzPayroll } from "@/lib/tax/azPayroll";
+import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
 import { fetchPendingCommissionsForEmployee } from "@/lib/commissions/api";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -66,7 +67,13 @@ export default function PayrollModal({
     [pending, selectedIds]
   );
   const deductionNum = parseFloat(deductions) || 0;
-  const netPay = calcPayrollNet(baseSalary, commissionTotal, deductionNum);
+  const taxBreakdown = calcAzPayroll({
+    baseSalary,
+    bonusesCommissions: commissionTotal,
+    otherDeductions: deductionNum,
+  });
+  const netPay = taxBreakdown.netSalary;
+  const totalDeductions = taxBreakdown.employeeDeductions + deductionNum;
 
   if (!isOpen || !employee) return null;
 
@@ -96,28 +103,10 @@ export default function PayrollModal({
         </div>
 
         <div className="space-y-4 p-5">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-xl border border-app bg-app-card-hover p-3">
-              <p className="text-[10px] font-bold uppercase text-app-muted">{t("employees.baseSalary")}</p>
-              <p className="font-mono text-sm font-bold">{baseSalary.toFixed(2)} {t("common.currency")}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-[10px] font-bold uppercase text-emerald-700">{t("employees.commission")}</p>
-              <p className="font-mono text-sm font-bold text-emerald-700">
-                +{commissionTotal.toFixed(2)} {t("common.currency")}
-              </p>
-            </div>
-            <div className="rounded-xl alert-danger rounded-xl p-3">
-              <p className="text-[10px] font-bold uppercase text-rose-700">{t("employees.deduction")}</p>
-              <p className="font-mono text-sm font-bold text-rose-700">
-                −{deductionNum.toFixed(2)} {t("common.currency")}
-              </p>
-            </div>
-            <div className="rounded-xl border border-app app-toolbar p-3">
-              <p className="text-[10px] font-bold uppercase opacity-70">{t("modals.payroll.netPay")}</p>
-              <p className="font-mono text-sm font-bold">{netPay.toFixed(2)} {t("common.currency")}</p>
-            </div>
-          </div>
+          <PayrollTaxBreakdown
+            breakdown={taxBreakdown}
+            otherDeductions={deductionNum}
+          />
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="block text-xs font-semibold text-app">
@@ -225,7 +214,7 @@ export default function PayrollModal({
                   baseSalary,
                   commissionIds: pending.filter((c) => selectedIds.has(c.id)).map((c) => c.id),
                   commissionTotal,
-                  deductions: deductionNum,
+                  deductions: totalDeductions,
                   notes,
                 })
               }

@@ -40,6 +40,7 @@ import {
   getDepartmentLabel,
   getEmployeeStatusLabel,
 } from "@/types/database.types";
+import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
 import {
   Banknote,
   CalendarDays,
@@ -420,6 +421,10 @@ export default function EmployeesPage() {
               <SummaryCard label={t("employees.payroll.paidCount")} value={String(payrollTotals.paidCount)} />
             </div>
 
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">
+              {t("employees.payroll.ratesHint")}
+            </p>
+
             <div className="app-table-wrap">
               {loading ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
@@ -431,28 +436,42 @@ export default function EmployeesPage() {
                     <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
                       <tr>
                         <th className="px-4 py-3">{t("employees.employee")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.base")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.commission")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.advance.deducted")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.deduction")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.net")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.gross")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.dsmf")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.its")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.incomeTax")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.otherDeductions")}</th>
+                        <th className="px-4 py-3 text-right">{t("employees.payroll.netSalary")}</th>
                         <th className="px-4 py-3">{t("common.status")}</th>
                         <th className="px-4 py-3 text-center">{t("common.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {payrollRuns.map((row) => (
+                      {payrollRuns.map((row) => {
+                        const tax = payrollRunToBreakdown(row);
+                        const other = row.advances_deducted + row.other_deductions;
+                        return (
                         <tr key={row.id} className="hover:bg-app-card-hover">
                           <td className="px-4 py-3 font-semibold">{row.employees?.full_name || "—"}</td>
-                          <td className="px-4 py-3 text-right font-mono">{row.base_salary.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right font-mono text-emerald-600">
-                            +{row.bonuses_commissions.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-amber-600">
-                            −{row.advances_deducted.toFixed(2)}
+                          <td className="px-4 py-3 text-right font-mono">{tax.grossSalary.toFixed(2)}</td>
+                          <td
+                            className="px-4 py-3 text-right font-mono text-rose-600"
+                            title={`${t("tax.employerNote", {
+                              dsmf: tax.dsmfEmployer.toFixed(2),
+                              its: tax.itsEmployer.toFixed(2),
+                              total: (tax.dsmfEmployer + tax.itsEmployer).toFixed(2),
+                            })}`}
+                          >
+                            −{tax.dsmfEmployee.toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-rose-600">
-                            −{row.other_deductions.toFixed(2)}
+                            −{tax.itsEmployee.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-rose-600">
+                            −{tax.incomeTax.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-amber-600">
+                            −{other.toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold">
                             {row.net_salary.toFixed(2)} {t("common.currency")}
@@ -472,7 +491,8 @@ export default function EmployeesPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

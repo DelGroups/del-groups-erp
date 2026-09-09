@@ -20,6 +20,7 @@ interface DocumentListActionsProps {
   sendToWarehouseTitle?: string;
   sendToWarehouseDisabled?: boolean;
   showSendToWarehouse?: boolean;
+  extra?: React.ReactNode;
 }
 
 export default function DocumentListActions({
@@ -38,6 +39,7 @@ export default function DocumentListActions({
   sendToWarehouseTitle,
   sendToWarehouseDisabled = false,
   showSendToWarehouse = false,
+  extra,
 }: DocumentListActionsProps) {
   const { t } = useI18n();
   const resolvedViewTitle = viewTitle ?? t("common.view");
@@ -69,6 +71,7 @@ export default function DocumentListActions({
           <Printer className="h-4 w-4" />
         </button>
       )}
+      {extra}
       {showSendToWarehouse && onSendToWarehouse && (
         <button
           type="button"

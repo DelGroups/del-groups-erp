@@ -523,6 +523,9 @@ export const ruMessages: Messages = {
     editTitle: "Редактировать транзакцию",
     receiptTitle: "Финансовый чек",
     transactionId: "ID транзакции",
+    taxEngineTitle: "Налоговые и страховые правила Азербайджана",
+    taxEngineHint:
+      "Ведомость автоматически считает DSMF, İTŞ и подоходный налог. e-Qaimə XML/JSON выгружается из счетов продаж и закупок.",
   },
   cashBank: {
     title: "Касса и банк",
@@ -671,6 +674,14 @@ export const ruMessages: Messages = {
       statusDRAFT: "Черновик",
       statusAPPROVED: "Утверждено",
       statusPAID: "Оплачено",
+      gross: "Брутто",
+      dsmf: "ДСМФ",
+      its: "ИТШ",
+      incomeTax: "Подоходный налог",
+      otherDeductions: "Прочие удержания",
+      netSalary: "Чистая зарплата",
+      ratesHint:
+        "2026: DSMF (работник 3%/10%, работодатель 22%/15%/11%), İTŞ 0.5%+0.5%, НДФЛ 3%/10%/14% после DSMF+İTŞ.",
     },
     advance: {
       newTitle: "Новый аванс",
@@ -1237,7 +1248,7 @@ export const ruMessages: Messages = {
     },
     payroll: {
       title: "Расчёт зарплаты — {name}",
-      subtitle: "Оклад + комиссия − удержания",
+      subtitle: "Брутто − DSMF / İTŞ / НДФЛ − прочие удержания",
       netPay: "К выплате",
       paymentAccount: "Счёт оплаты *",
       period: "Период (месяц / год)",
@@ -1867,5 +1878,20 @@ export const ruMessages: Messages = {
     attachmentDownloadFailed: "Не удалось скачать файл",
     searchContractsPlaceholder: "№ договора, сторона или ИНН",
     filterStatusAll: "Все",
+  },
+  tax: {
+    grossSalary: "Брутто",
+    dsmfEmployee: "ДСМФ (работник)",
+    itsEmployee: "ИТШ (работник)",
+    incomeTax: "Подоходный налог",
+    netSalary: "Чистая зарплата",
+    employerNote: "Обязательства работодателя: DSMF {dsmf} + İTŞ {its} = {total} AZN (из нетто не удерживается).",
+    eQaimeExport: "Экспорт e-Qaimə",
+    exporting: "Подготовка...",
+    exportSuccess: "Файл e-Qaimə скачан.",
+    ratesTitle: "Законные ставки (2026)",
+    dsmfRate: "DSMF: работник 3% (первые 200 AZN) + 10%; работодатель 22% / 15% / 11% свыше 8000 AZN.",
+    itsRate: "Страхование от безработицы (İTŞ): 0.5% работник + 0.5% работодатель.",
+    pitRate: "Подоходный налог: 3% до 2500 AZN, 10% до 8000, 14% свыше (после DSMF и İTŞ).",
   },
 };

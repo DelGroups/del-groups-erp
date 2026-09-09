@@ -29,6 +29,9 @@ import { FileSpreadsheet, Plus, ShoppingCart } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
+import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function SalesListPage() {
   const [sales, setSales] = useState<SaleRecord[]>([]);
@@ -42,6 +45,7 @@ export default function SalesListPage() {
   const [voiding, setVoiding] = useState(false);
   const invoicePrint = useInvoicePrintSystem();
   const vatAccountIds = useVatAccountIds();
+  const branding = useCompanyBranding();
   const { can } = useAuth();
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -99,6 +103,16 @@ export default function SalesListPage() {
   const openPayment = async (row: SaleRecord) => {
     const full = await fetchSaleById(row.id);
     if (full) setPaymentSale(full);
+  };
+
+  const exportEQaime = async (row: SaleRecord, format: "xml" | "json") => {
+    try {
+      const full = (await fetchSaleById(row.id)) || row;
+      await exportSaleEQaime(full, branding, format);
+      showSuccess(t("tax.exportSuccess"));
+    } catch (err) {
+      showError(err instanceof Error ? err.message : t("common.error"));
+    }
   };
 
   const handleVoidSale = async () => {
@@ -276,6 +290,12 @@ export default function SalesListPage() {
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
                             onPayment={() => void openPayment(sale)}
+                            extra={
+                              <EQaimeExportButton
+                                compact
+                                onExport={(format) => exportEQaime(sale, format)}
+                              />
+                            }
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onDelete={
                               canDeleteSales ? () => setVoidTarget(sale) : undefined

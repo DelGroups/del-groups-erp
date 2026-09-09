@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { PayrollRun } from "@/types/database.types";
+import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
+import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface PayPayrollModalProps {
@@ -34,7 +36,7 @@ export default function PayPayrollModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl app-card shadow-xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl app-card shadow-xl">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <h3 className="font-bold text-app">{t("employees.payroll.payTitle")}</h3>
           <button type="button" onClick={onClose} className="text-app-muted">
@@ -46,12 +48,12 @@ export default function PayPayrollModal({
           <p className="text-sm font-semibold text-app">
             {payroll.employees?.full_name || "—"}
           </p>
-          <div className="rounded-xl border border-app bg-app-card-hover p-3 text-center">
-            <p className="text-[10px] font-bold uppercase text-app-muted">{t("employees.net")}</p>
-            <p className="font-mono text-xl font-bold text-emerald-600">
-              {payroll.net_salary.toFixed(2)} {t("common.currency")}
-            </p>
-          </div>
+          <PayrollTaxBreakdown
+            compact
+            breakdown={payrollRunToBreakdown(payroll)}
+            advancesDeducted={payroll.advances_deducted}
+            otherDeductions={payroll.other_deductions}
+          />
 
           <label className="block text-xs font-semibold text-app">
             {t("employees.payroll.paymentAccount")} *

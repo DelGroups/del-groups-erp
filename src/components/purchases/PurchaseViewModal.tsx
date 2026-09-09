@@ -4,6 +4,9 @@ import React from "react";
 import { X } from "lucide-react";
 import type { PurchaseRecord } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
+import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 
 interface PurchaseViewModalProps {
   purchase: PurchaseRecord;
@@ -12,6 +15,7 @@ interface PurchaseViewModalProps {
 
 export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewModalProps) {
   const { t } = useI18n();
+  const branding = useCompanyBranding();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
@@ -66,10 +70,15 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
               ))}
             </tbody>
           </table>
-          <div className="flex justify-end gap-6 text-sm font-bold">
-            <span>{t("print.total")}: {purchase.total_amount.toFixed(2)} {t("common.currency")}</span>
-            <span className="text-emerald-600">{t("print.paid")}: {purchase.paid_amount.toFixed(2)}</span>
-            <span className="text-rose-600">{t("modals.purchaseView.debt")}: {purchase.debt_amount.toFixed(2)}</span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex justify-end gap-6 text-sm font-bold">
+              <span>{t("print.total")}: {purchase.total_amount.toFixed(2)} {t("common.currency")}</span>
+              <span className="text-emerald-600">{t("print.paid")}: {purchase.paid_amount.toFixed(2)}</span>
+              <span className="text-rose-600">{t("modals.purchaseView.debt")}: {purchase.debt_amount.toFixed(2)}</span>
+            </div>
+            <EQaimeExportButton
+              onExport={(format) => exportPurchaseEQaime(purchase, branding, format)}
+            />
           </div>
         </div>
       </div>
