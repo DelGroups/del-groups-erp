@@ -244,12 +244,18 @@ export interface ProductionOrder {
   installation_difficulty_notes?: string | null;
 }
 
-export type PurchaseRequestStatus = "pending" | "ordered" | "received" | "fulfilled" | "cancelled";
+export type PurchaseRequestStatus =
+  | "pending"
+  | "ordered"
+  | "received"
+  | "fulfilled"
+  | "cancelled"
+  | "auto_triggered";
 
 export interface PurchaseRequest {
   id: string;
   request_no: string;
-  production_order_id: string;
+  production_order_id: string | null;
   product_id: string | null;
   product_code: string | null;
   product_name: string;
@@ -260,6 +266,7 @@ export interface PurchaseRequest {
   purchase_id: string | null;
   notes: string | null;
   created_at: string | null;
+  source?: "production" | "safety_stock" | null;
 }
 
 export interface ProductionCosting {

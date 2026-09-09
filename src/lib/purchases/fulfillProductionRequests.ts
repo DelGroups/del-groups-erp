@@ -24,8 +24,28 @@ export async function fulfillProductionPurchaseRequestsByPurchaseId(
     .from("purchase_requests")
     .update({ status: "fulfilled", updated_at: new Date().toISOString() })
     .eq("purchase_id", purchaseId)
-    .in("status", ["pending", "ordered"]);
+    .in("status", ["pending", "ordered", "auto_triggered"]);
 
   if (updateError) return { ok: false, error: updateError.message };
+
+  const { data: items } = await supabase
+    .from("purchase_items")
+    .select("product_id")
+    .eq("purchase_id", purchaseId);
+
+  const productIds = [...new Set((items || []).map((row) => row.product_id).filter(Boolean))] as string[];
+  if (productIds.length > 0) {
+    await supabase
+      .from("purchase_requests")
+      .update({
+        status: "fulfilled",
+        purchase_id: purchaseId,
+        updated_at: new Date().toISOString(),
+      })
+      .in("product_id", productIds)
+      .eq("source", "safety_stock")
+      .in("status", ["auto_triggered", "pending", "ordered"]);
+  }
+
   return { ok: true };
 }

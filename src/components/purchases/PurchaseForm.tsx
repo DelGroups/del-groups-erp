@@ -58,6 +58,10 @@ import {
   filterLegalSuppliers,
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
+import SupplierRatingModal from "@/components/purchases/SupplierRatingModal";
+import { rateSupplierDeliveryAction } from "@/lib/actions/supplierRating";
+import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { formatSupplierOptionLabel, supplierDisplayName } from "@/lib/purchases/supplierScore";
 
 interface Account {
   id: string;
@@ -135,6 +139,11 @@ export default function PurchaseForm({
   );
   const [contractId, setContractId] = useState<string | null>(initialPurchase?.contract_id || null);
   const [voenVerification, setVoenVerification] = useState("");
+  const [ratingTarget, setRatingTarget] = useState<{
+    purchaseId: string;
+    supplierId: string;
+  } | null>(null);
+  const [ratingSaving, setRatingSaving] = useState(false);
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
@@ -472,7 +481,35 @@ export default function PurchaseForm({
       showToastError(formatRpcError(result.error ?? t("common.error"), t));
       return;
     }
+    if (result.purchaseId && supplierId) {
+      setRatingTarget({ purchaseId: result.purchaseId, supplierId });
+      return;
+    }
     onSuccess?.();
+  };
+
+  const finishAfterRating = () => {
+    setRatingTarget(null);
+    onSuccess?.();
+  };
+
+  const handleRateSupplier = async (scores: {
+    qualityScore: number;
+    deliverySpeedScore: number;
+  }) => {
+    if (!ratingTarget) return;
+    setRatingSaving(true);
+    const rated = await rateSupplierDeliveryAction({
+      purchaseId: ratingTarget.purchaseId,
+      qualityScore: scores.qualityScore,
+      deliverySpeedScore: scores.deliverySpeedScore,
+    });
+    setRatingSaving(false);
+    if (!rated.success) {
+      showToastError(rated.error || t("common.error"));
+      return;
+    }
+    finishAfterRating();
   };
 
   return (
@@ -529,8 +566,7 @@ export default function PurchaseForm({
                 <option value="">{t("common.select")}</option>
                 {supplierOptions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.full_name}
-                    {s.company_name ? ` (${s.company_name})` : ""}
+                    {formatSupplierOptionLabel(s)}
                   </option>
                 ))}
               </select>
@@ -883,6 +919,20 @@ export default function PurchaseForm({
       )}
 
       <ToastMessage message={toastMessage} variant={toastVariant} />
+
+      {ratingTarget ? (
+        <SupplierRatingModal
+          supplierName={supplierDisplayName(
+            supplierList.find((s) => s.id === ratingTarget.supplierId) || {
+              id: ratingTarget.supplierId,
+              full_name: t("forms.supplier"),
+            }
+          )}
+          saving={ratingSaving}
+          onSkip={finishAfterRating}
+          onSubmit={handleRateSupplier}
+        />
+      ) : null}
     </>
   );
 }

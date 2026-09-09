@@ -13,6 +13,7 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS color TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_info TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock_level NUMERIC DEFAULT 0;
 
 -- Sales header (items live in sale_items; payments may stay JSONB on sales)
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_no TEXT;
@@ -213,6 +214,9 @@ CREATE TABLE IF NOT EXISTS suppliers (
   company_name TEXT,
   phone TEXT,
   balance NUMERIC DEFAULT 0,
+  quality_score NUMERIC(4, 2),
+  delivery_speed_score NUMERIC(4, 2),
+  rating_count INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

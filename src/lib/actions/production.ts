@@ -2861,19 +2861,20 @@ function mapPurchaseRequest(row: Record<string, unknown>): PurchaseRequest {
   return {
     id: String(row.id),
     request_no: String(row.request_no || ""),
-    production_order_id: String(row.production_order_id),
+    production_order_id: (row.production_order_id as string) || null,
     product_id: (row.product_id as string) || null,
     product_code: (row.product_code as string) || null,
     product_name: String(row.product_name || ""),
     warehouse_id: (row.warehouse_id as string) || null,
     quantity: num(row.quantity),
     unit: (row.unit as string) || null,
-    status: (["pending", "ordered", "received", "fulfilled", "cancelled"].includes(String(row.status))
+    status: (["pending", "ordered", "received", "fulfilled", "cancelled", "auto_triggered"].includes(String(row.status))
       ? String(row.status)
       : "pending") as PurchaseRequestStatus,
     purchase_id: (row.purchase_id as string) || null,
     notes: (row.notes as string) || null,
     created_at: (row.created_at as string) || null,
+    source: row.source === "safety_stock" ? "safety_stock" : "production",
   };
 }
 

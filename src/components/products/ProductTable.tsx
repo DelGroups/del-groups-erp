@@ -5,6 +5,7 @@ import { AlertTriangle, Pencil, Printer, Trash2 } from "lucide-react";
 import type { Product, ProductColumnKey, Warehouse } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { useI18n } from "@/i18n/I18nProvider";
+import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
 
 interface ProductTableProps {
   products: Product[];
@@ -109,6 +110,7 @@ export default function ProductTable({
                 </th>
               ))}
               <th className="px-4 py-3 font-bold">{t("products.stock")}</th>
+              <th className="px-4 py-3 font-bold">{t("products.minStockLevel")}</th>
               <th className="px-4 py-3 font-bold">{t("common.warehouse")}</th>
               <th className="px-4 py-3 font-bold">{t("common.status")}</th>
               {canEdit || onPrintLabel ? (
@@ -118,8 +120,7 @@ export default function ProductTable({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {products.map((product) => {
-              const isLowStock =
-                Number(product.stock) <= Number(product.min_stock ?? 0);
+              const critical = isCriticalStock(product);
               return (
                 <tr key={product.id} className="transition-colors hover:bg-app-card-hover">
                   {columns.map((key) => (
@@ -130,12 +131,15 @@ export default function ProductTable({
                   <td className="px-4 py-3 font-bold">
                     {product.stock} {product.unit}
                   </td>
+                  <td className="px-4 py-3 font-mono text-app-muted">
+                    {productMinStock(product)} {product.unit}
+                  </td>
                   <td className="px-4 py-3 text-app-muted">—</td>
                   <td className="px-4 py-3">
-                    {isLowStock ? (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                    {critical ? (
+                      <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700">
                         <AlertTriangle className="mr-1 h-3 w-3" />
-                        {t("products.lowStockBadge")}
+                        {t("products.criticalStock")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">

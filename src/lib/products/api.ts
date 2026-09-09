@@ -97,6 +97,7 @@ export function buildProductInsert(
     sell_price: Number(input.sell_price) || 0,
     stock: isService ? 0 : Number(input.stock) || 0,
     min_stock: isService ? 0 : Number(input.min_stock) || 0,
+    min_stock_level: isService ? 0 : Number(input.min_stock_level ?? input.min_stock) || 0,
     barcode,
     qr_code: input.qr_code?.trim() || barcode,
     color: input.color?.trim() || null,
@@ -138,6 +139,7 @@ export async function findOrCreateServiceProduct(
     sell_price: sellPrice,
     stock: 0,
     min_stock: 0,
+    min_stock_level: 0,
     is_service: true,
     is_dimensional: false,
   });

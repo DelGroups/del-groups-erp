@@ -28,7 +28,7 @@ export async function listProductionPurchaseRequisitionsAction(): Promise<Purcha
       .select(
         "*, production_orders(order_no), warehouses(name)"
       )
-      .in("status", ["pending", "ordered"])
+      .in("status", ["pending", "ordered", "auto_triggered"])
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -41,7 +41,7 @@ export async function listProductionPurchaseRequisitionsAction(): Promise<Purcha
       return {
         id: String(row.id),
         request_no: String(row.request_no || ""),
-        production_order_id: String(row.production_order_id),
+        production_order_id: (row.production_order_id as string) || null,
         product_id: (row.product_id as string) || null,
         product_code: (row.product_code as string) || null,
         product_name: String(row.product_name || ""),
@@ -52,6 +52,7 @@ export async function listProductionPurchaseRequisitionsAction(): Promise<Purcha
         purchase_id: (row.purchase_id as string) || null,
         notes: (row.notes as string) || null,
         created_at: (row.created_at as string) || null,
+        source: (row.source as PurchaseRequest["source"]) || "production",
         production_order_no: productionOrder?.order_no || null,
         warehouse_name: warehouse?.name || null,
       };

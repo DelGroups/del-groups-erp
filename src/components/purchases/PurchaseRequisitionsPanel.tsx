@@ -64,16 +64,28 @@ export default function PurchaseRequisitionsPanel({ onOpenPurchase }: Props) {
             <tr key={row.id} className="transition-colors hover:bg-app-card-hover">
               <td className="px-4 py-3 font-mono font-bold text-amber-500">{row.request_no}</td>
               <td className="px-4 py-3">
-                <Link href={`/production/${row.production_order_id}`} className="text-app-accent hover:underline">
-                  {row.production_order_no || row.production_order_id.slice(0, 8)}
-                </Link>
+                {row.production_order_id ? (
+                  <Link href={`/production/${row.production_order_id}`} className="text-app-accent hover:underline">
+                    {row.production_order_no || row.production_order_id.slice(0, 8)}
+                  </Link>
+                ) : (
+                  <span className="text-rose-600 font-semibold">{t("purchases.autoTriggeredSource")}</span>
+                )}
               </td>
               <td className="px-4 py-3 font-semibold">{row.product_name}</td>
               <td className="px-4 py-3">{row.warehouse_name || "—"}</td>
               <td className="px-4 py-3 text-right font-mono">
                 {row.quantity} {row.unit}
               </td>
-              <td className="px-4 py-3">{row.status}</td>
+              <td className="px-4 py-3">
+                {row.status === "auto_triggered" ? (
+                  <span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                    {t("purchases.statusAutoTriggered")}
+                  </span>
+                ) : (
+                  row.status
+                )}
+              </td>
               <td className="px-4 py-3 text-center">
                 {row.purchase_id ? (
                   <button

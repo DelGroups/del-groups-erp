@@ -233,6 +233,7 @@ export interface Product {
   sell_price: number | null;
   stock: number | null;
   min_stock?: number | null;
+  min_stock_level?: number | null;
   barcode?: string | null;
   qr_code?: string | null;
   color?: string | null;
@@ -686,6 +687,9 @@ export interface Supplier {
   address?: string | null;
   entity_type?: "physical" | "legal" | null;
   balance?: number | null;
+  quality_score?: number | null;
+  delivery_speed_score?: number | null;
+  rating_count?: number | null;
   created_at?: string | null;
 }
 

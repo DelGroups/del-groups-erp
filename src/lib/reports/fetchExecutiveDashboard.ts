@@ -210,7 +210,7 @@ async function fetchCashFlowForecast(): Promise<{
     supabase
       .from("purchase_requests")
       .select("quantity, product_id, purchase_id, status, created_at")
-      .in("status", ["pending", "ordered"]),
+      .in("status", ["pending", "ordered", "auto_triggered"]),
     supabase.from("employees").select("base_salary, status"),
     supabase.from("products").select("id, buy_price"),
   ]);
@@ -310,7 +310,7 @@ function toUsageRow(
   extras?: { totalUsed?: number; daysIdle?: number }
 ): MaterialUsageRow {
   const stock = num(product.stock);
-  const minStock = num(product.min_stock);
+  const minStock = num(product.min_stock_level ?? product.min_stock);
   return {
     productId: String(product.id),
     code: String(product.code || ""),
@@ -320,7 +320,7 @@ function toUsageRow(
     totalUsed: extras?.totalUsed || 0,
     stock,
     minStock,
-    belowMin: stock <= minStock,
+    belowMin: minStock > 0 && stock <= minStock,
     daysIdle: extras?.daysIdle,
   };
 }

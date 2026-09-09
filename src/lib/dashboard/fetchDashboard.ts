@@ -61,7 +61,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       .gte("created_at", `${trendStart}T00:00:00`),
     supabase
       .from("products")
-      .select("id, code, name, stock, min_stock, unit, category, buy_price, sell_price"),
+      .select("id, code, name, stock, min_stock, min_stock_level, is_service, unit, category, buy_price, sell_price"),
     supabase.from("customers").select("balance"),
     checkCustomerArDiscrepancies(),
   ]);
@@ -106,9 +106,10 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
   const lowStockAlerts: LowStockProduct[] = products
     .filter((p) => {
+      if (p.is_service) return false;
       const stock = Number(p.stock) || 0;
-      const min = Number(p.min_stock) || 0;
-      return stock <= min;
+      const min = Number(p.min_stock_level ?? p.min_stock) || 0;
+      return min > 0 && stock <= min;
     })
     .map((p) => ({
       id: p.id as string,

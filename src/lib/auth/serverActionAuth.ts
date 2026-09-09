@@ -45,5 +45,8 @@ export function mapRpcError(message: string): string {
   if (message.includes("invalid_commission_ids")) return "Seçilmiş komissiyalar etibarsızdır və ya artıq ödənilib";
   if (message.includes("net_amount_zero")) return "Net maaş məbləği sıfırdan böyük olmalıdır";
   if (message.includes("invalid_amount")) return "Məbləğ düzgün deyil";
+  if (message.includes("invalid_quality_score") || message.includes("invalid_delivery_score")) {
+    return "Qiymət 1-5 ulduz arasında olmalıdır";
+  }
   return message;
 }
