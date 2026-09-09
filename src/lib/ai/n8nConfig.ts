@@ -21,8 +21,15 @@ function cleanEnv(value: string | undefined): string {
   return (value || "").trim().replace(/^["']|["']$/g, "");
 }
 
+const DEFAULT_N8N_PRODUCTION_WEBHOOK_URL =
+  "https://ai.del-groups.com/webhook/e6576363-eebf-461a-b93f-1240b0159593";
+
 export function envN8nWebhookUrl(): string {
-  return cleanEnv(process.env.NEXT_PUBLIC_N8N_AI_WEBHOOK_URL) || cleanEnv(process.env.N8N_AI_WEBHOOK_URL);
+  return (
+    cleanEnv(process.env.NEXT_PUBLIC_N8N_AI_WEBHOOK_URL) ||
+    cleanEnv(process.env.N8N_AI_WEBHOOK_URL) ||
+    DEFAULT_N8N_PRODUCTION_WEBHOOK_URL
+  );
 }
 
 export function envN8nWebhookSecret(): string {

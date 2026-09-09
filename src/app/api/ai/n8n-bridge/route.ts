@@ -213,7 +213,11 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
 
   const content = clampString(String(body.content || body.message || ""), MAX_N8N_MESSAGE);
   if (!content) throw new Error("Mesaj tələb olunur");
-  return switchPayload(userId, targetAgent, content);
+  return {
+    target_agent: resolveTargetAgent(targetAgent),
+    content,
+    session_id: erpAgentSessionId(userId),
+  };
 }
 
 async function buildFilePayload(
