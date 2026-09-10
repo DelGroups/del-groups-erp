@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
+  calcDiscountTotal,
   calcLineTotal,
   calcSaleTotals,
   createEmptySaleItem,
@@ -50,6 +51,10 @@ import {
   type OfficialTransactionState,
 } from "@/lib/finance/officialTransaction";
 import { calcOfficialTransactionTotals, type VatMode } from "@/lib/finance/vatEngine";
+import {
+  calcGlobalDiscountAmount,
+  type GlobalDiscountMode,
+} from "@/lib/finance/invoiceDiscounts";
 import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import {
@@ -210,6 +215,8 @@ export default function UniversalInvoiceForm({
   const [productSelectorRowId, setProductSelectorRowId] = useState<string | null>(null);
   const [isOfficial, setIsOfficial] = useState(false);
   const [vatMode, setVatMode] = useState<VatMode>("none");
+  const [globalDiscountMode, setGlobalDiscountMode] = useState<GlobalDiscountMode>("percent");
+  const [globalDiscountValue, setGlobalDiscountValue] = useState(0);
   const [contractId, setContractId] = useState<string | null>(null);
   const [voenVerification, setVoenVerification] = useState("");
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
@@ -224,6 +231,14 @@ export default function UniversalInvoiceForm({
     () => (isOfficial ? filterLegalCustomers(customers) : customers),
     [customers, isOfficial]
   );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const nextRate = isOfficial && vatMode !== "none" ? defaultVatRate : 0;
+    setItems((prev) =>
+      prev.map((row) => (row.vat_rate === nextRate ? row : { ...row, vat_rate: nextRate }))
+    );
+  }, [isOpen, isOfficial, vatMode, defaultVatRate]);
 
   useEffect(() => {
     if (!isOfficial || !selectedCustomerId) return;
@@ -268,6 +283,8 @@ export default function UniversalInvoiceForm({
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
     setProductSelectorRowId(null);
+    setGlobalDiscountMode("percent");
+    setGlobalDiscountValue(0);
     setVatMode(defaultVatMode(taxConfig.default_vat_rate));
     void fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when the modal opens
@@ -425,7 +442,18 @@ export default function UniversalInvoiceForm({
     return { availableStock: Number(prod.stock) || 0 };
   };
 
-  const handleProductSelect = async (rowId: string, prod: Product | null) => {
+  const resolveLineVatRate = (prod: Product): number => {
+    if (!isOfficial || vatMode === "none") return 0;
+    const productRate = Number(prod.vat_rate ?? prod.tax_rate);
+    if (Number.isFinite(productRate) && productRate > 0) return productRate;
+    return defaultVatRate;
+  };
+
+  const handleProductSelect = async (
+    rowId: string,
+    prod: Product | null,
+    quantityOverride?: number
+  ) => {
     if (!prod) {
       handleItemChange(rowId, {
         product_id: "",
@@ -469,6 +497,7 @@ export default function UniversalInvoiceForm({
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
+      quantity: quantityOverride ?? row?.quantity ?? 1,
       unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
       unit_price: polywoodRow
         ? roundPrice(
@@ -478,7 +507,7 @@ export default function UniversalInvoiceForm({
           )
         : productPrice(prod),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
-      vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
+      vat_rate: resolveLineVatRate(prod),
       available_stock: stockResult.availableStock,
       polywood_sale_mode: polywoodRow ? row?.polywood_sale_mode || "linear_m" : null,
       polywood_full_sheet_length_m: fullSheetLengthM,
@@ -490,6 +519,38 @@ export default function UniversalInvoiceForm({
   const handleQuickProductCreated = (product: Product, rowId: string) => {
     setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
     handleProductSelect(rowId, product);
+  };
+
+  const handleModalProductSelect = async (
+    product: Product,
+    quantity: number,
+    closeAfter: boolean
+  ) => {
+    if (!productSelectorRowId) return;
+
+    const targetRowId = productSelectorRowId;
+    await handleProductSelect(targetRowId, product, quantity);
+
+    if (closeAfter) {
+      setProductSelectorRowId(null);
+      return;
+    }
+
+    setItems((prev) => {
+      const nextEmpty = prev.find((row) => !row.product_id && row.id !== targetRowId);
+      if (nextEmpty) {
+        setProductSelectorRowId(nextEmpty.id);
+        return prev;
+      }
+
+      const source = prev.find((row) => row.id === targetRowId);
+      const newRow = createEmptySaleItem(
+        source?.warehouse_id || defaultWarehouse?.id || "",
+        source?.warehouse_name || defaultWarehouse?.name || ""
+      );
+      setProductSelectorRowId(newRow.id);
+      return [...prev, newRow];
+    });
   };
 
   const applyProductToSaleRow = (
@@ -662,7 +723,21 @@ export default function UniversalInvoiceForm({
     [items, payments, deliveryType, deliveryFee, additionalExpensesTotal]
   );
 
-  const itemsNetTotal = totals.subtotal - totals.discount_total;
+  const lineDiscountTotal = useMemo(() => calcDiscountTotal(items), [items]);
+
+  const globalDiscountAmount = useMemo(
+    () =>
+      calcGlobalDiscountAmount(
+        totals.subtotal - lineDiscountTotal,
+        globalDiscountMode,
+        globalDiscountValue
+      ),
+    [totals.subtotal, lineDiscountTotal, globalDiscountMode, globalDiscountValue]
+  );
+
+  const totalDiscountAmount = lineDiscountTotal + globalDiscountAmount;
+  const itemsNetTotal = totals.subtotal - totalDiscountAmount;
+
   const officialAmounts = useMemo(
     () =>
       calcOfficialTransactionTotals(itemsNetTotal, {
@@ -675,18 +750,29 @@ export default function UniversalInvoiceForm({
     [itemsNetTotal, isOfficial, vatMode, defaultVatRate, totals.delivery_cost, additionalExpensesTotal]
   );
 
-  const displayTotals = useMemo(
-    () =>
-      isOfficial
-        ? {
-            ...totals,
-            vat_total: officialAmounts.vat_amount,
-            grand_total: officialAmounts.grand_total,
-            remaining_balance: officialAmounts.grand_total - totals.paid_amount,
-          }
-        : totals,
-    [isOfficial, totals, officialAmounts]
-  );
+  const displayTotals = useMemo(() => {
+    const baseGrand = isOfficial
+      ? officialAmounts.grand_total
+      : totals.subtotal - totalDiscountAmount + totals.delivery_cost + additionalExpensesTotal;
+
+    return {
+      ...totals,
+      discount_total: totalDiscountAmount,
+      line_discount_total: lineDiscountTotal,
+      global_discount_total: globalDiscountAmount,
+      vat_total: isOfficial ? officialAmounts.vat_amount : totals.vat_total,
+      grand_total: baseGrand,
+      remaining_balance: baseGrand - totals.paid_amount,
+    };
+  }, [
+    isOfficial,
+    totals,
+    officialAmounts,
+    totalDiscountAmount,
+    lineDiscountTotal,
+    globalDiscountAmount,
+    additionalExpensesTotal,
+  ]);
 
   const salePreflightIssue = useMemo(() => {
     if (!isOpen) return null;
@@ -836,8 +922,8 @@ export default function UniversalInvoiceForm({
       issued_by: issuedBy,
       warehouse_name: primaryWarehouse,
       subtotal: totals.subtotal,
-      discount_total: totals.discount_total,
-      vat_total: isOfficial ? officialAmounts.vat_amount : totals.vat_total,
+      discount_total: displayTotals.discount_total,
+      vat_total: isOfficial ? officialAmounts.vat_amount : displayTotals.vat_total,
       total_amount: displayTotals.grand_total,
       paid_amount: totals.paid_amount,
       remaining_balance: displayTotals.grand_total - totals.paid_amount,
@@ -1084,7 +1170,7 @@ export default function UniversalInvoiceForm({
                   ) : null}
                   <th className="p-2.5 w-20">{t("forms.quantity")}</th>
                   <th className="p-2.5 w-24">{t("forms.price")}</th>
-                  <th className="p-2.5 w-20">{t("invoice.discount")}</th>
+                  <th className="p-2.5 w-20">{t("invoice.lineDiscount")}</th>
                   <th className="p-2.5 w-36">{t("invoice.info")}</th>
                   <th className="p-2.5 w-24 text-right">{t("forms.lineTotal")}</th>
                   <th className="p-2.5 w-10">{t("forms.remove")}</th>
@@ -1495,9 +1581,73 @@ export default function UniversalInvoiceForm({
                 <span className="font-mono">{totals.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-rose-300">
-                <span>{t("invoice.discountTotal")}</span>
-                <span className="font-mono">-{totals.discount_total.toFixed(2)}</span>
+                <span>{t("invoice.lineDiscountTotal")}</span>
+                <span className="font-mono">-{displayTotals.line_discount_total.toFixed(2)}</span>
               </div>
+              <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                  {t("invoice.globalDiscount")}
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={globalDiscountMode}
+                    onChange={(e) =>
+                      setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
+                    }
+                    className="w-1/3 rounded border border-white/20 bg-white/10 p-1.5 text-[11px]"
+                  >
+                    <option value="percent">%</option>
+                    <option value="amount">AZN</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={globalDiscountValue}
+                    onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
+                    className="w-2/3 rounded border border-white/20 bg-white/10 p-1.5 text-right font-mono"
+                  />
+                </div>
+                {displayTotals.global_discount_total > 0 ? (
+                  <div className="flex justify-between text-rose-200">
+                    <span>{t("invoice.globalDiscountApplied")}</span>
+                    <span className="font-mono">
+                      -{displayTotals.global_discount_total.toFixed(2)}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex justify-between text-rose-300">
+                <span>{t("invoice.discountTotal")}</span>
+                <span className="font-mono">-{displayTotals.discount_total.toFixed(2)}</span>
+              </div>
+              {isOfficial ? (
+                <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                    {t("invoice.vatToggleLabel")}
+                  </p>
+                  <div className="inline-flex overflow-hidden rounded-lg border border-white/20">
+                    <button
+                      type="button"
+                      onClick={() => setVatMode("none")}
+                      className={`px-3 py-1.5 text-[11px] font-semibold ${
+                        vatMode === "none" ? "bg-slate-600 text-white" : "text-slate-300"
+                      }`}
+                    >
+                      {t("invoice.vatOff")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVatMode("exclusive")}
+                      className={`px-3 py-1.5 text-[11px] font-semibold ${
+                        vatMode !== "none" ? "bg-emerald-600 text-white" : "text-slate-300"
+                      }`}
+                    >
+                      {t("invoice.vatOn", { rate: defaultVatRate })}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {totals.delivery_cost > 0 && (
                 <div className="flex justify-between text-blue-300">
                   <span>{t("invoice.deliveryCost")}</span>
@@ -1566,9 +1716,8 @@ export default function UniversalInvoiceForm({
           warehouses
         )}
         onClose={() => setProductSelectorRowId(null)}
-        onSelect={(product) => {
-          void handleProductSelect(productSelectorRowId, product);
-          setProductSelectorRowId(null);
+        onSelect={(product, quantity, closeAfter) => {
+          void handleModalProductSelect(product, quantity, closeAfter);
         }}
       />
     ) : null}

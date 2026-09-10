@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { Package, Search, X } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Minus, Package, Plus, Search, X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   fetchCompositeBomIndexAction,
@@ -23,7 +23,7 @@ type InvoiceProductSelectorModalProps = {
   open: boolean;
   products: Product[];
   onClose: () => void;
-  onSelect: (product: Product) => void;
+  onSelect: (product: Product, quantity: number, closeAfter: boolean) => void;
 };
 
 function productMatchesQuery(product: Product, query: string): boolean {
@@ -41,6 +41,48 @@ function productPrice(product: Product): number {
   return Number(product.sell_price ?? product.sale_price ?? product.price) || 0;
 }
 
+function QuantityStepper({
+  value,
+  onChange,
+  min = 1,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+}) {
+  const dec = () => onChange(Math.max(min, value - 1));
+  const inc = () => onChange(value + 1);
+
+  return (
+    <div className="inline-flex items-center overflow-hidden rounded-lg border border-app">
+      <button
+        type="button"
+        onClick={dec}
+        className="px-2 py-1 hover:bg-app-card-hover"
+        aria-label="-"
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <input
+        type="number"
+        min={min}
+        step="1"
+        value={value}
+        onChange={(e) => onChange(Math.max(min, Math.floor(Number(e.target.value) || min)))}
+        className="w-12 border-x border-app py-1 text-center text-xs font-mono"
+      />
+      <button
+        type="button"
+        onClick={inc}
+        className="px-2 py-1 hover:bg-app-card-hover"
+        aria-label="+"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export default function InvoiceProductSelectorModal({
   open,
   products,
@@ -48,6 +90,7 @@ export default function InvoiceProductSelectorModal({
   onSelect,
 }: InvoiceProductSelectorModalProps) {
   const { t } = useI18n();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<TabId>("standard");
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -56,6 +99,10 @@ export default function InvoiceProductSelectorModal({
   const [bomIndex, setBomIndex] = useState<CompositeBomIndexEntry[]>([]);
   const [seatId, setSeatId] = useState("");
   const [baseId, setBaseId] = useState("");
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [configuratorQty, setConfiguratorQty] = useState(1);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const [closeAfterSelect, setCloseAfterSelect] = useState(true);
 
   const categoryPills = useMemo(() => {
     const set = new Set<string>();
@@ -109,6 +156,19 @@ export default function InvoiceProductSelectorModal({
     return computeConfiguratorStock(seatStock, baseStock);
   }, [matchedComposite, seatId, baseId, stockMap]);
 
+  const getQuantity = useCallback(
+    (productId: string) => quantities[productId] ?? 1,
+    [quantities]
+  );
+
+  const setQuantity = useCallback((productId: string, qty: number) => {
+    setQuantities((prev) => ({ ...prev, [productId]: Math.max(1, qty) }));
+  }, []);
+
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [query, categoryFilter, filteredProducts.length]);
+
   useEffect(() => {
     if (!open) {
       setTab("standard");
@@ -117,6 +177,10 @@ export default function InvoiceProductSelectorModal({
       setSeatId("");
       setBaseId("");
       setStockMap({});
+      setQuantities({});
+      setConfiguratorQty(1);
+      setHighlightIndex(0);
+      setCloseAfterSelect(true);
       return;
     }
 
@@ -126,10 +190,59 @@ export default function InvoiceProductSelectorModal({
       setBomIndex(result.index);
     });
 
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 50);
+
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (tab !== "standard" || event.target !== searchRef.current) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlightIndex((idx) => Math.min(idx + 1, Math.max(filteredProducts.length - 1, 0)));
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlightIndex((idx) => Math.max(idx - 1, 0));
+        return;
+      }
+
+      if (event.key === "Enter" && filteredProducts.length > 0) {
+        event.preventDefault();
+        const product = filteredProducts[highlightIndex] ?? filteredProducts[0];
+        if (product) {
+          onSelect(product, getQuantity(product.id), closeAfterSelect);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    open,
+    tab,
+    onClose,
+    onSelect,
+    filteredProducts,
+    highlightIndex,
+    getQuantity,
+    closeAfterSelect,
+  ]);
 
   useEffect(() => {
     if (!open || tab !== "standard") return;
@@ -173,22 +286,24 @@ export default function InvoiceProductSelectorModal({
     return Number(product.stock) || 0;
   };
 
+  const finishSelect = (product: Product, quantity: number) => {
+    onSelect(product, quantity, closeAfterSelect);
+  };
+
   const handleStandardSelect = (product: Product) => {
-    onSelect(product);
-    onClose();
+    finishSelect(product, getQuantity(product.id));
   };
 
   const handleConfiguratorAdd = () => {
     if (!matchedComposite) return;
-    onSelect(matchedComposite);
-    onClose();
+    finishSelect(matchedComposite, configuratorQty);
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto app-scrim p-4">
-      <div className="my-4 w-full max-w-4xl app-modal">
+      <div className="my-4 flex w-full max-w-4xl flex-col app-modal">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>
             <h3 className="text-sm font-bold text-app">{t("invoice.productSelector.title")}</h3>
@@ -233,12 +348,14 @@ export default function InvoiceProductSelectorModal({
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-app-muted" />
               <input
+                ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("invoice.productSearchPlaceholder")}
                 className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm"
               />
             </label>
+            <p className="text-[10px] text-app-muted">{t("invoice.productSelector.keyboardHint")}</p>
 
             <div className="flex flex-wrap gap-2">
               <button
@@ -276,22 +393,28 @@ export default function InvoiceProductSelectorModal({
                     <th className="px-3 py-2 font-bold">{t("products.name")}</th>
                     <th className="px-3 py-2 font-bold">{t("products.stock")}</th>
                     <th className="px-3 py-2 font-bold">{t("products.price")}</th>
+                    <th className="px-3 py-2 font-bold">{t("forms.quantity")}</th>
                     <th className="px-3 py-2 font-bold" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-app">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-app-muted">
+                      <td colSpan={6} className="px-3 py-6 text-center text-app-muted">
                         {t("invoice.productNotFound")}
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map((product) => {
+                    filteredProducts.map((product, idx) => {
                       const stock = resolveStock(product);
                       const unit = product.unit || "Ədəd";
+                      const active = idx === highlightIndex;
                       return (
-                        <tr key={product.id} className="hover:bg-app-card-hover">
+                        <tr
+                          key={product.id}
+                          className={`hover:bg-app-card-hover ${active ? "bg-indigo-50/80" : ""}`}
+                          onMouseEnter={() => setHighlightIndex(idx)}
+                        >
                           <td className="px-3 py-2 font-mono">{productCode(product) || "-"}</td>
                           <td className="px-3 py-2">
                             <div className="font-medium text-app">{product.name}</div>
@@ -307,6 +430,12 @@ export default function InvoiceProductSelectorModal({
                               : `${stock} ${unit}`}
                           </td>
                           <td className="px-3 py-2">{productPrice(product).toFixed(2)} AZN</td>
+                          <td className="px-3 py-2">
+                            <QuantityStepper
+                              value={getQuantity(product.id)}
+                              onChange={(qty) => setQuantity(product.id, qty)}
+                            />
+                          </td>
                           <td className="px-3 py-2 text-right">
                             <button
                               type="button"
@@ -388,6 +517,7 @@ export default function InvoiceProductSelectorModal({
                       {productPrice(matchedComposite).toFixed(2)} AZN
                     </span>
                   ) : null}
+                  <QuantityStepper value={configuratorQty} onChange={setConfiguratorQty} />
                 </div>
               </div>
             ) : (
@@ -407,6 +537,17 @@ export default function InvoiceProductSelectorModal({
             </button>
           </div>
         )}
+
+        <div className="border-t border-app px-5 py-3">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-app">
+            <input
+              type="checkbox"
+              checked={closeAfterSelect}
+              onChange={(e) => setCloseAfterSelect(e.target.checked)}
+            />
+            {t("invoice.productSelector.closeAfterSelect")}
+          </label>
+        </div>
       </div>
     </div>
   );
