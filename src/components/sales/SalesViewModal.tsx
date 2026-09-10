@@ -46,10 +46,21 @@ export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: Sa
               <p className="font-semibold">{sale.warehouse_name || "-"}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase text-app-muted">{t("modals.salesView.seller")}</p>
-              <p className="font-semibold">{sale.seller_name || "-"}</p>
+              <p className="text-[10px] uppercase text-app-muted">{t("invoice.issuedBy")}</p>
+              <p className="font-semibold">{sale.issued_by_name || sale.seller_name || "-"}</p>
             </div>
           </div>
+          {(sale.created_by_name || sale.issued_by_name) &&
+          sale.created_by &&
+          sale.issued_by &&
+          sale.created_by !== sale.issued_by ? (
+            <p className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-[11px] text-app-muted">
+              {t("invoice.auditTrail", {
+                issuedBy: sale.issued_by_name || sale.seller_name || "-",
+                createdBy: sale.created_by_name || "-",
+              })}
+            </p>
+          ) : null}
           <table className="w-full overflow-hidden rounded-xl border border-app">
             <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
               <tr>

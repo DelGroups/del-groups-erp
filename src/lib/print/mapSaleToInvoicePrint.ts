@@ -81,7 +81,7 @@ export function mapSaleToInvoicePrint(
     docNo: sale.doc_no || "-",
     docDate: sale.doc_date || "-",
     customerName: sale.customer_name || "Anonim müştəri",
-    sellerName: sale.seller_name || "-",
+    sellerName: sale.issued_by_name || sale.seller_name || "-",
     warehouseName: sale.warehouse_name || "-",
     paymentStatus: resolvePaymentStatus(sale),
     subtotal: Number(sale.subtotal) || 0,

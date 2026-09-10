@@ -177,11 +177,15 @@ function buildRpcPayload(payload: SubmitSalePayload, validItems: SaleItem[]) {
 
   const docNo = payload.header.doc_no || payload.docNo;
 
+  const { created_by: _ignoredCreatedBy, ...headerWithoutCreatedBy } = payload.header as SaleInsert & {
+    created_by?: string | null;
+  };
+
   return {
     idempotency_key: saleInvoiceIdempotencyKey(docNo),
     decrement_stock: decrementStock,
     header: {
-      ...payload.header,
+      ...headerWithoutCreatedBy,
       doc_no: payload.header.doc_no || payload.docNo,
       payments: paymentsJson,
     },

@@ -58,6 +58,9 @@ import {
   filterLegalCustomers,
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
+import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
+import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
+import { resolveIssuedByProfileId } from "@/lib/sales/invoiceIssuer";
 
 export const ADHOC_SERVICE_PRODUCT_ID = "__custom_service__";
 
@@ -168,6 +171,9 @@ export default function MixedDimensionalInvoiceForm({
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [issuerProfiles, setIssuerProfiles] = useState<
+    Array<{ id: string; employee_id: string | null; is_active: boolean | null }>
+  >([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -200,7 +206,7 @@ export default function MixedDimensionalInvoiceForm({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: cats }, whResult, seedResult] =
+      const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: cats }, { data: prof }, whResult, seedResult] =
         await Promise.all([
           supabase.from("customers").select("*").order("created_at", { ascending: false }),
           supabase.from("employees").select("*"),
@@ -208,6 +214,11 @@ export default function MixedDimensionalInvoiceForm({
           supabase.from("accounts").select("*").order("created_at", { ascending: true }),
           supabase.from("products").select("*").order("name", { ascending: true }),
           supabase.from("categories").select("*").order("name", { ascending: true }),
+          supabase
+            .from("profiles")
+            .select("id, employee_id, is_active")
+            .eq("is_active", true)
+            .order("full_name"),
           ensurePolywoodWarehouseAction(),
           ensureDefaultServiceProductsAction(),
         ]);
@@ -223,6 +234,7 @@ export default function MixedDimensionalInvoiceForm({
 
       setCustomers((cust as Customer[]) || []);
       setEmployees((emp as Employee[]) || []);
+      setIssuerProfiles(prof || []);
       setWarehouses((wh as Warehouse[]) || []);
       setAccounts(acc ?? []);
       setProducts(productList);
@@ -247,13 +259,21 @@ export default function MixedDimensionalInvoiceForm({
     loadData();
   }, [loadData]);
 
+  const { locked: sellerLocked, lockedEmployeeId, lockedName } = useResponsiblePerson(employees);
+  const effectiveSellerId = sellerLocked ? lockedEmployeeId : sellerId;
+  const effectiveSellerName = sellerLocked
+    ? lockedName
+    : employees.find((employee) => employee.id === effectiveSellerId)
+      ? employeeLabel(employees.find((employee) => employee.id === effectiveSellerId)!)
+      : sellerName;
+
   useEffect(() => {
-    if (!sellerId && profile?.id) {
-      setSellerId(profile.id);
-      setSellerName(profile.full_name || "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
+    if (sellerLocked || sellerId || !profile?.employee_id) return;
+    const ownEmployee = employees.find((employee) => employee.id === profile.employee_id);
+    if (!ownEmployee) return;
+    setSellerId(ownEmployee.id);
+    setSellerName(employeeLabel(ownEmployee));
+  }, [employees, profile?.employee_id, sellerId, sellerLocked]);
 
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
@@ -562,13 +582,21 @@ export default function MixedDimensionalInvoiceForm({
     };
     const officialFields = buildOfficialDocumentFields(officialState, officialForSubmit);
 
+    const issuedBy = resolveIssuedByProfileId({
+      selectedEmployeeId: effectiveSellerId,
+      profiles: issuerProfiles,
+      currentProfileId: profile?.id,
+      role: profile?.role,
+    });
+
     const header: SaleInsert = {
       doc_no: docNo,
       doc_date: docDate,
       customer_id: customerId || null,
       customer_name: customerName || null,
-      seller_id: sellerId || null,
-      seller_name: sellerName || null,
+      seller_id: effectiveSellerId || null,
+      seller_name: effectiveSellerName || null,
+      issued_by: issuedBy,
       warehouse_name: warehouses.find((w) => w.id === warehouseId)?.name || null,
       subtotal: totalsForSubmit.subtotal,
       discount_total: totalsForSubmit.discount_total,
@@ -661,25 +689,19 @@ export default function MixedDimensionalInvoiceForm({
             )}
           </label>
 
-          <label className="text-xs font-semibold text-app">
-            {t("invoice.seller")}
-            <select
-              value={sellerId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSellerId(id);
-                const emp = employees.find((x) => x.id === id);
-                setSellerName(emp ? employeeLabel(emp) : "");
-              }}
-              className="app-input mt-1 w-full text-sm"
-            >
-              <option value="">{t("forms.notSelected")}</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {employeeLabel(emp)}
-                </option>
-              ))}
-            </select>
+          <label className="block text-xs font-semibold text-app">
+            {t("invoice.issuedBy")}
+            <div className="mt-1">
+              <ResponsiblePersonField
+                employees={employees}
+                value={effectiveSellerId}
+                onChange={(employeeId, displayName) => {
+                  setSellerId(employeeId);
+                  setSellerName(displayName);
+                }}
+                className="text-sm"
+              />
+            </div>
           </label>
 
           <label className="text-xs font-semibold text-app">

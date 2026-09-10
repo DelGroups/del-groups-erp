@@ -7,7 +7,8 @@ import { readSpreadsheetRows, downloadTextFile } from "@/lib/csv/csvUtils";
 import {
   buildPolywoodImportTemplateCsv,
   downloadPolywoodImportTemplateXlsx,
-  formatGroupedStock,
+  formatStockSummary,
+  isMeterUnit,
   parsePolywoodImportRows,
   validPolywoodImportRows,
   type PolywoodImportRow,
@@ -71,6 +72,32 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
   const validCount = validPolywoodImportRows(rows).length;
   const errorCount = rows.filter((row) => row.errors.length > 0).length;
 
+  const unitBadgeClass = (row: PolywoodImportRow) => {
+    if (row.unit === "sheet") return "bg-sky-100 text-sky-800";
+    if (row.unit === "pcs") return "bg-violet-100 text-violet-800";
+    return "bg-amber-100 text-amber-800";
+  };
+
+  const unitBadgeLabel = (row: PolywoodImportRow) => {
+    if (row.unit === "sheet") return t("polywood.import.unitSheet");
+    if (row.unit === "pcs") return t("polywood.import.unitPcs");
+    return t("polywood.import.unitMeter");
+  };
+
+  const stockSummaryLabel = (row: PolywoodImportRow) => {
+    if (row.unit === "sheet") {
+      return t("polywood.import.stockSheets", { count: row.quantity });
+    }
+    if (row.unit === "pcs") {
+      return t("polywood.import.stockPcs", { count: row.quantity });
+    }
+    const totalM = row.parsedLengths.reduce((sum, length) => sum + length, 0);
+    return t("polywood.import.stockMeters", {
+      pieces: row.parsedLengths.length,
+      total: totalM.toFixed(1),
+    });
+  };
+
   return (
     <div className="space-y-4">
       {initialProductId ? (
@@ -105,10 +132,11 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
         <div className="mt-4 rounded-lg bg-app-card-hover p-3 text-xs text-app-muted">
           <p className="font-semibold text-app">{t("polywood.import.columnsTitle")}</p>
           <p className="mt-1">
-            code, name, category, sub_category, buy_price, sell_price, barcode, full_sheet_length_m,
-            piece_lengths
+            code, name, category, sub_category, unit, quantity, buy_price, sell_price, barcode,
+            full_sheet_length_m, piece_lengths
           </p>
-          <p className="mt-2">{t("polywood.import.lengthsHint")}</p>
+          <p className="mt-2">{t("polywood.import.unitHint")}</p>
+          <p className="mt-1">{t("polywood.import.lengthsHint")}</p>
         </div>
       </div>
 
@@ -138,6 +166,7 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
                   <th className="p-2">{t("polywood.table.product")}</th>
                   <th className="p-2">{t("polywood.import.category")}</th>
                   <th className="p-2">{t("polywood.import.subCategory")}</th>
+                  <th className="p-2">{t("polywood.import.unitColumn")}</th>
                   <th className="p-2">{t("polywood.import.groupedStock")}</th>
                   <th className="p-2">{t("common.status")}</th>
                 </tr>
@@ -150,8 +179,20 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
                     <td className="p-2">{row.name}</td>
                     <td className="p-2">{row.category || "—"}</td>
                     <td className="p-2">{row.subCategory || "—"}</td>
+                    <td className="p-2">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${unitBadgeClass(row)}`}
+                      >
+                        {unitBadgeLabel(row)}
+                      </span>
+                      {!isMeterUnit(row.unit) && row.quantity > 0 ? (
+                        <span className="mt-1 block font-mono text-[11px] text-app-muted">
+                          qty: {row.quantity}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="p-2 font-mono">
-                      {formatGroupedStock(row.groupedStock) || row.parsedLengths.join("; ") || "—"}
+                      {stockSummaryLabel(row) || formatStockSummary(row) || "—"}
                     </td>
                     <td className="p-2">
                       {row.errors.length > 0 ? (

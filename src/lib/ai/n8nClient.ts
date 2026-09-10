@@ -110,7 +110,8 @@ function unwrapPayload(payload: unknown): Record<string, unknown> | string {
 export function parseN8nWebhookResponse(payload: unknown): N8nAssistantResult {
   const unwrapped = unwrapPayload(payload);
   if (typeof unwrapped === "string") {
-    return { reply: unwrapped, buttons: [], links: collectMarkdownLinks(unwrapped) };
+    const text = unwrapped.trim() || "n8n cavabı boş qayıtdı.";
+    return { reply: text, buttons: [], links: collectMarkdownLinks(text) };
   }
 
   const reply =

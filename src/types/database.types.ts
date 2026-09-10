@@ -902,6 +902,7 @@ export type RoleScopes = {
 
 /** Role name that bypasses the "own documents only" constraint. */
 export const ADMIN_ROLE_NAME = "Admin";
+export const MANAGER_ROLE_NAME = "Manager";
 
 export interface Role {
   id: string;
@@ -1041,6 +1042,14 @@ export function isAdminRole(role: Role | null | undefined): boolean {
   return role?.name === ADMIN_ROLE_NAME;
 }
 
+export function isManagerRole(role: Role | null | undefined): boolean {
+  return role?.name === MANAGER_ROLE_NAME;
+}
+
+export function canDelegateInvoiceIssuer(role: Role | null | undefined): boolean {
+  return isAdminRole(role) || isManagerRole(role);
+}
+
 
 // --- Generated schema aliases (from linked Supabase project) ----------------
 
@@ -1056,7 +1065,10 @@ export type ProcessMixedDimensionalSaleRpcReturns =
   Database["public"]["Functions"]["process_mixed_dimensional_sale"]["Returns"];
 export type RollbackMixedDimensionalSaleRpcArgs =
   Database["public"]["Functions"]["rollback_mixed_dimensional_sale"]["Args"];
-export type SaleInsert = Database["public"]["Tables"]["sales"]["Insert"];
+export type SaleInsert = Database["public"]["Tables"]["sales"]["Insert"] & {
+  issued_by?: string | null;
+  created_by?: string | null;
+};
 export type PurchaseInsertType = Database["public"]["Tables"]["purchases"]["Insert"];
 
 // ─── Dashboard & Reports ────────────────────────────────────────────────────

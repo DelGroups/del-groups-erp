@@ -21,9 +21,8 @@ function employeeName(employee: EmployeeLike): string {
 }
 
 /**
- * Employee picker for document headers. Non-admins are pinned to their own
- * name and the control is rendered read-only. The owning form must derive the
- * submitted value from `useResponsiblePerson` so the lock cannot be bypassed.
+ * Employee picker for document headers. Sales reps are pinned to their own
+ * name; Admins and Managers may select another active employee as issuer.
  */
 export default function ResponsiblePersonField({
   employees,
@@ -57,7 +56,7 @@ export default function ResponsiblePersonField({
         )}
         <p className="flex items-center gap-1 text-[10px] font-semibold text-app-muted">
           <Lock className="h-3 w-3 shrink-0" />
-          Sənədləri yalnız öz adınıza yarada bilərsiniz
+          Satış nümayəndəsi yalnız öz adınıza təyin olunur
         </p>
       </div>
     );

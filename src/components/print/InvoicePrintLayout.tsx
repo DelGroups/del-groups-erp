@@ -412,7 +412,7 @@ export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrin
         <div style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
           <InfoCard title={t("sales.customer")}>
             <InfoField label={t("sales.customer")} value={data.customerName} />
-            <InfoField label={t("print.salesManager")} value={data.sellerName} />
+            <InfoField label={t("invoice.issuedBy")} value={data.sellerName} />
           </InfoCard>
           <InfoCard title={t("print.salesInvoice")}>
             <InfoField label={t("print.docNo")} value={data.docNo} />

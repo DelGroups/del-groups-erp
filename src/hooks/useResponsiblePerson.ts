@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { canDelegateInvoiceIssuer } from "@/types/database.types";
 
 export interface EmployeeLike {
   id: string;
@@ -25,15 +26,14 @@ function employeeName(employee: EmployeeLike): string {
 }
 
 /**
- * Everyone except Admins is pinned to their own name on document forms.
- * The profile is matched to an `employees` row by explicit link first and by
- * name second, so commission tracking keeps working.
+ * Sales reps (User role) are pinned to their own name on document forms.
+ * Admins and Managers may delegate the invoice issuer to another employee.
  */
 export function useResponsiblePerson(employees: EmployeeLike[]): ResponsiblePersonState {
-  const { profile, isAdmin, loading, displayName } = useAuth();
+  const { profile, loading, displayName } = useAuth();
 
   return useMemo(() => {
-    const locked = !loading && !isAdmin && !!profile;
+    const locked = !loading && !canDelegateInvoiceIssuer(profile?.role) && !!profile;
     if (!locked) {
       return { locked: false, lockedEmployeeId: "", lockedName: "", ready: !loading };
     }
@@ -58,5 +58,5 @@ export function useResponsiblePerson(employees: EmployeeLike[]): ResponsiblePers
       lockedName: match ? employeeName(match) : profileName,
       ready: true,
     };
-  }, [employees, profile, isAdmin, loading, displayName]);
+  }, [employees, profile, loading, displayName]);
 }

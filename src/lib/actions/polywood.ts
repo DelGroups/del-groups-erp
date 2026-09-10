@@ -11,7 +11,12 @@ import {
   POLYWOOD_WAREHOUSE_TYPE,
   isFullSheetLength,
 } from "@/lib/polywood/constants";
-import type { PolywoodImportRow } from "@/lib/polywood/import";
+import {
+  isMeterUnit,
+  productUnitLabel,
+  rowHasImportableStock,
+  type PolywoodImportRow,
+} from "@/lib/polywood/import";
 import {
   resolveOrCreateCategory,
   resolveOrCreateSubCategory,
@@ -81,7 +86,7 @@ export async function importPolywoodStockAction(
     let skipped = 0;
 
     for (const row of rows) {
-      if (row.errors.length > 0 || row.parsedLengths.length === 0) {
+      if (!rowHasImportableStock(row)) {
         skipped += 1;
         continue;
       }
@@ -118,7 +123,8 @@ export async function importPolywoodStockAction(
         subcategory: subCategory?.name || row.subCategory || null,
         category_id: category.id,
         sub_category_id: subCategory?.id || null,
-        unit: "Metr",
+        unit: productUnitLabel(row.unit),
+        is_dimensional: isMeterUnit(row.unit) || row.unit === "sheet",
         buy_price: row.buyPrice,
         sell_price: row.sellPrice,
         stock: 0,
@@ -126,7 +132,6 @@ export async function importPolywoodStockAction(
         barcode: row.barcode.trim() || null,
         inventory_mode: POLYWOOD_INVENTORY_MODE,
         full_sheet_length_m: fullSheetLengthM,
-        is_dimensional: true,
         base_length: fullSheetLengthM,
       };
 

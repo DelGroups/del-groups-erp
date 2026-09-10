@@ -101,10 +101,21 @@ export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientPro
                 <p className="font-semibold">{sale.warehouse_name || "-"}</p>
               </div>
               <div>
-                <p className="text-xs uppercase text-app-muted">{t("modals.salesView.seller")}</p>
-                <p className="font-semibold">{sale.seller_name || "-"}</p>
+                <p className="text-xs uppercase text-app-muted">{t("invoice.issuedBy")}</p>
+                <p className="font-semibold">{sale.issued_by_name || sale.seller_name || "-"}</p>
               </div>
             </div>
+            {(sale.created_by_name || sale.issued_by_name) &&
+            sale.created_by &&
+            sale.issued_by &&
+            sale.created_by !== sale.issued_by ? (
+              <p className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-xs text-app-muted">
+                {t("invoice.auditTrail", {
+                  issuedBy: sale.issued_by_name || sale.seller_name || "-",
+                  createdBy: sale.created_by_name || "-",
+                })}
+              </p>
+            ) : null}
 
             <table className="w-full border-collapse text-xs">
               <thead className="border-b bg-app-card-hover font-bold uppercase">

@@ -22,7 +22,7 @@ export const maxDuration = 90;
 
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
-const N8N_TIMEOUT_MS = 60_000;
+const N8N_TIMEOUT_MS = 90_000;
 const ALLOWED_FILE_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -96,6 +96,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  console.log("--- [AI BRIDGE DEBUG START] ---");
+  console.log("Outbound Webhook URL:", runtime.url);
+  console.log("Payload Body:", JSON.stringify(payload));
+  console.log("User ID:", auth.user.id);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+
   try {
     const n8nResponse = await fetch(runtime.url, {
       method: "POST",
@@ -109,10 +117,23 @@ export async function POST(request: NextRequest) {
           : {}),
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(N8N_TIMEOUT_MS),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+
+    console.log("n8n Response Status:", n8nResponse.status);
+
     const rawText = await n8nResponse.text();
+    console.log("Raw n8n Response Text:", rawText || "(empty)");
+
+    if (!n8nResponse.ok) {
+      const errorReply = `n8n xətası (${n8nResponse.status}): ${rawText || "Cavab alınmadı"}`;
+      console.warn("[n8n-bridge] non-ok response:", errorReply);
+      console.log("--- [AI BRIDGE DEBUG END] ---");
+      return NextResponse.json({ reply: errorReply, provider: "n8n" });
+    }
+
     let parsed: unknown = rawText;
     if (rawText) {
       try {
@@ -122,31 +143,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!n8nResponse.ok) {
-      console.warn("[n8n-bridge]", n8nResponse.status, rawText.slice(0, 240));
-      return NextResponse.json({ error: "n8n webhook xətası" }, { status: 502 });
-    }
-
     const result = parseN8nWebhookResponse(parsed);
-    const reply =
-      (parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      typeof (parsed as { reply?: unknown }).reply === "string"
-        ? (parsed as { reply: string }).reply.trim()
-        : "") || result.reply;
+    const finalReply = extractBridgeReply(parsed, result.reply);
+
+    console.log("Final Extracted Reply:", finalReply || "(empty)");
+    console.log("--- [AI BRIDGE DEBUG END] ---");
+
     return NextResponse.json({
-      reply,
+      reply: finalReply || "Empty reply returned",
       buttons: result.buttons,
       table: result.table,
       links: result.links,
       provider: "n8n",
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "n8n timeout";
-    console.warn("[n8n-bridge]", message);
-    return NextResponse.json({ error: "n8n webhook cavab vermədi" }, { status: 504 });
+    clearTimeout(timeoutId);
+    const message = err instanceof Error ? err.message : "Serverə qoşulmaq mümkün olmadı";
+    console.error("[AI Bridge Critical Error]:", err);
+    console.log("--- [AI BRIDGE DEBUG END] ---");
+    return NextResponse.json({
+      reply: `Şəbəkə xətası: ${message}`,
+      provider: "n8n",
+    });
   }
+}
+
+function extractBridgeReply(parsed: unknown, parsedFallback: string): string {
+  if (typeof parsed === "string") {
+    const trimmed = parsed.trim();
+    return trimmed || parsedFallback;
+  }
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const record = parsed as Record<string, unknown>;
+    const direct =
+      (typeof record.reply === "string" && record.reply.trim()) ||
+      (typeof record.output === "string" && record.output.trim()) ||
+      (typeof record.content === "string" && record.content.trim()) ||
+      (typeof record.message === "string" && record.message.trim()) ||
+      (typeof record.text === "string" && record.text.trim()) ||
+      (typeof record.response === "string" && record.response.trim()) ||
+      "";
+    if (direct) return direct;
+  }
+  return parsedFallback;
 }
 
 function switchPayload(

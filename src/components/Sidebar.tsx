@@ -113,6 +113,7 @@ const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.pipeline", path: "/crm", icon: KanbanSquare },
       { titleKey: "nav.items.customers", path: "/customers", icon: Users },
       { titleKey: "nav.items.suppliers", path: "/suppliers", icon: Truck },
+      { titleKey: "nav.items.businessPartners", path: "/dashboard/partners", icon: Users },
     ],
   },
   {

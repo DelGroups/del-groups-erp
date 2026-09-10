@@ -9,6 +9,11 @@ export interface SaleRecord {
   customer_id: string | null;
   customer_name: string | null;
   seller_name: string | null;
+  seller_id?: string | null;
+  created_by?: string | null;
+  issued_by?: string | null;
+  created_by_name?: string | null;
+  issued_by_name?: string | null;
   warehouse_name: string | null;
   warehouses?: { name?: string | null } | null;
   subtotal: number;
@@ -37,7 +42,7 @@ export interface SaleRecord {
 }
 
 const SALES_LIST_SELECT =
-  "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, sale_items (warehouse_name)";
+  "id, doc_no, doc_date, customer_id, customer_name, seller_id, seller_name, created_by, issued_by, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, sale_items (warehouse_name)";
 
 const SALES_LIST_SELECT_NO_ITEMS =
   "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total";
@@ -140,7 +145,14 @@ function mapSaleRow(row: SalesListRow): SaleRecord | null {
     doc_date: typeof row.doc_date === "string" ? row.doc_date : null,
     customer_id: typeof row.customer_id === "string" ? row.customer_id : null,
     customer_name: typeof row.customer_name === "string" ? row.customer_name : null,
+    seller_id: typeof row.seller_id === "string" ? row.seller_id : null,
     seller_name: typeof row.seller_name === "string" ? row.seller_name : null,
+    created_by: typeof row.created_by === "string" ? row.created_by : null,
+    issued_by: typeof row.issued_by === "string" ? row.issued_by : null,
+    created_by_name:
+      typeof row.created_by_name === "string" ? row.created_by_name : null,
+    issued_by_name:
+      typeof row.issued_by_name === "string" ? row.issued_by_name : null,
     warehouse_name: resolveSaleWarehouseName(row) ?? DEFAULT_SALE_WAREHOUSE_LABEL,
     subtotal: toAmount(row.subtotal),
     discount_total: toAmount(row.discount_total),
@@ -264,6 +276,42 @@ export async function fetchSalesListWithMeta(): Promise<FetchSalesListResult> {
   }
 }
 
+async function enrichSaleAuditTrail(sale: SaleRecord): Promise<SaleRecord> {
+  const profileIds = [sale.created_by, sale.issued_by].filter(
+    (value, index, array): value is string =>
+      typeof value === "string" && value.length > 0 && array.indexOf(value) === index
+  );
+  if (profileIds.length === 0) {
+    return {
+      ...sale,
+      issued_by_name: sale.seller_name,
+    };
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", profileIds);
+
+  const nameById = new Map<string, string>();
+  for (const row of data || []) {
+    const id = typeof row.id === "string" ? row.id : "";
+    if (!id) continue;
+    const label =
+      (typeof row.full_name === "string" && row.full_name.trim()) ||
+      (typeof row.email === "string" && row.email.trim()) ||
+      "";
+    if (label) nameById.set(id, label);
+  }
+
+  return {
+    ...sale,
+    issued_by_name:
+      (sale.issued_by ? nameById.get(sale.issued_by) : null) || sale.seller_name || null,
+    created_by_name: sale.created_by ? nameById.get(sale.created_by) || null : null,
+  };
+}
+
 export async function fetchSaleById(id: string): Promise<SaleRecord | null> {
   if (!id?.trim()) return null;
 
@@ -289,13 +337,13 @@ export async function fetchSaleById(id: string): Promise<SaleRecord | null> {
     const items = (itemRows || []).map((row) => mapSaleItemRow(row as Record<string, unknown>));
     const warehouseFromItems = items.find((item) => item.warehouse_name?.trim())?.warehouse_name?.trim();
 
-    return {
+    return enrichSaleAuditTrail({
       ...mapped,
       warehouse_name:
         mapped.warehouse_name || warehouseFromItems || DEFAULT_SALE_WAREHOUSE_LABEL,
       items,
       payments: normalizePayments(sale.payments),
-    };
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown sale fetch error";
     console.error("Sale fetch exception:", message);

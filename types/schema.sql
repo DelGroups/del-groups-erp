@@ -21,6 +21,8 @@ ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_date DATE DEFAULT CURRENT_DATE;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS seller_id UUID;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name TEXT;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS seller_name TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS issued_by UUID REFERENCES auth.users(id);
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS subtotal NUMERIC DEFAULT 0;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_total NUMERIC DEFAULT 0;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS vat_total NUMERIC DEFAULT 0;
@@ -222,6 +224,30 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode);
+
+-- Unified business partners (customers + suppliers)
+CREATE TABLE IF NOT EXISTS partners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  full_name TEXT,
+  company_name TEXT,
+  phone TEXT,
+  address TEXT,
+  voen TEXT,
+  entity_type TEXT NOT NULL DEFAULT 'physical',
+  code TEXT,
+  is_customer BOOLEAN NOT NULL DEFAULT FALSE,
+  is_supplier BOOLEAN NOT NULL DEFAULT FALSE,
+  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_partners_customer_id ON partners (customer_id);
+CREATE INDEX IF NOT EXISTS idx_partners_supplier_id ON partners (supplier_id);
+
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partners(id);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partners(id);
 
 -- Suppliers
 CREATE TABLE IF NOT EXISTS suppliers (

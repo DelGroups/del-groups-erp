@@ -199,6 +199,7 @@ export default function AiAssistantWidget() {
           ...init,
         });
         const payload = (await response.json()) as BridgeResponse;
+        console.log("[AI Widget] bridge status:", response.status, "payload:", payload);
         if (response.status === 503) {
           setConfigured(false);
           if (init.method === "POST" && init.body && typeof init.body === "string") {
@@ -213,6 +214,7 @@ export default function AiAssistantWidget() {
         }
         if (!response.ok) {
           setError(payload.error || t("aiAssistant.error"));
+          if (payload.reply) appendAssistant(payload);
           return;
         }
         setConfigured(true);

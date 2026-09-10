@@ -35,6 +35,7 @@ import QuickAddProductModal from "@/components/purchases/QuickAddProductModal";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
+import { resolveIssuedByProfileId } from "@/lib/sales/invoiceIssuer";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -163,6 +164,9 @@ export default function UniversalInvoiceForm({
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [issuerProfiles, setIssuerProfiles] = useState<
+    Array<{ id: string; employee_id: string | null; is_active: boolean | null }>
+  >([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -199,7 +203,7 @@ export default function UniversalInvoiceForm({
   const [contractId, setContractId] = useState<string | null>(null);
   const [voenVerification, setVoenVerification] = useState("");
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
-  const { can } = useAuth();
+  const { can, profile } = useAuth();
   const { t } = useI18n();
   const { config: taxConfig } = useTaxPayrollConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
@@ -263,17 +267,23 @@ export default function UniversalInvoiceForm({
       await ensurePolywoodWarehouseAction();
     }
 
-    const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }] =
+    const [{ data: cust }, { data: emp }, { data: wh }, { data: acc }, { data: prod }, { data: prof }] =
       await Promise.all([
         supabase.from("customers").select("*").order("created_at", { ascending: false }),
         supabase.from("employees").select("*"),
         supabase.from("warehouses").select("*").order("created_at", { ascending: true }),
         supabase.from("accounts").select("*").order("created_at", { ascending: true }),
         supabase.from("products").select("*").order("name", { ascending: true }),
+        supabase
+          .from("profiles")
+          .select("id, employee_id, is_active")
+          .eq("is_active", true)
+          .order("full_name"),
       ]);
 
     if (cust) setCustomers(cust as Customer[]);
     if (emp) setEmployees(emp);
+    if (prof) setIssuerProfiles(prof);
 
     const allWarehouses = ((wh as Warehouse[]) || []).filter(Boolean);
     const warehouseRows = polywoodOnly
@@ -662,6 +672,14 @@ export default function UniversalInvoiceForm({
       ? employeeLabel(seller, t)
       : sellerName;
 
+  useEffect(() => {
+    if (sellerLocked || selectedSellerId || !profile?.employee_id) return;
+    const ownEmployee = employees.find((employee) => employee.id === profile.employee_id);
+    if (!ownEmployee) return;
+    setSelectedSellerId(ownEmployee.id);
+    setSellerName(employeeLabel(ownEmployee, t));
+  }, [employees, profile?.employee_id, selectedSellerId, sellerLocked, t]);
+
   const handleSellerChange = (employeeId: string, displayName: string) => {
     setSelectedSellerId(employeeId);
     setSellerName(displayName);
@@ -745,6 +763,13 @@ export default function UniversalInvoiceForm({
     };
     const officialFields = buildOfficialDocumentFields(officialState, officialAmounts);
 
+    const issuedBy = resolveIssuedByProfileId({
+      selectedEmployeeId: effectiveSellerId,
+      profiles: issuerProfiles,
+      currentProfileId: profile?.id,
+      role: profile?.role,
+    });
+
     const salesPayload: SaleInsert = {
       doc_no: docNo,
       doc_date: docDate,
@@ -752,6 +777,7 @@ export default function UniversalInvoiceForm({
       customer_name: selectedCustomer ? customerLabel(selectedCustomer, t) : "",
       seller_id: effectiveSellerId || null,
       seller_name: effectiveSellerName,
+      issued_by: issuedBy,
       warehouse_name: primaryWarehouse,
       subtotal: totals.subtotal,
       discount_total: totals.discount_total,
@@ -826,7 +852,7 @@ export default function UniversalInvoiceForm({
           <div className="app-card space-y-2 p-4 text-xs">
             <h3 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
               <User className="h-4 w-4 text-app-accent" />
-              {t("invoice.salesManager")}
+              {t("invoice.issuedBy")}
             </h3>
             <ResponsiblePersonField
               employees={employees}
