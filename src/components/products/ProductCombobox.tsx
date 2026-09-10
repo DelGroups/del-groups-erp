@@ -11,6 +11,7 @@ import {
   stockHintFromPolywoodSummary,
   type ProductStockHint,
 } from "@/lib/products/productOptionLabel";
+import { fetchProductStocksBatchAction } from "@/lib/actions/productBom";
 import type { Product } from "@/types/database.types";
 
 function productMatches(p: Product, query: string) {
@@ -52,6 +53,7 @@ export default function ProductCombobox({
   const [highlight, setHighlight] = useState(0);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const [polywoodHints, setPolywoodHints] = useState<Map<string, ProductStockHint>>(new Map());
+  const [stockOverrides, setStockOverrides] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!open) setQuery(selectedName || "");
@@ -107,6 +109,27 @@ export default function ProductCombobox({
     const list = q ? products.filter((p) => productMatches(p, q)) : products;
     return list.slice(0, 80);
   }, [products, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const compositeIds = filtered
+      .filter((product) => product.is_composite)
+      .map((product) => product.id);
+    if (compositeIds.length === 0) {
+      setStockOverrides(new Map());
+      return;
+    }
+
+    let active = true;
+    void fetchProductStocksBatchAction(compositeIds).then((result) => {
+      if (!active || !result.success) return;
+      setStockOverrides(new Map(Object.entries(result.stocks)));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open, filtered]);
 
   const exactScanMatch = useMemo(() => {
     const raw = query.trim();
@@ -209,6 +232,7 @@ export default function ProductCombobox({
                 const active = idx === highlight;
                 const selected = p.id === selectedId;
                 const hint = polywoodHints.get(p.id);
+                const stockOverride = stockOverrides.get(p.id);
                 return (
                   <button
                     key={p.id}
@@ -223,7 +247,7 @@ export default function ProductCombobox({
                       active ? "app-dropdown-item-active" : "bg-app-card"
                     } ${selected ? "font-semibold" : ""}`}
                   >
-                    {formatProductDropdownLabel(p, t, hint)}
+                    {formatProductDropdownLabel(p, t, hint, stockOverride)}
                   </button>
                 );
               })

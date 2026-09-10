@@ -13,7 +13,8 @@ export function productCode(product: Product): string {
 export function formatProductDropdownLabel(
   product: Product,
   t: (key: string, params?: Record<string, string | number>) => string,
-  stockHint?: ProductStockHint
+  stockHint?: ProductStockHint,
+  stockOverride?: number
 ): string {
   const code = productCode(product) || "-";
   const name = product.name || "-";
@@ -30,7 +31,10 @@ export function formatProductDropdownLabel(
     })})`;
   }
 
-  const stock = Number(product.stock) || 0;
+  const stock =
+    stockOverride != null && Number.isFinite(stockOverride)
+      ? stockOverride
+      : Number(product.stock) || 0;
   const unit = product.unit || "Ədəd";
   return `${code} - ${name} (${t("products.stockDropdown", { stock, unit })})`;
 }

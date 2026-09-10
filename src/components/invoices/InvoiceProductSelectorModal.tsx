@@ -1,0 +1,413 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { Package, Search, X } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
+import {
+  fetchCompositeBomIndexAction,
+  fetchProductStocksBatchAction,
+} from "@/lib/actions/productBom";
+import {
+  computeConfiguratorStock,
+  findCompositeByComponents,
+  isModularBaseProduct,
+  isModularSeatProduct,
+  type CompositeBomIndexEntry,
+} from "@/lib/products/modularRoles";
+import { productCode } from "@/lib/products/productOptionLabel";
+import type { Product } from "@/types/database.types";
+
+type TabId = "standard" | "configurator";
+
+type InvoiceProductSelectorModalProps = {
+  open: boolean;
+  products: Product[];
+  onClose: () => void;
+  onSelect: (product: Product) => void;
+};
+
+function productMatchesQuery(product: Product, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    (product.name || "").toLowerCase().includes(q) ||
+    (product.code || "").toLowerCase().includes(q) ||
+    (product.sku || "").toLowerCase().includes(q) ||
+    (product.barcode || "").toLowerCase().includes(q)
+  );
+}
+
+function productPrice(product: Product): number {
+  return Number(product.sell_price ?? product.sale_price ?? product.price) || 0;
+}
+
+export default function InvoiceProductSelectorModal({
+  open,
+  products,
+  onClose,
+  onSelect,
+}: InvoiceProductSelectorModalProps) {
+  const { t } = useI18n();
+  const [tab, setTab] = useState<TabId>("standard");
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [loadingStocks, setLoadingStocks] = useState(false);
+  const [bomIndex, setBomIndex] = useState<CompositeBomIndexEntry[]>([]);
+  const [seatId, setSeatId] = useState("");
+  const [baseId, setBaseId] = useState("");
+
+  const categoryPills = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((product) => {
+      if (product.category?.trim()) set.add(product.category.trim());
+      if (product.subcategory?.trim()) set.add(product.subcategory.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "az"));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((product) => productMatchesQuery(product, query))
+      .filter((product) => {
+        if (!categoryFilter) return true;
+        return product.category === categoryFilter || product.subcategory === categoryFilter;
+      })
+      .slice(0, 120);
+  }, [products, query, categoryFilter]);
+
+  const seatOptions = useMemo(
+    () =>
+      products.filter(
+        (product) => !product.is_composite && !product.is_service && isModularSeatProduct(product)
+      ),
+    [products]
+  );
+
+  const baseOptions = useMemo(
+    () =>
+      products.filter(
+        (product) => !product.is_composite && !product.is_service && isModularBaseProduct(product)
+      ),
+    [products]
+  );
+
+  const matchedComposite = useMemo(() => {
+    if (!seatId || !baseId) return null;
+    return findCompositeByComponents(bomIndex, products, seatId, baseId);
+  }, [bomIndex, products, seatId, baseId]);
+
+  const configuratorStock = useMemo(() => {
+    if (matchedComposite) {
+      const stock = stockMap[matchedComposite.id];
+      return stock != null ? stock : null;
+    }
+    if (!seatId || !baseId) return null;
+    const seatStock = stockMap[seatId];
+    const baseStock = stockMap[baseId];
+    if (seatStock == null || baseStock == null) return null;
+    return computeConfiguratorStock(seatStock, baseStock);
+  }, [matchedComposite, seatId, baseId, stockMap]);
+
+  useEffect(() => {
+    if (!open) {
+      setTab("standard");
+      setQuery("");
+      setCategoryFilter("");
+      setSeatId("");
+      setBaseId("");
+      setStockMap({});
+      return;
+    }
+
+    let active = true;
+    void fetchCompositeBomIndexAction().then((result) => {
+      if (!active || !result.success) return;
+      setBomIndex(result.index);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || tab !== "standard") return;
+    const ids = filteredProducts.map((product) => product.id);
+    if (ids.length === 0) return;
+
+    let active = true;
+    setLoadingStocks(true);
+    void fetchProductStocksBatchAction(ids).then((result) => {
+      if (!active) return;
+      if (result.success) {
+        setStockMap((prev) => ({ ...prev, ...result.stocks }));
+      }
+      setLoadingStocks(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open, tab, filteredProducts]);
+
+  useEffect(() => {
+    if (!open || tab !== "configurator") return;
+    const ids = [seatId, baseId, matchedComposite?.id].filter(Boolean) as string[];
+    if (ids.length === 0) return;
+
+    let active = true;
+    void fetchProductStocksBatchAction(ids).then((result) => {
+      if (!active || !result.success) return;
+      setStockMap((prev) => ({ ...prev, ...result.stocks }));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open, tab, seatId, baseId, matchedComposite?.id]);
+
+  const resolveStock = (product: Product): number => {
+    const override = stockMap[product.id];
+    if (override != null && Number.isFinite(override)) return override;
+    return Number(product.stock) || 0;
+  };
+
+  const handleStandardSelect = (product: Product) => {
+    onSelect(product);
+    onClose();
+  };
+
+  const handleConfiguratorAdd = () => {
+    if (!matchedComposite) return;
+    onSelect(matchedComposite);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto app-scrim p-4">
+      <div className="my-4 w-full max-w-4xl app-modal">
+        <div className="flex items-center justify-between border-b border-app px-5 py-4">
+          <div>
+            <h3 className="text-sm font-bold text-app">{t("invoice.productSelector.title")}</h3>
+            <p className="text-xs text-app-muted">{t("invoice.productSelector.subtitle")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex gap-2 border-b border-app px-5 pt-3">
+          <button
+            type="button"
+            onClick={() => setTab("standard")}
+            className={`rounded-t-lg px-4 py-2 text-xs font-semibold ${
+              tab === "standard"
+                ? "border border-b-0 border-app bg-app-card text-app"
+                : "text-app-muted hover:text-app"
+            }`}
+          >
+            {t("invoice.productSelector.tabStandard")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("configurator")}
+            className={`rounded-t-lg px-4 py-2 text-xs font-semibold ${
+              tab === "configurator"
+                ? "border border-b-0 border-app bg-app-card text-app"
+                : "text-app-muted hover:text-app"
+            }`}
+          >
+            {t("invoice.productSelector.tabConfigurator")}
+          </button>
+        </div>
+
+        {tab === "standard" ? (
+          <div className="space-y-4 p-5">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-app-muted" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("invoice.productSearchPlaceholder")}
+                className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm"
+              />
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter("")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  !categoryFilter
+                    ? "bg-[image:var(--app-gradient)] text-white"
+                    : "border border-app bg-app-card-hover text-app"
+                }`}
+              >
+                {t("common.all")}
+              </button>
+              {categoryPills.map((pill) => (
+                <button
+                  key={pill}
+                  type="button"
+                  onClick={() => setCategoryFilter(pill)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    categoryFilter === pill
+                      ? "bg-[image:var(--app-gradient)] text-white"
+                      : "border border-app bg-app-card-hover text-app"
+                  }`}
+                >
+                  {pill}
+                </button>
+              ))}
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-app">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 border-b border-app bg-app-card-hover text-app-muted">
+                  <tr>
+                    <th className="px-3 py-2 font-bold">{t("products.code")}</th>
+                    <th className="px-3 py-2 font-bold">{t("products.name")}</th>
+                    <th className="px-3 py-2 font-bold">{t("products.stock")}</th>
+                    <th className="px-3 py-2 font-bold">{t("products.price")}</th>
+                    <th className="px-3 py-2 font-bold" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-app">
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-6 text-center text-app-muted">
+                        {t("invoice.productNotFound")}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((product) => {
+                      const stock = resolveStock(product);
+                      const unit = product.unit || "Ədəd";
+                      return (
+                        <tr key={product.id} className="hover:bg-app-card-hover">
+                          <td className="px-3 py-2 font-mono">{productCode(product) || "-"}</td>
+                          <td className="px-3 py-2">
+                            <div className="font-medium text-app">{product.name}</div>
+                            {product.is_composite ? (
+                              <span className="text-[10px] font-bold uppercase text-indigo-600">
+                                {t("products.bom.compositeBadge")}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2 font-semibold">
+                            {loadingStocks && stockMap[product.id] == null
+                              ? "…"
+                              : `${stock} ${unit}`}
+                          </td>
+                          <td className="px-3 py-2">{productPrice(product).toFixed(2)} AZN</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleStandardSelect(product)}
+                              className="rounded-lg bg-[image:var(--app-gradient)] px-3 py-1.5 text-[11px] font-bold text-white"
+                            >
+                              {t("common.select")}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-5 p-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="block text-xs font-semibold text-app">
+                {t("invoice.productSelector.seatLabel")}
+                <select
+                  value={seatId}
+                  onChange={(e) => setSeatId(e.target.value)}
+                  className="app-input mt-1 text-sm"
+                >
+                  <option value="">{t("invoice.productSelector.selectSeat")}</option>
+                  {seatOptions.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {productCode(product)} — {product.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-xs font-semibold text-app">
+                {t("invoice.productSelector.baseLabel")}
+                <select
+                  value={baseId}
+                  onChange={(e) => setBaseId(e.target.value)}
+                  className="app-input mt-1 text-sm"
+                >
+                  <option value="">{t("invoice.productSelector.selectBase")}</option>
+                  {baseOptions.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {productCode(product)} — {product.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {seatId && baseId ? (
+              <div className="rounded-xl border border-app bg-app-card-hover p-4">
+                {matchedComposite ? (
+                  <>
+                    <p className="text-xs font-semibold text-app">
+                      {t("invoice.productSelector.matchedKit")}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-app">{matchedComposite.name}</p>
+                    <p className="mt-1 font-mono text-xs text-app-muted">
+                      {productCode(matchedComposite)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-amber-700">{t("invoice.productSelector.noKitFound")}</p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
+                  <span className="font-semibold text-app">
+                    {t("products.stock")}:{" "}
+                    <span className="font-mono text-app-accent">
+                      {configuratorStock == null ? "…" : configuratorStock}
+                    </span>{" "}
+                    {matchedComposite?.unit || seatOptions.find((p) => p.id === seatId)?.unit || "Ədəd"}
+                  </span>
+                  {matchedComposite ? (
+                    <span className="text-app-muted">
+                      {productPrice(matchedComposite).toFixed(2)} AZN
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-app-muted">{t("invoice.productSelector.configuratorHint")}</p>
+            )}
+
+            <button
+              type="button"
+              disabled={
+                !matchedComposite || configuratorStock == null || configuratorStock <= 0
+              }
+              onClick={handleConfiguratorAdd}
+              className="flex items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+            >
+              <Package className="h-4 w-4" />
+              {t("invoice.productSelector.addKit")}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

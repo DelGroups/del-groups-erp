@@ -57,7 +57,11 @@ import {
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
 import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
-import { fetchProductAvailableStockAction } from "@/lib/actions/productBom";
+import {
+  fetchCompositeAvailableStockAction,
+  fetchProductAvailableStockAction,
+} from "@/lib/actions/productBom";
+import InvoiceProductSelectorModal from "@/components/invoices/InvoiceProductSelectorModal";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
 import { productCode } from "@/lib/products/productOptionLabel";
@@ -112,6 +116,10 @@ interface Product {
   tax_rate?: number;
   discount_percent?: number;
   discount?: number;
+  is_composite?: boolean | null;
+  is_service?: boolean | null;
+  category?: string | null;
+  subcategory?: string | null;
 }
 
 function isPolywoodWarehouseRow(warehouseId: string, warehouses: Warehouse[]): boolean {
@@ -199,6 +207,7 @@ export default function UniversalInvoiceForm({
   ]);
   const [saving, setSaving] = useState(false);
   const [quickAddProductRowId, setQuickAddProductRowId] = useState<string | null>(null);
+  const [productSelectorRowId, setProductSelectorRowId] = useState<string | null>(null);
   const [isOfficial, setIsOfficial] = useState(false);
   const [vatMode, setVatMode] = useState<VatMode>("none");
   const [contractId, setContractId] = useState<string | null>(null);
@@ -258,6 +267,7 @@ export default function UniversalInvoiceForm({
     setItems(createEmptySaleItems(5));
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
+    setProductSelectorRowId(null);
     setVatMode(defaultVatMode(taxConfig.default_vat_rate));
     void fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when the modal opens
@@ -408,7 +418,7 @@ export default function UniversalInvoiceForm({
     }
 
     if (prod.is_composite) {
-      const result = await fetchProductAvailableStockAction(prod.id);
+      const result = await fetchCompositeAvailableStockAction(prod.id);
       return { availableStock: result.success ? result.stock : 0 };
     }
 
@@ -1108,6 +1118,14 @@ export default function UniversalInvoiceForm({
                         </div>
                         <button
                           type="button"
+                          onClick={() => setProductSelectorRowId(row.id)}
+                          title={t("invoice.productSelector.openButton")}
+                          className="flex max-w-[7.5rem] shrink-0 items-center justify-center self-start rounded border border-indigo-200 bg-indigo-50 px-2 py-2 text-center text-[10px] font-bold leading-tight text-indigo-700 hover:bg-indigo-100"
+                        >
+                          {t("invoice.productSelector.openButton")}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setQuickAddProductRowId(row.id)}
                           title={t("invoice.createProduct")}
                           className="flex shrink-0 items-center justify-center self-start rounded border border-emerald-200 bg-emerald-50 px-2 py-2 text-emerald-700 hover:bg-emerald-100"
@@ -1538,6 +1556,22 @@ export default function UniversalInvoiceForm({
         }}
       />
     )}
+
+    {productSelectorRowId && !polywoodOnly ? (
+      <InvoiceProductSelectorModal
+        open
+        products={filterProductsForWarehouse(
+          products,
+          items.find((row) => row.id === productSelectorRowId)?.warehouse_id || "",
+          warehouses
+        )}
+        onClose={() => setProductSelectorRowId(null)}
+        onSelect={(product) => {
+          void handleProductSelect(productSelectorRowId, product);
+          setProductSelectorRowId(null);
+        }}
+      />
+    ) : null}
 
     <ToastMessage message={toastMessage} variant={toastVariant} />
     </>
