@@ -172,9 +172,25 @@ CREATE TABLE IF NOT EXISTS commission_rules (
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
+  slug TEXT,
   parent_id UUID REFERENCES categories(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug_unique
+  ON categories (slug)
+  WHERE slug IS NOT NULL AND trim(slug) <> '';
+
+CREATE TABLE IF NOT EXISTS sub_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (category_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sub_categories_category_id ON sub_categories (category_id);
 
 -- Warehouses
 CREATE TABLE IF NOT EXISTS warehouses (
@@ -448,6 +464,8 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS responsible_name TEXT;
 ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS warehouse_type TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS inventory_mode TEXT NOT NULL DEFAULT 'standard';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS full_sheet_length_m NUMERIC NOT NULL DEFAULT 4;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES categories(id);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sub_category_id UUID REFERENCES sub_categories(id);
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_sale_mode TEXT;
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_length_m NUMERIC;
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS polywood_cut_details JSONB;
@@ -468,6 +486,18 @@ CREATE TABLE IF NOT EXISTS polywood_pieces (
 CREATE INDEX IF NOT EXISTS idx_polywood_pieces_product_available
   ON polywood_pieces (product_id, warehouse_id)
   WHERE status = 'available';
+
+CREATE TABLE IF NOT EXISTS polywood_inventory_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  length_m NUMERIC NOT NULL CHECK (length_m > 0),
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  is_full_sheet BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_polywood_inventory_items_product
+  ON polywood_inventory_items (product_id);
 
 -- ─── Inventory audit (stock count / انبارگردانی) ──────────────────────────────
 CREATE TABLE IF NOT EXISTS inventory_audits (

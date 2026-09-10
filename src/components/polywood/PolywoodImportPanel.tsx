@@ -6,6 +6,8 @@ import { importPolywoodStockAction } from "@/lib/actions/polywood";
 import { readSpreadsheetRows, downloadTextFile } from "@/lib/csv/csvUtils";
 import {
   buildPolywoodImportTemplateCsv,
+  downloadPolywoodImportTemplateXlsx,
+  formatGroupedStock,
   parsePolywoodImportRows,
   validPolywoodImportRows,
   type PolywoodImportRow,
@@ -31,7 +33,11 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
     setRows(parsed);
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplateXlsx = async () => {
+    await downloadPolywoodImportTemplateXlsx();
+  };
+
+  const handleDownloadTemplateCsv = () => {
     downloadTextFile("Polywood_Import_Sablonu.csv", buildPolywoodImportTemplateCsv());
   };
 
@@ -78,10 +84,16 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
             <h3 className="font-bold text-app">{t("polywood.import.title")}</h3>
             <p className="text-sm text-app-muted">{t("polywood.import.description")}</p>
           </div>
-          <button type="button" onClick={handleDownloadTemplate} className="btn-secondary">
-            <Download className="h-4 w-4" />
-            {t("polywood.import.downloadTemplate")}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handleDownloadTemplateXlsx} className="btn-primary">
+              <Download className="h-4 w-4" />
+              {t("polywood.import.downloadTemplateXlsx")}
+            </button>
+            <button type="button" onClick={handleDownloadTemplateCsv} className="btn-secondary">
+              <Download className="h-4 w-4" />
+              {t("polywood.import.downloadTemplateCsv")}
+            </button>
+          </div>
         </div>
 
         <FileDropzone
@@ -93,7 +105,8 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
         <div className="mt-4 rounded-lg bg-app-card-hover p-3 text-xs text-app-muted">
           <p className="font-semibold text-app">{t("polywood.import.columnsTitle")}</p>
           <p className="mt-1">
-            code, name, buy_price, sell_price, barcode, full_sheet_length_m, piece_lengths
+            code, name, category, sub_category, buy_price, sell_price, barcode, full_sheet_length_m,
+            piece_lengths
           </p>
           <p className="mt-2">{t("polywood.import.lengthsHint")}</p>
         </div>
@@ -116,14 +129,16 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
               {importing ? t("common.loading") : t("polywood.import.submit")}
             </button>
           </div>
-          <div className="max-h-96 overflow-auto">
+          <div className="max-h-[28rem] overflow-auto">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-app-card-hover font-bold uppercase text-app">
                 <tr>
                   <th className="p-2">#</th>
                   <th className="p-2">{t("polywood.table.code")}</th>
                   <th className="p-2">{t("polywood.table.product")}</th>
-                  <th className="p-2">{t("polywood.import.pieceLengths")}</th>
+                  <th className="p-2">{t("polywood.import.category")}</th>
+                  <th className="p-2">{t("polywood.import.subCategory")}</th>
+                  <th className="p-2">{t("polywood.import.groupedStock")}</th>
                   <th className="p-2">{t("common.status")}</th>
                 </tr>
               </thead>
@@ -133,7 +148,11 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
                     <td className="p-2">{row.rowNumber}</td>
                     <td className="p-2 font-mono">{row.code || "—"}</td>
                     <td className="p-2">{row.name}</td>
-                    <td className="p-2 font-mono">{row.parsedLengths.join("; ") || "—"}</td>
+                    <td className="p-2">{row.category || "—"}</td>
+                    <td className="p-2">{row.subCategory || "—"}</td>
+                    <td className="p-2 font-mono">
+                      {formatGroupedStock(row.groupedStock) || row.parsedLengths.join("; ") || "—"}
+                    </td>
                     <td className="p-2">
                       {row.errors.length > 0 ? (
                         <span className="text-red-600">{row.errors.join("; ")}</span>

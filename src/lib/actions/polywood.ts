@@ -11,8 +11,11 @@ import {
   POLYWOOD_WAREHOUSE_TYPE,
   isFullSheetLength,
 } from "@/lib/polywood/constants";
-import { addPolywoodStockFromLengths } from "@/lib/polywood/inventory";
 import type { PolywoodImportRow } from "@/lib/polywood/import";
+import {
+  resolveOrCreateCategory,
+  resolveOrCreateSubCategory,
+} from "@/lib/polywood/categoryResolver";
 import type { PolywoodPiece } from "@/lib/polywood/types";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
@@ -85,6 +88,8 @@ export async function importPolywoodStockAction(
 
       const code = row.code.trim() || `PW-${Date.now().toString(36).slice(-5)}`;
       const fullSheetLengthM = row.fullSheetLengthM || DEFAULT_FULL_SHEET_LENGTH_M;
+      const category = await resolveOrCreateCategory(admin, row.category || "Polywood");
+      const subCategory = await resolveOrCreateSubCategory(admin, category.id, row.subCategory);
 
       let productId: string | null = null;
 
@@ -106,25 +111,29 @@ export async function importPolywoodStockAction(
         productId = (byBarcode?.id as string) || null;
       }
 
+      const productPayload = {
+        code,
+        name: row.name.trim(),
+        category: category.name,
+        subcategory: subCategory?.name || row.subCategory || null,
+        category_id: category.id,
+        sub_category_id: subCategory?.id || null,
+        unit: "Metr",
+        buy_price: row.buyPrice,
+        sell_price: row.sellPrice,
+        stock: 0,
+        min_stock: 0,
+        barcode: row.barcode.trim() || null,
+        inventory_mode: POLYWOOD_INVENTORY_MODE,
+        full_sheet_length_m: fullSheetLengthM,
+        is_dimensional: true,
+        base_length: fullSheetLengthM,
+      };
+
       if (!productId) {
         const { data: createdProduct, error: createError } = await admin
           .from("products")
-          .insert([
-            {
-              code,
-              name: row.name.trim(),
-              category: "Polywood",
-              subcategory: "Polywood",
-              unit: "Metr",
-              buy_price: row.buyPrice,
-              sell_price: row.sellPrice,
-              stock: 0,
-              min_stock: 0,
-              barcode: row.barcode.trim() || null,
-              inventory_mode: POLYWOOD_INVENTORY_MODE,
-              full_sheet_length_m: fullSheetLengthM,
-            },
-          ])
+          .insert([productPayload])
           .select("id")
           .single();
 
@@ -133,15 +142,27 @@ export async function importPolywoodStockAction(
         }
         productId = createdProduct.id as string;
       } else {
-        await admin
+        const { error: updateError } = await admin
           .from("products")
-          .update({
-            inventory_mode: POLYWOOD_INVENTORY_MODE,
-            full_sheet_length_m: fullSheetLengthM,
-            unit: "Metr",
-            category: "Polywood",
-          })
+          .update(productPayload)
           .eq("id", productId);
+        if (updateError) return { success: false, error: updateError.message };
+      }
+
+      const inventoryItemRows = row.groupedStock.map((group) => ({
+        product_id: productId!,
+        length_m: group.lengthM,
+        quantity: group.quantity,
+        is_full_sheet: group.isFullSheet,
+      }));
+
+      if (inventoryItemRows.length > 0) {
+        const { error: inventoryItemsError } = await admin
+          .from("polywood_inventory_items")
+          .insert(inventoryItemRows);
+        if (inventoryItemsError) {
+          return { success: false, error: inventoryItemsError.message };
+        }
       }
 
       const pieceRows = row.parsedLengths.map((length) => ({

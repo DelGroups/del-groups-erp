@@ -135,6 +135,13 @@ export default function PolywoodPageClient() {
             {t("sales.polywoodInvoice")}
           </Link>
           <Link
+            href="/dashboard/inventory/polywood/import"
+            className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
+          >
+            <Upload className="mr-1 inline h-3.5 w-3.5" />
+            {t("polywood.import.pageTitle")}
+          </Link>
+          <Link
             href="/inventory-audit"
             className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
           >

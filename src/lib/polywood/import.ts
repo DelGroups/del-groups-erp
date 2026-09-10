@@ -1,23 +1,34 @@
 import { rowsToCsv } from "@/lib/csv/csvUtils";
-import { DEFAULT_FULL_SHEET_LENGTH_M } from "@/lib/polywood/constants";
+import { DEFAULT_FULL_SHEET_LENGTH_M, isFullSheetLength } from "@/lib/polywood/constants";
+
+export type PolywoodGroupedStock = {
+  lengthM: number;
+  quantity: number;
+  isFullSheet: boolean;
+};
 
 export interface PolywoodImportRow {
   rowNumber: number;
   code: string;
   name: string;
+  category: string;
+  subCategory: string;
   buyPrice: number;
   sellPrice: number;
   barcode: string;
   fullSheetLengthM: number;
-  /** Comma/semicolon separated lengths e.g. "4;4;2.5;1.2" */
+  /** Semicolon-separated lengths e.g. "4;4;2.5;1.2" */
   pieceLengths: string;
   parsedLengths: number[];
+  groupedStock: PolywoodGroupedStock[];
   errors: string[];
 }
 
 export const POLYWOOD_IMPORT_COLUMNS = [
   "code",
   "name",
+  "category",
+  "sub_category",
   "buy_price",
   "sell_price",
   "barcode",
@@ -25,7 +36,7 @@ export const POLYWOOD_IMPORT_COLUMNS = [
   "piece_lengths",
 ] as const;
 
-const HEADER_ALIASES: Record<string, keyof Omit<PolywoodImportRow, "rowNumber" | "parsedLengths" | "errors">> = {
+const HEADER_ALIASES: Record<string, keyof Omit<PolywoodImportRow, "rowNumber" | "parsedLengths" | "groupedStock" | "errors">> = {
   code: "code",
   kod: "code",
   sku: "code",
@@ -36,6 +47,16 @@ const HEADER_ALIASES: Record<string, keyof Omit<PolywoodImportRow, "rowNumber" |
   ad: "name",
   "məhsul adı": "name",
   "product name": "name",
+
+  category: "category",
+  kateqoriya: "category",
+  "kateqoriya adı": "category",
+
+  sub_category: "subCategory",
+  subcategory: "subCategory",
+  "alt kateqoriya": "subCategory",
+  "sub category": "subCategory",
+  "alt kateqoriya adı": "subCategory",
 
   buy_price: "buyPrice",
   "alış qiyməti": "buyPrice",
@@ -56,7 +77,7 @@ const HEADER_ALIASES: Record<string, keyof Omit<PolywoodImportRow, "rowNumber" |
   piece_lengths: "pieceLengths",
   "hissə uzunluqları": "pieceLengths",
   "piece lengths": "pieceLengths",
-  "uzunluqlar": "pieceLengths",
+  uzunluqlar: "pieceLengths",
   lengths: "pieceLengths",
   stok: "pieceLengths",
   stock: "pieceLengths",
@@ -77,33 +98,70 @@ function parseLengths(raw: string): number[] {
     .filter((value) => value > 0);
 }
 
+export function groupPieceLengths(
+  lengths: number[],
+  fullSheetLengthM: number
+): PolywoodGroupedStock[] {
+  const counts = new Map<number, number>();
+  for (const length of lengths) {
+    const key = Math.round(length * 1000) / 1000;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([lengthM, quantity]) => ({
+      lengthM,
+      quantity,
+      isFullSheet: isFullSheetLength(lengthM, fullSheetLengthM),
+    }));
+}
+
+export function formatGroupedStock(groups: PolywoodGroupedStock[]): string {
+  if (groups.length === 0) return "";
+  return groups.map((group) => `${group.quantity}×${group.lengthM}m`).join(", ");
+}
+
 function createEmptyRow(rowNumber: number): PolywoodImportRow {
   return {
     rowNumber,
     code: "",
     name: "",
+    category: "Polywood",
+    subCategory: "",
     buyPrice: 0,
     sellPrice: 0,
     barcode: "",
     fullSheetLengthM: DEFAULT_FULL_SHEET_LENGTH_M,
     pieceLengths: "",
     parsedLengths: [],
+    groupedStock: [],
     errors: [],
   };
 }
 
+const TEMPLATE_SAMPLE_ROW = [
+  "PW-001",
+  "Polywood White 18mm",
+  "Polywood",
+  "18mm",
+  "45",
+  "65",
+  "869000000001",
+  "4",
+  "4;4;4;2.5;1.2",
+];
+
 export function buildPolywoodImportTemplateCsv(): string {
-  return rowsToCsv([...POLYWOOD_IMPORT_COLUMNS], [
-    [
-      "PW-001",
-      "Polywood White 18mm",
-      "45",
-      "65",
-      "869000000001",
-      "4",
-      "4;4;4;2.5;1.2",
-    ],
-  ]);
+  return rowsToCsv([...POLYWOOD_IMPORT_COLUMNS], [TEMPLATE_SAMPLE_ROW]);
+}
+
+export async function downloadPolywoodImportTemplateXlsx(): Promise<void> {
+  const XLSX = await import("xlsx");
+  const sheet = XLSX.utils.aoa_to_sheet([[...POLYWOOD_IMPORT_COLUMNS], TEMPLATE_SAMPLE_ROW]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Import");
+  XLSX.writeFile(workbook, "Polywood_Import_Sablonu.xlsx");
 }
 
 export function parsePolywoodImportRows(rows: string[][]): PolywoodImportRow[] {
@@ -132,6 +190,8 @@ export function parsePolywoodImportRows(rows: string[][]): PolywoodImportRow[] {
     if (hasHeader) {
       row.code = readCell("code");
       row.name = readCell("name");
+      row.category = readCell("category") || "Polywood";
+      row.subCategory = readCell("subCategory");
       row.buyPrice = parseNumber(readCell("buyPrice"));
       row.sellPrice = parseNumber(readCell("sellPrice"));
       row.barcode = readCell("barcode");
@@ -140,16 +200,20 @@ export function parsePolywoodImportRows(rows: string[][]): PolywoodImportRow[] {
     } else {
       row.code = (cells[0] ?? "").trim();
       row.name = (cells[1] ?? "").trim();
-      row.buyPrice = parseNumber(cells[2] ?? "");
-      row.sellPrice = parseNumber(cells[3] ?? "");
-      row.barcode = (cells[4] ?? "").trim();
-      row.fullSheetLengthM = parseNumber(cells[5] ?? "", DEFAULT_FULL_SHEET_LENGTH_M);
-      row.pieceLengths = (cells[6] ?? "").trim();
+      row.category = (cells[2] ?? "").trim() || "Polywood";
+      row.subCategory = (cells[3] ?? "").trim();
+      row.buyPrice = parseNumber(cells[4] ?? "");
+      row.sellPrice = parseNumber(cells[5] ?? "");
+      row.barcode = (cells[6] ?? "").trim();
+      row.fullSheetLengthM = parseNumber(cells[7] ?? "", DEFAULT_FULL_SHEET_LENGTH_M);
+      row.pieceLengths = (cells[8] ?? "").trim();
     }
 
     row.parsedLengths = parseLengths(row.pieceLengths);
+    row.groupedStock = groupPieceLengths(row.parsedLengths, row.fullSheetLengthM);
 
     if (!row.name.trim()) row.errors.push("Product name is required");
+    if (!row.category.trim()) row.errors.push("Category is required");
     if (row.parsedLengths.length === 0) row.errors.push("At least one piece length is required");
     if (row.fullSheetLengthM <= 0) row.errors.push("Full sheet length must be positive");
 
