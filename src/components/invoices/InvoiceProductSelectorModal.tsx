@@ -6,12 +6,15 @@ import { useI18n } from "@/i18n/I18nProvider";
 import {
   fetchCompositeBomIndexAction,
   fetchProductStocksBatchAction,
+  resolveConfiguratorKitAction,
 } from "@/lib/actions/productBom";
 import {
+  buildConfiguratorKitPreview,
   computeConfiguratorStock,
   findCompositeByComponents,
-  isModularBaseProduct,
-  isModularSeatProduct,
+  listBaseConfiguratorOptions,
+  listConfiguratorComponents,
+  listSeatConfiguratorOptions,
   type CompositeBomIndexEntry,
 } from "@/lib/products/modularRoles";
 import { productCode } from "@/lib/products/productOptionLabel";
@@ -103,6 +106,8 @@ export default function InvoiceProductSelectorModal({
   const [configuratorQty, setConfiguratorQty] = useState(1);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [closeAfterSelect, setCloseAfterSelect] = useState(true);
+  const [resolvingKit, setResolvingKit] = useState(false);
+  const [kitError, setKitError] = useState<string | null>(null);
 
   const categoryPills = useMemo(() => {
     const set = new Set<string>();
@@ -123,20 +128,16 @@ export default function InvoiceProductSelectorModal({
       .slice(0, 120);
   }, [products, query, categoryFilter]);
 
-  const seatOptions = useMemo(
-    () =>
-      products.filter(
-        (product) => !product.is_composite && !product.is_service && isModularSeatProduct(product)
-      ),
-    [products]
-  );
+  const seatOptions = useMemo(() => listSeatConfiguratorOptions(products), [products]);
+  const baseOptions = useMemo(() => listBaseConfiguratorOptions(products), [products]);
 
-  const baseOptions = useMemo(
-    () =>
-      products.filter(
-        (product) => !product.is_composite && !product.is_service && isModularBaseProduct(product)
-      ),
-    [products]
+  const selectedSeat = useMemo(
+    () => seatOptions.find((product) => product.id === seatId) || null,
+    [seatOptions, seatId]
+  );
+  const selectedBase = useMemo(
+    () => baseOptions.find((product) => product.id === baseId) || null,
+    [baseOptions, baseId]
   );
 
   const matchedComposite = useMemo(() => {
@@ -145,16 +146,24 @@ export default function InvoiceProductSelectorModal({
   }, [bomIndex, products, seatId, baseId]);
 
   const configuratorStock = useMemo(() => {
+    if (!seatId || !baseId) return null;
     if (matchedComposite) {
       const stock = stockMap[matchedComposite.id];
       return stock != null ? stock : null;
     }
-    if (!seatId || !baseId) return null;
     const seatStock = stockMap[seatId];
     const baseStock = stockMap[baseId];
     if (seatStock == null || baseStock == null) return null;
     return computeConfiguratorStock(seatStock, baseStock);
   }, [matchedComposite, seatId, baseId, stockMap]);
+
+  const configuratorPreview = useMemo(() => {
+    if (!selectedSeat || !selectedBase) return null;
+    if (matchedComposite) return matchedComposite;
+    const seatStock = stockMap[seatId] ?? (Number(selectedSeat.stock) || 0);
+    const baseStock = stockMap[baseId] ?? (Number(selectedBase.stock) || 0);
+    return buildConfiguratorKitPreview(selectedSeat, selectedBase, seatStock, baseStock);
+  }, [selectedSeat, selectedBase, matchedComposite, seatId, baseId, stockMap]);
 
   const getQuantity = useCallback(
     (productId: string) => quantities[productId] ?? 1,
@@ -181,6 +190,8 @@ export default function InvoiceProductSelectorModal({
       setConfiguratorQty(1);
       setHighlightIndex(0);
       setCloseAfterSelect(true);
+      setResolvingKit(false);
+      setKitError(null);
       return;
     }
 
@@ -266,7 +277,28 @@ export default function InvoiceProductSelectorModal({
 
   useEffect(() => {
     if (!open || tab !== "configurator") return;
-    const ids = [seatId, baseId, matchedComposite?.id].filter(Boolean) as string[];
+
+    const componentIds = listConfiguratorComponents(products).map((product) => product.id);
+    if (componentIds.length === 0) return;
+
+    let active = true;
+    setLoadingStocks(true);
+    void fetchProductStocksBatchAction(componentIds).then((result) => {
+      if (!active) return;
+      if (result.success) {
+        setStockMap((prev) => ({ ...prev, ...result.stocks }));
+      }
+      setLoadingStocks(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open, tab, products]);
+
+  useEffect(() => {
+    if (!open || tab !== "configurator") return;
+    const ids = [matchedComposite?.id].filter(Boolean) as string[];
     if (ids.length === 0) return;
 
     let active = true;
@@ -278,7 +310,11 @@ export default function InvoiceProductSelectorModal({
     return () => {
       active = false;
     };
-  }, [open, tab, seatId, baseId, matchedComposite?.id]);
+  }, [open, tab, matchedComposite?.id]);
+
+  useEffect(() => {
+    setKitError(null);
+  }, [seatId, baseId, tab]);
 
   const resolveStock = (product: Product): number => {
     const override = stockMap[product.id];
@@ -294,9 +330,27 @@ export default function InvoiceProductSelectorModal({
     finishSelect(product, getQuantity(product.id));
   };
 
-  const handleConfiguratorAdd = () => {
-    if (!matchedComposite) return;
-    finishSelect(matchedComposite, configuratorQty);
+  const handleConfiguratorAdd = async () => {
+    if (!seatId || !baseId || seatId === baseId) return;
+
+    setResolvingKit(true);
+    setKitError(null);
+
+    const result = await resolveConfiguratorKitAction(seatId, baseId);
+    setResolvingKit(false);
+
+    if (!result.success || !result.product) {
+      setKitError(result.error || t("invoice.productSelector.kitResolveFailed"));
+      return;
+    }
+
+    const resolvedProduct = {
+      ...(result.product as Product),
+      stock: result.stock ?? 0,
+      is_composite: true,
+    };
+
+    finishSelect(resolvedProduct, configuratorQty);
   };
 
   if (!open) return null;
@@ -489,32 +543,42 @@ export default function InvoiceProductSelectorModal({
               </label>
             </div>
 
+            {seatOptions.length === 0 || baseOptions.length === 0 ? (
+              <p className="text-xs text-amber-700">{t("invoice.productSelector.noComponents")}</p>
+            ) : null}
+
             {seatId && baseId ? (
               <div className="rounded-xl border border-app bg-app-card-hover p-4">
                 {matchedComposite ? (
+                  <p className="text-xs font-semibold text-emerald-700">
+                    {t("invoice.productSelector.matchedKit")}
+                  </p>
+                ) : (
+                  <p className="text-xs font-semibold text-indigo-700">
+                    {t("invoice.productSelector.virtualKit")}
+                  </p>
+                )}
+                {configuratorPreview ? (
                   <>
-                    <p className="text-xs font-semibold text-app">
-                      {t("invoice.productSelector.matchedKit")}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-app">{matchedComposite.name}</p>
+                    <p className="mt-1 text-sm font-bold text-app">{configuratorPreview.name}</p>
                     <p className="mt-1 font-mono text-xs text-app-muted">
-                      {productCode(matchedComposite)}
+                      {productCode(configuratorPreview)}
                     </p>
                   </>
-                ) : (
-                  <p className="text-xs text-amber-700">{t("invoice.productSelector.noKitFound")}</p>
-                )}
+                ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
                   <span className="font-semibold text-app">
                     {t("products.stock")}:{" "}
                     <span className="font-mono text-app-accent">
-                      {configuratorStock == null ? "…" : configuratorStock}
+                      {loadingStocks && configuratorStock == null
+                        ? "…"
+                        : configuratorStock ?? 0}
                     </span>{" "}
-                    {matchedComposite?.unit || seatOptions.find((p) => p.id === seatId)?.unit || "Ədəd"}
+                    {configuratorPreview?.unit || "Ədəd"}
                   </span>
-                  {matchedComposite ? (
+                  {configuratorPreview ? (
                     <span className="text-app-muted">
-                      {productPrice(matchedComposite).toFixed(2)} AZN
+                      {productPrice(configuratorPreview).toFixed(2)} AZN
                     </span>
                   ) : null}
                   <QuantityStepper value={configuratorQty} onChange={setConfiguratorQty} />
@@ -524,16 +588,25 @@ export default function InvoiceProductSelectorModal({
               <p className="text-xs text-app-muted">{t("invoice.productSelector.configuratorHint")}</p>
             )}
 
+            {kitError ? <p className="text-xs text-rose-600">{kitError}</p> : null}
+
             <button
               type="button"
               disabled={
-                !matchedComposite || configuratorStock == null || configuratorStock <= 0
+                resolvingKit ||
+                !seatId ||
+                !baseId ||
+                seatId === baseId ||
+                configuratorStock == null ||
+                configuratorStock <= 0
               }
-              onClick={handleConfiguratorAdd}
+              onClick={() => void handleConfiguratorAdd()}
               className="flex items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
             >
               <Package className="h-4 w-4" />
-              {t("invoice.productSelector.addKit")}
+              {resolvingKit
+                ? t("common.loading")
+                : t("invoice.productSelector.addKit")}
             </button>
           </div>
         )}

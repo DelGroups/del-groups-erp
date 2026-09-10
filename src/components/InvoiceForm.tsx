@@ -212,7 +212,10 @@ export default function UniversalInvoiceForm({
   ]);
   const [saving, setSaving] = useState(false);
   const [quickAddProductRowId, setQuickAddProductRowId] = useState<string | null>(null);
-  const [productSelectorRowId, setProductSelectorRowId] = useState<string | null>(null);
+  const [productSelectorOpen, setProductSelectorOpen] = useState(false);
+  const [productSelectorTargetRowId, setProductSelectorTargetRowId] = useState<string | null>(
+    null
+  );
   const [isOfficial, setIsOfficial] = useState(false);
   const [vatMode, setVatMode] = useState<VatMode>("none");
   const [globalDiscountMode, setGlobalDiscountMode] = useState<GlobalDiscountMode>("percent");
@@ -282,7 +285,8 @@ export default function UniversalInvoiceForm({
     setItems(createEmptySaleItems(5));
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setQuickAddProductRowId(null);
-    setProductSelectorRowId(null);
+    setProductSelectorOpen(false);
+    setProductSelectorTargetRowId(null);
     setGlobalDiscountMode("percent");
     setGlobalDiscountValue(0);
     setVatMode(defaultVatMode(taxConfig.default_vat_rate));
@@ -521,25 +525,44 @@ export default function UniversalInvoiceForm({
     handleProductSelect(rowId, product);
   };
 
+  const openProductSelectorModal = () => {
+    const emptyRow = items.find((row) => !row.product_id);
+    if (emptyRow) {
+      setProductSelectorTargetRowId(emptyRow.id);
+      setProductSelectorOpen(true);
+      return;
+    }
+
+    const newRow = createEmptySaleItem(
+      defaultWarehouse?.id || "",
+      defaultWarehouse?.name || ""
+    );
+    setItems((prev) => [...prev, newRow]);
+    setProductSelectorTargetRowId(newRow.id);
+    setProductSelectorOpen(true);
+  };
+
   const handleModalProductSelect = async (
     product: Product,
     quantity: number,
     closeAfter: boolean
   ) => {
-    if (!productSelectorRowId) return;
+    if (!productSelectorTargetRowId) return;
 
-    const targetRowId = productSelectorRowId;
+    const targetRowId = productSelectorTargetRowId;
+    setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
     await handleProductSelect(targetRowId, product, quantity);
 
     if (closeAfter) {
-      setProductSelectorRowId(null);
+      setProductSelectorOpen(false);
+      setProductSelectorTargetRowId(null);
       return;
     }
 
     setItems((prev) => {
       const nextEmpty = prev.find((row) => !row.product_id && row.id !== targetRowId);
       if (nextEmpty) {
-        setProductSelectorRowId(nextEmpty.id);
+        setProductSelectorTargetRowId(nextEmpty.id);
         return prev;
       }
 
@@ -548,7 +571,7 @@ export default function UniversalInvoiceForm({
         source?.warehouse_id || defaultWarehouse?.id || "",
         source?.warehouse_name || defaultWarehouse?.name || ""
       );
-      setProductSelectorRowId(newRow.id);
+      setProductSelectorTargetRowId(newRow.id);
       return [...prev, newRow];
     });
   };
@@ -1136,16 +1159,28 @@ export default function UniversalInvoiceForm({
         </div>
 
         <div className="app-table-wrap overflow-visible">
-          <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
+          <div className="flex flex-wrap items-center justify-between gap-2 app-toolbar px-4 py-2.5 text-xs font-bold">
             <span>{t("invoice.invoiceItems")}</span>
-            <button
-              type="button"
-              onClick={addRow}
-              className="flex items-center gap-1 rounded bg-[image:var(--app-gradient)] px-2.5 py-1 text-[11px] hover:brightness-110"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t("forms.addRow")}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {!polywoodOnly ? (
+                <button
+                  type="button"
+                  onClick={openProductSelectorModal}
+                  className="flex items-center gap-1.5 rounded-lg bg-[image:var(--app-gradient)] px-3 py-1.5 text-[11px] font-bold text-white shadow-sm hover:brightness-110"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("invoice.productSelector.openModalButton")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={addRow}
+                className="flex items-center gap-1 rounded border border-app bg-app-card px-2.5 py-1.5 text-[11px] font-semibold text-app hover:bg-app-card-hover"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t("forms.addRow")}
+              </button>
+            </div>
           </div>
 
           {polywoodOnly && defaultWarehouse ? (
@@ -1202,14 +1237,6 @@ export default function UniversalInvoiceForm({
                             onSelect={(prod) => void handleProductSelect(row.id, prod)}
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setProductSelectorRowId(row.id)}
-                          title={t("invoice.productSelector.openButton")}
-                          className="flex max-w-[7.5rem] shrink-0 items-center justify-center self-start rounded border border-indigo-200 bg-indigo-50 px-2 py-2 text-center text-[10px] font-bold leading-tight text-indigo-700 hover:bg-indigo-100"
-                        >
-                          {t("invoice.productSelector.openButton")}
-                        </button>
                         <button
                           type="button"
                           onClick={() => setQuickAddProductRowId(row.id)}
@@ -1707,15 +1734,18 @@ export default function UniversalInvoiceForm({
       />
     )}
 
-    {productSelectorRowId && !polywoodOnly ? (
+    {productSelectorOpen && productSelectorTargetRowId && !polywoodOnly ? (
       <InvoiceProductSelectorModal
         open
         products={filterProductsForWarehouse(
           products,
-          items.find((row) => row.id === productSelectorRowId)?.warehouse_id || "",
+          items.find((row) => row.id === productSelectorTargetRowId)?.warehouse_id || "",
           warehouses
         )}
-        onClose={() => setProductSelectorRowId(null)}
+        onClose={() => {
+          setProductSelectorOpen(false);
+          setProductSelectorTargetRowId(null);
+        }}
         onSelect={(product, quantity, closeAfter) => {
           void handleModalProductSelect(product, quantity, closeAfter);
         }}
