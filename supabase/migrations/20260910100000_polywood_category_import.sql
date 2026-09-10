@@ -7,6 +7,24 @@ UPDATE categories
 SET slug = lower(regexp_replace(trim(name), '[^a-zA-Z0-9]+', '-', 'g'))
 WHERE slug IS NULL OR trim(slug) = '';
 
+-- Resolve slug collisions (e.g. top-level "Polywood" vs nested "Polywood" under another category).
+WITH ranked AS (
+  SELECT
+    id,
+    slug,
+    row_number() OVER (
+      PARTITION BY slug
+      ORDER BY parent_id NULLS FIRST, created_at NULLS LAST, id
+    ) AS rn
+  FROM categories
+  WHERE slug IS NOT NULL AND trim(slug) <> ''
+)
+UPDATE categories c
+SET slug = c.slug || '-' || left(replace(c.id::text, '-', ''), 8)
+FROM ranked r
+WHERE c.id = r.id
+  AND r.rn > 1;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug_unique
   ON categories (slug)
   WHERE slug IS NOT NULL AND trim(slug) <> '';

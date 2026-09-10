@@ -19,10 +19,23 @@ interface ProductTableProps {
   emptyMessage?: string;
 }
 
-function renderCell(key: ProductColumnKey, product: Product) {
+function renderCell(
+  key: ProductColumnKey,
+  product: Product,
+  t: (key: string) => string
+) {
   switch (key) {
     case "name":
-      return <span className="font-medium text-app">{product.name}</span>;
+      return (
+        <span className="font-medium text-app">
+          {product.name}
+          {product.is_composite ? (
+            <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">
+              {t("products.bom.compositeBadge")}
+            </span>
+          ) : null}
+        </span>
+      );
     case "code":
       return (
         <span className="font-mono text-xs font-semibold text-app">{product.code}</span>
@@ -127,7 +140,7 @@ export default function ProductTable({
                 <tr key={product.id} className="transition-colors hover:bg-app-card-hover">
                   {columns.map((key) => (
                     <td key={key} className="px-4 py-3">
-                      {renderCell(key, product)}
+                      {renderCell(key, product, t)}
                     </td>
                   ))}
                   <td className="px-4 py-3 font-bold">

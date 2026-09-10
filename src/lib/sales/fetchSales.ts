@@ -22,6 +22,8 @@ export interface SaleRecord {
   total_amount: number;
   paid_amount: number;
   remaining_balance: number;
+  total_cogs?: number;
+  cogs_journal_entry_id?: string | null;
   delivery_address: string | null;
   delivery_type: string | null;
   delivery_fee: number;
@@ -159,6 +161,9 @@ function mapSaleRow(row: SalesListRow): SaleRecord | null {
     vat_total: toAmount(row.vat_total),
     total_amount: totalAmount,
     paid_amount: paidAmount,
+    total_cogs: toAmount(row.total_cogs),
+    cogs_journal_entry_id:
+      typeof row.cogs_journal_entry_id === "string" ? row.cogs_journal_entry_id : null,
     remaining_balance:
       row.remaining_balance != null
         ? toAmount(row.remaining_balance)

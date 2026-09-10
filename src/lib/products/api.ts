@@ -106,6 +106,7 @@ export function buildProductInsert(
     category_id: input.category_id?.trim() || null,
     is_dimensional: isDimensional,
     is_service: isService,
+    is_composite: Boolean(input.is_composite) && !isService,
     base_length: isDimensional && input.base_length ? Number(input.base_length) || null : null,
     base_width: isDimensional && input.base_width ? Number(input.base_width) || null : null,
   };

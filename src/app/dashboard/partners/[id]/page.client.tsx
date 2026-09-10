@@ -11,7 +11,9 @@ import {
 import type { PartnerDashboardData } from "@/lib/partners/types";
 import { isCreditLimitExceeded } from "@/lib/partners/types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { AlertTriangle, ArrowLeft, Building2, CreditCard, Landmark, Phone, RefreshCw } from "lucide-react";
+import PaymentFormModal from "@/components/payments/PaymentFormModal";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { AlertTriangle, ArrowLeft, Building2, CreditCard, FileCheck2, Landmark, Phone, RefreshCw, Wallet } from "lucide-react";
 
 type TabKey = "sales" | "purchases" | "ledger";
 
@@ -35,9 +37,13 @@ export default function PartnerDetailPageClient() {
   const params = useParams<{ id: string }>();
   const partnerId = params?.id || "";
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManageFinance = can("can_manage_finance");
   const [data, setData] = useState<PartnerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("sales");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<"in" | "out">("in");
 
   const load = useCallback(async () => {
     if (!partnerId) return;
@@ -64,10 +70,47 @@ export default function PartnerDetailPageClient() {
             <ArrowLeft className="h-4 w-4" />
             {t("partners.backToList")}
           </Link>
-          <button type="button" onClick={() => void load()} className="btn-secondary">
-            <RefreshCw className="h-4 w-4" />
-            {t("common.refresh")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {can("can_view_financial_reports") ? (
+              <Link
+                href={`/dashboard/reports/reconciliation?partnerId=${partnerId}`}
+                className="btn-secondary inline-flex"
+              >
+                <FileCheck2 className="h-4 w-4" />
+                {t("reconciliation.exportFromPartner")}
+              </Link>
+            ) : null}
+            {canManageFinance ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentType("in");
+                    setPaymentOpen(true);
+                  }}
+                  className="btn-primary"
+                >
+                  <Wallet className="h-4 w-4" />
+                  {t("payments.receivePayment")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentType("out");
+                    setPaymentOpen(true);
+                  }}
+                  className="btn-secondary"
+                >
+                  <Wallet className="h-4 w-4" />
+                  {t("payments.payPartner")}
+                </button>
+              </>
+            ) : null}
+            <button type="button" onClick={() => void load()} className="btn-secondary">
+              <RefreshCw className="h-4 w-4" />
+              {t("common.refresh")}
+            </button>
+          </div>
         </div>
 
         {loading || !partner || !balance ? (
@@ -270,6 +313,14 @@ export default function PartnerDetailPageClient() {
           </div>
         )}
       </div>
+
+      <PaymentFormModal
+        open={paymentOpen}
+        defaultPartnerId={partnerId}
+        defaultPaymentType={paymentType}
+        onClose={() => setPaymentOpen(false)}
+        onSaved={() => void load()}
+      />
     </PageLayout>
   );
 }

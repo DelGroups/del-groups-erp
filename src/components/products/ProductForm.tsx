@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Barcode, Plus, Save, Trash2 } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
@@ -18,10 +18,14 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import ProductBomBuilder, { type BomBuilderRow } from "@/components/products/ProductBomBuilder";
+import { fetchProductBomAction, saveProductBomAction } from "@/lib/actions/productBom";
+import { fetchProductsCatalog } from "@/lib/products/api";
 
 interface ProductFormProps {
   categories: Category[];
   warehouses: Warehouse[];
+  allProducts?: Product[];
   initialProduct?: Product | null;
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -50,6 +54,7 @@ function resolvePolywoodWarehouseId(warehouses: Warehouse[]): string {
 export default function ProductForm({
   categories,
   warehouses,
+  allProducts = [],
   initialProduct,
   onSuccess,
   onCancel,
@@ -66,6 +71,9 @@ export default function ProductForm({
     : initialCategory;
 
   const [saving, setSaving] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
+  const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
+  const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
   const polywoodWarehouseId = useMemo(() => resolvePolywoodWarehouseId(warehouses), [warehouses]);
   const [fullSheetCount, setFullSheetCount] = useState("0");
   const [offCutRows, setOffCutRows] = useState<OffCutRow[]>([]);
@@ -88,6 +96,7 @@ export default function ProductForm({
     extra_info: initialProduct?.extra_info || "",
     warehouse_id: polywoodWarehouseId || warehouses[0]?.id || "",
     is_dimensional: Boolean(initialProduct?.is_dimensional),
+    is_composite: Boolean(initialProduct?.is_composite),
     base_length: String(initialProduct?.base_length ?? ""),
     base_width: String(initialProduct?.base_width ?? ""),
   });
@@ -163,6 +172,7 @@ export default function ProductForm({
     set({
       subcategory,
       is_dimensional: serviceCategory ? false : form.is_dimensional,
+      is_composite: serviceCategory ? false : form.is_composite,
       unit: serviceCategory ? "Xidmət" : form.unit,
       stock: serviceCategory ? "0" : form.stock,
       min_stock: serviceCategory ? "0" : form.min_stock,
@@ -170,8 +180,46 @@ export default function ProductForm({
     if (serviceCategory) {
       setFullSheetCount("0");
       setOffCutRows([]);
+      setIsComposite(false);
+      setBomRows([]);
     }
   };
+
+  const handleCompositeToggle = (checked: boolean) => {
+    setIsComposite(checked);
+    set({
+      is_composite: checked,
+      stock: checked ? "0" : form.stock,
+      is_dimensional: checked ? false : form.is_dimensional,
+    });
+    if (checked) {
+      setFullSheetCount("0");
+      setOffCutRows([]);
+    } else {
+      setBomRows([]);
+    }
+  };
+
+  useEffect(() => {
+    if (catalogProducts.length > 0) return;
+    void fetchProductsCatalog().then((data) => {
+      setCatalogProducts(data.products);
+    });
+  }, [catalogProducts.length]);
+
+  useEffect(() => {
+    if (!initialProduct?.id || !initialProduct.is_composite) return;
+    void fetchProductBomAction(initialProduct.id).then((result) => {
+      if (!result.success) return;
+      setBomRows(
+        result.rows.map((row) => ({
+          id: row.id,
+          componentProductId: row.componentProductId,
+          quantity: String(row.quantity),
+        }))
+      );
+    });
+  }, [initialProduct?.id, initialProduct?.is_composite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,7 +228,17 @@ export default function ProductForm({
       return;
     }
 
-    if (form.is_dimensional && !isEditMode && !isServiceCategorySelected) {
+    if (isComposite && !isServiceCategorySelected) {
+      const validBomRows = bomRows.filter(
+        (row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0
+      );
+      if (validBomRows.length === 0) {
+        showError(t("products.bom.required"));
+        return;
+      }
+    }
+
+    if (form.is_dimensional && !isEditMode && !isServiceCategorySelected && !isComposite) {
       const baseLength = parseFloat(form.base_length) || 0;
       if (baseLength <= 0 && (parseFloat(fullSheetCount) > 0 || parsedOffCuts.length > 0)) {
         showError(t("forms.baseLengthRequiredForInitialStock"));
@@ -208,7 +266,7 @@ export default function ProductForm({
       buy_price: parseFloat(form.buy_price) || 0,
       sell_price: parseFloat(form.sell_price) || 0,
       stock:
-        isServiceCategorySelected
+        isServiceCategorySelected || isComposite
           ? 0
           : form.is_dimensional && !isEditMode
             ? dimensionalInitialMeters
@@ -219,7 +277,8 @@ export default function ProductForm({
       color: form.color || null,
       weight: parseFloat(form.weight) || 0,
       extra_info: form.extra_info || null,
-      is_dimensional: isServiceCategorySelected ? false : form.is_dimensional,
+      is_dimensional: isServiceCategorySelected || isComposite ? false : form.is_dimensional,
+      is_composite: isServiceCategorySelected ? false : isComposite,
       is_service: isServiceCategorySelected,
       base_length: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_length) || null : null,
       base_width: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_width) || null : null,
@@ -242,6 +301,33 @@ export default function ProductForm({
     if (!result.ok) {
       showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) ?? t("common.error") }));
       return;
+    }
+
+    const savedProductId =
+      isEditMode && initialProduct ? initialProduct.id : result.product?.id;
+
+    if (savedProductId) {
+      const bomPayload = bomRows
+        .filter((row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0)
+        .map((row) => ({
+          componentProductId: row.componentProductId,
+          quantity: parseFloat(row.quantity) || 1,
+        }));
+
+      const bomResult = await saveProductBomAction(
+        savedProductId,
+        bomPayload,
+        isComposite && !isServiceCategorySelected
+      );
+
+      if (!bomResult.success) {
+        showError(
+          t("common.errorOccurred", {
+            message: bomResult.error || t("products.bom.saveFailed"),
+          })
+        );
+        return;
+      }
     }
 
     showSuccess(isEditMode ? t("common.success") : t("forms.productCreated"));
@@ -308,14 +394,24 @@ export default function ProductForm({
         </label>
 
         {!isServiceCategorySelected ? (
-          <div className="flex items-end gap-2 md:col-span-2">
+          <div className="flex flex-wrap items-end gap-4 md:col-span-2">
             <label className="flex items-center gap-2 text-xs font-semibold text-app">
               <input
                 type="checkbox"
                 checked={form.is_dimensional}
+                disabled={isComposite}
                 onChange={(e) => handleDimensionalToggle(e.target.checked)}
               />
               {t("forms.isDimensionalProduct")}
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-app">
+              <input
+                type="checkbox"
+                checked={isComposite}
+                disabled={form.is_dimensional}
+                onChange={(e) => handleCompositeToggle(e.target.checked)}
+              />
+              {t("products.bom.isComposite")}
             </label>
           </div>
         ) : (
@@ -469,7 +565,19 @@ export default function ProductForm({
           />
         </label>
 
-        {!isServiceCategorySelected && (!form.is_dimensional || isEditMode) ? (
+        {isComposite && !isServiceCategorySelected ? (
+          <div className="md:col-span-2">
+            <ProductBomBuilder
+              products={catalogProducts}
+              parentProductId={initialProduct?.id}
+              rows={bomRows}
+              onChange={setBomRows}
+            />
+            <p className="mt-2 text-xs text-app-muted">{t("products.bom.stockHint")}</p>
+          </div>
+        ) : null}
+
+        {!isServiceCategorySelected && !isComposite && (!form.is_dimensional || isEditMode) ? (
           <label className="block text-xs font-semibold text-app">
             {t("forms.initialStock")}
             <input
@@ -479,7 +587,7 @@ export default function ProductForm({
               className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
           </label>
-        ) : !isServiceCategorySelected && form.is_dimensional && !isEditMode ? (
+        ) : !isServiceCategorySelected && !isComposite && form.is_dimensional && !isEditMode ? (
           <div className="md:col-span-2 space-y-4 rounded-xl border border-app bg-app-card-hover p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2">
               <h3 className="text-sm font-bold text-app">{t("forms.initialStockComposition")}</h3>

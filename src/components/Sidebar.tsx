@@ -38,6 +38,8 @@ import {
   Landmark,
   Briefcase,
   BarChart3,
+  Table2,
+  FileCheck2,
   SlidersHorizontal,
   ShieldCheck,
   LogOut,
@@ -122,6 +124,7 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Landmark,
     items: [
       { titleKey: "nav.items.cashBank", path: "/cash-bank", icon: Wallet },
+      { titleKey: "nav.items.payments", path: "/dashboard/payments", icon: Wallet },
       { titleKey: "nav.items.expenses", path: "/expenses", icon: Receipt },
       { titleKey: "nav.items.finance", path: "/finance", icon: CircleDollarSign },
     ],
@@ -139,7 +142,13 @@ const NAV_SECTIONS: NavSection[] = [
     id: "reports",
     titleKey: "nav.sections.reports",
     icon: BarChart3,
-    items: [{ titleKey: "nav.items.reports", path: "/reports", icon: FileText }],
+    items: [
+      { titleKey: "nav.items.reports", path: "/reports", icon: FileText },
+      { titleKey: "nav.items.glFinancialReports", path: "/dashboard/reports/financial", icon: BarChart3 },
+      { titleKey: "nav.items.trialBalance", path: "/dashboard/reports/osv", icon: Table2 },
+      { titleKey: "nav.items.reconciliationAct", path: "/dashboard/reports/reconciliation", icon: FileCheck2 },
+      { titleKey: "nav.items.inventoryTurnover", path: "/dashboard/reports/inventory-turnover", icon: Package },
+    ],
   },
   {
     id: "settings",

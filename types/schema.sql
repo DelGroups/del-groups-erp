@@ -220,10 +220,25 @@ CREATE TABLE IF NOT EXISTS products (
   color TEXT,
   weight NUMERIC DEFAULT 0,
   extra_info TEXT,
+  is_composite BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode);
+
+-- Kit/bundle BOM for sales (distinct from production_boms used in manufacturing)
+CREATE TABLE IF NOT EXISTS product_bom (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  component_product_id UUID NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  quantity NUMERIC(14, 4) NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (parent_product_id, component_product_id),
+  CHECK (parent_product_id <> component_product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_bom_parent ON product_bom (parent_product_id);
+CREATE INDEX IF NOT EXISTS idx_product_bom_component ON product_bom (component_product_id);
 
 -- Unified business partners (customers + suppliers)
 CREATE TABLE IF NOT EXISTS partners (
@@ -907,10 +922,25 @@ ALTER TABLE public.production_orders
 -- production_materials schema drift (issued, line_cost, stage_no, dual price cols): types/fix-production-materials-schema.sql
 
 -- ─── Chart of Accounts & Journal (canonical DDL in migration files) ───────────
--- chart_of_accounts: id, code, name, account_type, parent_id, is_active
--- journal_entries: id, entry_no, entry_date, source_type, source_id, idempotency_key, memo, posted_at
+-- chart_of_accounts: id, code, name, account_type, parent_id, is_active (1C Hesablar Planı)
+-- journal_entries: id, entry_no, entry_date, date, document_type, document_id, description,
+--                  source_type, source_id, idempotency_key, memo, posted_at
 -- journal_entry_lines: id, journal_entry_id, coa_id, debit, credit, partner_type, partner_id, account_id
+-- journal_lines (view): entry_id, account_id (=coa_id), partner_id, debit, credit
+-- public.accounts = cash/bank operational accounts (Kassa/Bank), NOT the GL chart
+-- RPC: create_journal_entry(p_payload) — canonical 1C-style posting; post_journal_entry wraps it
+-- Trigger: trg_journal_entry_lines_balance — SUM(debit) must equal SUM(credit) per entry
 -- transactions.journal_entry_id links operational cash rows to journal_entries
+-- payments: partner_id, payment_type (in/out), payment_method (cash/bank), journal_entry_id
+-- RPC: create_partner_payment(p_payload) — atomic payment + cash movement + GL journal
+-- inventory_batches: FIFO cost layers (product_id, document_id, unit_cost, initial_qty, remaining_qty)
+-- inventory_batch_consumptions: per-sale FIFO audit trail
+-- sales.total_cogs, sales.cogs_journal_entry_id — COGS from process_sale_fifo_cogs()
+-- RPC: fifo_deplete_product, process_sale_fifo_cogs, create_inventory_batch
+-- GL financial reports RPCs: get_gl_pl_summary, get_gl_balance_sheet, get_gl_general_ledger
+-- UI: /dashboard/reports/financial — P&L, balance sheet, general ledger from journal_entry_lines
+-- Extended reports RPCs: get_gl_trial_balance, get_partner_reconciliation_act, get_inventory_turnover_report
+-- UI: /dashboard/reports/osv, /dashboard/reports/reconciliation, /dashboard/reports/inventory-turnover
 
 -- ─── System audit trail (supabase/migrations/20260909160000_audit_logs.sql) ──
 CREATE TABLE IF NOT EXISTS audit_logs (

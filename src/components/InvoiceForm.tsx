@@ -57,6 +57,7 @@ import {
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
 import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
+import { fetchProductAvailableStockAction } from "@/lib/actions/productBom";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
 import { productCode } from "@/lib/products/productOptionLabel";
@@ -385,6 +386,35 @@ export default function UniversalInvoiceForm({
     );
   };
 
+  const resolveProductAvailableStock = async (
+    prod: Product,
+    polywoodRow: boolean,
+    warehouseId?: string,
+    fullSheetLengthM = 4
+  ): Promise<{ availableStock: number; polywoodSummary?: { total: number; fullSheets: number } }> => {
+    if (polywoodRow && warehouseId) {
+      try {
+        const summary = await fetchPolywoodInventorySummary(prod.id, warehouseId, fullSheetLengthM);
+        return {
+          availableStock: summary.total_length_m,
+          polywoodSummary: {
+            total: summary.total_length_m,
+            fullSheets: summary.full_sheet_count,
+          },
+        };
+      } catch {
+        return { availableStock: Number(prod.stock) || 0 };
+      }
+    }
+
+    if (prod.is_composite) {
+      const result = await fetchProductAvailableStockAction(prod.id);
+      return { availableStock: result.success ? result.stock : 0 };
+    }
+
+    return { availableStock: Number(prod.stock) || 0 };
+  };
+
   const handleProductSelect = async (rowId: string, prod: Product | null) => {
     if (!prod) {
       handleItemChange(rowId, {
@@ -414,22 +444,16 @@ export default function UniversalInvoiceForm({
     }
 
     const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
-    let polywoodSummary = {
-      total: Number(prod.stock) || 0,
+    const stockResult = await resolveProductAvailableStock(
+      prod,
+      polywoodRow,
+      row?.warehouse_id,
+      fullSheetLengthM
+    );
+    const polywoodSummary = stockResult.polywoodSummary || {
+      total: stockResult.availableStock,
       fullSheets: 0,
     };
-
-    if (polywoodRow && row?.warehouse_id) {
-      try {
-        const summary = await fetchPolywoodInventorySummary(prod.id, row.warehouse_id, fullSheetLengthM);
-        polywoodSummary = {
-          total: summary.total_length_m,
-          fullSheets: summary.full_sheet_count,
-        };
-      } catch {
-        polywoodSummary = { total: Number(prod.stock) || 0, fullSheets: 0 };
-      }
-    }
 
     handleItemChange(rowId, {
       product_id: prod.id,
@@ -445,7 +469,7 @@ export default function UniversalInvoiceForm({
         : productPrice(prod),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
-      available_stock: polywoodRow ? polywoodSummary.total : Number(prod.stock) || 0,
+      available_stock: stockResult.availableStock,
       polywood_sale_mode: polywoodRow ? row?.polywood_sale_mode || "linear_m" : null,
       polywood_full_sheet_length_m: fullSheetLengthM,
       polywood_total_length_m: polywoodSummary.total,
@@ -458,7 +482,12 @@ export default function UniversalInvoiceForm({
     handleProductSelect(rowId, product);
   };
 
-  const applyProductToSaleRow = (row: SaleItem, prod: Product, quantity?: number): SaleItem => {
+  const applyProductToSaleRow = (
+    row: SaleItem,
+    prod: Product,
+    quantity?: number,
+    availableStock?: number
+  ): SaleItem => {
     const polywoodRow = isPolywoodWarehouseRow(row.warehouse_id, warehouses);
     const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
     const mode = polywoodRow ? row.polywood_sale_mode || "linear_m" : null;
@@ -474,7 +503,7 @@ export default function UniversalInvoiceForm({
         : meterPrice,
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
-      available_stock: Number(prod.stock) || 0,
+      available_stock: availableStock ?? (Number(prod.stock) || 0),
       quantity: quantity ?? row.quantity,
       polywood_sale_mode: mode,
       polywood_full_sheet_length_m: polywoodRow ? fullSheetLengthM : null,
@@ -506,19 +535,33 @@ export default function UniversalInvoiceForm({
       return;
     }
 
+    const stockResult = await resolveProductAvailableStock(
+      product,
+      polywoodOnly,
+      defaultWarehouse?.id,
+      Number(product.full_sheet_length_m) || 4
+    );
+
     setItems((prev) => {
       const existing = prev.find((r) => r.product_id === product!.id);
       if (existing) {
         return prev.map((row) => {
           if (row.id !== existing.id) return row;
-          return applyProductToSaleRow(row, product!, row.quantity + 1);
+          return applyProductToSaleRow(
+            row,
+            product!,
+            row.quantity + 1,
+            stockResult.availableStock
+          );
         });
       }
 
       const emptyRow = prev.find((r) => !r.product_id && !r.product_name.trim());
       if (emptyRow) {
         return prev.map((row) =>
-          row.id === emptyRow.id ? applyProductToSaleRow(row, product!, 1) : row
+          row.id === emptyRow.id
+            ? applyProductToSaleRow(row, product!, 1, stockResult.availableStock)
+            : row
         );
       }
 
@@ -526,7 +569,10 @@ export default function UniversalInvoiceForm({
         defaultWarehouse?.id || "",
         defaultWarehouse?.name || ""
       );
-      return [...prev, applyProductToSaleRow(newRow, product!, 1)];
+      return [
+        ...prev,
+        applyProductToSaleRow(newRow, product!, 1, stockResult.availableStock),
+      ];
     });
   };
 

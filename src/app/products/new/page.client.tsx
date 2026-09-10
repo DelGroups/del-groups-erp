@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ProductForm from "@/components/products/ProductForm";
 import { fetchProductsCatalog } from "@/lib/products/api";
-import type { Category, Warehouse } from "@/types/database.types";
+import type { Category, Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ArrowLeft, PackagePlus } from "lucide-react";
 
@@ -15,12 +15,14 @@ export default function NewProductPage() {
   const { t } = useI18n();
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void fetchProductsCatalog().then((data) => {
       setCategories(data.categories);
       setWarehouses(data.warehouses);
+      setProducts(data.products);
       setLoading(false);
     });
   }, []);
@@ -52,6 +54,7 @@ export default function NewProductPage() {
               <ProductForm
                 categories={categories}
                 warehouses={warehouses}
+                allProducts={products}
                 onCancel={() => router.push("/products")}
                 onSuccess={() => router.push("/products")}
               />

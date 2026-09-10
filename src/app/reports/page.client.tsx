@@ -12,9 +12,12 @@ import {
   ArrowRight,
   BarChart3,
   FileSpreadsheet,
+  FileCheck2,
+  Package,
   PieChart,
   RefreshCw,
   ShoppingCart,
+  Table2,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -65,6 +68,38 @@ export default function ReportsHubPage() {
       icon: PieChart,
       accent:
         "bg-[color:var(--app-accent-soft)] text-app-accent border-[color:var(--app-accent-ring)]",
+    },
+    {
+      title: t("reports.glFinancialCardTitle"),
+      description: t("reports.glFinancialCardDescription"),
+      href: "/dashboard/reports/financial",
+      icon: FileSpreadsheet,
+      accent:
+        "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800",
+    },
+    {
+      title: t("osv.pageTitle"),
+      description: t("osv.pageDescription"),
+      href: "/dashboard/reports/osv",
+      icon: Table2,
+      accent:
+        "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+    },
+    {
+      title: t("reconciliation.pageTitle"),
+      description: t("reconciliation.pageDescription"),
+      href: "/dashboard/reports/reconciliation",
+      icon: FileCheck2,
+      accent:
+        "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+    },
+    {
+      title: t("inventoryTurnover.pageTitle"),
+      description: t("inventoryTurnover.pageDescription"),
+      href: "/dashboard/reports/inventory-turnover",
+      icon: Package,
+      accent:
+        "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
     },
   ];
 

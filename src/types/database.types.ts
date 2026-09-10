@@ -252,6 +252,8 @@ export interface Product {
   is_dimensional?: boolean | null;
   /** True for billable services (cutting fee, edge banding, etc.) — no physical stock */
   is_service?: boolean | null;
+  /** True for kit/bundle products assembled from BOM components */
+  is_composite?: boolean | null;
   created_at?: string | null;
 }
 

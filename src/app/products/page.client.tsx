@@ -268,6 +268,7 @@ export default function ProductsPage() {
             <ProductForm
               categories={categories}
               warehouses={warehouses}
+              allProducts={products}
               initialProduct={editingProduct}
               onCancel={() => setEditingProduct(null)}
               onSuccess={() => {

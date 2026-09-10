@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { canDelegateInvoiceIssuer } from "@/types/database.types";
 
 interface SaleDetailPageClientProps {
   saleId: string;
@@ -22,6 +24,8 @@ interface SaleDetailPageClientProps {
 export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const { profile } = useAuth();
+  const canViewProfitability = canDelegateInvoiceIssuer(profile?.role);
   const invoicePrint = useInvoicePrintSystem();
   const branding = useCompanyBranding();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -145,6 +149,41 @@ export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientPro
                 {t("modals.salesView.remaining")}: {getSaleRemaining(sale).toFixed(2)}
               </span>
             </div>
+
+            {canViewProfitability ? (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/80 p-5">
+                <h3 className="mb-3 text-sm font-bold text-violet-900">{t("sales.profitability.title")}</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <p className="text-xs uppercase text-violet-700/80">{t("sales.profitability.revenue")}</p>
+                    <p className="font-mono text-lg font-bold text-violet-950">
+                      {sale.total_amount.toFixed(2)} {t("common.currency")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-violet-700/80">{t("sales.profitability.cogs")}</p>
+                    <p className="font-mono text-lg font-bold text-violet-950">
+                      {(sale.total_cogs ?? 0).toFixed(2)} {t("common.currency")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-violet-700/80">{t("sales.profitability.grossProfit")}</p>
+                    <p className="font-mono text-lg font-bold text-emerald-700">
+                      {(sale.total_amount - (sale.total_cogs ?? 0)).toFixed(2)} {t("common.currency")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-violet-700/80">{t("sales.profitability.margin")}</p>
+                    <p className="font-mono text-lg font-bold text-violet-950">
+                      {sale.total_amount > 0
+                        ? (((sale.total_amount - (sale.total_cogs ?? 0)) / sale.total_amount) * 100).toFixed(1)
+                        : "0.0"}
+                      %
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </main>
