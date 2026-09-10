@@ -9,8 +9,9 @@ import {
   partnerDisplayName,
 } from "@/lib/partners/fetchPartners";
 import type { PartnerDashboardData } from "@/lib/partners/types";
+import { isCreditLimitExceeded } from "@/lib/partners/types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { ArrowLeft, Building2, Phone, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Building2, CreditCard, Landmark, Phone, RefreshCw } from "lucide-react";
 
 type TabKey = "sales" | "purchases" | "ledger";
 
@@ -52,6 +53,8 @@ export default function PartnerDetailPageClient() {
 
   const partner = data?.partner;
   const balance = data?.balance;
+  const creditExceeded =
+    partner && balance ? isCreditLimitExceeded(partner, balance) : false;
 
   return (
     <PageLayout>
@@ -98,13 +101,43 @@ export default function PartnerDetailPageClient() {
                     {partner.address}
                   </p>
                 ) : null}
-                {partner.voen ? <p>VOEN: {partner.voen}</p> : null}
+                {partner.voen ? <p>{t("partners.voen")}: {partner.voen}</p> : null}
+                {partner.email ? <p>{t("partners.email")}: {partner.email}</p> : null}
+                {partner.bank_name ? (
+                  <p className="flex items-center gap-2">
+                    <Landmark className="h-4 w-4" />
+                    {partner.bank_name}
+                  </p>
+                ) : null}
+                {partner.iban ? (
+                  <p className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    {partner.iban}
+                  </p>
+                ) : null}
+                {partner.credit_limit > 0 ? (
+                  <p>{t("partners.creditLimit")}: {formatMoney(partner.credit_limit)}</p>
+                ) : null}
               </div>
             </div>
 
-            <div className={`rounded-2xl border px-5 py-4 text-right ${balanceBadgeClass(balance.netBalance)}`}>
+            <div
+              className={`rounded-2xl border px-5 py-4 text-right ${
+                creditExceeded
+                  ? "border-rose-300 bg-rose-50 text-rose-900"
+                  : balanceBadgeClass(balance.netBalance)
+              }`}
+            >
+              {creditExceeded ? (
+                <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                  <AlertTriangle className="h-3 w-3" />
+                  {t("partners.creditLimitExceeded")}
+                </span>
+              ) : null}
               <p className="text-xs font-bold uppercase tracking-wide">{balanceLabel(balance.netBalance, t)}</p>
-              <p className="mt-1 text-3xl font-black">{formatMoney(balance.netBalance)}</p>
+              <p className={`mt-1 text-3xl font-black ${creditExceeded ? "text-rose-700" : ""}`}>
+                {formatMoney(balance.netBalance)}
+              </p>
               <p className="mt-2 text-xs">
                 {t("partners.receivables")}: {formatMoney(balance.receivables)}
               </p>

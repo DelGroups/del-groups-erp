@@ -23,12 +23,17 @@ function mapPartner(row: Record<string, unknown>): PartnerRecord {
     phone: typeof row.phone === "string" ? row.phone : null,
     address: typeof row.address === "string" ? row.address : null,
     voen: typeof row.voen === "string" ? row.voen : null,
+    email: typeof row.email === "string" ? row.email : null,
+    bank_name: typeof row.bank_name === "string" ? row.bank_name : null,
+    iban: typeof row.iban === "string" ? row.iban : null,
+    credit_limit: toAmount(row.credit_limit),
     entity_type: typeof row.entity_type === "string" ? row.entity_type : "physical",
     code: typeof row.code === "string" ? row.code : null,
     is_customer: row.is_customer === true,
     is_supplier: row.is_supplier === true,
     customer_id: typeof row.customer_id === "string" ? row.customer_id : null,
     supplier_id: typeof row.supplier_id === "string" ? row.supplier_id : null,
+    is_deleted: row.is_deleted === true,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
   };
 }
@@ -37,6 +42,7 @@ export async function fetchPartnerList(): Promise<PartnerRecord[]> {
   const { data, error } = await supabase
     .from("partners")
     .select("*")
+    .eq("is_deleted", false)
     .order("name", { ascending: true });
 
   if (error) {
@@ -131,6 +137,7 @@ export async function fetchPartnerDashboard(partnerId: string): Promise<PartnerD
     .from("partners")
     .select("*")
     .eq("id", partnerId)
+    .eq("is_deleted", false)
     .maybeSingle();
 
   if (partnerError || !partnerRow) {

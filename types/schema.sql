@@ -232,14 +232,20 @@ CREATE TABLE IF NOT EXISTS partners (
   full_name TEXT,
   company_name TEXT,
   phone TEXT,
+  email TEXT,
   address TEXT,
   voen TEXT,
+  bank_name TEXT,
+  iban TEXT,
+  credit_limit NUMERIC NOT NULL DEFAULT 0,
   entity_type TEXT NOT NULL DEFAULT 'physical',
   code TEXT,
   is_customer BOOLEAN NOT NULL DEFAULT FALSE,
   is_supplier BOOLEAN NOT NULL DEFAULT FALSE,
   customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

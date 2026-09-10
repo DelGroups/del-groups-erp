@@ -6,7 +6,23 @@ import PageLayout from "@/components/layout/PageLayout";
 import { fetchPartnersWithBalances, partnerDisplayName } from "@/lib/partners/fetchPartners";
 import type { PartnerNetBalance, PartnerRecord } from "@/lib/partners/types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { RefreshCw, Search, Users } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import PartnerFormModal from "@/components/partners/PartnerFormModal";
+import MergePartnersDialog from "@/components/partners/MergePartnersDialog";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import { deletePartnerAction } from "@/lib/actions/partners";
+import ToastMessage from "@/components/ui/ToastMessage";
+import { useToast } from "@/hooks/useToast";
+import {
+  Eye,
+  GitMerge,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
 
 type PartnerRow = PartnerRecord & { balance: PartnerNetBalance };
 
@@ -20,11 +36,25 @@ function balanceBadgeClass(netBalance: number): string {
   return "bg-slate-100 text-slate-700";
 }
 
+function codeOrVoen(row: PartnerRow): string {
+  if (row.code && row.voen) return `${row.code} / ${row.voen}`;
+  return row.code || row.voen || "—";
+}
+
 export default function PartnersPageClient() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManage = can("can_manage_customers");
+  const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+
   const [rows, setRows] = useState<PartnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<PartnerRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PartnerRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -46,8 +76,10 @@ export default function PartnersPageClient() {
         row.full_name,
         row.company_name,
         row.phone,
+        row.email,
         row.voen,
         row.code,
+        row.iban,
       ]
         .filter(Boolean)
         .join(" ")
@@ -55,6 +87,30 @@ export default function PartnersPageClient() {
       return haystack.includes(query);
     });
   }, [rows, search]);
+
+  const openCreate = () => {
+    setEditingPartner(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (partner: PartnerRecord) => {
+    setEditingPartner(partner);
+    setFormOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deletePartnerAction(deleteTarget.id);
+    setDeleting(false);
+    if (!result.success) {
+      showError(result.error);
+      return;
+    }
+    showSuccess(t("partners.deleted"));
+    setDeleteTarget(null);
+    await load();
+  };
 
   return (
     <PageLayout>
@@ -66,10 +122,24 @@ export default function PartnersPageClient() {
           </h2>
           <p className="text-sm text-app-muted">{t("partners.pageDescription")}</p>
         </div>
-        <button type="button" onClick={() => void load()} className="btn-secondary">
-          <RefreshCw className="h-4 w-4" />
-          {t("common.refresh")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canManage ? (
+            <>
+              <button type="button" onClick={openCreate} className="btn-primary">
+                <Plus className="h-4 w-4" />
+                {t("partners.newPartner")}
+              </button>
+              <button type="button" onClick={() => setMergeOpen(true)} className="btn-secondary">
+                <GitMerge className="h-4 w-4" />
+                {t("partners.mergePartners")}
+              </button>
+            </>
+          ) : null}
+          <button type="button" onClick={() => void load()} className="btn-secondary">
+            <RefreshCw className="h-4 w-4" />
+            {t("common.refresh")}
+          </button>
+        </div>
       </header>
 
       <div className="space-y-4 p-6">
@@ -88,24 +158,27 @@ export default function PartnersPageClient() {
           <table className="w-full text-left text-sm">
             <thead className="bg-app-card-hover text-xs font-bold uppercase text-app-muted">
               <tr>
+                <th className="p-3">{t("partners.codeVoen")}</th>
                 <th className="p-3">{t("partners.name")}</th>
                 <th className="p-3">{t("partners.roles")}</th>
                 <th className="p-3">{t("partners.contact")}</th>
                 <th className="p-3 text-right">{t("partners.netBalance")}</th>
+                <th className="p-3 text-right">{t("partners.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-app">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
+                  <td colSpan={6} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-app-muted">{t("partners.empty")}</td>
+                  <td colSpan={6} className="p-6 text-center text-app-muted">{t("partners.empty")}</td>
                 </tr>
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="hover:bg-app-card-hover/60">
+                    <td className="p-3 font-mono text-xs text-app-muted">{codeOrVoen(row)}</td>
                     <td className="p-3">
                       <Link
                         href={`/dashboard/partners/${row.id}`}
@@ -113,7 +186,6 @@ export default function PartnersPageClient() {
                       >
                         {partnerDisplayName(row)}
                       </Link>
-                      {row.code ? <p className="font-mono text-xs text-app-muted">{row.code}</p> : null}
                     </td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
@@ -131,7 +203,7 @@ export default function PartnersPageClient() {
                     </td>
                     <td className="p-3 text-xs text-app-muted">
                       <p>{row.phone || "—"}</p>
-                      <p>{row.voen ? `VOEN: ${row.voen}` : ""}</p>
+                      <p>{row.email || ""}</p>
                     </td>
                     <td className="p-3 text-right">
                       <span
@@ -140,6 +212,37 @@ export default function PartnersPageClient() {
                         {formatMoney(row.balance.netBalance)}
                       </span>
                     </td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/dashboard/partners/${row.id}`}
+                          className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
+                          title={t("partners.viewDetails")}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        {canManage ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(row)}
+                              className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
+                              title={t("common.edit")}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(row)}
+                              className="rounded-lg p-2 text-app-muted hover:bg-rose-50 hover:text-rose-600"
+                              title={t("common.delete")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -147,6 +250,31 @@ export default function PartnersPageClient() {
           </table>
         </div>
       </div>
+
+      <PartnerFormModal
+        open={formOpen}
+        partner={editingPartner}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => void load()}
+      />
+
+      <MergePartnersDialog
+        open={mergeOpen}
+        partners={rows}
+        onClose={() => setMergeOpen(false)}
+        onMerged={() => void load()}
+      />
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        title={t("partners.deleteTitle")}
+        message={t("partners.deleteMessage", { name: deleteTarget ? partnerDisplayName(deleteTarget) : "" })}
+        loading={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }
