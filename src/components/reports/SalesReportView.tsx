@@ -70,21 +70,21 @@ export default function SalesReportView({ data, loading }: SalesReportViewProps)
                       <p className="font-mono text-[10px] text-app-muted">{row.product_code}</p>
                     </td>
                     <td className="px-4 py-3">{row.category}</td>
-                    <td className="px-4 py-3 text-right font-mono">{row.quantity.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">{row.quantity.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold">
                       {row.revenue.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-app-muted">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-app-muted">
                       {row.cost.toFixed(2)}
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-mono font-bold ${
+                      className={`px-4 py-3 text-right font-mono tabular-nums font-bold ${
                         row.profit >= 0 ? "text-emerald-600" : "text-rose-600"
                       }`}
                     >
                       {row.profit.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{row.marginPercent.toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">{row.marginPercent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -93,13 +93,13 @@ export default function SalesReportView({ data, loading }: SalesReportViewProps)
                   <td className="px-4 py-3" colSpan={3}>
                     CƏMİ
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">{summary.totalVolume.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-mono">{summary.totalRevenue.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-mono">{summary.totalCost.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-emerald-700">
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">{summary.totalVolume.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">{summary.totalRevenue.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">{summary.totalCost.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums text-emerald-700">
                     {summary.totalProfit.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">
                     {summary.averageMargin.toFixed(1)}%
                   </td>
                 </tr>

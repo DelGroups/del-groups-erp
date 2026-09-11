@@ -45,14 +45,14 @@ export default function InventoryTurnoverTable({ data, loading }: InventoryTurno
                 <td className="p-2 font-mono">{row.productCode}</td>
                 <td className="p-2">{row.productName}</td>
                 <td className="p-2">{row.unit}</td>
-                <td className="p-2 text-right font-mono">{formatReportQty(row.initialQty)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.initialValue)}</td>
-                <td className="p-2 text-right font-mono">{formatReportQty(row.inboundQty)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.inboundValue)}</td>
-                <td className="p-2 text-right font-mono">{formatReportQty(row.outboundQty)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.outboundValue)}</td>
-                <td className="p-2 text-right font-mono">{formatReportQty(row.closingQty)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.closingValue)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(row.initialQty)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.initialValue)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(row.inboundQty)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.inboundValue)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(row.outboundQty)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.outboundValue)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(row.closingQty)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.closingValue)}</td>
               </tr>
             ))
           )}
@@ -61,14 +61,14 @@ export default function InventoryTurnoverTable({ data, loading }: InventoryTurno
           <tfoot className="border-t-2 border-app font-bold">
             <tr>
               <td className="p-2" colSpan={3}>{t("inventoryTurnover.total")}</td>
-              <td className="p-2 text-right font-mono">{formatReportQty(data.totals.initialQty)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.initialValue)}</td>
-              <td className="p-2 text-right font-mono">{formatReportQty(data.totals.inboundQty)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.inboundValue)}</td>
-              <td className="p-2 text-right font-mono">{formatReportQty(data.totals.outboundQty)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.outboundValue)}</td>
-              <td className="p-2 text-right font-mono">{formatReportQty(data.totals.closingQty)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.closingValue)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(data.totals.initialQty)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.initialValue)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(data.totals.inboundQty)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.inboundValue)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(data.totals.outboundQty)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.outboundValue)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportQty(data.totals.closingQty)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.closingValue)}</td>
             </tr>
           </tfoot>
         ) : null}

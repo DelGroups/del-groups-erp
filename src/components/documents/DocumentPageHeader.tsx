@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import Button from "@/components/ui/button";
+import PageHeader from "@/components/ui/page-header";
 
 interface DocumentPageHeaderProps {
   icon: React.ReactNode;
@@ -25,38 +26,27 @@ export default function DocumentPageHeader({
   extraActions,
   backLink,
 }: DocumentPageHeaderProps) {
+  const hasActions = Boolean(extraActions) || Boolean(createLabel && onCreate);
+
   return (
-    <header className="app-glass flex flex-col justify-between gap-4 border-b border-app px-6 py-4 md:flex-row md:items-center">
-      <div>
-        {backLink && (
-          <Link
-            href={backLink.href}
-            className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-app-accent hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {backLink.label}
-          </Link>
-        )}
-        <h2 className="flex items-center gap-2 text-xl font-bold text-app">
-          {icon}
-          {title}
-        </h2>
-        <p className="text-sm text-app-muted">{description}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 self-start">
-        {extraActions}
-        {createLabel && onCreate && (
-          <button
-            type="button"
-            onClick={onCreate}
-            disabled={createDisabled}
-            className="btn-primary"
-          >
-            <Plus className="h-4 w-4" />
-            {createLabel}
-          </button>
-        )}
-      </div>
-    </header>
+    <PageHeader
+      icon={icon}
+      title={title}
+      subtitle={description}
+      breadcrumbs={backLink ? [{ href: backLink.href, label: backLink.label }] : undefined}
+      actions={
+        hasActions ? (
+          <>
+            {extraActions}
+            {createLabel && onCreate ? (
+              <Button onClick={onCreate} disabled={createDisabled}>
+                <Plus className="h-4 w-4" />
+                {createLabel}
+              </Button>
+            ) : null}
+          </>
+        ) : undefined
+      }
+    />
   );
 }

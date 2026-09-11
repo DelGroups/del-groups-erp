@@ -72,7 +72,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
                       </td>
                       <td className="px-4 py-3 font-semibold">{row.category}</td>
                       <td
-                        className={`px-4 py-3 text-right font-mono font-bold ${
+                        className={`px-4 py-3 text-right font-mono tabular-nums font-bold ${
                           isIncome ? "text-emerald-600" : "text-rose-600"
                         }`}
                       >
@@ -131,7 +131,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
                         {row.notes || "-"}
                       </td>
                       <td
-                        className={`px-4 py-3 text-right font-mono font-bold ${
+                        className={`px-4 py-3 text-right font-mono tabular-nums font-bold ${
                           isIn ? "text-emerald-600" : "text-rose-600"
                         }`}
                       >
@@ -148,7 +148,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
                     YEKUN (Mədaxil − Məxaric)
                   </td>
                   <td
-                    className={`px-4 py-3 text-right font-mono ${
+                    className={`px-4 py-3 text-right font-mono tabular-nums ${
                       summary.netFlow >= 0 ? "text-emerald-700" : "text-rose-700"
                     }`}
                   >

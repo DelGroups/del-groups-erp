@@ -1988,10 +1988,14 @@ export default function UniversalInvoiceForm({
                       onChange={(e) =>
                         setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
                       }
-                      className="w-1/3 rounded border border-white/20 bg-white/10 p-1.5 text-[11px]"
+                      className="w-1/3 rounded-md border border-white/30 bg-white/20 px-2 py-1 text-[11px] text-white focus:bg-white focus:text-slate-900"
                     >
-                      <option value="percent">%</option>
-                      <option value="amount">AZN</option>
+                      <option value="percent" className="bg-white font-medium text-slate-900">
+                        %
+                      </option>
+                      <option value="amount" className="bg-white font-medium text-slate-900">
+                        AZN
+                      </option>
                     </select>
                     <input
                       type="number"
@@ -1999,7 +2003,7 @@ export default function UniversalInvoiceForm({
                       step="0.01"
                       value={globalDiscountValue}
                       onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
-                      className="w-2/3 rounded border border-white/20 bg-white/10 p-1.5 text-right font-mono"
+                      className="w-2/3 rounded-md border border-white/30 bg-white/20 px-2 py-1 text-right font-mono text-white placeholder:text-white/70 focus:bg-white focus:text-slate-900"
                     />
                   </div>
                   {displayTotals.global_discount_total > 0 ? (

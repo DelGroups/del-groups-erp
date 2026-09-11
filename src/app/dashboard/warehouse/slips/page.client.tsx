@@ -18,6 +18,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
+import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
+import StatusBadge from "@/components/ui/status-badge";
+import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import { useToast } from "@/hooks/useToast";
 import type { WarehouseSlip, WarehouseSlipStatus } from "@/types/database.types";
 import { CheckCircle2, ClipboardList, Printer, XCircle } from "lucide-react";
@@ -123,19 +127,16 @@ export default function WarehouseSlipsPage() {
 
       <main className="flex-1 space-y-4 overflow-y-auto p-6">
         <div className="flex flex-wrap gap-2">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
+          {tabs.map((item) => (
+            <Button
+              key={item.id}
               type="button"
-              onClick={() => setTab(t.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                tab === t.id
-                  ? "bg-[image:var(--app-gradient)] text-white"
-                  : "app-card text-app-muted hover:bg-app-card-hover"
-              }`}
+              variant={tab === item.id ? "primary" : "outline"}
+              size="sm"
+              onClick={() => setTab(item.id)}
             >
-              {t.label}
-            </button>
+              {item.label}
+            </Button>
           ))}
         </div>
 
@@ -153,7 +154,7 @@ export default function WarehouseSlipsPage() {
           </div>
         )}
 
-        <div className="app-table-wrap">
+        <Card padding={false}>
           {loading ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
           ) : filtered.length === 0 ? (
@@ -163,84 +164,91 @@ export default function WarehouseSlipsPage() {
                 : t("warehouseSlips.empty")}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
-                  <tr>
-                    <th className="px-4 py-3">{t("warehouseSlips.slipNo")}</th>
-                    <th className="px-4 py-3">{t("warehouseSlips.type")}</th>
-                    <th className="px-4 py-3">{t("warehouseSlips.invoiceNo")}</th>
-                    <th className="px-4 py-3">{t("warehouseSlips.warehouse")}</th>
-                    <th className="px-4 py-3">{t("warehouseSlips.invoiceDate")}</th>
-                    <th className="px-4 py-3">{t("common.status")}</th>
-                    <th className="px-4 py-3 text-center">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-app">
-                  {filtered.map((slip) => (
-                    <tr key={slip.id} className="hover:bg-app-card-hover">
-                      <td className="px-4 py-3 font-mono font-bold">{slip.slip_number}</td>
-                      <td className="px-4 py-3">{t(`warehouseSlips.types.${slip.type}`)}</td>
-                      <td className="px-4 py-3 font-mono">{slip.source_document_no || "-"}</td>
-                      <td className="px-4 py-3">{slip.warehouse_name || "-"}</td>
-                      <td className="px-4 py-3">{formatDateTime(slip.created_at)}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            slip.status === "pending"
-                              ? "bg-amber-100 text-amber-800"
-                              : slip.status === "approved"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-rose-100 text-rose-800"
-                          }`}
-                        >
-                          {t(`warehouseSlips.statuses.${slip.status}`)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          {slip.status === "pending" && canApprove && (
-                            <>
-                              <button
-                                type="button"
-                                title={t("warehouseSlips.approveAndPrint")}
-                                disabled={processingId === slip.id}
-                                onClick={() => void handleApproveAndPrint(slip)}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                {t("warehouseSlips.approveAndPrint")}
-                              </button>
-                              <button
-                                type="button"
-                                title={t("warehouseSlips.reject")}
-                                disabled={processingId === slip.id}
-                                onClick={() => void handleReject(slip)}
-                                className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-500/10 disabled:opacity-50"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          {slip.status === "approved" && (
-                            <button
-                              type="button"
-                              title={t("warehouseSlips.reprint")}
-                              onClick={() => setPrintData(warehouseSlipToPrintData(slip))}
-                              className="rounded-lg p-1.5 text-indigo-600 hover:bg-indigo-50"
-                            >
-                              <Printer className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+            <TableWrap>
+              <div className="overflow-x-auto">
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>{t("warehouseSlips.slipNo")}</Th>
+                      <Th>{t("warehouseSlips.type")}</Th>
+                      <Th>{t("warehouseSlips.invoiceNo")}</Th>
+                      <Th>{t("warehouseSlips.warehouse")}</Th>
+                      <Th>{t("warehouseSlips.invoiceDate")}</Th>
+                      <Th>{t("common.status")}</Th>
+                      <Th className="text-center">{t("common.actions")}</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </THead>
+                  <tbody className="divide-y divide-slate-100 text-app">
+                    {filtered.map((slip) => {
+                      const tone =
+                        slip.status === "pending"
+                          ? "draft"
+                          : slip.status === "approved"
+                            ? "posted"
+                            : "cancelled";
+                      return (
+                        <tr key={slip.id} className="hover:bg-app-card-hover">
+                          <Td className="font-mono font-bold">{slip.slip_number}</Td>
+                          <Td>{t(`warehouseSlips.types.${slip.type}`)}</Td>
+                          <Td className="font-mono">{slip.source_document_no || "-"}</Td>
+                          <Td>{slip.warehouse_name || "-"}</Td>
+                          <Td>{formatDateTime(slip.created_at)}</Td>
+                          <Td>
+                            <StatusBadge tone={tone}>
+                              {t(`warehouseSlips.statuses.${slip.status}`)}
+                            </StatusBadge>
+                          </Td>
+                          <Td>
+                            <div className="flex items-center justify-center gap-1">
+                              {slip.status === "pending" && canApprove && (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    title={t("warehouseSlips.approveAndPrint")}
+                                    loading={processingId === slip.id}
+                                    onClick={() => void handleApproveAndPrint(slip)}
+                                    className="bg-emerald-600 bg-none text-white hover:bg-emerald-700 hover:brightness-100"
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    {t("warehouseSlips.approveAndPrint")}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    title={t("warehouseSlips.reject")}
+                                    disabled={processingId === slip.id}
+                                    onClick={() => void handleReject(slip)}
+                                    className="text-rose-600 hover:bg-rose-500/10"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {slip.status === "approved" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  title={t("warehouseSlips.reprint")}
+                                  onClick={() => setPrintData(warehouseSlipToPrintData(slip))}
+                                  className="text-indigo-600"
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+            </TableWrap>
           )}
-        </div>
+        </Card>
       </main>
 
       {printData && (

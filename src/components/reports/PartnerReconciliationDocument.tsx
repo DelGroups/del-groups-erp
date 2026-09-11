@@ -93,9 +93,9 @@ export default function PartnerReconciliationDocument({
                 <td className="p-2">{line.entryDate}</td>
                 <td className="p-2 font-mono">{line.documentNo}</td>
                 <td className="p-2">{docTypeLabel(line.documentType, t)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(line.ourDebit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(line.ourCredit)}</td>
-                <td className="p-2 text-right font-mono font-semibold">{formatReportMoney(line.runningBalance)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(line.ourDebit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(line.ourCredit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums font-semibold">{formatReportMoney(line.runningBalance)}</td>
               </tr>
             ))
           )}

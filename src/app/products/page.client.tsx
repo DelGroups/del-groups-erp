@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
 import ColumnVisibilityPanel from "@/components/products/ColumnVisibilityPanel";
@@ -45,7 +44,10 @@ import {
 } from "@/lib/barcode/labelConfig";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import Button from "@/components/ui/button";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import PageHeader from "@/components/ui/page-header";
+import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { deleteProductAction } from "@/lib/actions/entityDelete";
@@ -125,71 +127,58 @@ export default function ProductsPage() {
 
   return (
     <PageLayout>
-        <header className="flex flex-col justify-between gap-4 border-b border-app app-glass px-6 py-4 md:flex-row md:items-center">
-          <div>
-            <h2 className="flex items-center gap-2 text-xl font-bold text-app">
-              <Package className="h-6 w-6 text-app-accent" />
-              {t("products.titleWarehouse")}
-            </h2>
-            <p className="text-sm text-app-muted">{t("products.listSubtitle")}</p>
-          </div>
+        <PageHeader
+          icon={<Package className="h-6 w-6 text-app-accent" />}
+          title={t("products.titleWarehouse")}
+          subtitle={t("products.listSubtitle")}
+          actions={
+            <>
+              {canManageProducts ? (
+                <Button type="button" variant="secondary" onClick={() => setCategoryModalOpen(true)}>
+                  <FolderPlus className="h-4 w-4" />
+                  {t("products.categories")}
+                </Button>
+              ) : null}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {canManageProducts ? (
-              <button
+              <Select
+                value={paperSize}
+                onChange={(e) => setPaperSize(e.target.value as BarcodePaperSize)}
+                title={t("inventory.labelSize")}
+                className="w-auto min-w-[9rem]"
+              >
+                {BARCODE_PAPER_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {t(`barcodeSettings.paperSizes.${size}`)}
+                  </option>
+                ))}
+              </Select>
+
+              <Button
                 type="button"
-                onClick={() => setCategoryModalOpen(true)}
-                className="flex items-center gap-2 rounded-lg btn-secondary px-4 py-2 text-sm"
+                variant="outline"
+                onClick={() =>
+                  setPrintJob({ items: toLabelItems(filteredProducts), config: printConfig })
+                }
+                disabled={loading || filteredProducts.length === 0}
               >
-                <FolderPlus className="h-4 w-4" />
-                {t("products.categories")}
-              </button>
-            ) : null}
+                <Printer className="h-4 w-4" />
+                {t("inventory.printLabel")}
+              </Button>
 
-            <select
-              value={paperSize}
-              onChange={(e) => setPaperSize(e.target.value as BarcodePaperSize)}
-              className="rounded-lg border border-app bg-app-card px-3 py-2 text-sm font-semibold text-app"
-              title={t("inventory.labelSize")}
-            >
-              {BARCODE_PAPER_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {t(`barcodeSettings.paperSizes.${size}`)}
-                </option>
-              ))}
-            </select>
+              <Button href="/products/damaged-goods" variant="danger">
+                <Trash2 className="h-4 w-4" />
+                {t("products.damagedGoodsLink")}
+              </Button>
 
-            <button
-              type="button"
-              onClick={() =>
-                setPrintJob({ items: toLabelItems(filteredProducts), config: printConfig })
-              }
-              disabled={loading || filteredProducts.length === 0}
-              className="flex items-center gap-2 rounded-lg app-card px-4 py-2 text-sm font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
-            >
-              <Printer className="h-4 w-4" />
-              {t("inventory.printLabel")}
-            </button>
-
-            <Link
-              href="/products/damaged-goods"
-              className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
-            >
-              <Trash2 className="h-4 w-4" />
-              {t("products.damagedGoodsLink")}
-            </Link>
-
-            {canManageProducts ? (
-              <Link
-                href="/products/new"
-                className="flex items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
-              >
-                <Plus className="h-4 w-4" />
-                {t("products.createLabel")}
-              </Link>
-            ) : null}
-          </div>
-        </header>
+              {canManageProducts ? (
+                <Button href="/products/new">
+                  <Plus className="h-4 w-4" />
+                  {t("products.createLabel")}
+                </Button>
+              ) : null}
+            </>
+          }
+        />
 
         <main className="flex-1 space-y-4 overflow-y-auto p-6">
           <ProductFiltersPanel
@@ -215,14 +204,16 @@ export default function ProductsPage() {
                 visibility={columnVisibility}
                 onChange={setColumnVisibility}
               />
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => void loadData()}
-                className="rounded-lg border border-app p-2 text-app-muted hover:bg-app-card-hover"
+                loading={loading}
                 title={t("common.refresh")}
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </button>
+                {loading ? null : <RefreshCw className="h-4 w-4" />}
+              </Button>
             </div>
           </div>
 
@@ -257,13 +248,9 @@ export default function ProductsPage() {
               <h3 className="text-sm font-bold text-app">
                 {t("common.edit")}: {editingProduct.name}
               </h3>
-              <button
-                type="button"
-                onClick={() => setEditingProduct(null)}
-                className="rounded-lg border border-app px-2 py-1 text-xs font-semibold text-app"
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditingProduct(null)}>
                 {t("common.close")}
-              </button>
+              </Button>
             </div>
             <ProductForm
               categories={categories}

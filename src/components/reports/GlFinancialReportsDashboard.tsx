@@ -179,10 +179,10 @@ export default function GlFinancialReportsDashboard({
                       <p>{row.accountName}</p>
                     </td>
                     <td className="p-3 text-app-muted">{row.description || "—"}</td>
-                    <td className="p-3 text-right font-mono">
+                    <td className="p-3 text-right font-mono tabular-nums">
                       {row.debit > 0 ? formatMoney(row.debit) : "—"}
                     </td>
-                    <td className="p-3 text-right font-mono">
+                    <td className="p-3 text-right font-mono tabular-nums">
                       {row.credit > 0 ? formatMoney(row.credit) : "—"}
                     </td>
                   </tr>

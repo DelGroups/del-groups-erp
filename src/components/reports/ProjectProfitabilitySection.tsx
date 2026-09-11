@@ -142,26 +142,26 @@ export default function ProjectProfitabilitySection({ rows }: ProjectProfitabili
                       <p className="text-[10px] text-app-muted">{row.status}</p>
                     </td>
                     <td className="px-3 py-2 font-semibold text-app">{row.customerName}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.netRevenue.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{row.netRevenue.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-rose-500">
                       −{row.rawMaterialCost.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-rose-500">
                       −{row.laborCost.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-rose-500">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-rose-500">
                       −{row.generalExpenses.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">{row.estimatedProfit.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{row.estimatedProfit.toFixed(2)}</td>
                     <td
-                      className={`px-3 py-2 text-right font-mono font-bold ${
+                      className={`px-3 py-2 text-right font-mono tabular-nums font-bold ${
                         row.netProfit < 0 ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >
                       {row.netProfit.toFixed(2)}
                     </td>
                     <td
-                      className={`px-3 py-2 text-right font-mono font-bold ${
+                      className={`px-3 py-2 text-right font-mono tabular-nums font-bold ${
                         row.actualMarginPercent < 0 ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >

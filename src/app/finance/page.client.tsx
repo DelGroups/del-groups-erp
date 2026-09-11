@@ -5,6 +5,9 @@ import PageLayout from "@/components/layout/PageLayout";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
+import Button from "@/components/ui/button";
+import Card, { CardMeta } from "@/components/ui/card";
+import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -12,7 +15,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchUnifiedLedgerAction } from "@/lib/actions/finance";
 import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { formatReferenceTypeLabel, type UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
-import { ArrowDownRight, ArrowUpRight, CircleDollarSign } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw } from "lucide-react";
 
 function formatTypeLabel(type: string, t: (key: string) => string): string {
   if (type === "INCOME") return t("finance.typeIncome");
@@ -80,39 +83,43 @@ export default function FinancePage() {
         icon={<CircleDollarSign className="h-6 w-6 text-amber-500" />}
         title={t("finance.title")}
         description={t("finance.pageDescription")}
-        createLabel={t("common.refresh")}
-        onCreate={() => void loadData()}
+        extraActions={
+          <Button type="button" variant="secondary" onClick={() => void loadData()} loading={loading}>
+            {loading ? null : <RefreshCw className="h-4 w-4" />}
+            {t("common.refresh")}
+          </Button>
+        }
       />
 
       <main className="flex-1 space-y-4 overflow-y-auto p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="app-card app-card-elevated p-4">
-            <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.totalIncome")}</p>
-            <p className="mt-1 font-mono text-xl font-bold text-emerald-600">
+          <Card>
+            <CardMeta>{t("finance.totalIncome")}</CardMeta>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-emerald-600">
               {summary.totalIncome.toFixed(2)} AZN
             </p>
-          </div>
-          <div className="app-card app-card-elevated p-4">
-            <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.totalExpense")}</p>
-            <p className="mt-1 font-mono text-xl font-bold text-rose-600">
+          </Card>
+          <Card>
+            <CardMeta>{t("finance.totalExpense")}</CardMeta>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-rose-600">
               {summary.totalExpense.toFixed(2)} AZN
             </p>
-          </div>
-          <div className="app-card app-card-elevated p-4">
-            <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.netBalance")}</p>
-            <p className="mt-1 font-mono text-xl font-bold text-app">
+          </Card>
+          <Card>
+            <CardMeta>{t("finance.netBalance")}</CardMeta>
+            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-app">
               {summary.netBalance.toFixed(2)} AZN
             </p>
-          </div>
-          <div className="app-card app-card-elevated p-4 md:col-span-3">
-            <p className="text-[10px] font-bold uppercase text-app-muted">{t("finance.taxEngineTitle")}</p>
+          </Card>
+          <Card className="md:col-span-3">
+            <CardMeta>{t("finance.taxEngineTitle")}</CardMeta>
             <p className="mt-1 text-xs text-app">{t("finance.taxEngineHint")}</p>
-            <ul className="mt-2 space-y-1 text-[11px] text-app-muted">
+            <ul className="mt-2 space-y-1 font-mono text-[11px] tabular-nums text-app-muted">
               <li>{t("tax.dsmfRate", taxRateParams)}</li>
               <li>{t("tax.itsRate", taxRateParams)}</li>
               <li>{t("tax.pitRate", taxRateParams)}</li>
             </ul>
-          </div>
+          </Card>
         </div>
 
         <DocumentListSearchBar
@@ -123,88 +130,89 @@ export default function FinancePage() {
           loading={loading}
         />
 
-        <div className="app-table-wrap">
+        <Card padding={false}>
           {loading ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("finance.loading")}</div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("finance.empty")}</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
-                  <tr>
-                    <th className="px-4 py-3">{t("finance.columnDate")}</th>
-                    <th className="px-4 py-3">{t("finance.columnType")}</th>
-                    <th className="px-4 py-3">{t("finance.columnCategory")}</th>
-                    <th className="px-4 py-3 text-right">{t("finance.columnAmount")}</th>
-                    <th className="px-4 py-3">{t("finance.columnAccount")}</th>
-                    <th className="px-4 py-3">{t("finance.columnDescription")}</th>
-                    <th className="px-4 py-3">{t("finance.columnSource")}</th>
-                    <th className="px-4 py-3 text-right">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-app">
-                  {filtered.map((tx) => {
-                    const isIncome = tx.type === "INCOME";
-                    const isTransfer = tx.type === "TRANSFER";
-                    return (
-                      <tr key={tx.id} className="transition-colors hover:bg-app-card-hover">
-                        <td className="px-4 py-3">
-                          {(tx.transaction_date || tx.created_at).slice(0, 16).replace("T", " ")}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
-                              isIncome
-                                ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]"
-                                : isTransfer
-                                  ? "bg-sky-500/10 text-sky-400"
-                                  : "bg-rose-500/10 text-rose-400"
-                            }`}
+            <TableWrap>
+              <div className="overflow-x-auto">
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>{t("finance.columnDate")}</Th>
+                      <Th>{t("finance.columnType")}</Th>
+                      <Th>{t("finance.columnCategory")}</Th>
+                      <Th numeric>{t("finance.columnAmount")}</Th>
+                      <Th>{t("finance.columnAccount")}</Th>
+                      <Th>{t("finance.columnDescription")}</Th>
+                      <Th>{t("finance.columnSource")}</Th>
+                      <Th className="text-right">{t("common.actions")}</Th>
+                    </tr>
+                  </THead>
+                  <tbody className="divide-y divide-slate-100 text-app">
+                    {filtered.map((tx) => {
+                      const isIncome = tx.type === "INCOME";
+                      const isTransfer = tx.type === "TRANSFER";
+                      return (
+                        <tr key={tx.id} className="transition-colors hover:bg-app-card-hover">
+                          <Td>
+                            {(tx.transaction_date || tx.created_at).slice(0, 16).replace("T", " ")}
+                          </Td>
+                          <Td>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
+                                isIncome
+                                  ? "bg-[color:var(--app-success-soft)] text-[color:var(--app-success-text)]"
+                                  : isTransfer
+                                    ? "bg-sky-500/10 text-sky-400"
+                                    : "bg-rose-500/10 text-rose-400"
+                              }`}
+                            >
+                              {isIncome ? (
+                                <ArrowUpRight className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDownRight className="h-3.5 w-3.5" />
+                              )}
+                              {formatTypeLabel(tx.type, t)}
+                            </span>
+                          </Td>
+                          <Td className="font-semibold">{tx.category || "—"}</Td>
+                          <Td
+                            numeric
+                            className={`font-bold ${isIncome ? "text-emerald-600" : "text-rose-600"}`}
                           >
-                            {isIncome ? (
-                              <ArrowUpRight className="h-3.5 w-3.5" />
-                            ) : (
-                              <ArrowDownRight className="h-3.5 w-3.5" />
-                            )}
-                            {formatTypeLabel(tx.type, t)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-semibold">{tx.category || "—"}</td>
-                        <td
-                          className={`px-4 py-3 text-right font-mono font-bold ${
-                            isIncome ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                        >
-                          {isIncome ? "+" : "-"}
-                          {tx.amount.toFixed(2)} AZN
-                        </td>
-                        <td className="px-4 py-3">{tx.account_name || "—"}</td>
-                        <td className="max-w-xs truncate px-4 py-3 text-app-muted">
-                          {tx.description || tx.notes || "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
-                            {formatReferenceTypeLabel(tx.reference_type)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <UnifiedLedgerRowActions
-                            transaction={tx}
-                            canManage={canManage}
-                            onChanged={() => void loadData()}
-                            onError={showError}
-                            onSuccess={showSuccess}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {isIncome ? "+" : "-"}
+                            {tx.amount.toFixed(2)} AZN
+                          </Td>
+                          <Td>{tx.account_name || "—"}</Td>
+                          <Td className="max-w-xs truncate text-app-muted">
+                            {tx.description || tx.notes || "—"}
+                          </Td>
+                          <Td>
+                            <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
+                              {formatReferenceTypeLabel(tx.reference_type)}
+                            </span>
+                          </Td>
+                          <Td>
+                            <UnifiedLedgerRowActions
+                              transaction={tx}
+                              canManage={canManage}
+                              onChanged={() => void loadData()}
+                              onError={showError}
+                              onSuccess={showSuccess}
+                            />
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+            </TableWrap>
           )}
-        </div>
+        </Card>
       </main>
 
       <ToastMessage message={toastMessage} variant={toastVariant} />

@@ -41,12 +41,12 @@ export default function TrialBalanceTable({ data, loading }: TrialBalanceTablePr
               <tr key={row.accountId || row.code} className="hover:bg-app-card-hover/60">
                 <td className="p-2 font-mono">{row.code}</td>
                 <td className="p-2">{row.name}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.initialDebit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.initialCredit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.periodDebit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.periodCredit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.closingDebit)}</td>
-                <td className="p-2 text-right font-mono">{formatReportMoney(row.closingCredit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.initialDebit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.initialCredit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.periodDebit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.periodCredit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.closingDebit)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(row.closingCredit)}</td>
               </tr>
             ))
           )}
@@ -55,12 +55,12 @@ export default function TrialBalanceTable({ data, loading }: TrialBalanceTablePr
           <tfoot className="border-t-2 border-app font-bold print:bg-slate-50">
             <tr>
               <td className="p-2" colSpan={2}>{t("osv.total")}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.initialDebit)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.initialCredit)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.periodDebit)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.periodCredit)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.closingDebit)}</td>
-              <td className="p-2 text-right font-mono">{formatReportMoney(data.totals.closingCredit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.initialDebit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.initialCredit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.periodDebit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.periodCredit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.closingDebit)}</td>
+              <td className="p-2 text-right font-mono tabular-nums">{formatReportMoney(data.totals.closingCredit)}</td>
             </tr>
           </tfoot>
         ) : null}

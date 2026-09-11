@@ -2,13 +2,15 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
 import { isSalesDraft } from "@/lib/invoices/invoiceStatus";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
+import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
+import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
@@ -175,21 +177,14 @@ export default function SalesListPage() {
           createDisabled={!canCreateInvoice}
           extraActions={
             <>
-              <Link
-                href="/sales/polywood/new"
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md ring-2 ring-emerald-500/30 hover:bg-emerald-700"
-              >
+              <Button href="/sales/polywood/new" className="bg-emerald-600 bg-none text-white shadow-md ring-2 ring-emerald-500/30 hover:bg-emerald-700 hover:brightness-100">
                 <Plus className="h-4 w-4" />
                 {t("sales.polywoodCreateButton")}
-              </Link>
-              <button
-                type="button"
-                onClick={handleDownloadCSV}
-                className="flex items-center gap-2 rounded-xl border border-app bg-app-card-hover px-4 py-2.5 text-xs font-semibold text-app hover:bg-app-card-hover"
-              >
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleDownloadCSV}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.csvDownload")}
-              </button>
+              </Button>
             </>
           }
         />
@@ -210,7 +205,7 @@ export default function SalesListPage() {
             </div>
           )}
 
-          <div className="app-table-wrap">
+          <Card padding={false}>
             {loading ? (
               <div className="p-12 text-center text-xs text-app-muted">{t("sales.loading")}</div>
             ) : filteredSales.length === 0 ? (
@@ -218,22 +213,23 @@ export default function SalesListPage() {
                 {t("sales.empty")}
               </div>
             ) : (
+              <TableWrap>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
+                <Table>
+                  <THead>
                     <tr>
-                      <th className="px-4 py-3">{t("sales.docNo")}</th>
-                      <th className="px-4 py-3">{t("common.date")}</th>
-                      <th className="px-4 py-3">{t("sales.customer")}</th>
-                      <th className="px-4 py-3">{t("sales.warehouse")}</th>
-                      <th className="px-4 py-3">{t("sales.totalAmount")}</th>
-                      <th className="px-4 py-3">{t("sales.paid")}</th>
-                      <th className="px-4 py-3">{t("sales.remaining")}</th>
-                      <th className="px-4 py-3">{t("sales.docStatus")}</th>
-                      <th className="px-4 py-3">{t("sales.sendStatus")}</th>
-                      <th className="px-4 py-3 text-center">{t("common.actions")}</th>
+                      <Th>{t("sales.docNo")}</Th>
+                      <Th>{t("common.date")}</Th>
+                      <Th>{t("sales.customer")}</Th>
+                      <Th>{t("sales.warehouse")}</Th>
+                      <Th numeric>{t("sales.totalAmount")}</Th>
+                      <Th numeric>{t("sales.paid")}</Th>
+                      <Th numeric>{t("sales.remaining")}</Th>
+                      <Th>{t("sales.docStatus")}</Th>
+                      <Th>{t("sales.sendStatus")}</Th>
+                      <Th className="text-center">{t("common.actions")}</Th>
                     </tr>
-                  </thead>
+                  </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filteredSales.map((sale) => {
                       const debtBreakdown = computeInvoiceDebtBreakdown(
@@ -255,23 +251,23 @@ export default function SalesListPage() {
 
                       return (
                       <tr key={sale.id} className="transition-colors hover:bg-app-card-hover">
-                        <td className="px-4 py-3 font-mono font-bold text-app-accent">
+                        <Td className="font-mono font-bold text-app-accent">
                           {sale.doc_no ?? "-"}
-                        </td>
-                        <td className="px-4 py-3">{sale.doc_date ?? "-"}</td>
-                        <td className="px-4 py-3 font-semibold text-app">
+                        </Td>
+                        <Td>{sale.doc_date ?? "-"}</Td>
+                        <Td className="font-semibold text-app">
                           {sale.customer_name || t("common.anonymousCustomer")}
-                        </td>
-                        <td className="px-4 py-3 text-app-muted">
+                        </Td>
+                        <Td className="text-app-muted">
                           {getSaleWarehouseLabel(sale)}
-                        </td>
-                        <td className="px-4 py-3 font-mono font-bold">
+                        </Td>
+                        <Td numeric className="font-bold">
                           {formatSaleAmount(sale.total_amount, t("common.currency"))}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-emerald-600">
+                        </Td>
+                        <Td numeric className="text-emerald-600">
                           {formatSaleAmount(sale.paid_amount, t("common.currency"))}
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td numeric>
                           <InvoiceRemainingBalanceCell
                             breakdown={debtBreakdown}
                             currencyLabel={t("common.currency")}
@@ -281,17 +277,17 @@ export default function SalesListPage() {
                             })}
                             totalRemainingLabel={t("official.totalRemaining")}
                           />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <SalesDocumentStatusBadge status={sale.status} />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <WarehouseSendBadge
                             warehouseSent={sale.warehouse_sent === true}
                             warehouseSlipStatus={sale.warehouse_slip_status ?? null}
                           />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <DocumentListActions
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
@@ -328,15 +324,16 @@ export default function SalesListPage() {
                               })
                             }
                           />
-                        </td>
+                        </Td>
                       </tr>
                       );
                     })}
                   </tbody>
-                </table>
+                </Table>
               </div>
+              </TableWrap>
             )}
-          </div>
+          </Card>
         </main>
 
       {viewingSale && (

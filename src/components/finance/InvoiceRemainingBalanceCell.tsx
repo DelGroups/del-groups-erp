@@ -18,12 +18,12 @@ export default function InvoiceRemainingBalanceCell({
 }: InvoiceRemainingBalanceCellProps) {
   const totalClass =
     breakdown.totalRemaining > 0
-      ? "font-mono font-bold text-rose-600"
-      : "font-mono font-bold text-app-muted";
+      ? "font-mono font-bold tabular-nums text-rose-600"
+      : "font-mono font-bold tabular-nums text-app-muted";
 
   if (!breakdown.showSplit) {
     return (
-      <span className={totalClass}>
+      <span className={`${totalClass} text-right`}>
         {breakdown.totalRemaining.toFixed(2)} {currencyLabel}
       </span>
     );
@@ -34,7 +34,7 @@ export default function InvoiceRemainingBalanceCell({
   return (
     <div className="min-w-[9rem]" title={tooltip}>
       <p className="text-[10px] leading-tight text-app-muted">{splitLabel}</p>
-      <p className={`${totalClass} leading-tight`}>
+      <p className={`${totalClass} text-right leading-tight`}>
         {totalRemainingLabel}: {breakdown.totalRemaining.toFixed(2)} {currencyLabel}
       </p>
     </div>

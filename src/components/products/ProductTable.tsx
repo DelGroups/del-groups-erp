@@ -6,6 +6,10 @@ import type { Product, ProductColumnKey, Warehouse } from "@/types/database.type
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
+import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
+import StatusBadge from "@/components/ui/status-badge";
+import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 
 interface ProductTableProps {
   products: Product[];
@@ -17,6 +21,10 @@ interface ProductTableProps {
   onDelete?: (product: Product) => void;
   onPrintLabel?: (product: Product) => void;
   emptyMessage?: string;
+}
+
+function isNumericColumn(key: ProductColumnKey) {
+  return key === "buy_price" || key === "sell_price" || key === "weight";
 }
 
 function renderCell(
@@ -51,11 +59,7 @@ function renderCell(
     case "buy_price":
       return `${Number(product.buy_price || 0).toFixed(2)} AZN`;
     case "sell_price":
-      return (
-        <span className="font-semibold text-app">
-          {Number(product.sell_price || 0).toFixed(2)} AZN
-        </span>
-      );
+      return `${Number(product.sell_price || 0).toFixed(2)} AZN`;
     case "barcode":
       return (
         <BarcodeDisplay
@@ -99,111 +103,114 @@ export default function ProductTable({
 
   if (loading) {
     return (
-      <div className="app-card p-12 text-center text-sm text-app-muted">
-        {t("products.loading")}
-      </div>
+      <Card className="text-center text-sm text-app-muted">
+        <div className="py-7">{t("products.loading")}</div>
+      </Card>
     );
   }
 
   if (products.length === 0) {
     return (
-      <div className="app-card p-12 text-center text-sm text-app-muted">
-        {emptyMessage || t("products.empty")}
-      </div>
+      <Card className="text-center text-sm text-app-muted">
+        <div className="py-7">{emptyMessage || t("products.empty")}</div>
+      </Card>
     );
   }
 
   return (
-    <div className="app-table-wrap">
-      <div className="overflow-x-auto">
-        <table className="app-table">
-          <thead className="border-b border-app bg-app-card-hover text-xs uppercase text-app-muted">
-            <tr>
-              {columns.map((key) => (
-                <th key={key} className="px-4 py-3 font-bold">
-                  {t(`products.columnLabels.${key}`)}
-                </th>
-              ))}
-              <th className="px-4 py-3 font-bold">{t("products.stock")}</th>
-              <th className="px-4 py-3 font-bold">{t("products.minStockLevel")}</th>
-              <th className="px-4 py-3 font-bold">{t("common.warehouse")}</th>
-              <th className="px-4 py-3 font-bold">{t("common.status")}</th>
-              {canEdit || onPrintLabel ? (
-                <th className="px-4 py-3 font-bold">{t("common.actions")}</th>
-              ) : null}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {products.map((product) => {
-              const critical = isCriticalStock(product);
-              return (
-                <tr key={product.id} className="transition-colors hover:bg-app-card-hover">
-                  {columns.map((key) => (
-                    <td key={key} className="px-4 py-3">
-                      {renderCell(key, product, t)}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3 font-bold">
-                    {product.stock} {product.unit}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-app-muted">
-                    {productMinStock(product)} {product.unit}
-                  </td>
-                  <td className="px-4 py-3 text-app-muted">—</td>
-                  <td className="px-4 py-3">
-                    {critical ? (
-                      <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700">
-                        <AlertTriangle className="mr-1 h-3 w-3" />
-                        {t("products.criticalStock")}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                        {t("products.sufficientStock")}
-                      </span>
-                    )}
-                  </td>
-                  {canEdit || onPrintLabel ? (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {onPrintLabel ? (
-                          <button
-                            type="button"
-                            onClick={() => onPrintLabel(product)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-app bg-app-card px-2.5 py-1 text-xs font-semibold text-app hover:bg-app-card-hover"
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                            {t("inventory.printLabel")}
-                          </button>
-                        ) : null}
-                        {canEdit ? (
-                          <button
-                            type="button"
-                            onClick={() => onEdit?.(product)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            {t("common.edit")}
-                          </button>
-                        ) : null}
-                        {canEdit && onDelete ? (
-                          <button
-                            type="button"
-                            onClick={() => onDelete(product)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            {t("common.delete")}
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Card padding={false}>
+      <TableWrap>
+        <div className="overflow-x-auto">
+          <Table>
+            <THead>
+              <tr>
+                {columns.map((key) => (
+                  <Th key={key} numeric={isNumericColumn(key)}>
+                    {t(`products.columnLabels.${key}`)}
+                  </Th>
+                ))}
+                <Th numeric>{t("products.stock")}</Th>
+                <Th numeric>{t("products.minStockLevel")}</Th>
+                <Th>{t("common.warehouse")}</Th>
+                <Th>{t("common.status")}</Th>
+                {canEdit || onPrintLabel ? (
+                  <Th>{t("common.actions")}</Th>
+                ) : null}
+              </tr>
+            </THead>
+            <tbody className="divide-y divide-slate-100">
+              {products.map((product) => {
+                const critical = isCriticalStock(product);
+                return (
+                  <tr key={product.id} className="transition-colors hover:bg-app-card-hover">
+                    {columns.map((key) => (
+                      <Td key={key} numeric={isNumericColumn(key)}>
+                        {renderCell(key, product, t)}
+                      </Td>
+                    ))}
+                    <Td numeric className="font-bold">
+                      {product.stock} {product.unit}
+                    </Td>
+                    <Td numeric className="text-app-muted">
+                      {productMinStock(product)} {product.unit}
+                    </Td>
+                    <Td className="text-app-muted">—</Td>
+                    <Td>
+                      {critical ? (
+                        <StatusBadge tone="low-stock">
+                          <AlertTriangle className="h-3 w-3" />
+                          {t("products.lowStockBadge")}
+                        </StatusBadge>
+                      ) : (
+                        <StatusBadge tone="posted">{t("products.sufficientStock")}</StatusBadge>
+                      )}
+                    </Td>
+                    {canEdit || onPrintLabel ? (
+                      <Td>
+                        <div className="flex items-center gap-1.5">
+                          {onPrintLabel ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onPrintLabel(product)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              {t("inventory.printLabel")}
+                            </Button>
+                          ) : null}
+                          {canEdit ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onEdit?.(product)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("common.edit")}
+                            </Button>
+                          ) : null}
+                          {canEdit && onDelete ? (
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => onDelete(product)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t("common.delete")}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </Td>
+                    ) : null}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </div>
+      </TableWrap>
+    </Card>
   );
 }

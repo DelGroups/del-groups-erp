@@ -45,10 +45,10 @@ export default function InventoryInsightsSection({
                 <tr key={row.productId}>
                   <td className="py-2 font-mono font-bold">{row.code}</td>
                   <td className="py-2">{row.name}</td>
-                  <td className="py-2 text-right font-mono">
+                  <td className="py-2 text-right font-mono tabular-nums">
                     {row.totalUsed.toFixed(2)} {row.unit}
                   </td>
-                  <td className="py-2 text-right font-mono">{row.stock.toFixed(2)}</td>
+                  <td className="py-2 text-right font-mono tabular-nums">{row.stock.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

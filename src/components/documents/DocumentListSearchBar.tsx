@@ -3,6 +3,8 @@
 import React from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 interface DocumentListSearchBarProps {
   value: string;
@@ -22,25 +24,27 @@ export default function DocumentListSearchBar({
   const { t } = useI18n();
 
   return (
-    <div className="app-card app-card-elevated flex items-center gap-3 p-4">
+    <Card className="flex items-center gap-3" padding>
       <Search className="h-4 w-4 shrink-0 text-app-muted" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? t("documents.searchDefault")}
-        className="w-full border-none bg-transparent text-xs text-app placeholder:text-app-muted focus:outline-none"
+        className="h-9 w-full border-none bg-transparent text-sm text-app placeholder:text-app-muted focus:outline-none"
       />
-      {onRefresh && (
-        <button
+      {onRefresh ? (
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onRefresh}
-          className="btn-ghost !p-2"
+          loading={loading}
           title={t("common.refresh")}
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </button>
-      )}
-    </div>
+          {loading ? null : <RefreshCw className="h-4 w-4" />}
+        </Button>
+      ) : null}
+    </Card>
   );
 }

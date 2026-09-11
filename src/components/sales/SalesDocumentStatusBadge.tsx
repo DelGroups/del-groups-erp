@@ -3,6 +3,7 @@
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { normalizeSalesDocumentStatus } from "@/lib/invoices/invoiceStatus";
+import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
 
 interface SalesDocumentStatusBadgeProps {
   status?: string | null;
@@ -16,12 +17,8 @@ export default function SalesDocumentStatusBadge({
   const { t } = useI18n();
   const normalized = normalizeSalesDocumentStatus(status);
 
-  const styles =
-    normalized === "draft"
-      ? "bg-amber-100 text-amber-800 border-amber-200"
-      : normalized === "cancelled"
-        ? "bg-rose-100 text-rose-700 border-rose-200"
-        : "bg-emerald-100 text-emerald-800 border-emerald-200";
+  const tone: StatusTone =
+    normalized === "draft" ? "draft" : normalized === "cancelled" ? "cancelled" : "posted";
 
   const label =
     normalized === "draft"
@@ -31,10 +28,8 @@ export default function SalesDocumentStatusBadge({
         : t("invoice.statusPosted");
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${styles} ${className}`.trim()}
-    >
+    <StatusBadge tone={tone} className={className}>
       {label}
-    </span>
+    </StatusBadge>
   );
 }
