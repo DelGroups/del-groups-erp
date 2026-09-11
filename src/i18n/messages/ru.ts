@@ -1656,6 +1656,8 @@ export const ruMessages: Messages = {
     advancePayments: "Авансовые платежи",
     discountPercent: "Скидка %",
     expenseLabel: "Название расхода",
+    expenseCategoryType: "Категория / Тип расхода",
+    quickAddExpenseCategoryTitle: "Новая категория расхода",
     expenseLabelPlaceholder: "Напр.: Доставка, Монтаж",
     paidImmediately: "Оплачено сразу",
     payImmediately: "Оплатить сразу",

@@ -1,5 +1,6 @@
 export interface DocumentAdditionalExpense {
   id: string;
+  category_id: string;
   label: string;
   amount: number;
   paid_immediately: boolean;
@@ -9,6 +10,7 @@ export interface DocumentAdditionalExpense {
 export function createEmptyDocumentExpense(): DocumentAdditionalExpense {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    category_id: "",
     label: "",
     amount: 0,
     paid_immediately: false,
@@ -26,6 +28,9 @@ export function validateDocumentAdditionalExpenses(
   for (const row of expenses) {
     const amount = Number(row.amount) || 0;
     if (amount <= 0) continue;
+    if (!row.category_id?.trim() && !row.label.trim()) {
+      return "Əlavə xərc üçün kateqoriya seçilməlidir";
+    }
     if (row.paid_immediately && !row.account_id?.trim()) {
       return "Ödənilən əlavə xərc üçün kassa/bank hesabı seçilməlidir";
     }
@@ -35,7 +40,10 @@ export function validateDocumentAdditionalExpenses(
 
 export function documentExpensesToRpcPayload(expenses: DocumentAdditionalExpense[]) {
   return expenses
-    .filter((row) => (Number(row.amount) || 0) > 0 && row.label.trim())
+    .filter(
+      (row) =>
+        (Number(row.amount) || 0) > 0 && (row.label.trim() || row.category_id.trim())
+    )
     .map((row) => ({
       id: row.id,
       label: row.label.trim(),

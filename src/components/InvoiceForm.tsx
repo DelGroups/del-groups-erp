@@ -1622,133 +1622,139 @@ export default function UniversalInvoiceForm({
           </div>
           </div>
 
-          <div className="flex h-full flex-col justify-between gap-3 rounded-xl app-toolbar p-4 text-xs lg:col-span-1">
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between gap-4 text-slate-100">
-                <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
-                <span className="shrink-0 font-mono text-sm tabular-nums">
-                  {totals.subtotal.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 text-rose-200">
-                <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
-                <span className="shrink-0 font-mono text-sm tabular-nums">
-                  -{displayTotals.line_discount_total.toFixed(2)}
-                </span>
-              </div>
-              <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
-                  {t("invoice.globalDiscount")}
-                </p>
-                <div className="flex gap-2">
-                  <select
-                    value={globalDiscountMode}
-                    onChange={(e) =>
-                      setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
-                    }
-                    className="w-1/3 rounded border border-white/20 bg-white/10 p-1.5 text-[11px]"
-                  >
-                    <option value="percent">%</option>
-                    <option value="amount">AZN</option>
-                  </select>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={globalDiscountValue}
-                    onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
-                    className="w-2/3 rounded border border-white/20 bg-white/10 p-1.5 text-right font-mono"
-                  />
+          <div className="lg:col-span-1 lg:self-start">
+            <div className="sticky top-6 flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between gap-4 text-slate-100">
+                  <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums">
+                    {totals.subtotal.toFixed(2)}
+                  </span>
                 </div>
-                {displayTotals.global_discount_total > 0 ? (
-                  <div className="flex items-baseline justify-between gap-4 text-rose-200">
-                    <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
-                    <span className="shrink-0 font-mono tabular-nums">
-                      -{displayTotals.global_discount_total.toFixed(2)}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-              <div className="flex items-baseline justify-between gap-4 text-rose-200">
-                <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
-                <span className="shrink-0 font-mono text-sm tabular-nums">
-                  -{displayTotals.discount_total.toFixed(2)}
-                </span>
-              </div>
-              {isOfficial ? (
+                <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                  <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums">
+                    -{displayTotals.line_discount_total.toFixed(2)}
+                  </span>
+                </div>
                 <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
-                    {t("invoice.vatToggleLabel")}
+                    {t("invoice.globalDiscount")}
                   </p>
-                  <div className="inline-flex overflow-hidden rounded-lg border border-white/20">
-                    <button
-                      type="button"
-                      onClick={() => setVatMode("none")}
-                      className={`px-3 py-1.5 text-[11px] font-semibold ${
-                        vatMode === "none" ? "bg-slate-600 text-white" : "text-slate-300"
-                      }`}
+                  <div className="flex gap-2">
+                    <select
+                      value={globalDiscountMode}
+                      onChange={(e) =>
+                        setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
+                      }
+                      className="w-1/3 rounded border border-white/20 bg-white/10 p-1.5 text-[11px]"
                     >
-                      {t("invoice.vatOff")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVatMode("exclusive")}
-                      className={`px-3 py-1.5 text-[11px] font-semibold ${
-                        vatMode !== "none" ? "bg-emerald-600 text-white" : "text-slate-300"
-                      }`}
-                    >
-                      {t("invoice.vatOn", { rate: defaultVatRate })}
-                    </button>
+                      <option value="percent">%</option>
+                      <option value="amount">AZN</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={globalDiscountValue}
+                      onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
+                      className="w-2/3 rounded border border-white/20 bg-white/10 p-1.5 text-right font-mono"
+                    />
                   </div>
+                  {displayTotals.global_discount_total > 0 ? (
+                    <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                      <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
+                      <span className="shrink-0 font-mono tabular-nums">
+                        -{displayTotals.global_discount_total.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              {totals.delivery_cost > 0 && (
-                <div className="flex items-baseline justify-between gap-4 text-blue-200">
-                  <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
+                <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                  <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
                   <span className="shrink-0 font-mono text-sm tabular-nums">
-                    +{totals.delivery_cost.toFixed(2)}
+                    -{displayTotals.discount_total.toFixed(2)}
                   </span>
                 </div>
-              )}
-              <div className="flex items-baseline justify-between gap-4 text-amber-200">
-                <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
-                <span className="shrink-0 font-mono text-sm tabular-nums">
-                  +{additionalExpensesTotal.toFixed(2)}
-                </span>
+                {isOfficial ? (
+                  <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                      {t("invoice.vatToggleLabel")}
+                    </p>
+                    <div className="inline-flex overflow-hidden rounded-lg border border-white/20">
+                      <button
+                        type="button"
+                        onClick={() => setVatMode("none")}
+                        className={`px-3 py-1.5 text-[11px] font-semibold ${
+                          vatMode === "none" ? "bg-slate-600 text-white" : "text-slate-300"
+                        }`}
+                      >
+                        {t("invoice.vatOff")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVatMode("exclusive")}
+                        className={`px-3 py-1.5 text-[11px] font-semibold ${
+                          vatMode !== "none" ? "bg-emerald-600 text-white" : "text-slate-300"
+                        }`}
+                      >
+                        {t("invoice.vatOn", { rate: defaultVatRate })}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {totals.delivery_cost > 0 && (
+                  <div className="flex items-baseline justify-between gap-4 text-blue-200">
+                    <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
+                    <span className="shrink-0 font-mono text-sm tabular-nums">
+                      +{totals.delivery_cost.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between gap-4 text-amber-200">
+                  <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums">
+                    +{additionalExpensesTotal.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              {isOfficial ? (
-                <OfficialTotalsBreakdown
-                  amounts={officialAmounts}
-                  isOfficial={isOfficial}
-                  dark
-                />
-              ) : (
-                <div className="flex items-baseline justify-between gap-4 border-t border-white/20 pt-3">
-                  <span className="text-sm font-bold text-white">{t("invoice.grandTotal")}</span>
-                  <span className="shrink-0 font-mono text-xl font-bold tabular-nums text-emerald-300">
-                    {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                disabled={saving || Boolean(salePreflightIssue)}
-                title={salePreflightHint}
-                onClick={handleSubmit}
-                className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2 font-bold hover:brightness-110 disabled:opacity-50"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? t("common.saving") : t("invoice.confirmSave")}
-              </button>
+
+              <div className="my-4 border-y border-white/20 py-4">
+                {isOfficial ? (
+                  <OfficialTotalsBreakdown
+                    amounts={officialAmounts}
+                    isOfficial={isOfficial}
+                    dark
+                  />
+                ) : (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-base font-bold text-white">{t("invoice.grandTotal")}</span>
+                    <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-emerald-300">
+                      {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || Boolean(salePreflightIssue)}
+                  title={salePreflightHint}
+                  onClick={handleSubmit}
+                  className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2 font-bold hover:brightness-110 disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? t("common.saving") : t("invoice.confirmSave")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

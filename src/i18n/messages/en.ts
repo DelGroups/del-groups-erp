@@ -1656,6 +1656,8 @@ export const enMessages: Messages = {
     advancePayments: "Advance payments",
     discountPercent: "Discount %",
     expenseLabel: "Expense name",
+    expenseCategoryType: "Category / Expense type",
+    quickAddExpenseCategoryTitle: "New expense category",
     expenseLabelPlaceholder: "e.g. Delivery, Installation",
     paidImmediately: "Paid immediately",
     payImmediately: "Pay now",

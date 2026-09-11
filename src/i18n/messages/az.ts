@@ -1654,6 +1654,8 @@ export const azMessages = {
     advancePayments: "Avans ödənişləri",
     discountPercent: "Endirim %",
     expenseLabel: "Xərc adı",
+    expenseCategoryType: "Kateqoriya / Xərc Növü",
+    quickAddExpenseCategoryTitle: "Yeni Xərc Kateqoriyası",
     expenseLabelPlaceholder: "Məs: Çatdırılma, Quraşdırma",
     paidImmediately: "Dərhal ödənilib",
     payImmediately: "Dərhal ödə",

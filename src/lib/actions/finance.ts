@@ -23,8 +23,10 @@ import {
 } from "@/lib/finance/unifiedLedger";
 import {
   buildFinancialCategoryTree,
+  fetchActiveExpenseCategoryOptions,
   fetchFinancialCategoryRows,
   flattenExpenseCategoryOptions,
+  type ExpenseCategoryOption,
   type FinancialCategoryTreeNode,
 } from "@/lib/finance/financialCategories";
 import { fetchTransactionsRaw } from "@/lib/finance/transactionQueries";
@@ -50,6 +52,23 @@ async function requireFinanceOrExpenseManageAction(): Promise<ActionAuthContext>
     throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
   }
   if (
+    userHasLegacyPermission(profile, "can_manage_finance") ||
+    userHasLegacyPermission(profile, "can_manage_expenses")
+  ) {
+    return { user, profile };
+  }
+  throw new ActionAuthError("İcazəniz yoxdur");
+}
+
+async function requireDocumentExpenseCategoryAccess(): Promise<ActionAuthContext> {
+  const { user, profile } = await getServerAuthContext();
+  if (!user) throw new ActionAuthError("Giriş tələb olunur");
+  if (profile?.is_active === false) {
+    throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
+  }
+  if (
+    userHasLegacyPermission(profile, "can_create_invoice") ||
+    userHasLegacyPermission(profile, "can_view_purchases") ||
     userHasLegacyPermission(profile, "can_manage_finance") ||
     userHasLegacyPermission(profile, "can_manage_expenses")
   ) {
@@ -94,6 +113,60 @@ export interface UpdateAccountInput {
   code?: string;
   name: string;
   type: string;
+}
+
+export async function fetchDocumentExpenseCategoriesAction(): Promise<
+  ActionResult<ExpenseCategoryOption[]>
+> {
+  try {
+    await requireDocumentExpenseCategoryAccess();
+    const admin = createSupabaseAdminClient();
+    const options = await fetchActiveExpenseCategoryOptions(admin);
+    return { success: true, data: options };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function quickCreateExpenseCategoryAction(
+  name: string
+): Promise<ActionResult<ExpenseCategoryOption>> {
+  try {
+    await requireDocumentExpenseCategoryAccess();
+
+    const trimmed = clampString(name, 200);
+    if (!trimmed) return { success: false, error: "Kateqoriya adı tələb olunur" };
+
+    const admin = createSupabaseAdminClient();
+    const payload: Record<string, unknown> = {
+      name: trimmed,
+      type: "EXPENSE",
+      is_active: true,
+      parent_id: null,
+    };
+
+    let insert = await admin.from("financial_categories").insert([payload]).select("id").single();
+    if (insert.error && /column|parent_id|schema cache/i.test(insert.error.message || "")) {
+      delete payload.parent_id;
+      insert = await admin.from("financial_categories").insert([payload]).select("id").single();
+    }
+
+    if (insert.error || !insert.data) {
+      return { success: false, error: insert.error?.message || "Kateqoriya yaradılmadı" };
+    }
+
+    return {
+      success: true,
+      data: {
+        id: String(insert.data.id),
+        name: trimmed,
+      },
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Kateqoriya yaradılmadı" };
+  }
 }
 
 export async function fetchFinancialCategoriesAction(): Promise<
