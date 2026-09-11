@@ -2400,6 +2400,7 @@ export const enMessages: Messages = {
     voiceError: "Microphone permission was denied or recording failed.",
     fileTooLarge: "File must be smaller than 8 MB.",
     selectAgent: "Select an agent",
+    statusActive: "Active · Gemini",
   },
   aiSettings: {
     title: "AI Integration",

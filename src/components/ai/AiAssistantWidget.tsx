@@ -324,6 +324,10 @@ export default function AiAssistantWidget() {
     }
   }, [recording, sendVoice, sending, stopMedia, t]);
 
+  const selectedAgent = ERP_AI_AGENTS.find((item) => item.id === agent) ?? ERP_AI_AGENTS[0];
+  const pillClass =
+    "rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 hover:shadow-[0_0_12px_rgba(59,130,246,0.15)] disabled:opacity-50";
+
   if (!user) return null;
 
   return (
@@ -333,7 +337,7 @@ export default function AiAssistantWidget() {
           type="button"
           aria-label={t("aiAssistant.open")}
           onClick={() => setOpen(true)}
-          className="btn-primary fixed bottom-5 right-5 z-[60] h-14 w-14 rounded-full p-0 shadow-lg md:bottom-6 md:right-6"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/20 opacity-80 transition-all hover:opacity-100 hover:shadow-xl hover:shadow-indigo-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
         >
           <Sparkles className="h-6 w-6" />
         </button>
@@ -344,137 +348,153 @@ export default function AiAssistantWidget() {
           <button
             type="button"
             aria-label={t("aiAssistant.close")}
-            className="app-scrim fixed inset-0 z-[65]"
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px]"
             onClick={() => setOpen(false)}
           />
           <aside
             role="dialog"
             aria-modal="true"
             aria-label={t("aiAssistant.title")}
-            className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col border-l border-app bg-app shadow-2xl"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-slate-200/80 bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between gap-3 border-b border-app px-4 py-3">
-              <div className="flex min-w-0 items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-app-card-hover text-sky-500">
-                  <Bot className="h-5 w-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-bold text-app">{t("aiAssistant.title")}</h2>
-                  <p className="text-[11px] text-app-muted">{t("aiAssistant.subtitle")}</p>
-                  <label className="mt-2 block">
-                    <span className="sr-only">{t("aiAssistant.selectAgent")}</span>
-                    <select
-                      aria-label={t("aiAssistant.selectAgent")}
-                      value={agent}
-                      onChange={(event) => {
-                        const next = resolveTargetAgent(event.target.value);
-                        setAgent(next);
-                        sessionStorage.setItem(AGENT_KEY, next);
-                      }}
-                      className="app-input mt-1 w-full py-1.5 text-[11px] leading-tight"
-                    >
-                      {ERP_AI_AGENTS.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {formatAgentOption(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+            <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 px-4 py-4 text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-300 ring-1 ring-white/15">
+                    <Bot className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-sm font-bold">{t("aiAssistant.title")}</h2>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100 ring-1 ring-white/10">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                        {t("aiAssistant.statusActive")}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-slate-300">{t("aiAssistant.subtitle")}</p>
+                    <label className="mt-3 block">
+                      <span className="sr-only">{t("aiAssistant.selectAgent")}</span>
+                      <select
+                        aria-label={t("aiAssistant.selectAgent")}
+                        value={agent}
+                        onChange={(event) => {
+                          const next = resolveTargetAgent(event.target.value);
+                          setAgent(next);
+                          sessionStorage.setItem(AGENT_KEY, next);
+                        }}
+                        className="w-full rounded-lg border border-white/15 bg-white/10 py-1.5 pl-2 pr-8 text-[11px] leading-tight text-white backdrop-blur-sm transition focus:border-sky-400/50 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                      >
+                        {ERP_AI_AGENTS.map((item) => (
+                          <option key={item.id} value={item.id} className="text-slate-900">
+                            {formatAgentOption(item)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="mt-1.5 text-[10px] text-slate-400">
+                      {selectedAgent.emoji} {selectedAgent.role}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  aria-label={t("aiAssistant.close")}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label={t("aiAssistant.close")}
-                onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </header>
 
             {configured === false && (
-              <p className="border-b border-app bg-app-card px-4 py-2 text-[11px] text-app-muted">
+              <p className="border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-[11px] text-amber-800">
                 {t("aiAssistant.notConfigured")}
               </p>
             )}
 
-            <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            <div
+              ref={listRef}
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-4 py-4"
+            >
               {messages.length === 0 && (
-                <p className="text-sm text-app-muted">{t("aiAssistant.empty")}</p>
+                <p className="text-sm text-slate-500">{t("aiAssistant.empty")}</p>
               )}
               {messages.map((item, index) => (
                 <div
                   key={`${item.role}-${index}`}
-                  className={item.role === "user" ? "ml-8" : "mr-4"}
+                  className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div
-                    className={
-                      item.role === "user"
-                        ? "rounded-2xl bg-app-card-hover px-3 py-2 text-[13px] text-app"
-                        : "app-card px-3 py-3"
-                    }
-                  >
-                    {item.role === "assistant" ? (
-                      <>
-                        {item.content ? <AiAssistantMarkdown content={item.content} /> : null}
-                        {item.table ? (
-                          <div className="mt-2">
-                            <AiAssistantTable headers={item.table.headers} rows={item.table.rows} />
-                          </div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="whitespace-pre-wrap">{item.content}</p>
-                    )}
-                  </div>
-                  {item.role === "assistant" && item.links && item.links.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {item.links.slice(0, 8).map((link) => (
-                        <Link
-                          key={`${link.href}-${link.label}`}
-                          href={link.href}
-                          onClick={() => setOpen(false)}
-                          className="rounded-full border border-app bg-app-card px-2.5 py-1 text-[11px] font-semibold text-app hover:bg-app-card-hover"
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                  {item.role === "assistant" && item.buttons && item.buttons.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {item.buttons.map((button) =>
-                        button.href ? (
-                          <Link
-                            key={`${button.label}-${button.href}`}
-                            href={button.href}
-                            onClick={() => setOpen(false)}
-                            className="rounded-full border border-app bg-app-card px-2.5 py-1 text-[11px] font-semibold text-app hover:bg-app-card-hover"
-                          >
-                            {button.label}
-                          </Link>
-                        ) : (
-                          <button
-                            key={button.label}
-                            type="button"
-                            disabled={sending}
-                            onClick={() => void sendMessage(button.message || button.label)}
-                            className="rounded-full border border-app bg-app-card px-2.5 py-1 text-[11px] font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
-                          >
-                            {button.label}
-                          </button>
-                        )
+                  <div className={item.role === "user" ? "max-w-[85%]" : "max-w-[90%]"}>
+                    <div
+                      className={
+                        item.role === "user"
+                          ? "rounded-2xl rounded-tr-none bg-blue-600 px-4 py-2.5 text-[13px] text-white shadow-sm"
+                          : "rounded-2xl rounded-tl-none border border-slate-200/80 bg-slate-100 px-4 py-2.5 text-[13px] text-slate-800 shadow-sm"
+                      }
+                    >
+                      {item.role === "assistant" ? (
+                        <div className="[&_a]:text-blue-600 [&_a]:underline-offset-2 [&_a]:hover:underline [&_code]:bg-white/70 [&_strong]:text-slate-900">
+                          {item.content ? <AiAssistantMarkdown content={item.content} /> : null}
+                          {item.table ? (
+                            <div className="mt-2">
+                              <AiAssistantTable headers={item.table.headers} rows={item.table.rows} />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{item.content}</p>
                       )}
                     </div>
-                  )}
+                    {item.role === "assistant" && item.links && item.links.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {item.links.slice(0, 8).map((link) => (
+                          <Link
+                            key={`${link.href}-${link.label}`}
+                            href={link.href}
+                            onClick={() => setOpen(false)}
+                            className={pillClass}
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                    {item.role === "assistant" && item.buttons && item.buttons.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {item.buttons.map((button) =>
+                          button.href ? (
+                            <Link
+                              key={`${button.label}-${button.href}`}
+                              href={button.href}
+                              onClick={() => setOpen(false)}
+                              className={pillClass}
+                            >
+                              {button.label}
+                            </Link>
+                          ) : (
+                            <button
+                              key={button.label}
+                              type="button"
+                              disabled={sending}
+                              onClick={() => void sendMessage(button.message || button.label)}
+                              className={pillClass}
+                            >
+                              {button.label}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
               {sending && (
-                <div className="mr-4 flex items-center gap-2 text-xs text-app-muted">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span className="flex gap-1">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-app-accent [animation-delay:-0.2s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-app-accent [animation-delay:-0.1s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-app-accent" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.2s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.1s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500" />
                   </span>
                   {t("aiAssistant.thinking")}
                 </div>
@@ -487,14 +507,14 @@ export default function AiAssistantWidget() {
             </div>
 
             {chips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 border-t border-app px-4 py-2">
+              <div className="flex flex-wrap gap-1.5 border-t border-slate-200 bg-white px-4 py-2.5">
                 {chips.map((chip) => (
                   <button
                     key={chip.id}
                     type="button"
                     disabled={sending || recording}
                     onClick={() => void sendMessage(chip.prompt)}
-                    className="rounded-full border border-app bg-app-card px-2.5 py-1 text-[11px] font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
+                    className={pillClass}
                   >
                     {chip.label}
                   </button>
@@ -503,7 +523,7 @@ export default function AiAssistantWidget() {
             )}
 
             <form
-              className="flex items-end gap-2 border-t border-app p-3"
+              className="border-t border-slate-200 bg-white p-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 void sendMessage(input);
@@ -520,50 +540,54 @@ export default function AiAssistantWidget() {
                   if (file) void sendFile(file);
                 }}
               />
-              <button
-                type="button"
-                disabled={sending || recording}
-                aria-label={t("aiAssistant.attach")}
-                onClick={() => fileRef.current?.click()}
-                className="btn-ghost h-10 w-10 shrink-0 rounded-xl p-0"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                disabled={sending}
-                aria-label={recording ? t("aiAssistant.stopRecording") : t("aiAssistant.record")}
-                onClick={() => void toggleRecording()}
-                className={`h-10 w-10 shrink-0 rounded-xl p-0 ${
-                  recording ? "btn-primary" : "btn-ghost"
-                }`}
-              >
-                {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </button>
-              <textarea
-                ref={inputRef}
-                value={input}
-                rows={1}
-                maxLength={4000}
-                disabled={sending || recording}
-                placeholder={t("aiAssistant.placeholder")}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void sendMessage(input);
-                  }
-                }}
-                className="app-input min-h-10 max-h-28 flex-1 resize-none text-sm"
-              />
-              <button
-                type="submit"
-                disabled={sending || recording || !input.trim()}
-                className="btn-primary h-10 w-10 shrink-0 rounded-xl p-0"
-                aria-label={t("aiAssistant.send")}
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              <div className="flex items-end gap-1 rounded-xl border border-slate-200 bg-white p-1.5 transition-shadow focus-within:ring-2 focus-within:ring-blue-500">
+                <button
+                  type="button"
+                  disabled={sending || recording}
+                  aria-label={t("aiAssistant.attach")}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={sending}
+                  aria-label={recording ? t("aiAssistant.stopRecording") : t("aiAssistant.record")}
+                  onClick={() => void toggleRecording()}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition disabled:opacity-50 ${
+                    recording
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  }`}
+                >
+                  {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  rows={1}
+                  maxLength={4000}
+                  disabled={sending || recording}
+                  placeholder={t("aiAssistant.placeholder")}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void sendMessage(input);
+                    }
+                  }}
+                  className="min-h-9 max-h-28 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={sending || recording || !input.trim()}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={t("aiAssistant.send")}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
             </form>
           </aside>
         </>

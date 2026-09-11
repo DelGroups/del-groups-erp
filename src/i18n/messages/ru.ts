@@ -2400,6 +2400,7 @@ export const ruMessages: Messages = {
     voiceError: "Нет доступа к микрофону или запись не удалась.",
     fileTooLarge: "Файл должен быть меньше 8 МБ.",
     selectAgent: "Выберите агента",
+    statusActive: "Активен · Gemini",
   },
   aiSettings: {
     title: "AI-интеграция",

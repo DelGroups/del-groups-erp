@@ -2399,6 +2399,7 @@ export const azMessages = {
     voiceError: "Mikrofona icazə verilmədi və ya səs yazıla bilmədi.",
     fileTooLarge: "Fayl 8 MB-dan kiçik olmalıdır.",
     selectAgent: "Agent seçin",
+    statusActive: "Aktiv · Gemini",
   },
   aiSettings: {
     title: "AI İnteqrasiyası",
