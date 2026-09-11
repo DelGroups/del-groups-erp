@@ -1658,6 +1658,7 @@ export const ruMessages: Messages = {
     expenseLabel: "Название расхода",
     expenseLabelPlaceholder: "Напр.: Доставка, Монтаж",
     paidImmediately: "Оплачено сразу",
+    payImmediately: "Оплатить сразу",
     paidImmediatelyShort: "Сразу",
     paymentAccount: "Счёт оплаты",
     selectPaymentAccount: "Выберите счёт оплаты",

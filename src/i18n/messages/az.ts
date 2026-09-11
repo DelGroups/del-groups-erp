@@ -1656,6 +1656,7 @@ export const azMessages = {
     expenseLabel: "Xərc adı",
     expenseLabelPlaceholder: "Məs: Çatdırılma, Quraşdırma",
     paidImmediately: "Dərhal ödənilib",
+    payImmediately: "Dərhal ödə",
     paidImmediatelyShort: "Dərhal",
     paymentAccount: "Ödəniş hesabı",
     selectPaymentAccount: "Ödəniş hesabı seçin",

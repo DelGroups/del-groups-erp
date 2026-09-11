@@ -1489,7 +1489,8 @@ export default function UniversalInvoiceForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="flex flex-col gap-4 lg:col-span-2">
           <div className={`${INVOICE_CARD} space-y-3`}>
             <h4 className="flex items-center gap-1.5 border-b border-app pb-2 text-sm font-bold text-app">
               <Truck className="h-4 w-4 shrink-0 text-app-accent" />
@@ -1568,12 +1569,12 @@ export default function UniversalInvoiceForm({
               {payments.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 rounded-xl border border-app bg-app-card-hover p-2"
+                  className="flex items-center gap-2 rounded-xl border border-app bg-app-card-hover p-2"
                 >
                   <select
                     value={p.account_id}
                     onChange={(e) => handleAccountChange(p.id, e.target.value)}
-                    className={INVOICE_INPUT}
+                    className={`${INVOICE_INPUT} min-w-[60%] w-[60%] shrink-0`}
                   >
                     <option value="">{t("invoice.accountOption")}</option>
                     {accounts.map((acc) => (
@@ -1591,12 +1592,12 @@ export default function UniversalInvoiceForm({
                     onChange={(e) =>
                       updatePayment(p.id, { amount: Number(e.target.value) || 0 })
                     }
-                    className={`${INVOICE_INPUT} text-right font-mono font-bold`}
+                    className={`${INVOICE_INPUT} min-w-0 flex-1 text-right font-mono font-bold`}
                   />
                   <button
                     type="button"
                     onClick={() => removePaymentRow(p.id)}
-                    className="flex h-9 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
                     aria-label={t("common.delete")}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -1619,8 +1620,9 @@ export default function UniversalInvoiceForm({
               </div>
             </div>
           </div>
+          </div>
 
-          <div className="flex h-full flex-col justify-between gap-3 rounded-xl app-toolbar p-4 text-xs">
+          <div className="flex h-full flex-col justify-between gap-3 rounded-xl app-toolbar p-4 text-xs lg:col-span-1">
             <div className="space-y-2">
               <div className="flex items-baseline justify-between gap-4 text-slate-100">
                 <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>

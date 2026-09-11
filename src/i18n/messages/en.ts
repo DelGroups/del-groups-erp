@@ -1658,6 +1658,7 @@ export const enMessages: Messages = {
     expenseLabel: "Expense name",
     expenseLabelPlaceholder: "e.g. Delivery, Installation",
     paidImmediately: "Paid immediately",
+    payImmediately: "Pay now",
     paidImmediatelyShort: "Paid",
     paymentAccount: "Payment account",
     selectPaymentAccount: "Select payment account",

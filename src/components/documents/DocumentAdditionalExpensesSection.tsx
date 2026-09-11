@@ -22,8 +22,7 @@ interface DocumentAdditionalExpensesSectionProps {
 }
 
 const FIELD_INPUT =
-  "h-9 w-full rounded-lg border border-app bg-app-card px-3 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)] disabled:opacity-60";
-const FIELD_LABEL = "mb-1 block text-xs font-medium text-app";
+  "h-9 w-full rounded-md border border-slate-200 bg-app-card px-2 text-sm text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-60";
 
 export default function DocumentAdditionalExpensesSection({
   expenses,
@@ -48,7 +47,7 @@ export default function DocumentAdditionalExpensesSection({
 
   return (
     <section
-      className={`app-card flex h-full flex-col gap-3 rounded-xl p-4 ${className}`.trim()}
+      className={`app-card flex flex-col gap-3 rounded-xl p-4 ${className}`.trim()}
     >
       <div className="flex items-center justify-between gap-2 border-b border-app pb-2">
         <h3 className="text-sm font-bold text-app">{t("forms.additionalExpenses")}</h3>
@@ -66,98 +65,102 @@ export default function DocumentAdditionalExpensesSection({
       {expenses.length === 0 ? (
         <p className="text-xs text-app-muted">{t("forms.additionalExpensesEmpty")}</p>
       ) : (
-        <div className="space-y-3">
-          <div
-            className="hidden gap-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-app-muted lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,5.5rem)_minmax(0,1.5fr)_2rem]"
-          >
-            <span>{t("forms.expenseLabel")}</span>
-            <span>{t("common.amount")}</span>
-            <span className="text-center">{t("forms.paidImmediatelyShort")}</span>
-            <span>{t("forms.paymentAccount")}</span>
-            <span className="sr-only">{t("common.delete")}</span>
-          </div>
-
-          {expenses.map((row) => (
-            <div
-              key={row.id}
-              className="grid gap-3 rounded-xl border border-app bg-app-card-hover p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,5.5rem)_minmax(0,1.5fr)_2rem] lg:items-end"
-            >
-              <label className="min-w-0">
-                <span className={`${FIELD_LABEL} lg:hidden`}>{t("forms.expenseLabel")}</span>
-                <input
-                  type="text"
-                  className={FIELD_INPUT}
-                  value={row.label}
-                  disabled={disabled}
-                  placeholder={t("forms.expenseLabelPlaceholder")}
-                  onChange={(e) => updateRow(row.id, { label: e.target.value })}
-                />
-              </label>
-
-              <label className="min-w-0">
-                <span className={`${FIELD_LABEL} lg:hidden`}>{t("common.amount")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={FIELD_INPUT}
-                  value={row.amount || ""}
-                  disabled={disabled}
-                  onChange={(e) => updateRow(row.id, { amount: Number(e.target.value) || 0 })}
-                />
-              </label>
-
-              <label
-                className="flex h-9 items-center justify-start gap-2 rounded-lg border border-transparent px-1 lg:justify-center"
-                title={t("forms.paidImmediately")}
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 shrink-0"
-                  checked={row.paid_immediately}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    updateRow(row.id, {
-                      paid_immediately: e.target.checked,
-                      account_id: e.target.checked ? row.account_id : "",
-                    })
-                  }
-                />
-                <span className="text-xs font-medium text-app lg:hidden">
-                  {t("forms.paidImmediately")}
-                </span>
-              </label>
-
-              <label className="min-w-0">
-                <span className={`${FIELD_LABEL} lg:hidden`}>{t("forms.paymentAccount")}</span>
-                <select
-                  className={FIELD_INPUT}
-                  value={row.account_id}
-                  disabled={disabled || !row.paid_immediately}
-                  onChange={(e) => updateRow(row.id, { account_id: e.target.value })}
-                >
-                  <option value="">{t("forms.selectPaymentAccount")}</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex items-center justify-end lg:h-9">
-                <button
-                  type="button"
-                  className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-50"
-                  disabled={disabled}
-                  aria-label={t("common.delete")}
-                  onClick={() => removeRow(row.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] table-fixed border-collapse text-sm">
+            <colgroup>
+              <col className="w-[40%]" />
+              <col className="w-[20%]" />
+              <col className="w-[15%]" />
+              <col className="w-[20%]" />
+              <col className="w-[5%]" />
+            </colgroup>
+            <thead>
+              <tr className="text-left text-xs font-medium text-slate-700">
+                <th className="px-2 pb-2 font-medium">{t("forms.expenseLabel")}</th>
+                <th className="px-2 pb-2 font-medium">{t("common.amount")}</th>
+                <th className="px-2 pb-2 font-medium">{t("forms.payImmediately")}</th>
+                <th className="px-2 pb-2 font-medium">{t("forms.paymentAccount")}</th>
+                <th className="px-1 pb-2">
+                  <span className="sr-only">{t("common.delete")}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((row) => (
+                <tr key={row.id} className="align-middle">
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="text"
+                      className={FIELD_INPUT}
+                      value={row.label}
+                      disabled={disabled}
+                      placeholder={t("forms.expenseLabelPlaceholder")}
+                      onChange={(e) => updateRow(row.id, { label: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={FIELD_INPUT}
+                      value={row.amount || ""}
+                      disabled={disabled}
+                      onChange={(e) => updateRow(row.id, { amount: Number(e.target.value) || 0 })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <label
+                      className="flex h-9 items-center gap-2 whitespace-nowrap"
+                      title={t("forms.paidImmediately")}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 shrink-0"
+                        checked={row.paid_immediately}
+                        disabled={disabled}
+                        onChange={(e) =>
+                          updateRow(row.id, {
+                            paid_immediately: e.target.checked,
+                            account_id: e.target.checked ? row.account_id : "",
+                          })
+                        }
+                      />
+                      <span className="text-xs font-medium text-slate-700">
+                        {t("forms.payImmediately")}
+                      </span>
+                    </label>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <select
+                      className={FIELD_INPUT}
+                      value={row.account_id}
+                      disabled={disabled || !row.paid_immediately}
+                      onChange={(e) => updateRow(row.id, { account_id: e.target.value })}
+                    >
+                      <option value="">{t("forms.selectPaymentAccount")}</option>
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-1 py-1.5 text-center">
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                      disabled={disabled}
+                      aria-label={t("common.delete")}
+                      onClick={() => removeRow(row.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </section>
