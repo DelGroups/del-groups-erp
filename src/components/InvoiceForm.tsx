@@ -32,7 +32,6 @@ import {
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
-import QuickAddProductModal from "@/components/purchases/QuickAddProductModal";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
@@ -218,7 +217,6 @@ export default function UniversalInvoiceForm({
     { id: "1", account_id: "", method: "Nəğd", amount: 0 },
   ]);
   const [saving, setSaving] = useState(false);
-  const [quickAddProductRowId, setQuickAddProductRowId] = useState<string | null>(null);
   const [productSelectorOpen, setProductSelectorOpen] = useState(false);
   const [productSelectorTargetRowId, setProductSelectorTargetRowId] = useState<string | null>(
     null
@@ -291,7 +289,6 @@ export default function UniversalInvoiceForm({
     });
     setItems(createEmptySaleItems(5));
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
-    setQuickAddProductRowId(null);
     setProductSelectorOpen(false);
     setProductSelectorTargetRowId(null);
     setGlobalDiscountMode("percent");
@@ -525,11 +522,6 @@ export default function UniversalInvoiceForm({
       polywood_total_length_m: polywoodSummary.total,
       polywood_full_sheet_count: polywoodSummary.fullSheets,
     });
-  };
-
-  const handleQuickProductCreated = (product: Product, rowId: string) => {
-    setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
-    handleProductSelect(rowId, product);
   };
 
   const openProductSelectorModal = () => {
@@ -1223,35 +1215,25 @@ export default function UniversalInvoiceForm({
                   <tr key={row.id} className="overflow-visible">
                     <td className="px-3 py-3 font-mono text-app-muted">{idx + 1}</td>
                     <td className="relative overflow-visible px-3 py-3">
-                      <div className="flex min-w-[220px] gap-1">
-                        <div className="min-w-0 flex-1">
-                          <ProductCombobox
-                            instanceId={row.id}
-                            products={
-                              polywoodOnly
-                                ? products
-                                : filterProductsForWarehouse(products, row.warehouse_id, warehouses)
-                            }
-                            selectedId={row.product_id}
-                            selectedName={row.product_name}
-                            polywoodWarehouseId={
-                              isPolywoodWarehouseRow(row.warehouse_id, warehouses)
-                                ? row.warehouse_id
-                                : polywoodOnly
-                                  ? defaultWarehouse?.id || null
-                                  : null
-                            }
-                            onSelect={(prod) => void handleProductSelect(row.id, prod)}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setQuickAddProductRowId(row.id)}
-                          title={t("invoice.createProduct")}
-                          className="flex shrink-0 items-center justify-center self-start rounded border border-emerald-200 bg-emerald-50 px-2 py-2 text-emerald-700 hover:bg-emerald-100"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
+                      <div className="min-w-[220px]">
+                        <ProductCombobox
+                          instanceId={row.id}
+                          products={
+                            polywoodOnly
+                              ? products
+                              : filterProductsForWarehouse(products, row.warehouse_id, warehouses)
+                          }
+                          selectedId={row.product_id}
+                          selectedName={row.product_name}
+                          polywoodWarehouseId={
+                            isPolywoodWarehouseRow(row.warehouse_id, warehouses)
+                              ? row.warehouse_id
+                              : polywoodOnly
+                                ? defaultWarehouse?.id || null
+                                : null
+                          }
+                          onSelect={(prod) => void handleProductSelect(row.id, prod)}
+                        />
                       </div>
                     </td>
                     {!polywoodOnly ? (
@@ -1489,8 +1471,8 @@ export default function UniversalInvoiceForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="flex flex-col gap-4 lg:col-span-2">
+        <div className="flex flex-col items-start gap-6 lg:flex-row">
+          <div className="flex w-full flex-col gap-4 lg:w-2/3">
           <div className={`${INVOICE_CARD} space-y-3`}>
             <h4 className="flex items-center gap-1.5 border-b border-app pb-2 text-sm font-bold text-app">
               <Truck className="h-4 w-4 shrink-0 text-app-accent" />
@@ -1622,8 +1604,8 @@ export default function UniversalInvoiceForm({
           </div>
           </div>
 
-          <div className="lg:col-span-1 lg:self-start">
-            <div className="sticky top-6 flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
+          <div className="sticky top-6 h-fit w-full self-start lg:w-1/3">
+            <div className="flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-4 text-slate-100">
                   <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
@@ -1760,16 +1742,6 @@ export default function UniversalInvoiceForm({
         </div>
       </div>
     </div>
-
-    {quickAddProductRowId && (
-      <QuickAddProductModal
-        onClose={() => setQuickAddProductRowId(null)}
-        onCreated={(product) => {
-          handleQuickProductCreated(product as Product, quickAddProductRowId);
-          setQuickAddProductRowId(null);
-        }}
-      />
-    )}
 
     {productSelectorOpen && productSelectorTargetRowId && !polywoodOnly ? (
       <InvoiceProductSelectorModal
