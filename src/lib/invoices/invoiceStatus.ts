@@ -6,7 +6,29 @@ const CANCELLED_STATUSES = new Set([
   "voided",
 ]);
 
+export type SalesDocumentStatus = "draft" | "posted" | "cancelled";
+export type SalesPaymentType = "cash" | "credit" | "bank_transfer";
+export type SalesCurrency = "AZN" | "USD" | "EUR";
+
 export function isInvoiceCancelled(status: string | null | undefined): boolean {
   if (!status) return false;
   return CANCELLED_STATUSES.has(status.trim().toLowerCase());
+}
+
+/** Legacy invoices with a blank status were created by the posting RPC. */
+export function isSalesPosted(status: string | null | undefined): boolean {
+  if (!status || !status.trim()) return true;
+  return status.trim().toLowerCase() === "posted";
+}
+
+export function isSalesDraft(status: string | null | undefined): boolean {
+  return status?.trim().toLowerCase() === "draft";
+}
+
+export function normalizeSalesDocumentStatus(
+  status: string | null | undefined
+): SalesDocumentStatus {
+  if (isInvoiceCancelled(status)) return "cancelled";
+  if (isSalesDraft(status)) return "draft";
+  return "posted";
 }

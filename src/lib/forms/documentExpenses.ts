@@ -46,9 +46,24 @@ export function documentExpensesToRpcPayload(expenses: DocumentAdditionalExpense
     )
     .map((row) => ({
       id: row.id,
+      category_id: row.category_id?.trim() || null,
       label: row.label.trim(),
       amount: Number(row.amount) || 0,
       paid_immediately: Boolean(row.paid_immediately),
       account_id: row.paid_immediately ? row.account_id.trim() || null : null,
+    }));
+}
+
+export function parseDocumentAdditionalExpenses(value: unknown): DocumentAdditionalExpense[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((row): row is Record<string, unknown> => row != null && typeof row === "object")
+    .map((row) => ({
+      id: typeof row.id === "string" ? row.id : `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      category_id: typeof row.category_id === "string" ? row.category_id : "",
+      label: typeof row.label === "string" ? row.label : "",
+      amount: Number(row.amount) || 0,
+      paid_immediately: row.paid_immediately === true,
+      account_id: typeof row.account_id === "string" ? row.account_id : "",
     }));
 }

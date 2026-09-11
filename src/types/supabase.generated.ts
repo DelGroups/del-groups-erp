@@ -2242,6 +2242,11 @@ export type Database = {
           warehouse_sent_at: string | null
           warehouse_slip_id: string | null
           warehouse_slip_status: string | null
+          payment_type: string | null
+          due_date: string | null
+          currency: string | null
+          exchange_rate: number | null
+          posted_at: string | null
         }
         Insert: {
           additional_cost?: number | null
@@ -2278,6 +2283,11 @@ export type Database = {
           warehouse_sent_at?: string | null
           warehouse_slip_id?: string | null
           warehouse_slip_status?: string | null
+          payment_type?: string | null
+          due_date?: string | null
+          currency?: string | null
+          exchange_rate?: number | null
+          posted_at?: string | null
         }
         Update: {
           additional_cost?: number | null
@@ -2314,6 +2324,11 @@ export type Database = {
           warehouse_sent_at?: string | null
           warehouse_slip_id?: string | null
           warehouse_slip_status?: string | null
+          payment_type?: string | null
+          due_date?: string | null
+          currency?: string | null
+          exchange_rate?: number | null
+          posted_at?: string | null
         }
         Relationships: [
           {
@@ -2794,6 +2809,10 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      peek_next_sales_doc_no: { Args: { p_prefix?: string }; Returns: string }
+      next_sales_doc_no: { Args: { p_prefix?: string }; Returns: string }
+      post_sales_invoice_draft: { Args: { p_sale_id: string }; Returns: Json }
+      save_sales_invoice_draft: { Args: { p_payload: Json }; Returns: Json }
       process_sales_invoice_event: { Args: { p_payload: Json }; Returns: Json }
       production_material_line_cost: {
         Args: { p_line_cost: number; p_quantity: number; p_unit_cost: number }

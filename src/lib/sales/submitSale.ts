@@ -7,6 +7,7 @@ import { validateCashPaymentsRequireAccount } from "@/lib/finance/accountLedger"
 import { saleInvoiceIdempotencyKey } from "@/lib/finance/erpEvents";
 import {
   documentExpensesToRpcPayload,
+  sumDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +22,7 @@ import type { OfficialDocumentFields } from "@/lib/finance/officialTransaction";
 import { persistSaleOfficialFields } from "@/lib/finance/officialTransaction";
 import type { SaleInsert, SaleItem, SalePayment } from "@/types/database.types";
 import { toSalePaymentsJson } from "@/types/database.types";
+import type { SalesCurrency, SalesPaymentType } from "@/lib/invoices/invoiceStatus";
 
 export interface SubmitSalePayload {
   header: SaleInsert;
@@ -30,12 +32,20 @@ export interface SubmitSalePayload {
   decrementStock?: boolean;
   additionalExpenses?: DocumentAdditionalExpense[];
   officialFields?: OfficialDocumentFields;
+  mode?: "draft" | "post";
+  saleId?: string | null;
+  paymentType?: SalesPaymentType;
+  dueDate?: string | null;
+  currency?: SalesCurrency;
+  exchangeRate?: number;
 }
 
 export interface SubmitSaleResult {
   success: boolean;
   error?: string;
   saleId?: string;
+  docNo?: string;
+  status?: "draft" | "posted";
 }
 
 type CreateSaleAtomicItemPayload = {
@@ -100,6 +110,7 @@ type ProcessSalesInvoiceEventResponse = {
   doc_no?: string;
   event_id?: string;
   journal_entry_id?: string;
+  status?: string;
   items?: Array<{
     index?: number;
     id?: string;
@@ -188,6 +199,12 @@ function buildRpcPayload(payload: SubmitSalePayload, validItems: SaleItem[]) {
       ...headerWithoutCreatedBy,
       doc_no: payload.header.doc_no || payload.docNo,
       payments: paymentsJson,
+      payment_type: payload.paymentType || "cash",
+      due_date: payload.dueDate || null,
+      currency: payload.currency || "AZN",
+      exchange_rate: payload.exchangeRate ?? 1,
+      additional_expenses_total: sumDocumentAdditionalExpenses(payload.additionalExpenses || []),
+      status: payload.mode === "draft" ? "draft" : "posted",
     },
     items: validItems.map((item) => mapSaleItemToRpcPayload(item, decrementStock)),
     payments: payload.payments.map((pay) => ({
@@ -283,6 +300,37 @@ async function applyDimensionalAndAccessoryDeductions(
   return { ok: true };
 }
 
+async function persistOfficialAndCommissions(
+  payload: SubmitSalePayload,
+  saleId: string,
+  docNo: string,
+  validItems: SaleItem[],
+  recordCommissions: boolean
+): Promise<SubmitSaleResult | null> {
+  if (recordCommissions) {
+    await recordSaleCommissions(
+      saleId,
+      docNo,
+      payload.header.seller_id,
+      payload.header.seller_name,
+      validItems
+    );
+  }
+
+  if (payload.officialFields) {
+    const persisted = await persistSaleOfficialFields(saleId, payload.officialFields);
+    if (!persisted.ok) {
+      return {
+        success: false,
+        saleId,
+        error: persisted.error || "Rəsmi əməliyyat sahələri saxlanmadı",
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSaleResult> {
   const validItems = payload.items
     .filter((i) => i.product_id || i.product_name.trim())
@@ -298,11 +346,139 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
   }
 
   const paymentCheck = validateCashPaymentsRequireAccount(payload.payments);
-  if (!paymentCheck.ok) {
+  if (payload.mode !== "draft" && !paymentCheck.ok) {
     return { success: false, error: paymentCheck.error };
   }
 
   const rpcPayload = buildRpcPayload(payload, validItems);
+  const mode = payload.mode || "post";
+
+  if (mode === "draft") {
+    const { data, error } = await supabase.rpc("save_sales_invoice_draft", {
+      p_payload: { ...rpcPayload, sale_id: payload.saleId || null },
+    });
+    if (error) return { success: false, error: error.message };
+    const result = (data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    if (result && result.success === false && result.error) {
+      return { success: false, error: String(result.error) };
+    }
+    const saleId = result?.sale_id ? String(result.sale_id) : "";
+    if (!saleId) {
+      return { success: false, error: "Satış draft RPC cavab vermədi (sale_id yoxdur)" };
+    }
+    const officialError = await persistOfficialAndCommissions(
+      payload,
+      saleId,
+      result?.doc_no ? String(result.doc_no) : payload.docNo,
+      validItems,
+      false
+    );
+    if (officialError) return officialError;
+    return {
+      success: true,
+      saleId,
+      docNo: result?.doc_no ? String(result.doc_no) : payload.docNo,
+      status: "draft",
+    };
+  }
+
+  if (payload.saleId) {
+    const saved = await supabase.rpc("save_sales_invoice_draft", {
+      p_payload: { ...rpcPayload, sale_id: payload.saleId },
+    });
+    if (saved.error) return { success: false, error: saved.error.message };
+    const savedResult = (saved.data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    if (savedResult && savedResult.success === false && savedResult.error) {
+      return { success: false, error: String(savedResult.error) };
+    }
+
+    const { data, error } = await supabase.rpc("post_sales_invoice_draft", {
+      p_sale_id: payload.saleId,
+    });
+    if (error) return { success: false, error: error.message };
+    const result = (data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    if (result && result.success === false && result.error) {
+      return { success: false, error: String(result.error) };
+    }
+
+    const saleId = payload.saleId;
+    const docNo = result?.doc_no ? String(result.doc_no) : payload.docNo;
+
+    if (payload.decrementStock !== false) {
+      const dimensional = await applyDimensionalAndAccessoryDeductions(
+        validItems,
+        savedResult?.items
+      );
+      if (!dimensional.ok) {
+        return {
+          success: false,
+          saleId,
+          error: `${dimensional.error} (Satış #${docNo} təsdiqləndi, amma anbar əməliyyatı tamamlanmadı)`,
+        };
+      }
+    }
+
+    const officialError = await persistOfficialAndCommissions(
+      payload,
+      saleId,
+      docNo,
+      validItems,
+      true
+    );
+    if (officialError) return officialError;
+    return { success: true, saleId, docNo, status: "posted" };
+  }
+
+  if (mode === "post") {
+    const saved = await supabase.rpc("save_sales_invoice_draft", {
+      p_payload: { ...rpcPayload, sale_id: null },
+    });
+    if (saved.error) return { success: false, error: saved.error.message };
+    const savedResult = (saved.data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    if (savedResult && savedResult.success === false && savedResult.error) {
+      return { success: false, error: String(savedResult.error) };
+    }
+    const draftId = savedResult?.sale_id ? String(savedResult.sale_id) : "";
+    if (!draftId) {
+      return { success: false, error: "Satış draft RPC cavab vermədi (sale_id yoxdur)" };
+    }
+
+    const { data, error } = await supabase.rpc("post_sales_invoice_draft", {
+      p_sale_id: draftId,
+    });
+    if (error) return { success: false, error: error.message };
+    const result = (data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    if (result && result.success === false && result.error) {
+      return { success: false, error: String(result.error) };
+    }
+
+    const docNo = result?.doc_no ? String(result.doc_no) : savedResult?.doc_no ? String(savedResult.doc_no) : payload.docNo;
+
+    if (payload.decrementStock !== false) {
+      const dimensional = await applyDimensionalAndAccessoryDeductions(
+        validItems,
+        savedResult?.items
+      );
+      if (!dimensional.ok) {
+        return {
+          success: false,
+          saleId: draftId,
+          error: `${dimensional.error} (Satış #${docNo} təsdiqləndi, amma anbar əməliyyatı tamamlanmadı)`,
+        };
+      }
+    }
+
+    const officialError = await persistOfficialAndCommissions(
+      payload,
+      draftId,
+      docNo,
+      validItems,
+      true
+    );
+    if (officialError) return officialError;
+    return { success: true, saleId: draftId, docNo, status: "posted" };
+  }
+
   console.log("SALE_PAYLOAD_ITEMS:", rpcPayload.items);
 
   const { data, error } = await supabase.rpc("process_sales_invoice_event", {
@@ -325,6 +501,18 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
 
   const docNo = result?.doc_no ? String(result.doc_no) : payload.docNo;
 
+  await supabase
+    .from("sales")
+    .update({
+      status: "posted",
+      posted_at: new Date().toISOString(),
+      payment_type: payload.paymentType || "cash",
+      due_date: payload.dueDate || null,
+      currency: payload.currency || "AZN",
+      exchange_rate: payload.exchangeRate ?? 1,
+    })
+    .eq("id", saleId);
+
   if (payload.decrementStock !== false) {
     const dimensional = await applyDimensionalAndAccessoryDeductions(validItems, result?.items);
     if (!dimensional.ok) {
@@ -336,24 +524,8 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
     }
   }
 
-  await recordSaleCommissions(
-    saleId,
-    docNo,
-    payload.header.seller_id,
-    payload.header.seller_name,
-    validItems
-  );
+  const officialError = await persistOfficialAndCommissions(payload, saleId, docNo, validItems, true);
+  if (officialError) return officialError;
 
-  if (payload.officialFields) {
-    const persisted = await persistSaleOfficialFields(saleId, payload.officialFields);
-    if (!persisted.ok) {
-      return {
-        success: false,
-        saleId,
-        error: persisted.error || "Rəsmi əməliyyat sahələri saxlanmadı",
-      };
-    }
-  }
-
-  return { success: true, saleId };
+  return { success: true, saleId, docNo, status: "posted" };
 }

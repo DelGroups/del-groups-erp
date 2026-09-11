@@ -28,10 +28,23 @@ import {
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import DocumentAdditionalExpensesSection from "@/components/documents/DocumentAdditionalExpensesSection";
 import {
+  parseDocumentAdditionalExpenses,
   sumDocumentAdditionalExpenses,
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
+import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
+import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
+import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
+import { fetchSaleById, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchPartnerNetBalance } from "@/lib/partners/fetchPartners";
+import {
+  isSalesDraft,
+  isSalesPosted,
+  type SalesCurrency,
+  type SalesDocumentStatus,
+  type SalesPaymentType,
+} from "@/lib/invoices/invoiceStatus";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
@@ -72,9 +85,12 @@ import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import {
   Building2,
+  CheckCircle2,
+  ClipboardList,
   CreditCard,
+  FileText,
   Plus,
-  Save,
+  Printer,
   Trash2,
   Truck,
   User,
@@ -88,6 +104,9 @@ export interface InvoiceFormProps {
   onSuccess?: () => void;
   defaultType?: "sale" | "purchase" | "consignment";
   invoiceMode?: "standard" | "polywood";
+  layoutMode?: "modal" | "page";
+  draftId?: string | null;
+  onDraftSaved?: (saleId: string, docNo: string) => void;
 }
 
 interface Employee {
@@ -173,11 +192,16 @@ const INVOICE_INPUT =
 const INVOICE_TEXTAREA =
   "mt-1 w-full rounded-lg border border-app bg-app-card px-3 py-2 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]";
 
+type InvoiceBottomTab = "delivery" | "expenses" | "notes" | "payments";
+
 export default function UniversalInvoiceForm({
   isOpen,
   onClose,
   onSuccess,
   invoiceMode = "standard",
+  layoutMode = "modal",
+  draftId = null,
+  onDraftSaved,
 }: InvoiceFormProps) {
   const [docNo, setDocNo] = useState("");
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
@@ -200,6 +224,15 @@ export default function UniversalInvoiceForm({
   const [deliveryType, setDeliveryType] = useState<"paid" | "free">("free");
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [notes, setNotes] = useState("");
+  const [savedSaleId, setSavedSaleId] = useState<string | null>(null);
+  const [documentStatus, setDocumentStatus] = useState<SalesDocumentStatus>("draft");
+  const [paymentType, setPaymentType] = useState<SalesPaymentType>("cash");
+  const [dueDate, setDueDate] = useState("");
+  const [currency, setCurrency] = useState<SalesCurrency>("AZN");
+  const [exchangeRate, setExchangeRate] = useState(1);
+  const [creditLimit, setCreditLimit] = useState(0);
+  const [openReceivables, setOpenReceivables] = useState(0);
+  const [bottomTab, setBottomTab] = useState<InvoiceBottomTab>("delivery");
 
   const [additionalExpenses, setAdditionalExpenses] = useState<DocumentAdditionalExpense[]>([]);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -228,6 +261,7 @@ export default function UniversalInvoiceForm({
   const [contractId, setContractId] = useState<string | null>(null);
   const [voenVerification, setVoenVerification] = useState("");
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
+  const invoicePrint = useInvoicePrintSystem();
   const { can, profile } = useAuth();
   const { t } = useI18n();
   const { config: taxConfig } = useTaxPayrollConfig();
@@ -264,11 +298,9 @@ export default function UniversalInvoiceForm({
   useEffect(() => {
     if (!isOpen) return;
 
-    setDocNo(
-      `${polywoodOnly ? "SPW" : "SS"}-${new Date().getFullYear()}-${Math.floor(
-        10000 + Math.random() * 90000
-      )}`
-    );
+    const prefix = polywoodOnly ? "SPW" : "SS";
+    const year = new Date().getFullYear();
+    setDocNo(`${prefix}-${year}-.....`);
     setDocDate(new Date().toISOString().slice(0, 10));
     setSelectedCustomerId("");
     setSelectedCustomer(null);
@@ -278,6 +310,15 @@ export default function UniversalInvoiceForm({
     setDeliveryType("free");
     setDeliveryFee(0);
     setNotes("");
+    setSavedSaleId(draftId || null);
+    setDocumentStatus("draft");
+    setPaymentType("cash");
+    setDueDate("");
+    setCurrency("AZN");
+    setExchangeRate(1);
+    setCreditLimit(0);
+    setOpenReceivables(0);
+    setBottomTab("delivery");
     setAdditionalExpenses([]);
     setShowAddCustomer(false);
     setNewCustomerData({
@@ -294,9 +335,16 @@ export default function UniversalInvoiceForm({
     setGlobalDiscountMode("percent");
     setGlobalDiscountValue(0);
     setVatMode(defaultVatMode(taxConfig.default_vat_rate));
-    void fetchInitialData();
+    void (async () => {
+      await fetchInitialData();
+      if (draftId) {
+        await hydrateDraft(draftId);
+      } else {
+        await assignPreviewDocNo();
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when the modal opens
-  }, [isOpen, polywoodOnly]);
+  }, [isOpen, polywoodOnly, draftId]);
 
   const fetchInitialData = async () => {
     if (polywoodOnly) {
@@ -356,12 +404,97 @@ export default function UniversalInvoiceForm({
     }
   };
 
+  const assignPreviewDocNo = async () => {
+    const prefix = polywoodOnly ? "SPW" : "SS";
+    const { data, error } = await supabase.rpc("peek_next_sales_doc_no", { p_prefix: prefix });
+    if (!error && typeof data === "string" && data.trim()) {
+      setDocNo(data);
+      return;
+    }
+    setDocNo(`${prefix}-${new Date().getFullYear()}-.....`);
+  };
+
+  const hydrateDraft = async (saleId: string) => {
+    const sale = await fetchSaleById(saleId);
+    if (!sale) {
+      showToastError(t("invoice.draftNotFound"));
+      return;
+    }
+    applySaleRecordToForm(sale);
+    if (sale.customer_id) {
+      const { data: customerRow } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", sale.customer_id)
+        .maybeSingle();
+      if (customerRow) setSelectedCustomer(customerRow as Customer);
+      void loadCustomerCredit(sale.customer_id);
+    }
+  };
+
+  const applySaleRecordToForm = (sale: SaleRecord) => {
+    setSavedSaleId(sale.id);
+    setDocNo(sale.doc_no || docNo);
+    setDocDate(sale.doc_date || new Date().toISOString().slice(0, 10));
+    setSelectedCustomerId(sale.customer_id || "");
+    setDeliveryAddress(sale.delivery_address || "");
+    setDeliveryType(sale.delivery_type === "paid" ? "paid" : "free");
+    setDeliveryFee(Number(sale.delivery_fee) || 0);
+    setNotes(sale.note || "");
+    setDocumentStatus(isSalesDraft(sale.status) ? "draft" : isSalesPosted(sale.status) ? "posted" : "draft");
+    setPaymentType(
+      sale.payment_type === "credit" || sale.payment_type === "bank_transfer"
+        ? sale.payment_type
+        : "cash"
+    );
+    setDueDate(sale.due_date ? sale.due_date.slice(0, 10) : "");
+    setCurrency(sale.currency === "USD" || sale.currency === "EUR" ? sale.currency : "AZN");
+    setExchangeRate(Number(sale.exchange_rate) || 1);
+    setAdditionalExpenses(parseDocumentAdditionalExpenses(sale.additional_expenses));
+    if (sale.items.length > 0) {
+      setItems(sale.items);
+    }
+    if (sale.payments.length > 0) {
+      setPayments(sale.payments);
+    }
+    if (sale.seller_id) {
+      setSelectedSellerId(sale.seller_id);
+      setSellerName(sale.seller_name || "");
+    }
+  };
+
+  const loadCustomerCredit = async (customerId: string) => {
+    const { data: partner } = await supabase
+      .from("partners")
+      .select("id, credit_limit")
+      .eq("customer_id", customerId)
+      .eq("is_deleted", false)
+      .maybeSingle();
+
+    const limit = Number((partner as { credit_limit?: number } | null)?.credit_limit) || 0;
+    setCreditLimit(limit);
+    const partnerId = (partner as { id?: string } | null)?.id;
+    if (partnerId) {
+      const balance = await fetchPartnerNetBalance(partnerId);
+      setOpenReceivables(balance.receivables);
+      return;
+    }
+    const customer = customers.find((c) => c.id === customerId);
+    setOpenReceivables(Number(customer?.balance) || 0);
+  };
+
   const handleCustomerChange = (id: string) => {
     setSelectedCustomerId(id);
     const found = customers.find((c) => c.id === id) || null;
     setSelectedCustomer(found);
     if (found?.address) setDeliveryAddress(found.address);
     if (isOfficial && found?.voen) setVoenVerification(found.voen);
+    if (id) {
+      void loadCustomerCredit(id);
+    } else {
+      setCreditLimit(0);
+      setOpenReceivables(0);
+    }
     if (!id) {
       setContractId(null);
       setVoenVerification("");
@@ -853,7 +986,13 @@ export default function UniversalInvoiceForm({
     onClose?.();
   };
 
-  const handleSubmit = async () => {
+  const documentLocked = Boolean(savedSaleId) && documentStatus === "posted";
+
+  const persistDocument = async (mode: "draft" | "post") => {
+    if (documentLocked) {
+      showToastError(t("invoice.postedLocked"));
+      return;
+    }
     if (!canSaveInvoice) {
       showToastError(t("invoice.noPermission"));
       return;
@@ -880,13 +1019,13 @@ export default function UniversalInvoiceForm({
       const product = (products ?? []).find((p) => p.id === item.product_id);
       return Number(product?.stock) || 0;
     });
-    if (lineIssue) {
+    if (mode === "post" && lineIssue) {
       showToastError(preflightMessage(t, lineIssue));
       return;
     }
 
     const paymentAccountIssue = validatePaymentRowsRequireAccount(payments);
-    if (paymentAccountIssue) {
+    if (mode === "post" && paymentType !== "credit" && paymentAccountIssue) {
       showToastError(preflightMessage(t, paymentAccountIssue));
       return;
     }
@@ -904,7 +1043,7 @@ export default function UniversalInvoiceForm({
       totals.paid_amount,
       displayTotals.grand_total
     );
-    if (paymentTotalIssue) {
+    if (mode === "post" && paymentTotalIssue) {
       showToastError(preflightMessage(t, paymentTotalIssue));
       return;
     }
@@ -935,7 +1074,7 @@ export default function UniversalInvoiceForm({
     });
 
     const salesPayload: SaleInsert = {
-      doc_no: docNo,
+      doc_no: docNo.includes(".....") ? "" : docNo,
       doc_date: docDate,
       customer_id: selectedCustomerId,
       customer_name: selectedCustomer ? customerLabel(selectedCustomer, t) : "",
@@ -956,13 +1095,32 @@ export default function UniversalInvoiceForm({
       created_at: new Date().toISOString(),
     };
 
+    const projectedReceivable =
+      openReceivables + Math.max(0, displayTotals.grand_total - totals.paid_amount);
+    if (mode === "post" && creditLimit > 0 && projectedReceivable > creditLimit) {
+      setSaving(false);
+      showToastError(
+        t("invoice.creditLimitExceeded", {
+          limit: creditLimit.toFixed(2),
+          used: projectedReceivable.toFixed(2),
+        })
+      );
+      return;
+    }
+
     const result = await submitSale({
       header: salesPayload,
       items: saleItems,
       payments,
-      docNo,
+      docNo: salesPayload.doc_no || docNo,
       additionalExpenses,
       officialFields,
+      mode,
+      saleId: savedSaleId,
+      paymentType,
+      dueDate: dueDate || null,
+      currency,
+      exchangeRate: currency === "AZN" ? 1 : exchangeRate,
     });
 
     if (!result.success) {
@@ -972,45 +1130,138 @@ export default function UniversalInvoiceForm({
     }
 
     setSaving(false);
-    showToastSuccess(t("invoice.saveSuccess"));
+    if (result.saleId) setSavedSaleId(result.saleId);
+    if (result.docNo) setDocNo(result.docNo);
+    setDocumentStatus(result.status === "posted" ? "posted" : "draft");
+
+    if (mode === "draft") {
+      showToastSuccess(t("invoice.draftSaveSuccess"));
+      if (result.saleId) onDraftSaved?.(result.saleId, result.docNo || docNo);
+      return;
+    }
+
+    showToastSuccess(t("invoice.postSuccess"));
     onSuccess?.();
-    handleClose();
+    if (layoutMode === "modal") handleClose();
+  };
+
+  const handlePrint = () => {
+    const saleItems = items.filter((i) => i.product_id || i.product_name.trim());
+    invoicePrint.requestPrint(
+      mapSaleToInvoicePrint({
+        id: savedSaleId || "draft",
+        doc_no: docNo,
+        doc_date: docDate,
+        customer_id: selectedCustomerId || null,
+        customer_name: selectedCustomer ? customerLabel(selectedCustomer, t) : t("invoice.anonymousCustomer"),
+        seller_name: sellerName || null,
+        warehouse_name: items.find((i) => i.warehouse_name)?.warehouse_name || defaultWarehouse?.name || "",
+        subtotal: totals.subtotal,
+        discount_total: displayTotals.discount_total,
+        vat_total: isOfficial ? officialAmounts.vat_amount : displayTotals.vat_total,
+        total_amount: displayTotals.grand_total,
+        paid_amount: totals.paid_amount,
+        remaining_balance: displayTotals.grand_total - totals.paid_amount,
+        delivery_address: deliveryAddress,
+        delivery_type: deliveryType,
+        delivery_fee: totals.delivery_cost,
+        note: notes,
+        created_at: null,
+        warehouse_sent: false,
+        warehouse_slip_status: null,
+        status: documentStatus,
+        is_official: isOfficial,
+        items: saleItems,
+        payments,
+      })
+    );
   };
 
   if (!isOpen) return null;
 
+  const formShellClass =
+    layoutMode === "page"
+      ? "w-full space-y-4 pb-8"
+      : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
+
+  const actionButtons = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <button
+        type="button"
+        onClick={handleClose}
+        className="rounded-lg border border-app bg-app-card px-4 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
+      >
+        {t("common.cancel")}
+      </button>
+      <button
+        type="button"
+        disabled={saving || documentLocked}
+        onClick={() => void persistDocument("draft")}
+        className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+      >
+        <FileText className="h-4 w-4" />
+        {saving ? t("common.saving") : t("invoice.saveDraft")}
+      </button>
+      <button
+        type="button"
+        disabled={saving || documentLocked || Boolean(salePreflightIssue)}
+        title={salePreflightHint}
+        onClick={() => void persistDocument("post")}
+        className="inline-flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        {saving ? t("common.saving") : t("invoice.postDocument")}
+      </button>
+      <button
+        type="button"
+        onClick={handlePrint}
+        className="inline-flex items-center gap-1 rounded-lg border border-app bg-app-card px-4 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
+      >
+        <Printer className="h-4 w-4" />
+        {t("common.print")}
+      </button>
+    </div>
+  );
+
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
-      <div className="my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm">
-        <div className="app-card flex items-center justify-between px-4 py-3">
-          <div>
-            <h2 className="text-sm font-bold text-app">
-              {polywoodOnly ? t("sales.polywoodInvoice") : t("invoice.newSaleTitle")}
-            </h2>
+    <div className={layoutMode === "page" ? "w-full" : "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4"}>
+      <div className={formShellClass}>
+        <div className="app-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-bold text-app">
+                {polywoodOnly ? t("sales.polywoodInvoice") : t("invoice.newSaleTitle")}
+              </h2>
+              <SalesDocumentStatusBadge status={documentStatus} />
+            </div>
             <p className="text-[11px] text-app-muted">
               {t("invoice.docNoLabel")}: <span className="font-mono font-semibold text-app-accent">{docNo}</span>
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
             <label className="font-semibold text-app-muted">
-              {t("common.date")}
+              {t("invoice.docDate")}
               <input
                 type="date"
                 value={docDate}
+                disabled={documentLocked}
                 onChange={(e) => setDocDate(e.target.value)}
-                className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app"
+                className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app disabled:opacity-60"
               />
             </label>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover hover:text-app"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            {layoutMode === "page" ? actionButtons : (
+              <button
+                type="button"
+                onClick={handleClose}
+                className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover hover:text-app"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
+        {layoutMode === "modal" ? <div className="px-0">{actionButtons}</div> : null}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="app-card space-y-2 p-4 text-xs">
@@ -1135,9 +1386,71 @@ export default function UniversalInvoiceForm({
                 <p>
                   <strong>{t("invoice.voen")}:</strong> {selectedCustomer.voen || "-"}
                 </p>
+                {creditLimit > 0 ? (
+                  <p className={openReceivables + Math.max(0, displayTotals.grand_total - totals.paid_amount) > creditLimit ? "font-semibold text-rose-600" : ""}>
+                    <strong>{t("invoice.creditLimit")}:</strong>{" "}
+                    {creditLimit.toFixed(2)} {t("common.currency")} · {t("invoice.openReceivables")}:{" "}
+                    {openReceivables.toFixed(2)}
+                  </p>
+                ) : null}
               </div>
             )}
           </div>
+        </div>
+
+        <div className="app-card grid grid-cols-1 gap-3 p-4 text-xs md:grid-cols-4">
+          <label className="min-w-0">
+            <span className={INVOICE_LABEL}>{t("invoice.paymentTerms")}</span>
+            <select
+              value={paymentType}
+              disabled={documentLocked}
+              onChange={(e) => setPaymentType(e.target.value as SalesPaymentType)}
+              className={INVOICE_INPUT}
+            >
+              <option value="cash">{t("invoice.paymentTypeCash")}</option>
+              <option value="credit">{t("invoice.paymentTypeCredit")}</option>
+              <option value="bank_transfer">{t("invoice.paymentTypeBank")}</option>
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className={INVOICE_LABEL}>{t("invoice.dueDate")}</span>
+            <input
+              type="date"
+              value={dueDate}
+              disabled={documentLocked}
+              onChange={(e) => setDueDate(e.target.value)}
+              className={INVOICE_INPUT}
+            />
+          </label>
+          <label className="min-w-0">
+            <span className={INVOICE_LABEL}>{t("invoice.currency")}</span>
+            <select
+              value={currency}
+              disabled={documentLocked}
+              onChange={(e) => {
+                const next = e.target.value as SalesCurrency;
+                setCurrency(next);
+                if (next === "AZN") setExchangeRate(1);
+              }}
+              className={INVOICE_INPUT}
+            >
+              <option value="AZN">AZN</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className={INVOICE_LABEL}>{t("invoice.exchangeRate")}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.0001"
+              value={exchangeRate}
+              disabled={documentLocked || currency === "AZN"}
+              onChange={(e) => setExchangeRate(Number(e.target.value) || 1)}
+              className={`${INVOICE_INPUT} font-mono`}
+            />
+          </label>
         </div>
 
         <div className="px-0">
@@ -1472,7 +1785,33 @@ export default function UniversalInvoiceForm({
         </div>
 
         <div className="flex flex-col items-start gap-6 lg:flex-row">
-          <div className="flex w-full flex-col gap-4 lg:w-2/3">
+          <div className="flex w-full flex-col gap-3 lg:w-[60%]">
+            <div className="flex flex-wrap gap-1 rounded-xl border border-app bg-app-card p-1">
+              {(
+                [
+                  ["delivery", t("invoice.delivery"), Truck],
+                  ["expenses", t("forms.additionalExpenses"), ClipboardList],
+                  ["notes", t("invoice.operationNotes"), FileText],
+                  ["payments", t("invoice.multiPayment"), CreditCard],
+                ] as const
+              ).map(([id, label, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setBottomTab(id)}
+                  className={`inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold ${
+                    bottomTab === id
+                      ? "bg-[image:var(--app-gradient)] text-white"
+                      : "text-app-muted hover:bg-app-card-hover"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="truncate">{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {bottomTab === "delivery" ? (
           <div className={`${INVOICE_CARD} space-y-3`}>
             <h4 className="flex items-center gap-1.5 border-b border-app pb-2 text-sm font-bold text-app">
               <Truck className="h-4 w-4 shrink-0 text-app-accent" />
@@ -1483,6 +1822,7 @@ export default function UniversalInvoiceForm({
               <input
                 type="text"
                 value={deliveryAddress}
+                disabled={documentLocked}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder={t("invoice.addressPlaceholder")}
                 className={INVOICE_INPUT}
@@ -1492,6 +1832,7 @@ export default function UniversalInvoiceForm({
               <span className={INVOICE_LABEL}>{t("invoice.deliveryType")}</span>
               <select
                 value={deliveryType}
+                disabled={documentLocked}
                 onChange={(e) => setDeliveryType(e.target.value as "paid" | "free")}
                 className={INVOICE_INPUT}
               >
@@ -1507,30 +1848,43 @@ export default function UniversalInvoiceForm({
                   step="0.01"
                   min="0"
                   value={deliveryFee}
+                  disabled={documentLocked}
                   onChange={(e) => setDeliveryFee(Number(e.target.value) || 0)}
                   className={`${INVOICE_INPUT} font-mono`}
                 />
               </label>
             )}
-            <label className="block min-w-0">
-              <span className={INVOICE_LABEL}>{t("common.notes")}</span>
-              <textarea
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className={INVOICE_TEXTAREA}
-              />
-            </label>
           </div>
+            ) : null}
 
+            {bottomTab === "expenses" ? (
           <DocumentAdditionalExpensesSection
             expenses={additionalExpenses}
             onChange={setAdditionalExpenses}
             accounts={accounts}
-            disabled={saving}
+            disabled={saving || documentLocked}
             className="text-xs"
           />
+            ) : null}
 
+            {bottomTab === "notes" ? (
+              <div className={`${INVOICE_CARD} space-y-3`}>
+                <h4 className="flex items-center gap-1.5 border-b border-app pb-2 text-sm font-bold text-app">
+                  <FileText className="h-4 w-4 shrink-0 text-app-accent" />
+                  <span className="truncate">{t("invoice.operationNotes")}</span>
+                </h4>
+                <textarea
+                  rows={6}
+                  value={notes}
+                  disabled={documentLocked}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={t("invoice.notePlaceholder")}
+                  className={INVOICE_TEXTAREA}
+                />
+              </div>
+            ) : null}
+
+            {bottomTab === "payments" ? (
           <div className={`${INVOICE_CARD} space-y-3`}>
             <div className="flex items-center justify-between gap-2 border-b border-app pb-2">
               <h4 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-app">
@@ -1540,6 +1894,7 @@ export default function UniversalInvoiceForm({
               <button
                 type="button"
                 onClick={addPaymentRow}
+                disabled={documentLocked}
                 className="btn-secondary flex shrink-0 items-center gap-1 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1555,6 +1910,7 @@ export default function UniversalInvoiceForm({
                 >
                   <select
                     value={p.account_id}
+                    disabled={documentLocked}
                     onChange={(e) => handleAccountChange(p.id, e.target.value)}
                     className={`${INVOICE_INPUT} min-w-[60%] w-[60%] shrink-0`}
                   >
@@ -1571,6 +1927,7 @@ export default function UniversalInvoiceForm({
                     min="0"
                     placeholder={t("invoice.amountPlaceholder")}
                     value={p.amount}
+                    disabled={documentLocked}
                     onChange={(e) =>
                       updatePayment(p.id, { amount: Number(e.target.value) || 0 })
                     }
@@ -1578,6 +1935,7 @@ export default function UniversalInvoiceForm({
                   />
                   <button
                     type="button"
+                    disabled={documentLocked}
                     onClick={() => removePaymentRow(p.id)}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
                     aria-label={t("common.delete")}
@@ -1591,20 +1949,21 @@ export default function UniversalInvoiceForm({
               <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                 <span className="text-app-muted">{t("invoice.paidTotal")}</span>
                 <span className="font-mono tabular-nums text-emerald-600">
-                  {totals.paid_amount.toFixed(2)} {t("common.currency")}
+                  {totals.paid_amount.toFixed(2)} {currency}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                 <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
                 <span className="font-mono tabular-nums text-rose-600">
-                  {totals.remaining_balance.toFixed(2)} {t("common.currency")}
+                  {totals.remaining_balance.toFixed(2)} {currency}
                 </span>
               </div>
             </div>
           </div>
+            ) : null}
           </div>
 
-          <div className="sticky top-6 h-fit w-full self-start lg:w-1/3">
+          <div className="sticky top-6 h-fit w-full self-start lg:w-[40%]">
             <div className="flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-4 text-slate-100">
@@ -1712,30 +2071,10 @@ export default function UniversalInvoiceForm({
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="text-base font-bold text-white">{t("invoice.grandTotal")}</span>
                     <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-emerald-300">
-                      {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
+                      {displayTotals.grand_total.toFixed(2)} {currency}
                     </span>
                   </div>
                 )}
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  disabled={saving || Boolean(salePreflightIssue)}
-                  title={salePreflightHint}
-                  onClick={handleSubmit}
-                  className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2 font-bold hover:brightness-110 disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? t("common.saving") : t("invoice.confirmSave")}
-                </button>
               </div>
             </div>
           </div>
@@ -1762,6 +2101,14 @@ export default function UniversalInvoiceForm({
     ) : null}
 
     <ToastMessage message={toastMessage} variant={toastVariant} />
+    <InvoicePrintSystem
+      branding={invoicePrint.branding}
+      modalOpen={invoicePrint.modalOpen}
+      pendingData={invoicePrint.pendingData}
+      printPayload={invoicePrint.printPayload}
+      closeModal={invoicePrint.closeModal}
+      confirmPrint={invoicePrint.confirmPrint}
+    />
     </>
   );
 }

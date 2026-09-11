@@ -3,7 +3,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import Link from "next/link";
-import UniversalInvoiceForm from "@/components/InvoiceForm";
+import { useRouter } from "next/navigation";
+import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
+import { isSalesDraft } from "@/lib/invoices/invoiceStatus";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
@@ -34,11 +36,11 @@ import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function SalesListPage() {
+  const router = useRouter();
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
   const [voidTarget, setVoidTarget] = useState<SaleRecord | null>(null);
@@ -169,7 +171,7 @@ export default function SalesListPage() {
           title={t("sales.title")}
           description={t("sales.description")}
           createLabel={t("sales.createLabel")}
-          onCreate={() => setIsFormOpen(true)}
+          onCreate={() => router.push("/sales/new")}
           createDisabled={!canCreateInvoice}
           extraActions={
             <>
@@ -227,6 +229,7 @@ export default function SalesListPage() {
                       <th className="px-4 py-3">{t("sales.totalAmount")}</th>
                       <th className="px-4 py-3">{t("sales.paid")}</th>
                       <th className="px-4 py-3">{t("sales.remaining")}</th>
+                      <th className="px-4 py-3">{t("sales.docStatus")}</th>
                       <th className="px-4 py-3">{t("sales.sendStatus")}</th>
                       <th className="px-4 py-3 text-center">{t("common.actions")}</th>
                     </tr>
@@ -280,6 +283,9 @@ export default function SalesListPage() {
                           />
                         </td>
                         <td className="px-4 py-3">
+                          <SalesDocumentStatusBadge status={sale.status} />
+                        </td>
+                        <td className="px-4 py-3">
                           <WarehouseSendBadge
                             warehouseSent={sale.warehouse_sent === true}
                             warehouseSlipStatus={sale.warehouse_slip_status ?? null}
@@ -289,6 +295,11 @@ export default function SalesListPage() {
                           <DocumentListActions
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
+                            onEdit={
+                              isSalesDraft(sale.status)
+                                ? () => router.push(`/sales/new?draft=${sale.id}`)
+                                : undefined
+                            }
                             onPayment={() => void openPayment(sale)}
                             extra={
                               <EQaimeExportButton
@@ -327,18 +338,6 @@ export default function SalesListPage() {
             )}
           </div>
         </main>
-
-      {isFormOpen ? (
-        <UniversalInvoiceForm
-          isOpen
-          defaultType="sale"
-          onClose={() => setIsFormOpen(false)}
-          onSuccess={() => {
-            setIsFormOpen(false);
-            void loadData();
-          }}
-        />
-      ) : null}
 
       {viewingSale && (
         <SalesViewModal

@@ -39,12 +39,18 @@ export interface SaleRecord {
   vat_rate?: number | null;
   vat_amount?: number | null;
   grand_total?: number | null;
+  additional_expenses?: unknown;
+  additional_expenses_total?: number;
+  payment_type?: string | null;
+  due_date?: string | null;
+  currency?: string | null;
+  exchange_rate?: number | null;
   items: SaleItem[];
   payments: SalePayment[];
 }
 
 const SALES_LIST_SELECT =
-  "id, doc_no, doc_date, customer_id, customer_name, seller_id, seller_name, created_by, issued_by, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, sale_items (warehouse_name)";
+  "id, doc_no, doc_date, customer_id, customer_name, seller_id, seller_name, created_by, issued_by, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total, payment_type, due_date, currency, exchange_rate, additional_expenses, additional_expenses_total, sale_items (warehouse_name)";
 
 const SALES_LIST_SELECT_NO_ITEMS =
   "id, doc_no, doc_date, customer_id, customer_name, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_address, delivery_type, delivery_fee, note, notes, created_at, warehouse_sent, warehouse_slip_status, status, payments, is_official, contract_id, vat_mode, subtotal_amount, vat_rate, vat_amount, grand_total";
@@ -191,6 +197,12 @@ function mapSaleRow(row: SalesListRow): SaleRecord | null {
     vat_rate: row.vat_rate != null ? toAmount(row.vat_rate) : null,
     vat_amount: row.vat_amount != null ? toAmount(row.vat_amount) : null,
     grand_total: row.grand_total != null ? toAmount(row.grand_total) : null,
+    additional_expenses: row.additional_expenses,
+    additional_expenses_total: toAmount(row.additional_expenses_total),
+    payment_type: typeof row.payment_type === "string" ? row.payment_type : null,
+    due_date: typeof row.due_date === "string" ? row.due_date : null,
+    currency: typeof row.currency === "string" ? row.currency : null,
+    exchange_rate: row.exchange_rate != null ? toAmount(row.exchange_rate) : null,
     items: [],
     payments: normalizePayments(row.payments),
   };
