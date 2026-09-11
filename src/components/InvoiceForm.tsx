@@ -167,6 +167,13 @@ function roundPrice(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+const INVOICE_CARD = "app-card flex h-full flex-col rounded-xl p-4 text-xs";
+const INVOICE_LABEL = "mb-1 block text-xs font-medium text-app";
+const INVOICE_INPUT =
+  "h-9 w-full rounded-lg border border-app bg-app-card px-3 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]";
+const INVOICE_TEXTAREA =
+  "mt-1 w-full rounded-lg border border-app bg-app-card px-3 py-2 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]";
+
 export default function UniversalInvoiceForm({
   isOpen,
   onClose,
@@ -1159,26 +1166,26 @@ export default function UniversalInvoiceForm({
         </div>
 
         <div className="app-table-wrap overflow-visible">
-          <div className="flex flex-wrap items-center justify-between gap-2 app-toolbar px-4 py-2.5 text-xs font-bold">
-            <span>{t("invoice.invoiceItems")}</span>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 app-toolbar px-4 py-3 text-xs font-bold">
+            <span className="min-w-0 truncate">{t("invoice.invoiceItems")}</span>
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
               {!polywoodOnly ? (
                 <button
                   type="button"
                   onClick={openProductSelectorModal}
-                  className="flex items-center gap-1.5 rounded-lg bg-[image:var(--app-gradient)] px-3 py-1.5 text-[11px] font-bold text-white shadow-sm hover:brightness-110"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[image:var(--app-gradient)] px-3 text-xs font-bold text-white shadow-sm hover:brightness-110"
                 >
-                  <Plus className="h-4 w-4" />
-                  {t("invoice.productSelector.openModalButton")}
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
                 </button>
               ) : null}
               <button
                 type="button"
                 onClick={addRow}
-                className="flex items-center gap-1 rounded border border-app bg-app-card px-2.5 py-1.5 text-[11px] font-semibold text-app hover:bg-app-card-hover"
+                className="inline-flex h-9 items-center gap-1 rounded-lg border border-app bg-app-card px-3 text-xs font-semibold text-app hover:bg-app-card-hover"
               >
-                <Plus className="h-3.5 w-3.5" />
-                {t("forms.addRow")}
+                <Plus className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{t("forms.addRow")}</span>
               </button>
             </div>
           </div>
@@ -1198,24 +1205,24 @@ export default function UniversalInvoiceForm({
             <table className="w-full text-left text-xs">
               <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
                 <tr>
-                  <th className="p-2.5 w-8">№</th>
-                  <th className="p-2.5">{t("invoice.productName")}</th>
+                  <th className="px-3 py-3 w-8">№</th>
+                  <th className="px-3 py-3">{t("invoice.productName")}</th>
                   {!polywoodOnly ? (
-                    <th className="p-2.5 w-36">{t("common.warehouse")}</th>
+                    <th className="px-3 py-3 w-36">{t("common.warehouse")}</th>
                   ) : null}
-                  <th className="p-2.5 w-20">{t("forms.quantity")}</th>
-                  <th className="p-2.5 w-24">{t("forms.price")}</th>
-                  <th className="p-2.5 w-20">{t("invoice.lineDiscount")}</th>
-                  <th className="p-2.5 w-36">{t("invoice.info")}</th>
-                  <th className="p-2.5 w-24 text-right">{t("forms.lineTotal")}</th>
-                  <th className="p-2.5 w-10">{t("forms.remove")}</th>
+                  <th className="px-3 py-3 w-20">{t("forms.quantity")}</th>
+                  <th className="px-3 py-3 w-24">{t("forms.price")}</th>
+                  <th className="px-3 py-3 w-20">{t("invoice.lineDiscount")}</th>
+                  <th className="px-3 py-3 w-36">{t("invoice.info")}</th>
+                  <th className="px-3 py-3 w-24 text-right">{t("forms.lineTotal")}</th>
+                  <th className="px-3 py-3 w-10">{t("forms.remove")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
                 {items.map((row, idx) => (
                   <tr key={row.id} className="overflow-visible">
-                    <td className="p-2.5 font-mono text-app-muted">{idx + 1}</td>
-                    <td className="relative overflow-visible p-2.5">
+                    <td className="px-3 py-3 font-mono text-app-muted">{idx + 1}</td>
+                    <td className="relative overflow-visible px-3 py-3">
                       <div className="flex min-w-[220px] gap-1">
                         <div className="min-w-0 flex-1">
                           <ProductCombobox
@@ -1248,11 +1255,11 @@ export default function UniversalInvoiceForm({
                       </div>
                     </td>
                     {!polywoodOnly ? (
-                      <td className="p-2.5">
+                      <td className="px-3 py-3">
                         <select
                           value={row.warehouse_id}
                           onChange={(e) => handleWarehouseSelect(row.id, e.target.value)}
-                          className="w-full rounded border border-app p-1"
+                          className={INVOICE_INPUT}
                         >
                           <option value="">{t("invoice.warehouseOption")}</option>
                           {warehouses.map((w) => (
@@ -1268,7 +1275,7 @@ export default function UniversalInvoiceForm({
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="p-2.5 align-top">
+                    <td className="px-3 py-3 align-top">
                       {polywoodOnly && row.product_id ? (
                         <div className="mb-2 space-y-1 text-[10px] text-app-muted">
                           <p>
@@ -1420,7 +1427,7 @@ export default function UniversalInvoiceForm({
                         onChange={(e) =>
                           handleItemChange(row.id, { quantity: Number(e.target.value) || 0 })
                         }
-                        className="w-full rounded border border-app p-1 text-center"
+                        className={`${INVOICE_INPUT} text-center`}
                       />
                       {polywoodOnly && row.polywood_sale_mode ? (
                         <p className="mt-0.5 text-center text-[10px] text-app-muted">
@@ -1430,7 +1437,7 @@ export default function UniversalInvoiceForm({
                         </p>
                       ) : null}
                     </td>
-                    <td className="p-2.5">
+                    <td className="px-3 py-3">
                       <input
                         type="number"
                         step="0.01"
@@ -1438,10 +1445,10 @@ export default function UniversalInvoiceForm({
                         onChange={(e) =>
                           handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
                         }
-                        className="w-full rounded border border-app p-1 font-mono"
+                        className={`${INVOICE_INPUT} font-mono`}
                       />
                     </td>
-                    <td className="p-2.5">
+                    <td className="px-3 py-3">
                       <input
                         type="number"
                         step="0.1"
@@ -1451,22 +1458,22 @@ export default function UniversalInvoiceForm({
                             discount_percent: Number(e.target.value) || 0,
                           })
                         }
-                        className="w-full rounded border border-app p-1 text-center text-amber-700"
+                        className={`${INVOICE_INPUT} text-center text-amber-700`}
                       />
                     </td>
-                    <td className="p-2.5">
+                    <td className="px-3 py-3">
                       <input
                         type="text"
                         placeholder={t("invoice.notePlaceholder")}
                         value={row.extra_info}
                         onChange={(e) => handleItemChange(row.id, { extra_info: e.target.value })}
-                        className="w-full rounded border border-app p-1"
+                        className={INVOICE_INPUT}
                       />
                     </td>
-                    <td className="p-2.5 text-right font-mono font-bold">
+                    <td className="px-3 py-3 text-right font-mono font-bold tabular-nums">
                       {row.total.toFixed(2)}
                     </td>
-                    <td className="p-2.5 text-center">
+                    <td className="px-3 py-3 text-center">
                       <button
                         type="button"
                         onClick={() => removeRow(row.id)}
@@ -1483,52 +1490,52 @@ export default function UniversalInvoiceForm({
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-          <div className="app-card space-y-2 p-4 text-xs">
-            <h4 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
-              <Truck className="h-4 w-4 text-app-accent" />
-              {t("invoice.delivery")}
+          <div className={`${INVOICE_CARD} space-y-3`}>
+            <h4 className="flex items-center gap-1.5 border-b border-app pb-2 text-sm font-bold text-app">
+              <Truck className="h-4 w-4 shrink-0 text-app-accent" />
+              <span className="truncate">{t("invoice.delivery")}</span>
             </h4>
-            <label className="block font-semibold text-app-muted">
-              {t("invoice.deliveryAddress")}
+            <label className="block min-w-0">
+              <span className={INVOICE_LABEL}>{t("invoice.deliveryAddress")}</span>
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder={t("invoice.addressPlaceholder")}
-                className="mt-1 w-full rounded-lg border border-app p-2 font-normal"
+                className={INVOICE_INPUT}
               />
             </label>
-            <label className="block font-semibold text-app-muted">
-              {t("invoice.deliveryType")}
+            <label className="block min-w-0">
+              <span className={INVOICE_LABEL}>{t("invoice.deliveryType")}</span>
               <select
                 value={deliveryType}
                 onChange={(e) => setDeliveryType(e.target.value as "paid" | "free")}
-                className="mt-1 w-full rounded-lg border border-app bg-app-card-hover p-2 font-semibold"
+                className={INVOICE_INPUT}
               >
                 <option value="free">{t("invoice.deliveryFree")}</option>
                 <option value="paid">{t("invoice.deliveryPaid")}</option>
               </select>
             </label>
             {deliveryType === "paid" && (
-              <label className="block font-semibold text-app-muted">
-                {t("invoice.deliveryFee")}
+              <label className="block min-w-0">
+                <span className={INVOICE_LABEL}>{t("invoice.deliveryFee")}</span>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   value={deliveryFee}
                   onChange={(e) => setDeliveryFee(Number(e.target.value) || 0)}
-                  className="mt-1 w-full rounded-lg border border-app p-2 font-mono"
+                  className={`${INVOICE_INPUT} font-mono`}
                 />
               </label>
             )}
-            <label className="block font-semibold text-app-muted">
-              {t("common.notes")}
+            <label className="block min-w-0">
+              <span className={INVOICE_LABEL}>{t("common.notes")}</span>
               <textarea
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-app p-2 font-normal"
+                className={INVOICE_TEXTAREA}
               />
             </label>
           </div>
@@ -1541,75 +1548,91 @@ export default function UniversalInvoiceForm({
             className="text-xs"
           />
 
-          <div className="app-card space-y-2 p-4 text-xs">
-            <div className="flex items-center justify-between border-b border-app pb-2">
-              <h4 className="flex items-center gap-1.5 font-bold text-app">
-                <CreditCard className="h-4 w-4 text-emerald-600" />
-                {t("invoice.multiPayment")}
+          <div className={`${INVOICE_CARD} space-y-3`}>
+            <div className="flex items-center justify-between gap-2 border-b border-app pb-2">
+              <h4 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-app">
+                <CreditCard className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span className="truncate">{t("invoice.multiPayment")}</span>
               </h4>
               <button
                 type="button"
                 onClick={addPaymentRow}
-                className="flex items-center gap-1 text-[11px] font-bold text-app-accent"
+                className="btn-secondary flex shrink-0 items-center gap-1 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {t("invoice.addAccount")}
               </button>
             </div>
             <OfficialPaymentSplitBanner amounts={officialAmounts} isOfficial={isOfficial} />
-            {payments.map((p) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <select
-                  value={p.account_id}
-                  onChange={(e) => handleAccountChange(p.id, e.target.value)}
-                  className="w-1/2 rounded border border-app p-1.5"
+            <div className="space-y-2">
+              {payments.map((p) => (
+                <div
+                  key={p.id}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 rounded-xl border border-app bg-app-card-hover p-2"
                 >
-                  <option value="">{t("invoice.accountOption")}</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {formatTreasuryAccountLabel(acc, t)}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder={t("invoice.amountPlaceholder")}
-                  value={p.amount}
-                  onChange={(e) =>
-                    updatePayment(p.id, { amount: Number(e.target.value) || 0 })
-                  }
-                  className="w-1/2 rounded border border-app p-1.5 text-right font-mono font-bold"
-                />
-                <button
-                  type="button"
-                  onClick={() => removePaymentRow(p.id)}
-                  className="text-app-muted hover:text-rose-600"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-            <div className="flex justify-between border-t border-app pt-2 font-semibold">
-              <span className="text-app-muted">{t("invoice.paidTotal")}</span>
-              <span className="font-mono text-emerald-600">{totals.paid_amount.toFixed(2)} {t("common.currency")}</span>
+                  <select
+                    value={p.account_id}
+                    onChange={(e) => handleAccountChange(p.id, e.target.value)}
+                    className={INVOICE_INPUT}
+                  >
+                    <option value="">{t("invoice.accountOption")}</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {formatTreasuryAccountLabel(acc, t)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder={t("invoice.amountPlaceholder")}
+                    value={p.amount}
+                    onChange={(e) =>
+                      updatePayment(p.id, { amount: Number(e.target.value) || 0 })
+                    }
+                    className={`${INVOICE_INPUT} text-right font-mono font-bold`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePaymentRow(p.id)}
+                    className="flex h-9 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
+                    aria-label={t("common.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-between font-semibold">
-              <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
-              <span className="font-mono text-rose-600">{totals.remaining_balance.toFixed(2)} AZN</span>
+            <div className="mt-auto space-y-1 border-t border-app pt-2">
+              <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+                <span className="text-app-muted">{t("invoice.paidTotal")}</span>
+                <span className="font-mono tabular-nums text-emerald-600">
+                  {totals.paid_amount.toFixed(2)} {t("common.currency")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+                <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
+                <span className="font-mono tabular-nums text-rose-600">
+                  {totals.remaining_balance.toFixed(2)} {t("common.currency")}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col justify-between space-y-3 rounded-xl app-toolbar p-4 text-xs">
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-slate-300">
-                <span>{t("invoice.subtotal")}</span>
-                <span className="font-mono">{totals.subtotal.toFixed(2)}</span>
+          <div className="flex h-full flex-col justify-between gap-3 rounded-xl app-toolbar p-4 text-xs">
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-4 text-slate-100">
+                <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
+                <span className="shrink-0 font-mono text-sm tabular-nums">
+                  {totals.subtotal.toFixed(2)}
+                </span>
               </div>
-              <div className="flex justify-between text-rose-300">
-                <span>{t("invoice.lineDiscountTotal")}</span>
-                <span className="font-mono">-{displayTotals.line_discount_total.toFixed(2)}</span>
+              <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
+                <span className="shrink-0 font-mono text-sm tabular-nums">
+                  -{displayTotals.line_discount_total.toFixed(2)}
+                </span>
               </div>
               <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-300">
@@ -1636,17 +1659,19 @@ export default function UniversalInvoiceForm({
                   />
                 </div>
                 {displayTotals.global_discount_total > 0 ? (
-                  <div className="flex justify-between text-rose-200">
-                    <span>{t("invoice.globalDiscountApplied")}</span>
-                    <span className="font-mono">
+                  <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                    <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
+                    <span className="shrink-0 font-mono tabular-nums">
                       -{displayTotals.global_discount_total.toFixed(2)}
                     </span>
                   </div>
                 ) : null}
               </div>
-              <div className="flex justify-between text-rose-300">
-                <span>{t("invoice.discountTotal")}</span>
-                <span className="font-mono">-{displayTotals.discount_total.toFixed(2)}</span>
+              <div className="flex items-baseline justify-between gap-4 text-rose-200">
+                <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
+                <span className="shrink-0 font-mono text-sm tabular-nums">
+                  -{displayTotals.discount_total.toFixed(2)}
+                </span>
               </div>
               {isOfficial ? (
                 <div className="space-y-1 rounded-lg border border-white/10 bg-white/5 p-2">
@@ -1676,14 +1701,18 @@ export default function UniversalInvoiceForm({
                 </div>
               ) : null}
               {totals.delivery_cost > 0 && (
-                <div className="flex justify-between text-blue-300">
-                  <span>{t("invoice.deliveryCost")}</span>
-                  <span className="font-mono">+{totals.delivery_cost.toFixed(2)}</span>
+                <div className="flex items-baseline justify-between gap-4 text-blue-200">
+                  <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums">
+                    +{totals.delivery_cost.toFixed(2)}
+                  </span>
                 </div>
               )}
-              <div className="flex justify-between text-amber-300">
-                <span>{t("forms.additionalExpenses")}</span>
-                <span className="font-mono">+{additionalExpensesTotal.toFixed(2)}</span>
+              <div className="flex items-baseline justify-between gap-4 text-amber-200">
+                <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
+                <span className="shrink-0 font-mono text-sm tabular-nums">
+                  +{additionalExpensesTotal.toFixed(2)}
+                </span>
               </div>
               {isOfficial ? (
                 <OfficialTotalsBreakdown
@@ -1692,9 +1721,9 @@ export default function UniversalInvoiceForm({
                   dark
                 />
               ) : (
-                <div className="flex items-center justify-between border-t border-white/20 pt-2 text-sm font-bold">
-                  <span>{t("invoice.grandTotal")}</span>
-                  <span className="font-mono text-lg text-emerald-400">
+                <div className="flex items-baseline justify-between gap-4 border-t border-white/20 pt-3">
+                  <span className="text-sm font-bold text-white">{t("invoice.grandTotal")}</span>
+                  <span className="shrink-0 font-mono text-xl font-bold tabular-nums text-emerald-300">
                     {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
                   </span>
                 </div>
