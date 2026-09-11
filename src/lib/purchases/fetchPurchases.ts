@@ -111,6 +111,8 @@ export async function fetchPurchaseById(id: string): Promise<PurchaseRecord | nu
     debt_amount: Number(purchase.debt_amount) || 0,
     status: purchase.status,
     notes: purchase.notes,
+    due_date: (purchase as { due_date?: string | null }).due_date ?? null,
+    additional_expenses: (purchase as { additional_expenses?: unknown }).additional_expenses,
     created_at: purchase.created_at,
     warehouse_sent: purchase.warehouse_sent === true,
     warehouse_slip_status: (purchase.warehouse_slip_status as WarehouseSlipStatus) || null,

@@ -32,3 +32,26 @@ export function normalizeSalesDocumentStatus(
   if (isSalesDraft(status)) return "draft";
   return "posted";
 }
+
+export type PurchaseDocumentStatus = "draft" | "posted" | "cancelled";
+
+/** Legacy purchase invoices with blank or debtor/paid labels were posted immediately. */
+export function isPurchasePosted(status: string | null | undefined): boolean {
+  if (!status || !status.trim()) return true;
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "draft") return false;
+  if (isInvoiceCancelled(status)) return false;
+  return true;
+}
+
+export function isPurchaseDraft(status: string | null | undefined): boolean {
+  return status?.trim().toLowerCase() === "draft";
+}
+
+export function normalizePurchaseDocumentStatus(
+  status: string | null | undefined
+): PurchaseDocumentStatus {
+  if (isInvoiceCancelled(status)) return "cancelled";
+  if (isPurchaseDraft(status)) return "draft";
+  return "posted";
+}

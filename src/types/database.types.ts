@@ -736,6 +736,8 @@ export interface Purchase {
   debt_amount: number;
   status: string | null;
   notes?: string | null;
+  due_date?: string | null;
+  additional_expenses?: unknown;
   created_at: string | null;
   warehouse_sent?: boolean;
   warehouse_slip_status?: WarehouseSlipStatus | null;

@@ -1,11 +1,14 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import PurchaseForm from "@/components/purchases/PurchaseForm";
+import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocumentStatusBadge";
+import { isPurchaseDraft } from "@/lib/invoices/invoiceStatus";
 import PurchaseViewModal from "@/components/purchases/PurchaseViewModal";
 import PurchaseRequisitionsPanel from "@/components/purchases/PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
@@ -29,7 +32,8 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidPurchaseAction } from "@/lib/actions/entityDelete";
-import { ShoppingBag } from "lucide-react";
+import Button from "@/components/ui/button";
+import { Plus, ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
@@ -38,6 +42,7 @@ import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function PurchasesPage() {
+  const router = useRouter();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,7 +57,6 @@ export default function PurchasesPage() {
     useDocumentPrint<PurchaseRecord>();
   const { can } = useAuth();
   const { t } = useI18n();
-  const canCreatePurchase = can("can_create_purchase");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
@@ -85,15 +89,14 @@ export default function PurchasesPage() {
       (p.supplier_company || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const openCreate = () => {
-    setEditingPurchase(null);
-    setIsFormOpen(true);
-  };
-
   const openEditById = async (purchaseId: string) => {
     const full = await fetchPurchaseById(purchaseId);
     if (!full) {
       showError(t("common.notFound"));
+      return;
+    }
+    if (isPurchaseDraft(full.status)) {
+      router.push(`/purchases/new?draft=${full.id}`);
       return;
     }
     setEditingPurchase(full);
@@ -105,6 +108,10 @@ export default function PurchasesPage() {
     const full = await fetchPurchaseById(row.id);
     if (!full) {
       showError(t("common.notFound"));
+      return;
+    }
+    if (isPurchaseDraft(full.status)) {
+      router.push(`/purchases/new?draft=${full.id}`);
       return;
     }
     setEditingPurchase(full);
@@ -168,9 +175,12 @@ export default function PurchasesPage() {
           icon={<ShoppingBag className="h-6 w-6 text-emerald-600" />}
           title={t("purchases.title")}
           description={t("purchases.description")}
-          createLabel={t("purchases.createLabel")}
-          onCreate={openCreate}
-          createDisabled={!canCreatePurchase || warehouses.length === 0 || suppliers.length === 0}
+          extraActions={
+            <Button href="/purchases/new">
+              <Plus className="h-4 w-4" />
+              {t("purchases.createLabel")}
+            </Button>
+          }
         />
 
         <main className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -277,7 +287,9 @@ export default function PurchasesPage() {
                             totalRemainingLabel={t("official.totalRemaining")}
                           />
                         </td>
-                        <td className="px-4 py-3">{row.status || "-"}</td>
+                        <td className="px-4 py-3">
+                          <PurchaseDocumentStatusBadge status={row.status} />
+                        </td>
                         <td className="px-4 py-3">
                           <WarehouseSendBadge
                             warehouseSent={row.warehouse_sent === true}

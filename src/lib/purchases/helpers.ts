@@ -16,11 +16,11 @@ export function calcPurchasePaymentsTotal(payments: PurchasePaymentRow[]): numbe
   return payments.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 }
 
-/** Generates a unique purchase invoice number, e.g. PUR-2026-48291 */
+/** Fallback preview number when peek RPC is unavailable (not consumed until post). */
 export function generatePurchaseInvoiceNumber(): string {
   const year = new Date().getFullYear();
-  const seq = Math.floor(10000 + Math.random() * 90000);
-  return `PUR-${year}-${seq}`;
+  const seq = String(Math.floor(10000 + Math.random() * 90000)).padStart(5, "0");
+  return `AS-${year}-${seq}`;
 }
 
 export function createEmptyPurchaseLineItem(): PurchaseLineItem {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CreditCard, Plus, Save, Trash2, User, X } from "lucide-react";
+import { CheckCircle2, CreditCard, FileText, Plus, Trash2, User, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type {
   Product,
@@ -22,6 +22,15 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { submitPurchase, updatePurchase } from "@/lib/purchases/submitPurchase";
+import {
+  isPurchaseDraft,
+  isPurchasePosted,
+  type PurchaseDocumentStatus,
+} from "@/lib/invoices/invoiceStatus";
+import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocumentStatusBadge";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import {
   collectPurchaseSubmitPreflightIssues,
   preflightMessage,
@@ -84,8 +93,11 @@ interface PurchaseFormProps {
   warehouses: Warehouse[];
   mode?: "create" | "edit";
   initialPurchase?: PurchaseRecord | null;
+  layoutMode?: "modal" | "page";
+  draftId?: string | null;
   onSuccess?: () => void;
   onCancel?: () => void;
+  onDraftSaved?: (purchaseId: string) => void;
 }
 
 export default function PurchaseForm({
@@ -94,11 +106,15 @@ export default function PurchaseForm({
   warehouses,
   mode = "create",
   initialPurchase = null,
+  layoutMode = "modal",
+  draftId = null,
   onSuccess,
   onCancel,
+  onDraftSaved,
 }: PurchaseFormProps) {
   const isEdit = mode === "edit" && !!initialPurchase;
-  const existingPaid = isEdit ? Number(initialPurchase?.paid_amount ?? 0) : 0;
+  const isPostedDocument = isEdit && isPurchasePosted(initialPurchase?.status);
+  const existingPaid = isEdit && isPostedDocument ? Number(initialPurchase?.paid_amount ?? 0) : 0;
 
   const [supplierList, setSupplierList] = useState(suppliersProp);
   const [productList, setProductList] = useState(productsProp);
@@ -107,13 +123,24 @@ export default function PurchaseForm({
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [quickAddProductRowId, setQuickAddProductRowId] = useState<string | null>(null);
 
-  const [invoiceNumber] = useState(
+  const [invoiceNumber, setInvoiceNumber] = useState(
     () => initialPurchase?.invoice_number || generatePurchaseInvoiceNumber()
   );
+  const [savedPurchaseId, setSavedPurchaseId] = useState<string | null>(
+    initialPurchase?.id || draftId || null
+  );
+  const [documentStatus, setDocumentStatus] = useState<PurchaseDocumentStatus>(
+    initialPurchase ? (isPurchaseDraft(initialPurchase.status) ? "draft" : "posted") : "draft"
+  );
+  const documentLocked = documentStatus === "posted";
   const [docDate, setDocDate] = useState(
     initialPurchase?.doc_date ||
       initialPurchase?.created_at?.slice(0, 10) ||
       new Date().toISOString().slice(0, 10)
+  );
+  const [dueDate, setDueDate] = useState(
+    (initialPurchase as PurchaseRecord & { due_date?: string | null })?.due_date?.slice(0, 10) ||
+      ""
   );
   const [supplierId, setSupplierId] = useState(initialPurchase?.supplier_id || "");
   const [warehouseId, setWarehouseId] = useState(
@@ -147,14 +174,23 @@ export default function PurchaseForm({
     supplierId: string;
   } | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
-  const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
+  const {
+    message: toastMessage,
+    variant: toastVariant,
+    showError: showToastError,
+    showSuccess: showToastSuccess,
+  } = useToast();
   const { can } = useAuth();
   const { t } = useI18n();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
   const { config: procurementConfig } = useProcurementConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const appliedDefaultVat = useRef(Boolean(initialPurchase));
-  const canSavePurchase = isEdit ? can("can_edit_purchases") : can("can_create_purchase");
+  const canSavePurchase =
+    can("can_create_purchase") ||
+    can("can_edit_purchases") ||
+    can("can_view_purchases") ||
+    can("can_manage_finance");
 
   useEffect(() => {
     setSupplierList(suppliersProp);
@@ -163,6 +199,42 @@ export default function PurchaseForm({
   useEffect(() => {
     setProductList(productsProp);
   }, [productsProp]);
+
+  useEffect(() => {
+    if (initialPurchase?.invoice_number) return;
+    void supabase.rpc("peek_next_purchase_doc_no", { p_prefix: "AS" }).then(({ data }) => {
+      if (typeof data === "string" && data.trim()) {
+        setInvoiceNumber(data);
+      }
+    });
+  }, [initialPurchase?.invoice_number]);
+
+  useEffect(() => {
+    if (!initialPurchase) return;
+    setSavedPurchaseId(initialPurchase.id);
+    setDocumentStatus(isPurchaseDraft(initialPurchase.status) ? "draft" : "posted");
+    setInvoiceNumber(initialPurchase.invoice_number);
+    setDocDate(
+      initialPurchase.doc_date ||
+        initialPurchase.created_at?.slice(0, 10) ||
+        new Date().toISOString().slice(0, 10)
+    );
+    setDueDate(
+      (initialPurchase as PurchaseRecord & { due_date?: string | null }).due_date?.slice(0, 10) ||
+        ""
+    );
+    setSupplierId(initialPurchase.supplier_id || "");
+    setWarehouseId(initialPurchase.warehouse_id || warehouses[0]?.id || "");
+    setNotes(initialPurchase.notes || "");
+    if (initialPurchase.items?.length) {
+      setItems(initialPurchase.items);
+    }
+    const rawExpenses = (initialPurchase as PurchaseRecord & { additional_expenses?: unknown })
+      .additional_expenses;
+    if (Array.isArray(rawExpenses)) {
+      setAdditionalExpenses(rawExpenses as DocumentAdditionalExpense[]);
+    }
+  }, [initialPurchase, warehouses]);
 
   useEffect(() => {
     if (appliedDefaultVat.current || taxConfigLoading) return;
@@ -403,7 +475,7 @@ export default function PurchaseForm({
     setPayments((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleSubmit = async () => {
+  const persistDocument = async (mode: "draft" | "post") => {
     if (!canSavePurchase) {
       showToastError(t("forms.noPurchasePermission"));
       return;
@@ -431,16 +503,18 @@ export default function PurchaseForm({
       return;
     }
 
-    const paymentAccountIssue = validatePaymentRowsRequireAccount(payments);
-    if (paymentAccountIssue) {
-      showToastError(preflightMessage(t, paymentAccountIssue));
-      return;
-    }
+    if (mode === "post") {
+      const paymentAccountIssue = validatePaymentRowsRequireAccount(payments);
+      if (paymentAccountIssue) {
+        showToastError(preflightMessage(t, paymentAccountIssue));
+        return;
+      }
 
-    const paymentTotalIssue = validatePaymentsNotExceedTotal(totalPaid, grandTotal);
-    if (paymentTotalIssue) {
-      showToastError(preflightMessage(t, paymentTotalIssue));
-      return;
+      const paymentTotalIssue = validatePaymentsNotExceedTotal(totalPaid, grandTotal);
+      if (paymentTotalIssue) {
+        showToastError(preflightMessage(t, paymentTotalIssue));
+        return;
+      }
     }
 
     const additionalExpenseError = validateDocumentAdditionalExpenses(additionalExpenses);
@@ -464,37 +538,68 @@ export default function PurchaseForm({
       supplier_id: supplierId,
       warehouse_id: warehouseId,
       doc_date: docDate,
+      due_date: dueDate || null,
       responsible_id: effectiveResponsibleId || null,
       responsible_name: effectiveResponsibleName || null,
       total_amount: grandTotal,
       paid_amount: totalPaid,
       debt_amount: debt,
-      status,
+      status: mode === "draft" ? "draft" : "posted",
       notes: notes.trim() || null,
+      is_official: isOfficial,
+      contract_id: contractId,
+      vat_mode: isOfficial ? vatMode : "none",
+      subtotal_amount: officialAmounts.subtotal,
+      vat_rate: defaultVatRate,
+      vat_amount: officialAmounts.vat_amount,
+      grand_total: officialAmounts.grand_total,
+      additional_expenses_total: additionalExpensesTotal,
     };
 
-    const result = isEdit
-      ? await updatePurchase(
-          initialPurchase!.id,
-          { header, items, invoiceNumber, payments: paymentsToProcess, officialFields },
-          initialPurchase!.items,
-          initialPurchase!.debt_amount,
-          initialPurchase!.supplier_id || ""
-        )
-      : await submitPurchase({
-          header,
-          items,
-          invoiceNumber,
-          payments: paymentsToProcess,
-          additionalExpenses,
-          officialFields,
-        });
+    const payload = {
+      header,
+      items,
+      invoiceNumber,
+      payments: paymentsToProcess,
+      additionalExpenses,
+      officialFields,
+      mode,
+      purchaseId: savedPurchaseId,
+    };
+
+    const result =
+      isEdit && isPostedDocument
+        ? await updatePurchase(
+            initialPurchase!.id,
+            { ...payload, mode: "post" },
+            initialPurchase!.items,
+            initialPurchase!.debt_amount,
+            initialPurchase!.supplier_id || ""
+          )
+        : await submitPurchase(payload);
 
     setSaving(false);
     if (!result.success) {
       showToastError(formatRpcError(result.error ?? t("common.error"), t));
       return;
     }
+
+    if (result.purchaseId) {
+      setSavedPurchaseId(result.purchaseId);
+    }
+    if (result.invoiceNumber) {
+      setInvoiceNumber(result.invoiceNumber);
+    }
+    setDocumentStatus(result.status === "posted" ? "posted" : "draft");
+
+    if (mode === "draft") {
+      showToastSuccess(t("invoice.draftSaveSuccess"));
+      if (result.purchaseId) {
+        onDraftSaved?.(result.purchaseId);
+      }
+      return;
+    }
+
     if (result.purchaseId && supplierId) {
       setRatingTarget({ purchaseId: result.purchaseId, supplierId });
       return;
@@ -526,45 +631,108 @@ export default function PurchaseForm({
     finishAfterRating();
   };
 
+  const formShellClass =
+    layoutMode === "page"
+      ? "w-full space-y-4 pb-8"
+      : "space-y-4 rounded-2xl border border-app bg-app-card-hover p-5";
+
+  const actionButtons = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {onCancel ? (
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {t("common.cancel")}
+        </Button>
+      ) : null}
+      {!documentLocked ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void persistDocument("draft")}
+          className="border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+        >
+          <FileText className="h-4 w-4" />
+          {saving ? t("common.saving") : t("invoice.saveDraft")}
+        </Button>
+      ) : null}
+      {!documentLocked ? (
+        <Button
+          type="button"
+          disabled={saving || Boolean(purchasePreflightIssue)}
+          title={purchasePreflightHint}
+          onClick={() => void persistDocument("post")}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          {saving ? t("common.saving") : t("invoice.postDocument")}
+        </Button>
+      ) : isEdit ? (
+        <Button
+          type="button"
+          disabled={saving || Boolean(purchasePreflightIssue)}
+          title={purchasePreflightHint}
+          onClick={() => void persistDocument("post")}
+        >
+          {saving ? t("common.saving") : t("forms.saveChanges")}
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
-      <div className="space-y-4 rounded-2xl border border-app bg-app-card-hover p-5">
-        <div className="app-card flex items-center justify-between px-4 py-3">
-          <div>
-            <h2 className="text-sm font-bold text-app">
-              {isEdit ? t("forms.purchaseEditTitle") : t("forms.purchaseNewTitle")}
-            </h2>
+      <div className={formShellClass}>
+        <div className="app-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-bold text-app">
+                {isEdit ? t("forms.purchaseEditTitle") : t("forms.purchaseNewTitle")}
+              </h2>
+              <PurchaseDocumentStatusBadge status={documentStatus} />
+            </div>
             <p className="text-[11px] text-app-muted">
               {t("forms.invoiceNoLabel")}:{" "}
               <span className="font-mono font-semibold text-emerald-600">{invoiceNumber}</span>
             </p>
           </div>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <label className="font-semibold text-app-muted">
+              {t("common.date")}
+              <Input
+                type="date"
+                value={docDate}
+                disabled={documentLocked}
+                onChange={(e) => setDocDate(e.target.value)}
+                className="ml-2 w-auto"
+              />
+            </label>
+            {layoutMode === "page" ? actionButtons : (
+              onCancel ? (
+                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                  <X className="h-5 w-5" />
+                </Button>
+              ) : null
+            )}
+          </div>
         </div>
+        {layoutMode === "modal" ? actionButtons : null}
 
         <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
           <label className="block text-xs font-semibold text-app">
-            {t("common.date")}
-            <input
+            {t("invoice.dueDate")}
+            <Input
               type="date"
-              value={docDate}
-              onChange={(e) => setDocDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              value={dueDate}
+              disabled={documentLocked}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="mt-1"
             />
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("forms.supplier")}
             <div className="mt-1 flex gap-1">
-              <select
+              <Select
                 value={supplierId}
+                disabled={documentLocked}
                 onChange={(e) => {
                   const id = e.target.value;
                   setSupplierId(id);
@@ -575,7 +743,7 @@ export default function PurchaseForm({
                     setVoenVerification("");
                   }
                 }}
-                className="min-w-0 flex-1 app-input text-sm"
+                className="min-w-0 flex-1"
               >
                 <option value="">{t("common.select")}</option>
                 {supplierOptions.map((s) => (
@@ -583,7 +751,7 @@ export default function PurchaseForm({
                     {formatSupplierOptionLabel(s, procurementConfig)}
                   </option>
                 ))}
-              </select>
+              </Select>
               {isOfficial && supplierOptions.length === 0 && (
                 <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalSuppliers")}</p>
               )}
@@ -599,10 +767,11 @@ export default function PurchaseForm({
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("forms.targetWarehouse")}
-            <select
+            <Select
               value={warehouseId}
+              disabled={documentLocked}
               onChange={(e) => setWarehouseId(e.target.value)}
-              className="app-input mt-1 text-sm"
+              className="mt-1"
             >
               <option value="">{t("common.select")}</option>
               {warehouses.map((w) => (
@@ -610,7 +779,7 @@ export default function PurchaseForm({
                   {w.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <div className="block text-xs font-semibold text-app">
             <span className="flex items-center gap-1.5">
@@ -888,31 +1057,7 @@ export default function PurchaseForm({
           />
         </label>
 
-        <div className="flex justify-end gap-2">
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-lg border border-app px-4 py-2.5 text-xs font-semibold text-app"
-            >
-              {t("common.cancel")}
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={saving || Boolean(purchasePreflightIssue)}
-            title={purchasePreflightHint}
-            onClick={handleSubmit}
-            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            {saving
-              ? t("common.saving")
-              : isEdit
-                ? t("forms.saveChanges")
-                : t("forms.confirmWarehouseEntry")}
-          </button>
-        </div>
+        {layoutMode === "modal" ? null : actionButtons}
       </div>
 
       {showSupplierModal && (
