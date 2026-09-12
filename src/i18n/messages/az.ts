@@ -65,6 +65,15 @@ export const azMessages = {
     collapseMenu: "Menyunu yığ",
     expandMenu: "Menyunu genişlət",
   },
+  shell: {
+    searchPlaceholder: "Axtarış — müştəri, məhsul, faktura...",
+    quickActions: "Sürətli əməliyyatlar",
+    createInvoice: "Yeni satış fakturası",
+    addCustomer: "Müştəri əlavə et",
+    addExpense: "Xərc əlavə et",
+    noResults: "Nəticə tapılmadı",
+    allPages: "Bütün səhifələr",
+  },
   theme: {
     label: "Görünüş",
     dark: "Gecə şiferi",

@@ -67,6 +67,15 @@ export const ruMessages: Messages = {
     collapseMenu: "Свернуть меню",
     expandMenu: "Развернуть меню",
   },
+  shell: {
+    searchPlaceholder: "Поиск клиентов, товаров, счетов...",
+    quickActions: "Быстрые действия",
+    createInvoice: "Новый счёт продажи",
+    addCustomer: "Добавить клиента",
+    addExpense: "Добавить расход",
+    noResults: "Ничего не найдено",
+    allPages: "Все страницы",
+  },
   theme: {
     label: "Тема",
     dark: "Ночной сланец",

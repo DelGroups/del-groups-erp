@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
 import QueryProvider from "@/components/providers/QueryProvider";
+import SonnerProvider from "@/components/providers/SonnerProvider";
 import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
+
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"${DEFAULT_THEME}";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","${DEFAULT_THEME}");}})();`;
 
@@ -58,11 +66,14 @@ export default function RootLayout({
         />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen bg-app text-app antialiased">
+      <body className={`${inter.variable} min-h-screen bg-app font-sans text-app antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <QueryProvider>
-              <I18nProvider>{children}</I18nProvider>
+              <I18nProvider>
+                {children}
+                <SonnerProvider />
+              </I18nProvider>
             </QueryProvider>
           </AuthProvider>
         </ThemeProvider>

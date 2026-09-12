@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import GlobalAppHeader from "@/components/layout/GlobalAppHeader";
+import AppTopBar from "@/components/layout/AppTopBar";
+import CommandPalette from "@/components/layout/CommandPalette";
 import AiAssistantWidget from "@/components/ai/AiAssistantWidget";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import { SidebarMenuProvider } from "@/components/layout/SidebarContext";
@@ -65,25 +65,11 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="app-glass flex shrink-0 items-center gap-3 border-b border-app px-4 py-3 md:hidden">
-            <button
-              type="button"
-              aria-label={t("nav.openMenu")}
-              onClick={() => setMobileMenuOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-app text-app transition-colors hover:bg-app-card-hover"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-app">DEL GROUPS MMC</p>
-              <p className="truncate text-[10px] text-app-muted">{t("nav.erpSubtitle")}</p>
-            </div>
-          </header>
-
-          <GlobalAppHeader />
+          <AppTopBar />
           <div className="min-h-0 flex-1 overflow-y-auto bg-app">{content}</div>
         </div>
       </div>
+      <CommandPalette />
       <AiAssistantWidget />
     </SidebarMenuProvider>
   );

@@ -67,6 +67,15 @@ export const enMessages: Messages = {
     collapseMenu: "Collapse menu",
     expandMenu: "Expand menu",
   },
+  shell: {
+    searchPlaceholder: "Search customers, products, invoices...",
+    quickActions: "Quick actions",
+    createInvoice: "New sales invoice",
+    addCustomer: "Add customer",
+    addExpense: "Add expense",
+    noResults: "No results found",
+    allPages: "All pages",
+  },
   theme: {
     label: "Theme",
     dark: "Midnight Slate",
