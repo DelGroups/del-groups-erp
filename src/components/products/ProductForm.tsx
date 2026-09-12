@@ -12,9 +12,16 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
-import MetricPriceInput from "@/components/products/MetricPriceInput";
+import UnitAwarePriceInput from "@/components/products/UnitAwarePriceInput";
 import ProductBomBuilder, { type BomBuilderRow } from "@/components/products/ProductBomBuilder";
 import { parseMetricBarLengthM } from "@/lib/polywood/metricPriceConversion";
+import {
+  defaultPriceEntryUnitForMeasure,
+  isMetricMeasureUnit,
+  measureUnitLabel,
+  PRODUCT_MEASURE_UNITS,
+  type PriceEntryUnit,
+} from "@/lib/products/productPriceUnits";
 import { fetchProductBomAction, saveProductBomAction } from "@/lib/actions/productBom";
 import { fetchProductsCatalog } from "@/lib/products/api";
 
@@ -26,8 +33,6 @@ interface ProductFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
 }
-
-const UNITS = ["Ədəd", "Metr", "Kvadrat Metr", "Set/Komplekt"];
 
 export default function ProductForm({
   categories,
@@ -52,7 +57,13 @@ export default function ProductForm({
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
   const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
   const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
-  const [priceEntryByBar, setPriceEntryByBar] = useState(false);
+  const initialMeasureUnit = initialProduct?.unit || "Ədəd";
+  const [buyPriceUnit, setBuyPriceUnit] = useState<PriceEntryUnit>(
+    defaultPriceEntryUnitForMeasure(initialMeasureUnit)
+  );
+  const [sellPriceUnit, setSellPriceUnit] = useState<PriceEntryUnit>(
+    defaultPriceEntryUnitForMeasure(initialMeasureUnit)
+  );
   const [form, setForm] = useState({
     code: initialProduct?.code || "",
     name: initialProduct?.name || "",
@@ -86,25 +97,42 @@ export default function ProductForm({
   const isServiceCategorySelected =
     matchesServiceCategoryName(form.category) || matchesServiceCategoryName(form.subcategory);
 
-  const isMetricUnit = form.unit === "Metr";
+  const metricMeasureUnit = isMetricMeasureUnit(form.unit);
   const showMetricFields =
-    (form.is_dimensional || isMetricUnit) && !isServiceCategorySelected && !isComposite;
+    (form.is_dimensional || metricMeasureUnit) && !isServiceCategorySelected && !isComposite;
   const standardBarLengthM = parseMetricBarLengthM(form.base_length);
+  const standardWidthM = parseFloat(form.base_width) || 0;
+  const priceStorageMode = showMetricFields ? "per_meter" : "per_piece";
 
   const handleUnitChange = (unit: string) => {
-    const metric = unit === "Metr";
+    const metric = isMetricMeasureUnit(unit);
+    const nextEntryUnit = defaultPriceEntryUnitForMeasure(unit);
+    setBuyPriceUnit(nextEntryUnit);
+    setSellPriceUnit(nextEntryUnit);
     set({
       unit,
       is_dimensional: metric,
       base_length:
         metric && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
+      base_width:
+        unit === "Kvadrat Metr" && !(parseFloat(form.base_width) > 0) ? "0.60" : form.base_width,
     });
   };
 
   const handleDimensionalToggle = (checked: boolean) => {
+    const nextUnit = checked
+      ? form.unit === "Ədəd"
+        ? "Metr"
+        : form.unit
+      : metricMeasureUnit
+        ? "Ədəd"
+        : form.unit;
+    const nextEntryUnit = defaultPriceEntryUnitForMeasure(nextUnit);
+    setBuyPriceUnit(nextEntryUnit);
+    setSellPriceUnit(nextEntryUnit);
     set({
       is_dimensional: checked,
-      unit: checked ? "Metr" : form.unit === "Metr" ? "Ədəd" : form.unit,
+      unit: nextUnit,
       base_length:
         checked && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
     });
@@ -205,19 +233,28 @@ export default function ProductForm({
       category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
-      buy_price_cut: form.is_dimensional ? parseFloat(form.buy_price_cut) || 0 : 0,
+      buy_price_cut: showMetricFields ? parseFloat(form.buy_price) || 0 : 0,
       sell_price: parseFloat(form.sell_price) || 0,
-      sell_price_cut: form.is_dimensional ? parseFloat(form.sell_price_cut) || 0 : 0,
+      sell_price_cut: showMetricFields ? parseFloat(form.sell_price) || 0 : 0,
       stock: isServiceCategorySelected || isComposite || !isEditMode ? 0 : parseFloat(form.stock) || 0,
       min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
       barcode: form.barcode || null,
       qr_code: form.barcode || null,
       extra_info: form.extra_info || null,
-      is_dimensional: isServiceCategorySelected || isComposite ? false : form.is_dimensional,
+      is_dimensional:
+        isServiceCategorySelected || isComposite
+          ? false
+          : form.is_dimensional || metricMeasureUnit,
       is_composite: isServiceCategorySelected ? false : isComposite,
       is_service: isServiceCategorySelected,
-      base_length: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_length) || null : null,
-      base_width: !isServiceCategorySelected && form.is_dimensional ? parseFloat(form.base_width) || null : null,
+      base_length:
+        !isServiceCategorySelected && (form.is_dimensional || metricMeasureUnit)
+          ? parseFloat(form.base_length) || null
+          : null,
+      base_width:
+        !isServiceCategorySelected && (form.is_dimensional || form.unit === "Kvadrat Metr")
+          ? parseFloat(form.base_width) || null
+          : null,
     };
 
     const result = isEditMode && initialProduct
@@ -387,13 +424,17 @@ export default function ProductForm({
                   <label className="block text-xs font-semibold text-app">
                     {t("forms.unitMeasure")}
                     <select
-                      value={form.unit}
+                      value={
+                        PRODUCT_MEASURE_UNITS.includes(form.unit as (typeof PRODUCT_MEASURE_UNITS)[number])
+                          ? form.unit
+                          : "Ədəd"
+                      }
                       onChange={(e) => handleUnitChange(e.target.value)}
                       className="app-input mt-1 w-full text-sm"
                     >
-                      {UNITS.map((u) => (
+                      {PRODUCT_MEASURE_UNITS.map((u) => (
                         <option key={u} value={u}>
-                          {u}
+                          {measureUnitLabel(u)}
                         </option>
                       ))}
                     </select>
@@ -406,70 +447,26 @@ export default function ProductForm({
             <div className={columnClass}>
               {!isServiceCategorySelected ? (
                 <>
-                  {showMetricFields ? (
-                    <>
-                      <label className="flex items-center gap-2 text-xs font-semibold text-app">
-                        <input
-                          type="checkbox"
-                          checked={priceEntryByBar}
-                          onChange={(event) => setPriceEntryByBar(event.target.checked)}
-                        />
-                        {t("forms.enterPriceByBar")}
-                      </label>
-
-                      <MetricPriceInput
-                        label={t("forms.buyPriceWholeBar")}
-                        meterValue={form.buy_price}
-                        barLengthM={standardBarLengthM}
-                        entryByBar={priceEntryByBar}
-                        onMeterChange={(value) => set({ buy_price: value })}
-                      />
-                      <MetricPriceInput
-                        label={t("forms.buyPriceCutPiece")}
-                        meterValue={form.buy_price_cut}
-                        barLengthM={standardBarLengthM}
-                        entryByBar={priceEntryByBar}
-                        onMeterChange={(value) => set({ buy_price_cut: value })}
-                      />
-                      <MetricPriceInput
-                        label={t("forms.sellPriceWholeBar")}
-                        meterValue={form.sell_price}
-                        barLengthM={standardBarLengthM}
-                        entryByBar={priceEntryByBar}
-                        onMeterChange={(value) => set({ sell_price: value })}
-                      />
-                      <MetricPriceInput
-                        label={t("forms.sellPriceCutPiece")}
-                        meterValue={form.sell_price_cut}
-                        barLengthM={standardBarLengthM}
-                        entryByBar={priceEntryByBar}
-                        onMeterChange={(value) => set({ sell_price_cut: value })}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <label className="block text-xs font-semibold text-app">
-                        {t("forms.buyPrice")} (AZN)
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={form.buy_price}
-                          onChange={(e) => set({ buy_price: e.target.value })}
-                          className={inputClass}
-                        />
-                      </label>
-                      <label className="block text-xs font-semibold text-app">
-                        {t("forms.sellPrice")}
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={form.sell_price}
-                          onChange={(e) => set({ sell_price: e.target.value })}
-                          className={inputClass}
-                        />
-                      </label>
-                    </>
-                  )}
+                  <UnitAwarePriceInput
+                    label={t("forms.buyPrice")}
+                    storedValue={form.buy_price}
+                    entryUnit={buyPriceUnit}
+                    onEntryUnitChange={setBuyPriceUnit}
+                    onStoredValueChange={(value) => set({ buy_price: value })}
+                    barLengthM={standardBarLengthM}
+                    widthM={standardWidthM}
+                    storageMode={priceStorageMode}
+                  />
+                  <UnitAwarePriceInput
+                    label={t("forms.sellPrice")}
+                    storedValue={form.sell_price}
+                    entryUnit={sellPriceUnit}
+                    onEntryUnitChange={setSellPriceUnit}
+                    onStoredValueChange={(value) => set({ sell_price: value })}
+                    barLengthM={standardBarLengthM}
+                    widthM={standardWidthM}
+                    storageMode={priceStorageMode}
+                  />
 
                   <div className="block text-xs font-semibold text-app">
                     <label>
