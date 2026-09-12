@@ -87,13 +87,12 @@ export default function ProductForm({
         : initialProduct?.subcategory || "",
     unit: initialProduct?.unit || "Ədəd",
     buy_price: String(initialProduct?.buy_price ?? 0),
+    buy_price_cut: String(initialProduct?.buy_price_cut ?? 0),
     sell_price: String(initialProduct?.sell_price ?? 0),
     sell_price_cut: String(initialProduct?.sell_price_cut ?? 0),
     stock: String(initialProduct?.stock ?? 0),
     min_stock: String(initialProduct?.min_stock ?? 5),
     barcode: initialProduct?.barcode || (!initialProduct ? generateProductBarcode() : ""),
-    color: initialProduct?.color || "",
-    weight: String(initialProduct?.weight ?? 0),
     extra_info: initialProduct?.extra_info || "",
     warehouse_id: polywoodWarehouseId || warehouses[0]?.id || "",
     is_dimensional: Boolean(initialProduct?.is_dimensional),
@@ -286,6 +285,7 @@ export default function ProductForm({
       category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
+      buy_price_cut: form.is_dimensional ? parseFloat(form.buy_price_cut) || 0 : 0,
       sell_price: parseFloat(form.sell_price) || 0,
       sell_price_cut: form.is_dimensional ? parseFloat(form.sell_price_cut) || 0 : 0,
       stock:
@@ -297,8 +297,6 @@ export default function ProductForm({
       min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
       barcode: form.barcode || null,
       qr_code: form.barcode || null,
-      color: form.color || null,
-      weight: parseFloat(form.weight) || 0,
       extra_info: form.extra_info || null,
       is_dimensional: isServiceCategorySelected || isComposite ? false : form.is_dimensional,
       is_composite: isServiceCategorySelected ? false : isComposite,
@@ -507,19 +505,30 @@ export default function ProductForm({
           </select>
         </label>
 
-        <label className="block text-xs font-semibold text-app">
-          {showMetricFields ? t("forms.buyPricePerMeter") : t("forms.buyPrice")} (AZN)
-          <input
-            type="number"
-            step="0.01"
-            value={form.buy_price}
-            onChange={(e) => set({ buy_price: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
-
         {showMetricFields ? (
           <>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.buyPriceWholeBar")} ({t("forms.pricePerMeterShort")})
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.buy_price}
+                onChange={(event) => set({ buy_price: event.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.buyPriceCutPiece")} ({t("forms.pricePerMeterShort")})
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.buy_price_cut}
+                onChange={(event) => set({ buy_price_cut: event.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
             <label className="block text-xs font-semibold text-app">
               {t("forms.sellPriceWholeBar")} ({t("forms.pricePerMeterShort")})
               <input
@@ -544,16 +553,28 @@ export default function ProductForm({
             </label>
           </>
         ) : (
-          <label className="block text-xs font-semibold text-app">
-            {t("forms.sellPrice")}
-            <input
-              type="number"
-              step="0.01"
-              value={form.sell_price}
-              onChange={(e) => set({ sell_price: e.target.value })}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            />
-          </label>
+          <>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.buyPrice")} (AZN)
+              <input
+                type="number"
+                step="0.01"
+                value={form.buy_price}
+                onChange={(e) => set({ buy_price: e.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.sellPrice")}
+              <input
+                type="number"
+                step="0.01"
+                value={form.sell_price}
+                onChange={(e) => set({ sell_price: e.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+          </>
         )}
 
         <div className="block text-xs font-semibold text-app">
@@ -594,27 +615,6 @@ export default function ProductForm({
             </div>
           )}
         </div>
-
-        <label className="block text-xs font-semibold text-app">
-          {t("forms.color")}
-          <input
-            type="text"
-            value={form.color}
-            onChange={(e) => set({ color: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
-
-        <label className="block text-xs font-semibold text-app">
-          {t("forms.weight")}
-          <input
-            type="number"
-            step="0.001"
-            value={form.weight}
-            onChange={(e) => set({ weight: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
 
         {isComposite && !isServiceCategorySelected ? (
           <div className="md:col-span-2">

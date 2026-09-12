@@ -38,7 +38,7 @@ interface ProductTableProps {
 }
 
 function isNumericColumn(key: ProductColumnKey) {
-  return key === "buy_price" || key === "sell_price" || key === "weight";
+  return key === "buy_price" || key === "sell_price";
 }
 
 function renderCell(
@@ -85,10 +85,6 @@ function renderCell(
       );
     case "unit":
       return product.unit || "-";
-    case "color":
-      return product.color || "-";
-    case "weight":
-      return product.weight ? `${product.weight} kq` : "-";
     case "extra_info":
       return (
         <span className="line-clamp-2 max-w-[200px] text-app-muted">

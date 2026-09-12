@@ -3,8 +3,25 @@ import { LENGTH_EPSILON } from "@/lib/polywood/constants";
 export interface MetricProductPricing {
   sell_price?: number | null;
   sell_price_cut?: number | null;
+  buy_price?: number | null;
+  buy_price_cut?: number | null;
   base_length?: number | null;
   full_sheet_length_m?: number | null;
+}
+
+function resolveDualMetricPricePerMeter(
+  wholePrice: number,
+  cutPrice: number | null | undefined,
+  requestedM: number,
+  product: MetricProductPricing | null | undefined
+): number {
+  const whole = wholePrice || 0;
+  const cut = Number(cutPrice) > 0 ? Number(cutPrice) : whole;
+  const barLengthM = resolveBarLengthM(product);
+  if (isWholeBarMeterQuantity(requestedM, barLengthM)) {
+    return whole;
+  }
+  return cut;
 }
 
 export function resolveBarLengthM(product: MetricProductPricing | null | undefined): number {
@@ -31,15 +48,41 @@ export function resolveMetricSellPricePerMeter(
   product: MetricProductPricing | null | undefined,
   requestedM: number
 ): number {
-  const wholeBarPrice = Number(product?.sell_price) || 0;
-  const cutPrice = Number(product?.sell_price_cut);
-  const cutPriceResolved = cutPrice > 0 ? cutPrice : wholeBarPrice;
-  const barLengthM = resolveBarLengthM(product);
+  return resolveDualMetricPricePerMeter(
+    Number(product?.sell_price) || 0,
+    product?.sell_price_cut,
+    requestedM,
+    product
+  );
+}
 
-  if (isWholeBarMeterQuantity(requestedM, barLengthM)) {
-    return wholeBarPrice;
+export function resolveMetricBuyPricePerMeter(
+  product: MetricProductPricing | null | undefined,
+  requestedM: number
+): number {
+  return resolveDualMetricPricePerMeter(
+    Number(product?.buy_price) || 0,
+    product?.buy_price_cut,
+    requestedM,
+    product
+  );
+}
+
+/** Weighted average buy price per meter across multiple piece lengths. */
+export function resolveMetricPurchaseUnitPrice(
+  product: MetricProductPricing | null | undefined,
+  lengths: number[]
+): number {
+  if (lengths.length === 0) {
+    return Math.round((Number(product?.buy_price) || 0) * 100) / 100;
   }
-  return cutPriceResolved;
+  const totalM = lengths.reduce((sum, length) => sum + length, 0);
+  if (totalM <= 0) return 0;
+  const totalCost = lengths.reduce(
+    (sum, length) => sum + length * resolveMetricBuyPricePerMeter(product, length),
+    0
+  );
+  return Math.round((totalCost / totalM) * 100) / 100;
 }
 
 export function resolvePolywoodLineUnitPrice(

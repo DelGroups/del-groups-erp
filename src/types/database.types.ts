@@ -232,6 +232,8 @@ export interface Product {
   subcategory?: string | null;
   unit: string | null;
   buy_price: number | null;
+  /** Cut/custom-length buy price per meter for metric products */
+  buy_price_cut?: number | null;
   sell_price: number | null;
   /** Cut/custom-length sell price per meter for metric products */
   sell_price_cut?: number | null;
@@ -240,8 +242,6 @@ export interface Product {
   min_stock_level?: number | null;
   barcode?: string | null;
   qr_code?: string | null;
-  color?: string | null;
-  weight?: number | null;
   extra_info?: string | null;
   warehouse_id?: string | null;
   inventory_mode?: "standard" | "polywood" | string | null;
@@ -275,8 +275,6 @@ export type ProductColumnKey =
   | "sell_price"
   | "barcode"
   | "unit"
-  | "color"
-  | "weight"
   | "extra_info";
 
 export interface ProductFilters {

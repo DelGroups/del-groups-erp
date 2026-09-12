@@ -83,6 +83,7 @@ import {
   resolveStandardBarLengthM,
   totalMetricMeters,
 } from "@/lib/polywood/metricReceive";
+import { resolveMetricPurchaseUnitPrice } from "@/lib/polywood/metricPricing";
 
 interface Account {
   id: string;
@@ -373,7 +374,7 @@ export default function PurchaseForm({
       standardLengthM
     );
     const quantity = totalMetricMeters(lengths);
-    const unitPrice = Number(items.find((row) => row.id === rowId)?.unit_price) || Number(product.buy_price) || 0;
+    const unitPrice = resolveMetricPurchaseUnitPrice(product, lengths);
     updateItem(rowId, {
       metric_receive_mode: intake.mode,
       metric_full_bar_count: intake.fullBarCount,
@@ -400,8 +401,8 @@ export default function PurchaseForm({
       return;
     }
     const qty = items.find((r) => r.id === rowId)?.quantity || 1;
-    const unitPrice = Number(product.buy_price) || 0;
     const metric = isMetricProduct(product);
+    const unitPrice = metric ? 0 : Number(product.buy_price) || 0;
     updateItem(rowId, {
       product_id: product.id,
       product_code: product.code,

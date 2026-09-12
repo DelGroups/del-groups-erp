@@ -17,8 +17,6 @@ export const PRODUCT_COLUMNS: ProductColumnDef[] = [
   { key: "sell_price", label: "Satış qiyməti", defaultVisible: true },
   { key: "barcode", label: "Barkod", defaultVisible: true },
   { key: "unit", label: "Ölçü vahidi", defaultVisible: true },
-  { key: "color", label: "Rəng", defaultVisible: false },
-  { key: "weight", label: "Çəki", defaultVisible: false },
   { key: "extra_info", label: "Əlavə məlumat", defaultVisible: false },
 ];
 

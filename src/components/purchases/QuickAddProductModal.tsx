@@ -29,8 +29,6 @@ export default function QuickAddProductModal({
   const [buyPrice, setBuyPrice] = useState("0");
   const [sellPrice, setSellPrice] = useState("0");
   const [barcode, setBarcode] = useState(() => generateProductBarcode());
-  const [color, setColor] = useState("");
-  const [weight, setWeight] = useState("0");
   const [extraInfo, setExtraInfo] = useState("");
   const [saving, setSaving] = useState(false);
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
@@ -65,8 +63,6 @@ export default function QuickAddProductModal({
       stock: 0,
       min_stock: 0,
       barcode: barcode || null,
-      color: color || null,
-      weight: parseFloat(weight) || 0,
       extra_info: extraInfo || null,
     });
 
@@ -192,25 +188,6 @@ export default function QuickAddProductModal({
               min="0"
               value={sellPrice}
               onChange={(e) => setSellPrice(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
-            />
-          </label>
-          <label className="block font-semibold text-app">
-            Rəng
-            <input
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block font-semibold text-app">
-            Çəki
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
               className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
             />
           </label>

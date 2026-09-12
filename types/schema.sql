@@ -10,11 +10,10 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS name TEXT;
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS color TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS weight NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_info TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock_level NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price_cut NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_price_cut NUMERIC DEFAULT 0;
 
 -- Sales header (items live in sale_items; payments may stay JSONB on sales)
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_no TEXT;
@@ -220,13 +219,12 @@ CREATE TABLE IF NOT EXISTS products (
   subcategory TEXT,
   unit TEXT DEFAULT 'Ədəd',
   buy_price NUMERIC DEFAULT 0,
+  buy_price_cut NUMERIC DEFAULT 0,
   sell_price NUMERIC DEFAULT 0,
   sell_price_cut NUMERIC DEFAULT 0,
   stock NUMERIC DEFAULT 0,
   min_stock NUMERIC DEFAULT 0,
   barcode TEXT,
-  color TEXT,
-  weight NUMERIC DEFAULT 0,
   extra_info TEXT,
   is_composite BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()

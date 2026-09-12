@@ -1627,6 +1627,8 @@ export const enMessages: Messages = {
     baseLength: "Base Length",
     standardBarLength: "Standard bar length (m)",
     buyPricePerMeter: "Buy price (per meter)",
+    buyPriceWholeBar: "Buy price - Whole bar (per 1 m full bar)",
+    buyPriceCutPiece: "Buy price - Cut piece (per 1 m custom cut)",
     sellPricePerMeter: "Sell price (per meter)",
     sellPriceWholeBar: "Sell price - Whole bar (per 1 m full bar)",
     sellPriceCutPiece: "Sell price - Cut piece (per 1 m custom cut)",
