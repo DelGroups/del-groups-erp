@@ -97,11 +97,19 @@ export default function ProductForm({
     warehouse_id: polywoodWarehouseId || warehouses[0]?.id || "",
     is_dimensional: Boolean(initialProduct?.is_dimensional),
     is_composite: Boolean(initialProduct?.is_composite),
-    base_length: String(initialProduct?.base_length ?? ""),
+    base_length: String(initialProduct?.base_length ?? initialProduct?.full_sheet_length_m ?? "4.0"),
     base_width: String(initialProduct?.base_width ?? ""),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const parentCategories = categories.filter((cat) => !cat.parent_id);
+  const selectedParent = categories.find((cat) => cat.name === form.category && !cat.parent_id);
+  const availableSubcategories = selectedParent
+    ? categories.filter((cat) => cat.parent_id === selectedParent.id)
+    : [];
+  const isServiceCategorySelected =
+    matchesServiceCategoryName(form.category) || matchesServiceCategoryName(form.subcategory);
 
   const parsedOffCuts = useMemo(
     () =>
@@ -134,6 +142,8 @@ export default function ProductForm({
     set({
       unit,
       is_dimensional: metric,
+      base_length:
+        metric && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
       warehouse_id: metric ? polywoodWarehouseId || form.warehouse_id : form.warehouse_id,
     });
     if (!metric) {
@@ -146,6 +156,8 @@ export default function ProductForm({
     set({
       is_dimensional: checked,
       unit: checked ? "Metr" : form.unit === "Metr" ? "Ədəd" : form.unit,
+      base_length:
+        checked && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
       warehouse_id: checked ? polywoodWarehouseId || form.warehouse_id : form.warehouse_id,
     });
     if (!checked) {
@@ -159,14 +171,6 @@ export default function ProductForm({
     setOffCutRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   const removeOffCutRow = (id: string) =>
     setOffCutRows((prev) => prev.filter((row) => row.id !== id));
-
-  const parentCategories = categories.filter((cat) => !cat.parent_id);
-  const selectedParent = categories.find((cat) => cat.name === form.category && !cat.parent_id);
-  const availableSubcategories = selectedParent
-    ? categories.filter((cat) => cat.parent_id === selectedParent.id)
-    : [];
-  const isServiceCategorySelected =
-    matchesServiceCategoryName(form.category) || matchesServiceCategoryName(form.subcategory);
 
   const handleCategoryChange = (category: string) => {
     const serviceCategory = matchesServiceCategoryName(category);
@@ -417,7 +421,7 @@ export default function ProductForm({
                 type="checkbox"
                 checked={form.is_dimensional}
                 disabled={isComposite}
-                onChange={(e) => handleDimensionalToggle(e.target.checked)}
+                onChange={(event) => handleDimensionalToggle(event.target.checked)}
               />
               {t("forms.isDimensionalProduct")}
             </label>
@@ -445,8 +449,8 @@ export default function ProductForm({
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.base_length}
-                onChange={(e) => set({ base_length: e.target.value })}
+                value={form.base_length || "4.0"}
+                onChange={(event) => set({ base_length: event.target.value })}
                 placeholder="4.0"
                 className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               />
