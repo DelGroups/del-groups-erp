@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import PurchaseForm from "@/components/purchases/PurchaseForm";
+import { FormLayout } from "@/components/ui/form-layout";
 import { fetchPurchaseById, fetchPurchaseFormData } from "@/lib/purchases/fetchPurchases";
 import type { Product, PurchaseRecord, Supplier, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -47,31 +48,38 @@ export default function NewPurchasePage() {
     };
   }, [draftId]);
 
-  if (loading) {
-    return (
-      <PageLayout>
-        <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
-      </PageLayout>
-    );
-  }
+  const title = initialPurchase ? t("forms.purchaseEditTitle") : t("forms.purchaseNewTitle");
 
   return (
     <PageLayout>
-      <PurchaseForm
-        key={initialPurchase?.id || "new"}
-        layoutMode="page"
-        suppliers={suppliers}
-        products={products}
-        warehouses={warehouses}
-        mode={initialPurchase ? "edit" : "create"}
-        initialPurchase={initialPurchase}
-        draftId={draftId}
-        onCancel={goToList}
-        onSuccess={goToList}
-        onDraftSaved={(purchaseId) => {
-          router.replace(`/purchases/new?draft=${purchaseId}`);
-        }}
-      />
+      <FormLayout
+        title={title}
+        subtitle={t("forms.purchaseFormSubtitle")}
+        breadcrumbs={[
+          { label: t("nav.items.purchases"), href: "/purchases" },
+          { label: title },
+        ]}
+      >
+        {loading ? (
+          <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
+        ) : (
+          <PurchaseForm
+            key={initialPurchase?.id || "new"}
+            layoutMode="page"
+            suppliers={suppliers}
+            products={products}
+            warehouses={warehouses}
+            mode={initialPurchase ? "edit" : "create"}
+            initialPurchase={initialPurchase}
+            draftId={draftId}
+            onCancel={goToList}
+            onSuccess={goToList}
+            onDraftSaved={(purchaseId) => {
+              router.replace(`/purchases/new?draft=${purchaseId}`);
+            }}
+          />
+        )}
+      </FormLayout>
     </PageLayout>
   );
 }

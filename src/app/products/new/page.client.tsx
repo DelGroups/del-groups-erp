@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ProductForm from "@/components/products/ProductForm";
+import { FormLayout } from "@/components/ui/form-layout";
 import { fetchProductsCatalog } from "@/lib/products/api";
 import type { Category, Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { ArrowLeft, PackagePlus } from "lucide-react";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -29,38 +28,40 @@ export default function NewProductPage() {
 
   return (
     <PageLayout>
-        <header className="border-b border-app app-glass px-6 py-4">
-          <Link
-            href="/products"
-            className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-app-accent hover:underline"
+      <FormLayout
+        fullWidth
+        title={t("products.newTitle")}
+        subtitle={t("products.newSubtitle")}
+        breadcrumbs={[
+          { label: t("nav.items.products"), href: "/products" },
+          { label: t("products.createLabel") },
+        ]}
+        actions={
+          <button
+            type="button"
+            onClick={() => router.push("/products")}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-app dark:bg-app-card dark:text-app"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {t("products.backToList")}
-          </Link>
-          <h2 className="flex items-center gap-2 text-xl font-bold text-app">
-            <PackagePlus className="h-6 w-6 text-app-accent" />
-            {t("products.newTitle")}
-          </h2>
-          <p className="text-sm text-app-muted">{t("products.newSubtitle")}</p>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-6">
+            {t("common.cancel")}
+          </button>
+        }
+      >
+        <div className="w-full">
           {loading ? (
-            <div className="app-card rounded-xl p-12 text-center text-sm text-app-muted">
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm dark:border-app dark:bg-app-card dark:text-app-muted">
               {t("products.formLoading")}
             </div>
           ) : (
-            <div className="mx-auto max-w-4xl">
-              <ProductForm
-                categories={categories}
-                warehouses={warehouses}
-                allProducts={products}
-                onCancel={() => router.push("/products")}
-                onSuccess={() => router.push("/products")}
-              />
-            </div>
+            <ProductForm
+              categories={categories}
+              warehouses={warehouses}
+              allProducts={products}
+              onCancel={() => router.push("/products")}
+              onSuccess={() => router.push("/products")}
+            />
           )}
-        </main>
-      </PageLayout>
+        </div>
+      </FormLayout>
+    </PageLayout>
   );
 }

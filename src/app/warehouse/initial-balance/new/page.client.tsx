@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import PageHeader from "@/components/ui/page-header";
+import { FormLayout } from "@/components/ui/form-layout";
 import InitialBalanceForm from "@/components/initialBalance/InitialBalanceForm";
 import { fetchInitialBalanceByIdAction } from "@/lib/initialBalance/actions";
 import { fetchProductsCatalog } from "@/lib/products/api";
@@ -48,28 +48,34 @@ export default function InitialBalanceNewPageClient() {
     };
   }, [draftId]);
 
-  if (loading) {
-    return (
-      <PageLayout>
-        <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
-      </PageLayout>
-    );
-  }
+  const title =
+    initialDocument?.document_number
+      ? `${t("initialBalance.formTitle")} — ${initialDocument.document_number}`
+      : t("initialBalance.newDocument");
 
   return (
     <PageLayout>
-      <PageHeader
-        title={t("initialBalance.formTitle")}
-        description={t("initialBalance.formDescription")}
-      />
-      <InitialBalanceForm
-        products={products}
-        warehouses={warehouses}
-        initialDocument={initialDocument}
-        onSuccess={() => {
-          void goToList();
-        }}
-      />
+      <FormLayout
+        title={title}
+        subtitle={t("initialBalance.formDescription")}
+        breadcrumbs={[
+          { label: t("nav.items.initialBalances"), href: "/warehouse/initial-balance" },
+          { label: title },
+        ]}
+      >
+        {loading ? (
+          <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
+        ) : (
+          <InitialBalanceForm
+            products={products}
+            warehouses={warehouses}
+            initialDocument={initialDocument}
+            onSuccess={() => {
+              void goToList();
+            }}
+          />
+        )}
+      </FormLayout>
     </PageLayout>
   );
 }
