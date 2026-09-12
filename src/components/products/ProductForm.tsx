@@ -43,6 +43,8 @@ interface ProductFormProps {
   onCancel?: () => void;
   /** When true, renders inside a drawer without a fixed viewport footer. */
   embedded?: boolean;
+  /** Polished centered layout for the dedicated create page. */
+  layout?: "default" | "create-page";
 }
 
 export default function ProductForm({
@@ -53,7 +55,10 @@ export default function ProductForm({
   onSuccess,
   onCancel,
   embedded = false,
+  layout = "default",
 }: ProductFormProps) {
+  const isCreatePage = layout === "create-page" && !embedded;
+  const rowClass = isCreatePage ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : formRowClass;
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const isEditMode = Boolean(initialProduct);
@@ -316,10 +321,10 @@ export default function ProductForm({
           </p>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
-          <div className="space-y-4 lg:col-span-8">
+        <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="flex w-full flex-col gap-6 lg:col-span-8">
             <FormSectionCard title={t("forms.sectionMainInfo")}>
-              <div className={formRowClass}>
+              <div className={rowClass}>
                 <div>
                   <label className={formLabelClass}>{t("forms.productName")}</label>
                   <input
@@ -342,7 +347,7 @@ export default function ProductForm({
                 </div>
               </div>
 
-              <div className={formRowClass}>
+              <div className={rowClass}>
                 <div>
                   <label className={formLabelClass}>{t("common.category")} *</label>
                   <select
@@ -379,9 +384,9 @@ export default function ProductForm({
 
             {!isServiceCategorySelected ? (
               <FormSectionCard title={t("forms.sectionMetricsPricing")}>
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
                       form.is_dimensional
                         ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100"
                         : "border-slate-200 bg-white text-slate-700 dark:border-app dark:bg-app-card dark:text-app"
@@ -398,7 +403,7 @@ export default function ProductForm({
                   </label>
 
                   <label
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
                       isComposite
                         ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100"
                         : "border-slate-200 bg-white text-slate-700 dark:border-app dark:bg-app-card dark:text-app"
@@ -415,7 +420,7 @@ export default function ProductForm({
                   </label>
                 </div>
 
-                <div className={formRowClass}>
+                <div className={showMetricFields ? rowClass : "grid grid-cols-1 gap-4"}>
                   <div>
                     <label className={formLabelClass}>{t("forms.unitMeasure")}</label>
                     <select
@@ -449,13 +454,11 @@ export default function ProductForm({
                         className={formInputClass}
                       />
                     </div>
-                  ) : (
-                    <div className="hidden sm:block" />
-                  )}
+                  ) : null}
                 </div>
 
                 {showMetricFields ? (
-                  <div className={formRowClass}>
+                  <div className={rowClass}>
                     <div>
                       <label className={formLabelClass}>{t("forms.baseWidth")} (m)</label>
                       <input
@@ -471,7 +474,7 @@ export default function ProductForm({
                   </div>
                 ) : null}
 
-                <div className={formRowClass}>
+                <div className={rowClass}>
                   <UnitAwarePriceInput
                     label={t("forms.buyPrice")}
                     storedValue={form.buy_price}
@@ -509,19 +512,19 @@ export default function ProductForm({
             ) : null}
           </div>
 
-          <div className="space-y-4 lg:col-span-4">
+          <div className="flex w-full flex-col gap-6 lg:col-span-4">
             {!isServiceCategorySelected ? (
               <>
                 <FormSectionCard title={t("forms.sectionBarcodeRules")}>
-                  <div>
+                  <div className="space-y-4">
                     <label className={formLabelClass}>{t("forms.barcode")}</label>
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:flex-row">
                       <input
                         type="text"
                         value={form.barcode}
                         onChange={(e) => set({ barcode: e.target.value })}
                         placeholder={t("forms.autoGenerated")}
-                        className={`${formInputClass} font-mono`}
+                        className={`${formInputClass} min-w-0 flex-1 font-mono`}
                       />
                       <button
                         type="button"
@@ -553,23 +556,25 @@ export default function ProductForm({
                 </FormSectionCard>
 
                 <FormSectionCard title={t("forms.sectionExtraSettings")}>
-                  <div>
-                    <label className={formLabelClass}>{t("forms.minStockThreshold")}</label>
-                    <input
-                      type="number"
-                      value={form.min_stock}
-                      onChange={(e) => set({ min_stock: e.target.value })}
-                      className={formInputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={formLabelClass}>{t("forms.extraInfo")}</label>
-                    <textarea
-                      rows={4}
-                      value={form.extra_info}
-                      onChange={(e) => set({ extra_info: e.target.value })}
-                      className={formTextareaClass}
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className={formLabelClass}>{t("forms.minStockThreshold")}</label>
+                      <input
+                        type="number"
+                        value={form.min_stock}
+                        onChange={(e) => set({ min_stock: e.target.value })}
+                        className={formInputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={formLabelClass}>{t("forms.extraInfo")}</label>
+                      <textarea
+                        rows={4}
+                        value={form.extra_info}
+                        onChange={(e) => set({ extra_info: e.target.value })}
+                        className={formTextareaClass}
+                      />
+                    </div>
                   </div>
                 </FormSectionCard>
               </>
@@ -595,6 +600,26 @@ export default function ProductForm({
             >
               <Save className="h-4 w-4" />
               {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
+            </button>
+          </div>
+        ) : isCreatePage ? (
+          <div className="mt-8 flex w-full items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-app">
+            {onCancel ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-app dark:bg-app-card dark:text-app dark:hover:bg-app-card-hover"
+              >
+                {t("common.cancel")}
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-6 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? t("common.saving") : t("forms.saveProduct")}
             </button>
           </div>
         ) : (

@@ -17,6 +17,8 @@ export interface FormLayoutProps {
   fullWidth?: boolean;
   /** Reserve space for a fixed bottom action bar rendered inside children. */
   withStickyFooter?: boolean;
+  /** Override default content area classes (default: app-page-content space-y-4). */
+  contentClassName?: string;
   children: React.ReactNode;
 }
 
@@ -26,6 +28,7 @@ export function FormLayout({
   actions,
   fullWidth = false,
   withStickyFooter = false,
+  contentClassName,
   children,
 }: FormLayoutProps) {
   const widthClass = fullWidth ? "w-full" : "w-full max-w-7xl mx-auto";
@@ -48,7 +51,9 @@ export function FormLayout({
         </div>
       </div>
 
-      <div className={`${widthClass} app-page-content space-y-4`}>{children}</div>
+      <div className={`${widthClass} ${contentClassName ?? "app-page-content space-y-4"}`}>
+        {children}
+      </div>
     </div>
   );
 }
