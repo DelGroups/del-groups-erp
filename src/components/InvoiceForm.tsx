@@ -77,6 +77,7 @@ import {
   fetchAvailablePolywoodPieces,
   fetchPolywoodInventorySummary,
 } from "@/lib/polywood/inventory";
+import { resolvePolywoodLineUnitPrice } from "@/lib/polywood/metricPricing";
 import { evaluateSmartCut } from "@/lib/polywood/smartCut";
 import PolywoodCutConfirmModal, {
   type PolywoodCutConfirmState,
@@ -136,12 +137,15 @@ interface Product {
   barcode?: string;
   unit?: string;
   sell_price?: number;
+  sell_price_cut?: number | null;
   sale_price?: number;
   price?: number;
   stock?: number;
   warehouse_id?: string;
   inventory_mode?: string | null;
   full_sheet_length_m?: number | null;
+  base_length?: number | null;
+  is_dimensional?: boolean | null;
   vat_rate?: number;
   tax_rate?: number;
   discount_percent?: number;
@@ -203,6 +207,25 @@ function productPrice(p: Product) {
 
 function roundPrice(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function resolvePolywoodRowUnitPrice(
+  prod: Product | null | undefined,
+  row: Pick<
+    SaleItem,
+    "polywood_sale_mode" | "polywood_length_m" | "quantity" | "polywood_full_sheet_length_m"
+  >
+): number {
+  if (!prod) return 0;
+  const mode = (row.polywood_sale_mode || "linear_m") as "linear_m" | "full_sheet";
+  const requestedM =
+    mode === "full_sheet"
+      ? Number(row.polywood_full_sheet_length_m) || Number(prod.full_sheet_length_m) || 4
+      : Number(row.polywood_length_m ?? row.quantity) || 0;
+  if (requestedM <= 0) {
+    return roundPrice(productPrice(prod));
+  }
+  return resolvePolywoodLineUnitPrice(prod, requestedM, mode);
 }
 
 const INVOICE_CARD = "app-card flex h-full flex-col rounded-xl p-4 text-xs";
@@ -610,6 +633,12 @@ export default function UniversalInvoiceForm({
             polywood_length_m: requestedM,
             polywood_cut_confirmed: true,
             polywood_sale_mode: "linear_m",
+            unit_price: resolvePolywoodRowUnitPrice(product, {
+              polywood_sale_mode: "linear_m",
+              polywood_length_m: requestedM,
+              quantity: requestedM,
+              polywood_full_sheet_length_m: fullSheetLengthM,
+            }),
           });
           return;
         }
@@ -715,20 +744,25 @@ export default function UniversalInvoiceForm({
       fullSheets: 0,
     };
 
+    const nextQuantity = quantityOverride ?? row?.quantity ?? 1;
+    const nextMode = (row?.polywood_sale_mode || "linear_m") as "linear_m" | "full_sheet";
+    const polywoodDraftRow = {
+      polywood_sale_mode: nextMode,
+      polywood_length_m: polywoodRow ? nextQuantity : null,
+      quantity: nextQuantity,
+      polywood_full_sheet_length_m: fullSheetLengthM,
+    };
+
     handleItemChange(rowId, {
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
       warehouse_id: warehouseId,
       warehouse_name: warehouseName,
-      quantity: quantityOverride ?? row?.quantity ?? 1,
+      quantity: nextQuantity,
       unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
       unit_price: polywoodRow
-        ? roundPrice(
-            (row?.polywood_sale_mode || "linear_m") === "full_sheet"
-              ? productPrice(prod) * fullSheetLengthM
-              : productPrice(prod)
-          )
+        ? resolvePolywoodRowUnitPrice(prod, polywoodDraftRow)
         : productPrice(prod),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: resolveLineVatRate(prod),
@@ -815,7 +849,6 @@ export default function UniversalInvoiceForm({
     const polywoodRow = isPolywoodProd || isPolywoodWarehouseRow(row.warehouse_id, warehouses);
     const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
     const mode = polywoodRow ? row.polywood_sale_mode || "linear_m" : null;
-    const meterPrice = productPrice(prod);
     const nextQuantity = quantity ?? row.quantity;
     const updated: SaleItem = {
       ...row,
@@ -827,8 +860,13 @@ export default function UniversalInvoiceForm({
         isPolywoodProd && polywoodWarehouse ? polywoodWarehouse.name : row.warehouse_name,
       unit: polywoodRow ? (mode === "full_sheet" ? "Vərəq" : "Metr") : prod.unit || "Ədəd",
       unit_price: polywoodRow
-        ? roundPrice(mode === "full_sheet" ? meterPrice * fullSheetLengthM : meterPrice)
-        : meterPrice,
+        ? resolvePolywoodRowUnitPrice(prod, {
+            polywood_sale_mode: mode,
+            polywood_length_m: mode === "linear_m" ? nextQuantity : null,
+            quantity: nextQuantity,
+            polywood_full_sheet_length_m: fullSheetLengthM,
+          })
+        : productPrice(prod),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
       available_stock: availableStock ?? (Number(prod.stock) || 0),
@@ -1697,25 +1735,22 @@ export default function UniversalInvoiceForm({
                           </p>
                           <select
                             value={row.polywood_sale_mode || "linear_m"}
-                            onChange={(e) =>
-                              (() => {
-                                const nextMode = e.target.value as "linear_m" | "full_sheet";
-                                const sheetLen = row.polywood_full_sheet_length_m || 4;
-                                const perMeterPrice =
-                                  row.polywood_sale_mode === "full_sheet"
-                                    ? row.unit_price / sheetLen
-                                    : row.unit_price;
-                                handleItemChange(row.id, {
+                            onChange={(e) => {
+                              const nextMode = e.target.value as "linear_m" | "full_sheet";
+                              const rowProduct = products.find(
+                                (product) => product.id === row.product_id
+                              );
+                              handleItemChange(row.id, {
+                                polywood_sale_mode: nextMode,
+                                unit: nextMode === "full_sheet" ? "Vərəq" : "Metr",
+                                unit_price: resolvePolywoodRowUnitPrice(rowProduct, {
                                   polywood_sale_mode: nextMode,
-                                  unit: nextMode === "full_sheet" ? "Vərəq" : "Metr",
-                                  unit_price: roundPrice(
-                                    nextMode === "full_sheet"
-                                      ? perMeterPrice * sheetLen
-                                      : perMeterPrice
-                                  ),
-                                });
-                              })()
-                            }
+                                  polywood_length_m: row.polywood_length_m,
+                                  quantity: row.quantity,
+                                  polywood_full_sheet_length_m: row.polywood_full_sheet_length_m,
+                                }),
+                              });
+                            }}
                             className="mt-1 w-full rounded border border-app p-1 text-[10px]"
                           >
                             <option value="linear_m">{t("polywood.invoice.modeLinear")}</option>
@@ -1740,6 +1775,17 @@ export default function UniversalInvoiceForm({
                                     polywood_total_area_m2:
                                       width > 0 ? length * width * pieces : null,
                                   });
+                                }}
+                                onBlur={() => {
+                                  const rowProduct = products.find(
+                                    (product) => product.id === row.product_id
+                                  );
+                                  if (!rowProduct) return;
+                                  handleItemChange(row.id, {
+                                    unit_price: resolvePolywoodRowUnitPrice(rowProduct, row),
+                                    polywood_cut_confirmed: false,
+                                  });
+                                  void handlePolywoodQuantityBlur(row.id);
                                 }}
                               />
                             </label>
@@ -1855,6 +1901,9 @@ export default function UniversalInvoiceForm({
                         onBlur={() => {
                           const rowProduct = products.find((product) => product.id === row.product_id);
                           if (isPolywoodMeterLine(row, rowProduct)) {
+                            handleItemChange(row.id, {
+                              unit_price: resolvePolywoodRowUnitPrice(rowProduct, row),
+                            });
                             void handlePolywoodQuantityBlur(row.id);
                           }
                         }}
@@ -2249,11 +2298,21 @@ export default function UniversalInvoiceForm({
         state={cutConfirmState}
         onCancel={() => setCutConfirmState(null)}
         onConfirm={() => {
+          const row = items.find((item) => item.id === cutConfirmState.rowId);
+          const rowProduct = row
+            ? products.find((product) => product.id === row.product_id)
+            : undefined;
           handleItemChange(cutConfirmState.rowId, {
             polywood_length_m: cutConfirmState.requestedM,
             quantity: cutConfirmState.requestedM,
             polywood_sale_mode: "linear_m",
             polywood_cut_confirmed: true,
+            unit_price: resolvePolywoodRowUnitPrice(rowProduct, {
+              polywood_sale_mode: "linear_m",
+              polywood_length_m: cutConfirmState.requestedM,
+              quantity: cutConfirmState.requestedM,
+              polywood_full_sheet_length_m: row?.polywood_full_sheet_length_m,
+            }),
           });
           setCutConfirmState(null);
         }}

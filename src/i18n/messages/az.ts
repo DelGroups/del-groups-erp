@@ -1626,6 +1626,8 @@ export const azMessages = {
     standardBarLength: "Standard şaxə uzunluğu (m)",
     buyPricePerMeter: "Alış qiyməti (hər metr)",
     sellPricePerMeter: "Satış qiyməti (hər metr)",
+    sellPriceWholeBar: "Satış qiyməti - Bütöv Şaxə (hər 1 m tam şaxə)",
+    sellPriceCutPiece: "Satış qiyməti - Kəsilmiş Parça (hər 1 m kəsilmiş parça)",
     pricePerMeterShort: "AZN/m",
     baseWidth: "Əsas en",
     notSelected: "Seçilməyib",

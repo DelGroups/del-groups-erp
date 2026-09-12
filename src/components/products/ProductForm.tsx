@@ -88,6 +88,7 @@ export default function ProductForm({
     unit: initialProduct?.unit || "Ədəd",
     buy_price: String(initialProduct?.buy_price ?? 0),
     sell_price: String(initialProduct?.sell_price ?? 0),
+    sell_price_cut: String(initialProduct?.sell_price_cut ?? 0),
     stock: String(initialProduct?.stock ?? 0),
     min_stock: String(initialProduct?.min_stock ?? 5),
     barcode: initialProduct?.barcode || (!initialProduct ? generateProductBarcode() : ""),
@@ -286,6 +287,7 @@ export default function ProductForm({
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
       sell_price: parseFloat(form.sell_price) || 0,
+      sell_price_cut: form.is_dimensional ? parseFloat(form.sell_price_cut) || 0 : 0,
       stock:
         isServiceCategorySelected || isComposite
           ? 0
@@ -516,16 +518,43 @@ export default function ProductForm({
           />
         </label>
 
-        <label className="block text-xs font-semibold text-app">
-          {showMetricFields ? t("forms.sellPricePerMeter") : t("forms.sellPrice")}
-          <input
-            type="number"
-            step="0.01"
-            value={form.sell_price}
-            onChange={(e) => set({ sell_price: e.target.value })}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
-        </label>
+        {showMetricFields ? (
+          <>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.sellPriceWholeBar")} ({t("forms.pricePerMeterShort")})
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.sell_price}
+                onChange={(event) => set({ sell_price: event.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-app">
+              {t("forms.sellPriceCutPiece")} ({t("forms.pricePerMeterShort")})
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.sell_price_cut}
+                onChange={(event) => set({ sell_price_cut: event.target.value })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              />
+            </label>
+          </>
+        ) : (
+          <label className="block text-xs font-semibold text-app">
+            {t("forms.sellPrice")}
+            <input
+              type="number"
+              step="0.01"
+              value={form.sell_price}
+              onChange={(e) => set({ sell_price: e.target.value })}
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+        )}
 
         <div className="block text-xs font-semibold text-app">
           <label>

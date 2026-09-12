@@ -95,6 +95,7 @@ export function buildProductInsert(
     unit: input.unit || "Ədəd",
     buy_price: Number(input.buy_price) || 0,
     sell_price: Number(input.sell_price) || 0,
+    sell_price_cut: Number(input.sell_price_cut) || 0,
     stock: isService ? 0 : Number(input.stock) || 0,
     min_stock: isService ? 0 : Number(input.min_stock) || 0,
     min_stock_level: isService ? 0 : Number(input.min_stock_level ?? input.min_stock) || 0,

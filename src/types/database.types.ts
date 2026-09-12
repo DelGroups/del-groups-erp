@@ -233,6 +233,8 @@ export interface Product {
   unit: string | null;
   buy_price: number | null;
   sell_price: number | null;
+  /** Cut/custom-length sell price per meter for metric products */
+  sell_price_cut?: number | null;
   stock: number | null;
   min_stock?: number | null;
   min_stock_level?: number | null;

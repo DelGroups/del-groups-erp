@@ -14,6 +14,7 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS color TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS weight NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_info TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock_level NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price_cut NUMERIC DEFAULT 0;
 
 -- Sales header (items live in sale_items; payments may stay JSONB on sales)
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_no TEXT;
@@ -220,6 +221,7 @@ CREATE TABLE IF NOT EXISTS products (
   unit TEXT DEFAULT 'Ədəd',
   buy_price NUMERIC DEFAULT 0,
   sell_price NUMERIC DEFAULT 0,
+  sell_price_cut NUMERIC DEFAULT 0,
   stock NUMERIC DEFAULT 0,
   min_stock NUMERIC DEFAULT 0,
   barcode TEXT,

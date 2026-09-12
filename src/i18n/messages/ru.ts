@@ -1628,6 +1628,8 @@ export const ruMessages: Messages = {
     standardBarLength: "Стандартная длина штанги (м)",
     buyPricePerMeter: "Закупочная цена (за метр)",
     sellPricePerMeter: "Цена продажи (за метр)",
+    sellPriceWholeBar: "Цена продажи — целый пруток (за 1 м полного прутка)",
+    sellPriceCutPiece: "Цена продажи — резаная часть (за 1 м кастомного реза)",
     pricePerMeterShort: "AZN/м",
     baseWidth: "Базовая ширина",
     notSelected: "Не выбрано",
