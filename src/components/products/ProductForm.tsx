@@ -37,7 +37,7 @@ interface OffCutRow {
   count: string;
 }
 
-const UNITS = ["Ədəd", "Kq", "Litr", "Metr", "Qutu", "Xidmət"];
+const UNITS = ["Ədəd", "Metr", "Kvadrat Metr", "Set/Komplekt"];
 
 function createOffCutRow(): OffCutRow {
   return {
@@ -125,10 +125,27 @@ export default function ProductForm({
     );
   }, [form.is_dimensional, form.base_length, fullSheetCount, parsedOffCuts]);
 
+  const isMetricUnit = form.unit === "Metr";
+  const showMetricFields =
+    (form.is_dimensional || isMetricUnit) && !isServiceCategorySelected && !isComposite;
+
+  const handleUnitChange = (unit: string) => {
+    const metric = unit === "Metr";
+    set({
+      unit,
+      is_dimensional: metric,
+      warehouse_id: metric ? polywoodWarehouseId || form.warehouse_id : form.warehouse_id,
+    });
+    if (!metric) {
+      setFullSheetCount("0");
+      setOffCutRows([]);
+    }
+  };
+
   const handleDimensionalToggle = (checked: boolean) => {
     set({
       is_dimensional: checked,
-      unit: checked ? "Metr" : form.unit,
+      unit: checked ? "Metr" : form.unit === "Metr" ? "Ədəd" : form.unit,
       warehouse_id: checked ? polywoodWarehouseId || form.warehouse_id : form.warehouse_id,
     });
     if (!checked) {
@@ -420,17 +437,17 @@ export default function ProductForm({
           </p>
         )}
 
-        {form.is_dimensional && !isServiceCategorySelected ? (
+        {showMetricFields ? (
           <>
             <label className="block text-xs font-semibold text-app">
-              {t("forms.baseLength")} (m)
+              {t("forms.standardBarLength")}
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={form.base_length}
                 onChange={(e) => set({ base_length: e.target.value })}
-                placeholder="4.10"
+                placeholder="4.0"
                 className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               />
             </label>
@@ -472,8 +489,9 @@ export default function ProductForm({
           {t("forms.unitMeasure")}
           <select
             value={form.unit}
-            onChange={(e) => set({ unit: e.target.value })}
+            onChange={(e) => handleUnitChange(e.target.value)}
             className="app-input mt-1 text-sm"
+            disabled={isServiceCategorySelected}
           >
             {UNITS.map((u) => (
               <option key={u} value={u}>
@@ -484,7 +502,7 @@ export default function ProductForm({
         </label>
 
         <label className="block text-xs font-semibold text-app">
-          {t("forms.buyPrice")} (AZN)
+          {showMetricFields ? t("forms.buyPricePerMeter") : t("forms.buyPrice")} (AZN)
           <input
             type="number"
             step="0.01"
@@ -495,7 +513,7 @@ export default function ProductForm({
         </label>
 
         <label className="block text-xs font-semibold text-app">
-          {t("forms.sellPrice")}
+          {showMetricFields ? t("forms.sellPricePerMeter") : t("forms.sellPrice")}
           <input
             type="number"
             step="0.01"
@@ -577,7 +595,7 @@ export default function ProductForm({
           </div>
         ) : null}
 
-        {!isServiceCategorySelected && !isComposite && (!form.is_dimensional || isEditMode) ? (
+        {!isServiceCategorySelected && !isComposite && (!showMetricFields || isEditMode) ? (
           <label className="block text-xs font-semibold text-app">
             {t("forms.initialStock")}
             <input
@@ -587,7 +605,7 @@ export default function ProductForm({
               className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
           </label>
-        ) : !isServiceCategorySelected && !isComposite && form.is_dimensional && !isEditMode ? (
+        ) : !isServiceCategorySelected && !isComposite && showMetricFields && !isEditMode ? (
           <div className="md:col-span-2 space-y-4 rounded-xl border border-app bg-app-card-hover p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2">
               <h3 className="text-sm font-bold text-app">{t("forms.initialStockComposition")}</h3>

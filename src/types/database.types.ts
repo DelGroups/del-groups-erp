@@ -706,6 +706,10 @@ export interface PurchaseLineItem {
   unit: string;
   unit_price: number;
   total: number;
+  /** Metric intake: full bars vs custom piece lengths */
+  metric_receive_mode?: "full_bars" | "custom_pieces" | null;
+  metric_full_bar_count?: number;
+  metric_custom_lengths?: string;
 }
 
 export interface PurchaseItemRow {

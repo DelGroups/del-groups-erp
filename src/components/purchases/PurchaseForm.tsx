@@ -74,6 +74,15 @@ import { rateSupplierDeliveryAction } from "@/lib/actions/supplierRating";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { formatSupplierOptionLabel, supplierDisplayName } from "@/lib/purchases/supplierScore";
 import { useProcurementConfig } from "@/hooks/useProcurementConfig";
+import MetricStockIntakeFields, {
+  type MetricIntakeValue,
+} from "@/components/polywood/MetricStockIntakeFields";
+import {
+  buildMetricLengths,
+  isMetricProduct,
+  resolveStandardBarLengthM,
+  totalMetricMeters,
+} from "@/lib/polywood/metricReceive";
 
 interface Account {
   id: string;
@@ -351,6 +360,30 @@ export default function PurchaseForm({
     );
   };
 
+  const handleMetricIntakeChange = (
+    rowId: string,
+    product: Product,
+    intake: MetricIntakeValue
+  ) => {
+    const standardLengthM = resolveStandardBarLengthM(product);
+    const lengths = buildMetricLengths(
+      intake.mode,
+      intake.fullBarCount,
+      intake.customLengths,
+      standardLengthM
+    );
+    const quantity = totalMetricMeters(lengths);
+    const unitPrice = Number(items.find((row) => row.id === rowId)?.unit_price) || Number(product.buy_price) || 0;
+    updateItem(rowId, {
+      metric_receive_mode: intake.mode,
+      metric_full_bar_count: intake.fullBarCount,
+      metric_custom_lengths: intake.customLengths,
+      quantity,
+      unit: "Metr",
+      total: calcPurchaseLineTotal(quantity, unitPrice),
+    });
+  };
+
   const handleProductSelect = (rowId: string, productId: string) => {
     const product = productList.find((p) => p.id === productId);
     if (!product) {
@@ -360,17 +393,26 @@ export default function PurchaseForm({
         product_name: "",
         unit_price: 0,
         total: 0,
+        metric_receive_mode: null,
+        metric_full_bar_count: 0,
+        metric_custom_lengths: "",
       });
       return;
     }
     const qty = items.find((r) => r.id === rowId)?.quantity || 1;
+    const unitPrice = Number(product.buy_price) || 0;
+    const metric = isMetricProduct(product);
     updateItem(rowId, {
       product_id: product.id,
       product_code: product.code,
       product_name: product.name,
-      unit: product.unit || "Ədəd",
-      unit_price: Number(product.buy_price) || 0,
-      total: calcPurchaseLineTotal(qty, Number(product.buy_price) || 0),
+      unit: metric ? "Metr" : product.unit || "Ədəd",
+      unit_price: unitPrice,
+      quantity: metric ? 0 : qty,
+      total: metric ? 0 : calcPurchaseLineTotal(qty, unitPrice),
+      metric_receive_mode: metric ? "full_bars" : null,
+      metric_full_bar_count: 0,
+      metric_custom_lengths: "",
     });
   };
 
@@ -875,6 +917,22 @@ export default function PurchaseForm({
                           <Plus className="h-3.5 w-3.5" />
                         </button>
                       </div>
+                      {(() => {
+                        const product = productList.find((item) => item.id === row.product_id);
+                        if (!product || !isMetricProduct(product)) return null;
+                        return (
+                          <MetricStockIntakeFields
+                            value={{
+                              mode: row.metric_receive_mode || "full_bars",
+                              fullBarCount: row.metric_full_bar_count || 0,
+                              customLengths: row.metric_custom_lengths || "",
+                            }}
+                            standardLengthM={resolveStandardBarLengthM(product)}
+                            disabled={saving}
+                            onChange={(value) => handleMetricIntakeChange(row.id, product, value)}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="p-2.5">
                       <input
@@ -882,11 +940,19 @@ export default function PurchaseForm({
                         min="0"
                         step="0.01"
                         value={row.quantity}
+                        readOnly={Boolean(
+                          row.metric_receive_mode &&
+                            productList.find((item) => item.id === row.product_id) &&
+                            isMetricProduct(productList.find((item) => item.id === row.product_id)!)
+                        )}
                         onChange={(e) =>
                           updateItem(row.id, { quantity: Number(e.target.value) || 0 })
                         }
-                        className="w-full rounded border px-2 py-1 text-center"
+                        className="w-full rounded border px-2 py-1 text-center font-mono"
                       />
+                      {row.unit === "Metr" ? (
+                        <p className="mt-0.5 text-center text-[10px] text-app-muted">m</p>
+                      ) : null}
                     </td>
                     <td className="p-2.5">
                       <input
@@ -899,6 +965,11 @@ export default function PurchaseForm({
                         }
                         className="w-full rounded border px-2 py-1 font-mono"
                       />
+                      {row.unit === "Metr" ? (
+                        <p className="mt-0.5 text-center text-[10px] text-app-muted">
+                          {t("forms.pricePerMeterShort")}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="p-2.5 text-right font-mono font-bold">
                       {row.total.toFixed(2)}

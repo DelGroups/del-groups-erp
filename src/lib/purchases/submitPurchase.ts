@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
 import { fulfillProductionPurchaseRequestsByPurchaseId } from "@/lib/purchases/fulfillProductionRequests";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
+import { applyMetricPurchaseReceipts } from "@/lib/polywood/metricReceive";
 
 export interface SubmitPurchasePayload {
   header: PurchaseInsert & {
@@ -193,6 +194,22 @@ async function adjustSupplierBalance(
   return { ok: true };
 }
 
+async function applyPostedMetricReceipts(
+  payload: SubmitPurchasePayload,
+  validItems: PurchaseLineItem[],
+  purchaseId: string
+): Promise<SubmitPurchaseResult | null> {
+  const warehouseId = payload.header.warehouse_id;
+  if (!warehouseId) return null;
+  const metricItems = validItems.filter((item) => item.metric_receive_mode);
+  if (metricItems.length === 0) return null;
+  const result = await applyMetricPurchaseReceipts(metricItems, warehouseId);
+  if (!result.ok) {
+    return { success: false, purchaseId, error: result.error };
+  }
+  return null;
+}
+
 async function persistOfficialFields(
   payload: SubmitPurchasePayload,
   purchaseId: string
@@ -271,6 +288,8 @@ export async function submitPurchase(
 
     const officialError = await persistOfficialFields(payload, payload.purchaseId);
     if (officialError) return officialError;
+    const metricError = await applyPostedMetricReceipts(payload, validItems, payload.purchaseId);
+    if (metricError) return metricError;
     await fulfillProductionPurchaseRequestsByPurchaseId(payload.purchaseId);
 
     return {
@@ -307,6 +326,8 @@ export async function submitPurchase(
 
   const officialError = await persistOfficialFields(payload, draftId);
   if (officialError) return officialError;
+  const metricError = await applyPostedMetricReceipts(payload, validItems, draftId);
+  if (metricError) return metricError;
   await fulfillProductionPurchaseRequestsByPurchaseId(draftId);
 
   return {

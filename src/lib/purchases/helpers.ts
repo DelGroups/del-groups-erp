@@ -33,6 +33,9 @@ export function createEmptyPurchaseLineItem(): PurchaseLineItem {
     unit: "Ədəd",
     unit_price: 0,
     total: 0,
+    metric_receive_mode: null,
+    metric_full_bar_count: 0,
+    metric_custom_lengths: "",
   };
 }
 
