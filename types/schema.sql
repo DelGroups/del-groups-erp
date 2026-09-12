@@ -15,6 +15,41 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock_level NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price_cut NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_price_cut NUMERIC DEFAULT 0;
 
+-- Initial balance documents (1C-style opening inventory)
+CREATE TABLE IF NOT EXISTS inventory_initial_balances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_number TEXT NOT NULL UNIQUE,
+  doc_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id),
+  warehouse_name TEXT,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'posted', 'cancelled')),
+  total_amount NUMERIC NOT NULL DEFAULT 0,
+  created_by UUID REFERENCES auth.users(id),
+  created_by_name TEXT,
+  posted_at TIMESTAMPTZ,
+  posted_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inventory_initial_balance_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES inventory_initial_balances(id) ON DELETE CASCADE,
+  line_no INT NOT NULL DEFAULT 1,
+  product_id UUID NOT NULL REFERENCES products(id),
+  product_code TEXT,
+  product_name TEXT NOT NULL,
+  unit TEXT DEFAULT 'Ədəd',
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  unit_cost NUMERIC NOT NULL DEFAULT 0,
+  line_total NUMERIC NOT NULL DEFAULT 0,
+  is_metric BOOLEAN NOT NULL DEFAULT FALSE,
+  metric_total_meters NUMERIC,
+  piece_lengths JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Sales header (items live in sale_items; payments may stay JSONB on sales)
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_no TEXT;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS doc_date DATE DEFAULT CURRENT_DATE;

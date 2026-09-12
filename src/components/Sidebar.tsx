@@ -93,6 +93,7 @@ const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.products", path: "/products", icon: Package },
       { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
       { titleKey: "nav.items.warehouseIncoming", path: "/warehouse/incoming", icon: Package },
+      { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },
       { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
       { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },
       { titleKey: "nav.items.damagedGoods", path: "/products/damaged-goods", icon: Trash2 },

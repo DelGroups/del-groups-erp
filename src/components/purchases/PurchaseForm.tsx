@@ -74,6 +74,7 @@ import { rateSupplierDeliveryAction } from "@/lib/actions/supplierRating";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { formatSupplierOptionLabel, supplierDisplayName } from "@/lib/purchases/supplierScore";
 import { useProcurementConfig } from "@/hooks/useProcurementConfig";
+import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
 import MetricStockIntakeFields, {
   type MetricIntakeValue,
 } from "@/components/polywood/MetricStockIntakeFields";
@@ -966,11 +967,18 @@ export default function PurchaseForm({
                         }
                         className="w-full rounded border px-2 py-1 font-mono"
                       />
-                      {row.unit === "Metr" ? (
-                        <p className="mt-0.5 text-center text-[10px] text-app-muted">
-                          {t("forms.pricePerMeterShort")}
-                        </p>
-                      ) : null}
+                      {(() => {
+                        const product = productList.find((item) => item.id === row.product_id);
+                        if (!product || !isMetricProduct(product) || !row.unit_price) return null;
+                        const barLengthM = resolveStandardBarLengthM(product);
+                        return (
+                          <MetricLinePriceHint
+                            unitPrice={row.unit_price}
+                            barLengthM={barLengthM}
+                            mode="linear_m"
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="p-2.5 text-right font-mono font-bold">
                       {row.total.toFixed(2)}

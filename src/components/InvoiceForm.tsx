@@ -79,6 +79,7 @@ import {
 } from "@/lib/polywood/inventory";
 import { resolvePolywoodLineUnitPrice } from "@/lib/polywood/metricPricing";
 import { evaluateSmartCut } from "@/lib/polywood/smartCut";
+import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
 import PolywoodCutConfirmModal, {
   type PolywoodCutConfirmState,
 } from "@/components/polywood/PolywoodCutConfirmModal";
@@ -1931,6 +1932,24 @@ export default function UniversalInvoiceForm({
                         }
                         className={`${INVOICE_INPUT} font-mono`}
                       />
+                      {(() => {
+                        const rowProduct = products.find((product) => product.id === row.product_id);
+                        const metricLine =
+                          isPolywoodMeterLine(row, rowProduct) ||
+                          (row.polywood_sale_mode && rowProduct && isPolywoodProductRow(rowProduct));
+                        if (!metricLine || !row.unit_price) return null;
+                        const barLengthM =
+                          row.polywood_full_sheet_length_m ||
+                          Number(rowProduct?.base_length ?? rowProduct?.full_sheet_length_m) ||
+                          4;
+                        return (
+                          <MetricLinePriceHint
+                            unitPrice={row.unit_price}
+                            barLengthM={barLengthM}
+                            mode={row.polywood_sale_mode || "linear_m"}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-3">
                       <input
