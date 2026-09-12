@@ -94,6 +94,11 @@ import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
 import {
+  formControlClass,
+  formLabelClass,
+  formTextareaClass,
+} from "@/components/ui/form-field-styles";
+import {
   Building2,
   CheckCircle2,
   ClipboardList,
@@ -231,11 +236,9 @@ function resolvePolywoodRowUnitPrice(
 }
 
 const INVOICE_CARD = "app-card flex h-full flex-col rounded-xl p-4 text-xs";
-const INVOICE_LABEL = "mb-1 block text-xs font-medium text-app";
-const INVOICE_INPUT =
-  "h-9 w-full rounded-lg border border-app bg-app-card px-3 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]";
-const INVOICE_TEXTAREA =
-  "mt-1 w-full rounded-lg border border-app bg-app-card px-3 py-2 text-xs font-medium text-app focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-[color:var(--app-accent-ring)]";
+const INVOICE_LABEL = formLabelClass;
+const INVOICE_INPUT = formControlClass;
+const INVOICE_TEXTAREA = formTextareaClass;
 
 type InvoiceBottomTab = "delivery" | "expenses" | "notes" | "payments";
 
@@ -2116,13 +2119,13 @@ export default function UniversalInvoiceForm({
               {payments.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-2 rounded-xl border border-app bg-app-card-hover p-2"
+                  className="grid grid-cols-1 gap-2 rounded-xl border border-app bg-app-card-hover p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"
                 >
                   <select
                     value={p.account_id}
                     disabled={documentLocked}
                     onChange={(e) => handleAccountChange(p.id, e.target.value)}
-                    className={`${INVOICE_INPUT} min-w-[60%] w-[60%] shrink-0`}
+                    className={INVOICE_INPUT}
                   >
                     <option value="">{t("invoice.accountOption")}</option>
                     {accounts.map((acc) => (
@@ -2141,13 +2144,13 @@ export default function UniversalInvoiceForm({
                     onChange={(e) =>
                       updatePayment(p.id, { amount: Number(e.target.value) || 0 })
                     }
-                    className={`${INVOICE_INPUT} min-w-0 flex-1 text-right font-mono font-bold`}
+                    className={`${INVOICE_INPUT} text-right font-mono font-bold`}
                   />
                   <button
                     type="button"
                     disabled={documentLocked}
                     onClick={() => removePaymentRow(p.id)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
                     aria-label={t("common.delete")}
                   >
                     <Trash2 className="h-4 w-4" />

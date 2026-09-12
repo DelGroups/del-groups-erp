@@ -10,7 +10,12 @@ import {
   resolvePieceHintPrice,
 } from "@/lib/products/productPriceUnits";
 import { parseMetricBarLengthM } from "@/lib/polywood/metricPriceConversion";
-import { formInputClass, formLabelClass, formSelectClass } from "@/components/ui/form-field-styles";
+import {
+  formInputGroupClass,
+  formNumberInputClass,
+  formSelectClass,
+} from "@/components/ui/form-field-styles";
+import { FormField } from "@/components/ui/form-field";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface UnitAwarePriceInputProps {
@@ -90,21 +95,21 @@ export default function UnitAwarePriceInput({
   }
 
   return (
-    <div>
-      <label className={formLabelClass}>{label}</label>
-      <div className="flex gap-2">
+    <FormField label={label} hint={hint}>
+      <div className={formInputGroupClass}>
         <input
           type="number"
           step="0.01"
           min="0"
+          inputMode="decimal"
           value={storedValue.trim() === "" ? "" : String(displayValue)}
           onChange={(event) => handleValueChange(event.target.value)}
-          className={`${formInputClass} min-w-0 flex-1`}
+          className={formNumberInputClass}
         />
         <select
           value={entryUnit}
           onChange={(event) => onEntryUnitChange(event.target.value as PriceEntryUnit)}
-          className={`${formSelectClass} w-[7.5rem] shrink-0`}
+          className={formSelectClass}
         >
           {PRICE_UNITS.map((unit) => (
             <option key={unit} value={unit}>
@@ -117,7 +122,6 @@ export default function UnitAwarePriceInput({
           ))}
         </select>
       </div>
-      {hint ? <p className="mt-1 text-xs font-normal text-slate-700 dark:text-app-muted">{hint}</p> : null}
-    </div>
+    </FormField>
   );
 }

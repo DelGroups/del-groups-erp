@@ -343,14 +343,17 @@ button.app-card:hover {
   transform: translateY(-1px);
 }
 
-/* Form inputs */
+/* Form inputs — aligned with form-field-styles (h-10, text-sm) */
 .app-input {
   width: 100%;
-  border-radius: 0.625rem;
+  min-width: 0;
+  height: 2.5rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--app-border);
   background-color: var(--app-input-bg);
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
   color: var(--app-text);
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
@@ -367,11 +370,19 @@ button.app-card:hover {
 }
 
 select.app-input,
+select:not(.sidebar-select),
 textarea.app-input,
 .app-select,
 .sidebar-select {
   appearance: auto;
   cursor: pointer;
+}
+
+textarea.app-input {
+  height: auto;
+  min-height: 5.5rem;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
 }
 
 select.app-input option,
