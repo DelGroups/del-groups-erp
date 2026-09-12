@@ -1821,6 +1821,18 @@ export const enMessages: Messages = {
     fullSheet: "full sheet",
     cutPiece: "cut",
     pieceDetails: "Physical piece breakdown",
+    viewPieces: "View pieces",
+    smartCut: {
+      title: "Cut confirmation",
+      message:
+        "No exact {length}m piece in stock. Cut from a full {sheet}m sheet?",
+      resultTitle: "Expected result",
+      resultUsed: "Used: {length}m",
+      resultRemainder: "Remainder returned to stock: {length}m",
+      confirm: "Yes, cut",
+      cancel: "Cancel",
+      pending: "Cut confirmation required: {product}",
+    },
     deleteConfirm: "Delete this piece and return it to warehouse stock?",
     deleteError: "Failed to delete Polywood stock",
     tabs: {

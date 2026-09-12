@@ -2,7 +2,10 @@
 
 import React from "react";
 import { AlertTriangle, Pencil, Printer, Trash2 } from "lucide-react";
+import PolywoodStockCell from "@/components/polywood/PolywoodStockCell";
+import type { PolywoodInventorySummary } from "@/lib/polywood/types";
 import type { Product, ProductColumnKey, Warehouse } from "@/types/database.types";
+import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
@@ -11,9 +14,20 @@ import Card from "@/components/ui/card";
 import StatusBadge from "@/components/ui/status-badge";
 import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 
+function isMeterStockProduct(product: Product): boolean {
+  const unit = (product.unit || "").trim().toLowerCase();
+  return (
+    product.inventory_mode === POLYWOOD_INVENTORY_MODE ||
+    product.is_dimensional === true ||
+    unit === "m" ||
+    unit === "metr"
+  );
+}
+
 interface ProductTableProps {
   products: Product[];
   warehouses: Warehouse[];
+  polywoodSummaries?: Map<string, PolywoodInventorySummary>;
   visibleColumns: Record<ProductColumnKey, boolean>;
   loading?: boolean;
   canEdit?: boolean;
@@ -88,6 +102,7 @@ function renderCell(
 
 export default function ProductTable({
   products,
+  polywoodSummaries,
   visibleColumns,
   loading,
   canEdit,
@@ -149,7 +164,17 @@ export default function ProductTable({
                       </Td>
                     ))}
                     <Td numeric className="font-bold">
-                      {product.stock} {product.unit}
+                      {isMeterStockProduct(product) ? (
+                        <PolywoodStockCell
+                          stock={product.stock}
+                          unit={product.unit || "Metr"}
+                          summary={polywoodSummaries?.get(product.id) ?? null}
+                        />
+                      ) : (
+                        <span className="font-mono tabular-nums">
+                          {product.stock} {product.unit}
+                        </span>
+                      )}
                     </Td>
                     <Td numeric className="text-app-muted">
                       {productMinStock(product)} {product.unit}

@@ -73,7 +73,14 @@ import {
   filterLegalCustomers,
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
-import { fetchPolywoodInventorySummary } from "@/lib/polywood/inventory";
+import {
+  fetchAvailablePolywoodPieces,
+  fetchPolywoodInventorySummary,
+} from "@/lib/polywood/inventory";
+import { evaluateSmartCut } from "@/lib/polywood/smartCut";
+import PolywoodCutConfirmModal, {
+  type PolywoodCutConfirmState,
+} from "@/components/polywood/PolywoodCutConfirmModal";
 import {
   fetchCompositeAvailableStockAction,
   fetchProductAvailableStockAction,
@@ -151,15 +158,28 @@ function isPolywoodWarehouseRow(warehouseId: string, warehouses: Warehouse[]): b
 }
 
 function isPolywoodProductRow(product: Product | null | undefined): boolean {
-  return product?.inventory_mode === POLYWOOD_INVENTORY_MODE;
+  return (
+    product?.inventory_mode === POLYWOOD_INVENTORY_MODE || product?.is_dimensional === true
+  );
 }
 
-function filterProductsForWarehouse(products: Product[], warehouseId: string, warehouses: Warehouse[]): Product[] {
-  const polywood = isPolywoodWarehouseRow(warehouseId, warehouses);
-  return products.filter((product) => {
-    const isPolywoodProduct = isPolywoodProductRow(product);
-    return polywood ? isPolywoodProduct : !isPolywoodProduct;
-  });
+function findPolywoodWarehouse(warehouses: Warehouse[]): Warehouse | undefined {
+  return warehouses.find((warehouse) => warehouse.warehouse_type === POLYWOOD_WAREHOUSE_TYPE);
+}
+
+function isPolywoodMeterLine(row: SaleItem, product: Product | null | undefined): boolean {
+  return (
+    isPolywoodProductRow(product) &&
+    (row.polywood_sale_mode === "linear_m" || row.unit === "Metr")
+  );
+}
+
+function filterProductsForWarehouse(
+  products: Product[],
+  _warehouseId: string,
+  _warehouses: Warehouse[]
+): Product[] {
+  return products;
 }
 
 interface Account {
@@ -254,6 +274,7 @@ export default function UniversalInvoiceForm({
   const [productSelectorTargetRowId, setProductSelectorTargetRowId] = useState<string | null>(
     null
   );
+  const [cutConfirmState, setCutConfirmState] = useState<PolywoodCutConfirmState | null>(null);
   const [isOfficial, setIsOfficial] = useState(false);
   const [vatMode, setVatMode] = useState<VatMode>("none");
   const [globalDiscountMode, setGlobalDiscountMode] = useState<GlobalDiscountMode>("percent");
@@ -554,6 +575,59 @@ export default function UniversalInvoiceForm({
     );
   };
 
+  const handlePolywoodQuantityBlur = useCallback(
+    async (rowId: string) => {
+      const row = items.find((item) => item.id === rowId);
+      if (!row?.product_id) return;
+
+      const product = products.find((item) => item.id === row.product_id);
+      if (!isPolywoodMeterLine(row, product)) return;
+
+      const requestedM = Number(row.quantity);
+      if (!Number.isFinite(requestedM) || requestedM <= 0) return;
+
+      const warehouseId = row.warehouse_id || findPolywoodWarehouse(warehouses)?.id;
+      if (!warehouseId) {
+        showToastError(t("polywood.invoice.usePolywoodWarehouse"));
+        return;
+      }
+
+      const fullSheetLengthM =
+        row.polywood_full_sheet_length_m || Number(product?.full_sheet_length_m) || 4;
+
+      try {
+        const pieces = await fetchAvailablePolywoodPieces(row.product_id, warehouseId);
+        const evaluation = evaluateSmartCut(requestedM, pieces, fullSheetLengthM);
+
+        if (evaluation.kind === "insufficient") {
+          showToastError(evaluation.error);
+          handleItemChange(rowId, { polywood_cut_confirmed: false });
+          return;
+        }
+
+        if (evaluation.kind === "exact") {
+          handleItemChange(rowId, {
+            polywood_length_m: requestedM,
+            polywood_cut_confirmed: true,
+            polywood_sale_mode: "linear_m",
+          });
+          return;
+        }
+
+        setCutConfirmState({
+          rowId,
+          productName: row.product_name,
+          requestedM: evaluation.requestedM,
+          sourceLengthM: evaluation.sourceLengthM,
+          remainderM: evaluation.remainderM,
+        });
+      } catch (error) {
+        showToastError(error instanceof Error ? error.message : t("common.error"));
+      }
+    },
+    [handleItemChange, items, products, showToastError, t, warehouses]
+  );
+
   const resolveProductAvailableStock = async (
     prod: Product,
     polywoodRow: boolean,
@@ -611,14 +685,21 @@ export default function UniversalInvoiceForm({
     }
 
     const row = items.find((item) => item.id === rowId);
-    const polywoodRow = row ? isPolywoodWarehouseRow(row.warehouse_id, warehouses) : false;
+    const isPolywoodProd = isPolywoodProductRow(prod);
+    const polywoodWarehouse = findPolywoodWarehouse(warehouses);
+    const polywoodRow =
+      isPolywoodProd || (row ? isPolywoodWarehouseRow(row.warehouse_id, warehouses) : false);
+    const warehouseId =
+      isPolywoodProd && polywoodWarehouse
+        ? polywoodWarehouse.id
+        : row?.warehouse_id || defaultWarehouse?.id || "";
+    const warehouseName =
+      isPolywoodProd && polywoodWarehouse
+        ? polywoodWarehouse.name
+        : row?.warehouse_name || defaultWarehouse?.name || "";
 
-    if (polywoodRow && !isPolywoodProductRow(prod)) {
+    if (polywoodRow && !isPolywoodProd) {
       showToastError(t("polywood.invoice.onlyPolywoodProducts"));
-      return;
-    }
-    if (!polywoodRow && isPolywoodProductRow(prod)) {
-      showToastError(t("polywood.invoice.usePolywoodWarehouse"));
       return;
     }
 
@@ -626,7 +707,7 @@ export default function UniversalInvoiceForm({
     const stockResult = await resolveProductAvailableStock(
       prod,
       polywoodRow,
-      row?.warehouse_id,
+      warehouseId,
       fullSheetLengthM
     );
     const polywoodSummary = stockResult.polywoodSummary || {
@@ -638,6 +719,8 @@ export default function UniversalInvoiceForm({
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
+      warehouse_id: warehouseId,
+      warehouse_name: warehouseName,
       quantity: quantityOverride ?? row?.quantity ?? 1,
       unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
       unit_price: polywoodRow
@@ -651,10 +734,18 @@ export default function UniversalInvoiceForm({
       vat_rate: resolveLineVatRate(prod),
       available_stock: stockResult.availableStock,
       polywood_sale_mode: polywoodRow ? row?.polywood_sale_mode || "linear_m" : null,
+      polywood_length_m: polywoodRow ? quantityOverride ?? row?.quantity ?? 1 : null,
       polywood_full_sheet_length_m: fullSheetLengthM,
       polywood_total_length_m: polywoodSummary.total,
       polywood_full_sheet_count: polywoodSummary.fullSheets,
+      polywood_cut_confirmed: false,
     });
+
+    if (polywoodRow && !polywoodOnly) {
+      window.setTimeout(() => {
+        void handlePolywoodQuantityBlur(rowId);
+      }, 0);
+    }
   };
 
   const openProductSelectorModal = () => {
@@ -684,6 +775,11 @@ export default function UniversalInvoiceForm({
     const targetRowId = productSelectorTargetRowId;
     setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
     await handleProductSelect(targetRowId, product, quantity);
+    if (isPolywoodProductRow(product)) {
+      window.setTimeout(() => {
+        void handlePolywoodQuantityBlur(targetRowId);
+      }, 0);
+    }
 
     if (closeAfter) {
       setProductSelectorOpen(false);
@@ -714,15 +810,21 @@ export default function UniversalInvoiceForm({
     quantity?: number,
     availableStock?: number
   ): SaleItem => {
-    const polywoodRow = isPolywoodWarehouseRow(row.warehouse_id, warehouses);
+    const isPolywoodProd = isPolywoodProductRow(prod);
+    const polywoodWarehouse = findPolywoodWarehouse(warehouses);
+    const polywoodRow = isPolywoodProd || isPolywoodWarehouseRow(row.warehouse_id, warehouses);
     const fullSheetLengthM = Number(prod.full_sheet_length_m) || 4;
     const mode = polywoodRow ? row.polywood_sale_mode || "linear_m" : null;
     const meterPrice = productPrice(prod);
+    const nextQuantity = quantity ?? row.quantity;
     const updated: SaleItem = {
       ...row,
       product_id: prod.id,
       product_code: productCode(prod),
       product_name: prod.name,
+      warehouse_id: isPolywoodProd && polywoodWarehouse ? polywoodWarehouse.id : row.warehouse_id,
+      warehouse_name:
+        isPolywoodProd && polywoodWarehouse ? polywoodWarehouse.name : row.warehouse_name,
       unit: polywoodRow ? (mode === "full_sheet" ? "Vərəq" : "Metr") : prod.unit || "Ədəd",
       unit_price: polywoodRow
         ? roundPrice(mode === "full_sheet" ? meterPrice * fullSheetLengthM : meterPrice)
@@ -730,9 +832,11 @@ export default function UniversalInvoiceForm({
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
       available_stock: availableStock ?? (Number(prod.stock) || 0),
-      quantity: quantity ?? row.quantity,
+      quantity: nextQuantity,
       polywood_sale_mode: mode,
+      polywood_length_m: polywoodRow && mode === "linear_m" ? nextQuantity : null,
       polywood_full_sheet_length_m: polywoodRow ? fullSheetLengthM : null,
+      polywood_cut_confirmed: false,
     };
     updated.total = calcLineTotal(updated.quantity, updated.unit_price, updated.discount_percent);
     return updated;
@@ -752,19 +856,17 @@ export default function UniversalInvoiceForm({
       return;
     }
 
-    if (!polywoodOnly && isPolywoodProductRow(product)) {
-      showToastError(t("polywood.invoice.usePolywoodWarehouse"));
-      return;
-    }
     if (polywoodOnly && !isPolywoodProductRow(product)) {
       showToastError(t("polywood.invoice.onlyPolywoodProducts"));
       return;
     }
 
+    const isPolywoodProd = isPolywoodProductRow(product);
+    const polywoodWarehouse = findPolywoodWarehouse(warehouses);
     const stockResult = await resolveProductAvailableStock(
       product,
-      polywoodOnly,
-      defaultWarehouse?.id,
+      isPolywoodProd || polywoodOnly,
+      isPolywoodProd && polywoodWarehouse ? polywoodWarehouse.id : defaultWarehouse?.id,
       Number(product.full_sheet_length_m) || 4
     );
 
@@ -1052,6 +1154,19 @@ export default function UniversalInvoiceForm({
     if (additionalExpenseError) {
       showToastError(additionalExpenseError);
       return;
+    }
+
+    if (mode === "post") {
+      for (const item of saleItems) {
+        const product = products.find((row) => row.id === item.product_id);
+        if (!isPolywoodMeterLine(item, product)) continue;
+        if (!item.polywood_cut_confirmed) {
+          showToastError(
+            t("polywood.smartCut.pending", { product: item.product_name || t("invoice.productName") })
+          );
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -1717,14 +1832,39 @@ export default function UniversalInvoiceForm({
                       <input
                         type="number"
                         min="0"
-                        step={polywoodOnly && row.polywood_sale_mode === "linear_m" ? "0.001" : "1"}
-                        value={row.quantity}
-                        onChange={(e) =>
-                          handleItemChange(row.id, { quantity: Number(e.target.value) || 0 })
+                        step={
+                          (polywoodOnly && row.polywood_sale_mode === "linear_m") ||
+                          isPolywoodMeterLine(
+                            row,
+                            products.find((product) => product.id === row.product_id)
+                          )
+                            ? "0.001"
+                            : "1"
                         }
+                        value={row.quantity}
+                        onChange={(e) => {
+                          const nextQuantity = Number(e.target.value) || 0;
+                          const rowProduct = products.find((product) => product.id === row.product_id);
+                          const patch: Partial<SaleItem> = { quantity: nextQuantity };
+                          if (isPolywoodMeterLine(row, rowProduct)) {
+                            patch.polywood_cut_confirmed = false;
+                            patch.polywood_length_m = null;
+                          }
+                          handleItemChange(row.id, patch);
+                        }}
+                        onBlur={() => {
+                          const rowProduct = products.find((product) => product.id === row.product_id);
+                          if (isPolywoodMeterLine(row, rowProduct)) {
+                            void handlePolywoodQuantityBlur(row.id);
+                          }
+                        }}
                         className={`${INVOICE_INPUT} text-center`}
                       />
-                      {polywoodOnly && row.polywood_sale_mode ? (
+                      {(polywoodOnly && row.polywood_sale_mode) ||
+                      isPolywoodMeterLine(
+                        row,
+                        products.find((product) => product.id === row.product_id)
+                      ) ? (
                         <p className="mt-0.5 text-center text-[10px] text-app-muted">
                           {row.polywood_sale_mode === "full_sheet"
                             ? t("polywood.invoice.qtySheets")
@@ -2100,6 +2240,22 @@ export default function UniversalInvoiceForm({
         }}
         onSelect={(product, quantity, closeAfter) => {
           void handleModalProductSelect(product, quantity, closeAfter);
+        }}
+      />
+    ) : null}
+
+    {cutConfirmState ? (
+      <PolywoodCutConfirmModal
+        state={cutConfirmState}
+        onCancel={() => setCutConfirmState(null)}
+        onConfirm={() => {
+          handleItemChange(cutConfirmState.rowId, {
+            polywood_length_m: cutConfirmState.requestedM,
+            quantity: cutConfirmState.requestedM,
+            polywood_sale_mode: "linear_m",
+            polywood_cut_confirmed: true,
+          });
+          setCutConfirmState(null);
         }}
       />
     ) : null}

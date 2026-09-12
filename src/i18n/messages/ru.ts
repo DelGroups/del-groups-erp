@@ -1821,6 +1821,18 @@ export const ruMessages: Messages = {
     fullSheet: "целый лист",
     cutPiece: "обрезок",
     pieceDetails: "Список физических деталей",
+    viewPieces: "Показать детали",
+    smartCut: {
+      title: "Подтверждение резки",
+      message:
+        "Точной детали {length} м нет. Резать из целого листа {sheet} м?",
+      resultTitle: "Ожидаемый результат",
+      resultUsed: "Будет использовано: {length} м",
+      resultRemainder: "Остаток вернётся на склад: {length} м",
+      confirm: "Да, резать",
+      cancel: "Отмена",
+      pending: "Требуется подтверждение резки: {product}",
+    },
     deleteConfirm: "Удалить эту деталь и вернуть на склад?",
     deleteError: "Не удалось удалить запас Polywood",
     tabs: {

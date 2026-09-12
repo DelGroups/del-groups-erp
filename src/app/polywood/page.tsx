@@ -1,5 +1,5 @@
-import PolywoodPageClient from "./page.client";
+import { redirect } from "next/navigation";
 
 export default function PolywoodPage() {
-  return <PolywoodPageClient />;
+  redirect("/products");
 }

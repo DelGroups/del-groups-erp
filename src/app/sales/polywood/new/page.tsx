@@ -1,8 +1,5 @@
-import PolywoodMixedInvoicePage from "./page.client";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-/** Renders {@link MixedDimensionalInvoiceForm} — Polywood / Sinelik / Accessory / Service grid. */
-export default function PolywoodSaleNewPage() {
-  return <PolywoodMixedInvoicePage />;
+export default function PolywoodSalesPage() {
+  redirect("/sales/new");
 }

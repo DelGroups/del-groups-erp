@@ -12,6 +12,9 @@ import ThermalLabelPrintTemplate, {
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 import ProductForm from "@/components/products/ProductForm";
 import { fetchProductsCatalog } from "@/lib/products/api";
+import { fetchPolywoodSummariesByWarehouse } from "@/lib/polywood/inventory";
+import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import type { PolywoodInventorySummary } from "@/lib/polywood/types";
 import { filterProducts } from "@/lib/products/filters";
 import {
   loadColumnVisibility,
@@ -62,6 +65,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [polywoodSummaries, setPolywoodSummaries] = useState<
+    Map<string, PolywoodInventorySummary>
+  >(new Map());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>(DEFAULT_PRODUCT_FILTERS);
   const [columnVisibility, setColumnVisibility] = useState<Record<ProductColumnKey, boolean>>(
@@ -95,6 +101,19 @@ export default function ProductsPage() {
     setProducts(data.products);
     setCategories(data.categories);
     setWarehouses(data.warehouses);
+    const polywoodWarehouse = data.warehouses.find(
+      (row) => row.warehouse_type === POLYWOOD_WAREHOUSE_TYPE
+    );
+    if (polywoodWarehouse) {
+      try {
+        const summaries = await fetchPolywoodSummariesByWarehouse(polywoodWarehouse.id);
+        setPolywoodSummaries(summaries);
+      } catch {
+        setPolywoodSummaries(new Map());
+      }
+    } else {
+      setPolywoodSummaries(new Map());
+    }
     setLoading(false);
   }, []);
 
@@ -220,6 +239,7 @@ export default function ProductsPage() {
           <ProductTable
             products={filteredProducts}
             warehouses={warehouses}
+            polywoodSummaries={polywoodSummaries}
             visibleColumns={columnVisibility}
             loading={loading}
             canEdit={canManageProducts}

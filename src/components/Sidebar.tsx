@@ -91,7 +91,6 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Boxes,
     items: [
       { titleKey: "nav.items.products", path: "/products", icon: Package },
-      { titleKey: "nav.items.polywood", path: "/polywood", icon: Layers },
       { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
       { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
       { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },

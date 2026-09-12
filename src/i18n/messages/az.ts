@@ -1819,6 +1819,18 @@ export const azMessages = {
     fullSheet: "tam vərəq",
     cutPiece: "kəsim",
     pieceDetails: "Fiziki hissələrin siyahısı",
+    viewPieces: "Hissələri gör",
+    smartCut: {
+      title: "Kesim Təsdiqi",
+      message:
+        "Anbarımızda tam {length}m parça tapılmadı. {sheet}m-lik bütöv şaxədən kəsim etmək istəyirsiniz?",
+      resultTitle: "Gözlənilən nəticə",
+      resultUsed: "İstifadə olunacaq: {length}m",
+      resultRemainder: "Anbara qayıdacaq qalıq: {length}m",
+      confirm: "Bəli, Kəs",
+      cancel: "Ləğv et",
+      pending: "Kəsim təsdiqi tələb olunur: {product}",
+    },
     deleteConfirm: "Bu detalı silmək və anbara qaytarmaq istəyirsiniz?",
     deleteError: "Polywood stoku silinmədi",
     tabs: {

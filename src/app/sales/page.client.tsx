@@ -177,10 +177,6 @@ export default function SalesListPage() {
           createDisabled={!canCreateInvoice}
           extraActions={
             <>
-              <Button href="/sales/polywood/new" className="bg-emerald-600 bg-none text-white shadow-md ring-2 ring-emerald-500/30 hover:bg-emerald-700 hover:brightness-100">
-                <Plus className="h-4 w-4" />
-                {t("sales.polywoodCreateButton")}
-              </Button>
               <Button type="button" variant="secondary" onClick={handleDownloadCSV}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.csvDownload")}

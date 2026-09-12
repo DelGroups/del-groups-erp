@@ -43,6 +43,8 @@ export interface SaleItem {
   polywood_total_area_m2?: number | null;
   polywood_cutting_option?: string | null;
   polywood_edge_option?: string | null;
+  /** UI-only: user confirmed cutting from a full sheet */
+  polywood_cut_confirmed?: boolean;
   /** Mixed dimensional-sale grid: which engine should process this line */
   sale_item_type?: "standard" | "dimensional" | "accessory" | "service";
   /** Number of identical cuts/pieces requested (meter-mode dimensional lines) */
