@@ -165,7 +165,7 @@ export default function CrmPipelinePage() {
         onCreate={() => setDealModalOpen(true)}
       />
 
-      <main className="flex-1 overflow-x-auto p-4 md:p-6">
+      <main className="app-page-content flex-1 overflow-x-auto">
         {loading ? (
           <div className="p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
         ) : (

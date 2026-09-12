@@ -154,7 +154,7 @@ export default function PolywoodPageClient() {
         </div>
       </header>
 
-      <main className="flex-1 space-y-6 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="app-card p-4">
             <p className="text-xs text-app-muted">{t("polywood.stats.warehouse")}</p>

@@ -58,6 +58,8 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 
 type HrTab = "directory" | "payroll" | "advances" | "leaves";
 
@@ -279,7 +281,7 @@ export default function EmployeesPage() {
         onCreate={headerAction?.onClick}
       />
 
-      <main className="flex-1 space-y-4 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
         <div className="flex flex-wrap gap-2 border-b border-app pb-3">
           {tabs.map((tab) => (
             <button
@@ -313,54 +315,66 @@ export default function EmployeesPage() {
               ) : filteredEmployees.length === 0 ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("employees.empty")}</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
+                <TableWrap className="rounded-none border-0 shadow-none">
+                  <Table>
+                    <THead>
                       <tr>
-                        <th className="px-4 py-3">{t("common.code")}</th>
-                        <th className="px-4 py-3">{t("auth.fullName")}</th>
-                        <th className="px-4 py-3">{t("employees.role")}</th>
-                        <th className="px-4 py-3">{t("employees.department")}</th>
-                        <th className="px-4 py-3">{t("common.status")}</th>
-                        <th className="px-4 py-3 text-right">{t("employees.baseSalary")}</th>
-                        <th className="px-4 py-3 text-center">{t("common.actions")}</th>
+                        <Th>{t("common.code")}</Th>
+                        <Th>{t("auth.fullName")}</Th>
+                        <Th>{t("employees.role")}</Th>
+                        <Th>{t("employees.department")}</Th>
+                        <Th>{t("common.status")}</Th>
+                        <Th className="text-right">{t("employees.baseSalary")}</Th>
+                        <ActionsTh>{t("common.actions")}</ActionsTh>
                       </tr>
-                    </thead>
+                    </THead>
                     <tbody className="divide-y divide-slate-100 text-app">
                       {filteredEmployees.map((emp) => (
-                        <tr key={emp.id} className="hover:bg-app-card-hover">
-                          <td className="px-4 py-3 font-mono font-bold">{emp.employee_code}</td>
-                          <td className="px-4 py-3 font-semibold">{emp.full_name}</td>
-                          <td className="px-4 py-3">{emp.role || "—"}</td>
-                          <td className="px-4 py-3">{getDepartmentLabel(emp.department)}</td>
-                          <td className="px-4 py-3">
+                        <Tr key={emp.id}>
+                          <Td className="font-mono font-bold">{emp.employee_code}</Td>
+                          <Td className="font-semibold">{emp.full_name}</Td>
+                          <Td>{emp.role || "—"}</Td>
+                          <Td>{getDepartmentLabel(emp.department)}</Td>
+                          <Td>
                             <StatusBadge status={emp.status} label={getEmployeeStatusLabel(emp.status)} />
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-bold">
+                          </Td>
+                          <Td numeric className="font-mono font-bold">
                             {emp.base_salary.toFixed(2)} {t("common.currency")}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-1">
-                              <IconBtn title={t("employees.viewProfile")} onClick={() => setDetailEmployee(emp)}>
-                                <Eye className="h-4 w-4" />
-                              </IconBtn>
-                              {canManageHr && (
-                                <>
-                                  <IconBtn title={t("employees.editEmployee")} onClick={() => openEdit(emp)}>
-                                    <Pencil className="h-4 w-4 text-app-accent" />
-                                  </IconBtn>
-                                  <IconBtn title={t("common.delete")} onClick={() => void handleDelete(emp)}>
-                                    <Trash2 className="h-4 w-4 text-rose-600" />
-                                  </IconBtn>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                          </Td>
+                          <ActionsTd>
+                            <TableRowActionsMenu
+                              items={[
+                                {
+                                  key: "view",
+                                  label: t("employees.viewProfile"),
+                                  icon: <Eye className="h-4 w-4" />,
+                                  onClick: () => setDetailEmployee(emp),
+                                },
+                                ...(canManageHr
+                                  ? [
+                                      {
+                                        key: "edit",
+                                        label: t("employees.editEmployee"),
+                                        icon: <Pencil className="h-4 w-4" />,
+                                        onClick: () => openEdit(emp),
+                                      },
+                                      {
+                                        key: "delete",
+                                        label: t("common.delete"),
+                                        icon: <Trash2 className="h-4 w-4" />,
+                                        onClick: () => void handleDelete(emp),
+                                        variant: "destructive" as const,
+                                      },
+                                    ]
+                                  : []),
+                              ]}
+                            />
+                          </ActionsTd>
+                        </Tr>
                       ))}
                     </tbody>
-                  </table>
-                </div>
+                  </Table>
+                </TableWrap>
               )}
             </div>
           </>
@@ -703,27 +717,6 @@ export default function EmployeesPage() {
 
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
-  );
-}
-
-function IconBtn({
-  title,
-  onClick,
-  children,
-}: {
-  title: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className="rounded-lg p-1.5 text-app-accent hover:bg-[color:var(--app-accent-soft)]"
-    >
-      {children}
-    </button>
   );
 }
 

@@ -418,7 +418,7 @@ export default function AiAssistantWidget() {
               className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-4 py-4"
             >
               {messages.length === 0 && (
-                <p className="text-sm text-slate-500">{t("aiAssistant.empty")}</p>
+                <p className="text-sm text-slate-700">{t("aiAssistant.empty")}</p>
               )}
               {messages.map((item, index) => (
                 <div
@@ -490,7 +490,7 @@ export default function AiAssistantWidget() {
                 </div>
               ))}
               {sending && (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-slate-700">
                   <span className="flex gap-1">
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.2s]" />
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.1s]" />
@@ -546,7 +546,7 @@ export default function AiAssistantWidget() {
                   disabled={sending || recording}
                   aria-label={t("aiAssistant.attach")}
                   onClick={() => fileRef.current?.click()}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-700 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
@@ -558,7 +558,7 @@ export default function AiAssistantWidget() {
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition disabled:opacity-50 ${
                     recording
                       ? "bg-red-500 text-white hover:bg-red-600"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-700"
                   }`}
                 >
                   {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}

@@ -136,7 +136,7 @@ export default function ManagementDashboardPage() {
           </div>
         </header>
 
-        <main className="flex-1 space-y-6 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
           {hasArDiscrepancies ? (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

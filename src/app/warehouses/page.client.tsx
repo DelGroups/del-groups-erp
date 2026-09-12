@@ -8,7 +8,8 @@ import Card, { CardMeta } from "@/components/ui/card";
 import Input from "@/components/ui/input";
 import PageHeader from "@/components/ui/page-header";
 import StatusBadge from "@/components/ui/status-badge";
-import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import type { Warehouse, Product } from "@/types/database.types";
@@ -114,7 +115,7 @@ export default function WarehousesPage() {
           }
         />
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardMeta>{t("warehouses.activeCount")}</CardMeta>
@@ -156,7 +157,7 @@ export default function WarehousesPage() {
                       <Th>{t("warehouses.warehouseName")}</Th>
                       <Th>{t("common.location")}</Th>
                       <Th>{t("common.status")}</Th>
-                      <Th>{t("common.actions")}</Th>
+                      <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody>
@@ -172,12 +173,18 @@ export default function WarehousesPage() {
                             <StatusBadge tone="neutral">{t("warehouses.secondaryWarehouse")}</StatusBadge>
                           )}
                         </Td>
-                        <Td>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => openEditModal(w)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                            {t("common.edit")}
-                          </Button>
-                        </Td>
+                        <ActionsTd>
+                          <TableRowActionsMenu
+                            items={[
+                              {
+                                key: "edit",
+                                label: t("common.edit"),
+                                icon: <Pencil className="h-4 w-4" />,
+                                onClick: () => openEditModal(w),
+                              },
+                            ]}
+                          />
+                        </ActionsTd>
                       </tr>
                     ))}
                   </tbody>

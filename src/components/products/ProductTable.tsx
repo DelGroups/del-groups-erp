@@ -2,6 +2,7 @@
 
 import React from "react";
 import { AlertTriangle, Pencil, Printer, Trash2 } from "lucide-react";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import PolywoodStockCell from "@/components/polywood/PolywoodStockCell";
 import type { PolywoodInventorySummary } from "@/lib/polywood/types";
 import type { Product, ProductColumnKey, Warehouse } from "@/types/database.types";
@@ -9,10 +10,9 @@ import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
-import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import StatusBadge from "@/components/ui/status-badge";
-import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 
 function isMeterStockProduct(product: Product): boolean {
   const unit = (product.unit || "").trim().toLowerCase();
@@ -145,7 +145,7 @@ export default function ProductTable({
                 <Th>{t("common.warehouse")}</Th>
                 <Th>{t("common.status")}</Th>
                 {canEdit || onPrintLabel ? (
-                  <Th>{t("common.actions")}</Th>
+                  <ActionsTh>{t("common.actions")}</ActionsTh>
                 ) : null}
               </tr>
             </THead>
@@ -187,43 +187,43 @@ export default function ProductTable({
                       )}
                     </Td>
                     {canEdit || onPrintLabel ? (
-                      <Td>
-                        <div className="flex items-center gap-1.5">
-                          {onPrintLabel ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onPrintLabel(product)}
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                              {t("inventory.printLabel")}
-                            </Button>
-                          ) : null}
-                          {canEdit ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => onEdit?.(product)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {t("common.edit")}
-                            </Button>
-                          ) : null}
-                          {canEdit && onDelete ? (
-                            <Button
-                              type="button"
-                              variant="danger"
-                              size="sm"
-                              onClick={() => onDelete(product)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              {t("common.delete")}
-                            </Button>
-                          ) : null}
-                        </div>
-                      </Td>
+                      <ActionsTd>
+                        <TableRowActionsMenu
+                          items={[
+                            ...(onPrintLabel
+                              ? [
+                                  {
+                                    key: "print",
+                                    label: t("inventory.printLabel"),
+                                    icon: <Printer className="h-4 w-4" />,
+                                    onClick: () => onPrintLabel(product),
+                                  },
+                                ]
+                              : []),
+                            ...(canEdit && onEdit
+                              ? [
+                                  {
+                                    key: "edit",
+                                    label: t("common.edit"),
+                                    icon: <Pencil className="h-4 w-4" />,
+                                    onClick: () => onEdit(product),
+                                  },
+                                ]
+                              : []),
+                            ...(canEdit && onDelete
+                              ? [
+                                  {
+                                    key: "delete",
+                                    label: t("common.delete"),
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    onClick: () => onDelete(product),
+                                    variant: "destructive" as const,
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
+                      </ActionsTd>
                     ) : null}
                   </tr>
                 );

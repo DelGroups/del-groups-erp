@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { deleteCustomerAction } from "@/lib/actions/entityDelete";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 
 export default function CustomersPage() {
   const { t } = useI18n();
@@ -224,7 +226,7 @@ export default function CustomersPage() {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
           <div className="app-card app-card-elevated flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 absolute left-3 top-3 text-app-muted" />
@@ -253,83 +255,82 @@ export default function CustomersPage() {
                 {t("customers.emptyHint")}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="app-table">
-                  <thead>
+              <TableWrap className="rounded-none border-0 shadow-none">
+                <Table>
+                  <THead>
                     <tr>
-                      <th className="px-6 py-3">{t("common.code")}</th>
-                      <th className="px-6 py-3">{t("customers.customerCompany")}</th>
-                      <th className="px-6 py-3">{t("common.phone")}</th>
-                      <th className="px-6 py-3">{t("customers.entityType")}</th>
-                      <th className="px-6 py-3">{t("customers.balanceDebt")}</th>
-                      {canManageCustomers ? <th className="px-6 py-3">{t("common.actions")}</th> : null}
+                      <Th>{t("common.code")}</Th>
+                      <Th>{t("customers.customerCompany")}</Th>
+                      <Th>{t("common.phone")}</Th>
+                      <Th>{t("customers.entityType")}</Th>
+                      <Th>{t("customers.balanceDebt")}</Th>
+                      {canManageCustomers ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
                     </tr>
-                  </thead>
+                  </THead>
                   <tbody>
                     {filteredCustomers.map((c) => {
                       const isDebtor = (c.balance ?? 0) > 0;
                       return (
-                        <tr key={c.id} >
-                          <td className="px-6 py-4 font-mono text-xs font-semibold text-app">
+                        <Tr key={c.id}>
+                          <Td className="font-mono font-semibold text-app">
                             {c.code}
-                          </td>
-                          <td className="px-6 py-4">
+                          </Td>
+                          <Td>
                             <div className="font-medium text-app">{c.full_name}</div>
                             {c.company_name && (
                               <div className="text-xs text-app-muted">{c.company_name}</div>
                             )}
-                          </td>
-                          <td className="px-6 py-4 text-app-muted">
+                          </Td>
+                          <Td className="text-app-muted">
                             {c.phone ? (
                               <span className="flex items-center space-x-1">
-                                <Phone className="w-3.5 h-3.5 text-app-muted mr-1" />
+                                <Phone className="mr-1 h-3.5 w-3.5 text-app-muted" />
                                 {c.phone}
                               </span>
                             ) : (
                               "-"
                             )}
-                          </td>
-                          <td className="px-6 py-4 text-app-muted">
+                          </Td>
+                          <Td className="text-app-muted">
                             {entityTypeLabel(c.entity_type === "legal" ? "legal" : "physical", t)}
                             {c.voen ? (
                               <div className="text-[11px]">VÖEN: {c.voen}</div>
                             ) : null}
-                          </td>
-                          <td className="px-6 py-4 font-bold">
+                          </Td>
+                          <Td className="font-bold">
                             {isDebtor ? (
                               <span className="text-amber-600">{(c.balance ?? 0).toFixed(2)} AZN ({t("common.debtor")})</span>
                             ) : (
                               <span className="text-emerald-600">{(c.balance ?? 0).toFixed(2)} AZN</span>
                             )}
-                          </td>
+                          </Td>
                           {canManageCustomers ? (
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => openEditModal(c)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                  {t("common.edit")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteTarget(c)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  {t("common.delete")}
-                                </button>
-                              </div>
-                            </td>
+                            <ActionsTd>
+                              <TableRowActionsMenu
+                                items={[
+                                  {
+                                    key: "edit",
+                                    label: t("common.edit"),
+                                    icon: <Pencil className="h-4 w-4" />,
+                                    onClick: () => openEditModal(c),
+                                  },
+                                  {
+                                    key: "delete",
+                                    label: t("common.delete"),
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    onClick: () => setDeleteTarget(c),
+                                    variant: "destructive",
+                                  },
+                                ]}
+                              />
+                            </ActionsTd>
                           ) : null}
-                        </tr>
+                        </Tr>
                       );
                     })}
                   </tbody>
-                </table>
-              </div>
+                </Table>
+              </TableWrap>
             )}
           </div>
         </main>

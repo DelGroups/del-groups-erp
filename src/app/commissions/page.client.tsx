@@ -50,7 +50,7 @@ export default function CommissionsPage() {
           }
         />
 
-        <main className="flex-1 space-y-4 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="app-card app-card-elevated p-4">
               <p className="text-[10px] font-bold uppercase text-app-muted">{t("commissions.pendingRows")}</p>

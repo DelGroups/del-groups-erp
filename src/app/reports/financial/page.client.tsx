@@ -72,7 +72,7 @@ export default function FinancialReportPage() {
           backLink={{ href: "/reports", label: t("reports.backToReports") }}
         />
 
-        <main className="flex-1 space-y-4 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
           <ReportFiltersPanel
             filters={filters}
             warehouses={warehouses}

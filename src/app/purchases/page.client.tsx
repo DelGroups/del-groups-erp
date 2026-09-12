@@ -33,12 +33,12 @@ import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidPurchaseAction } from "@/lib/actions/entityDelete";
 import Button from "@/components/ui/button";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import { Plus, ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
-import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function PurchasesPage() {
@@ -183,7 +183,7 @@ export default function PurchasesPage() {
           }
         />
 
-        <main className="flex-1 space-y-4 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
           <div className="flex flex-wrap gap-2 border-b border-app pb-2">
             <button
               type="button"
@@ -229,21 +229,21 @@ export default function PurchasesPage() {
                 {t("purchases.empty")}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
+              <TableWrap className="rounded-none border-0 shadow-none">
+                <Table>
+                  <THead>
                     <tr>
-                      <th className="px-4 py-3">{t("purchases.invoiceNo")}</th>
-                      <th className="px-4 py-3">{t("common.date")}</th>
-                      <th className="px-4 py-3">{t("purchases.supplier")}</th>
-                      <th className="px-4 py-3">{t("purchases.totalAmount")}</th>
-                      <th className="px-4 py-3">{t("purchases.paid")}</th>
-                      <th className="px-4 py-3">{t("purchases.debt")}</th>
-                      <th className="px-4 py-3">{t("common.status")}</th>
-                      <th className="px-4 py-3">{t("purchases.sendStatus")}</th>
-                      <th className="px-4 py-3 text-center">{t("common.actions")}</th>
+                      <Th>{t("purchases.invoiceNo")}</Th>
+                      <Th>{t("common.date")}</Th>
+                      <Th>{t("purchases.supplier")}</Th>
+                      <Th>{t("purchases.totalAmount")}</Th>
+                      <Th>{t("purchases.paid")}</Th>
+                      <Th>{t("purchases.debt")}</Th>
+                      <Th>{t("common.status")}</Th>
+                      <Th>{t("purchases.sendStatus")}</Th>
+                      <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
-                  </thead>
+                  </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filtered.map((row) => {
                       const debtBreakdown = computeInvoiceDebtBreakdown(
@@ -260,23 +260,23 @@ export default function PurchasesPage() {
                       );
 
                       return (
-                      <tr key={row.id} className="transition-colors hover:bg-app-card-hover">
-                        <td className="px-4 py-3 font-mono font-bold text-emerald-600">
+                      <Tr key={row.id}>
+                        <Td className="font-mono font-bold text-emerald-600">
                           {row.invoice_number}
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           {row.doc_date || row.created_at?.slice(0, 10) || "-"}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-app">
+                        </Td>
+                        <Td className="font-semibold text-app">
                           {row.supplier_name || "-"}
-                        </td>
-                        <td className="px-4 py-3 font-mono font-bold">
+                        </Td>
+                        <Td className="font-mono font-bold">
                           {row.total_amount.toFixed(2)} {t("common.currency")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-emerald-600">
+                        </Td>
+                        <Td className="font-mono text-emerald-600">
                           {row.paid_amount.toFixed(2)} {t("common.currency")}
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <InvoiceRemainingBalanceCell
                             breakdown={debtBreakdown}
                             currencyLabel={t("common.currency")}
@@ -286,27 +286,22 @@ export default function PurchasesPage() {
                             })}
                             totalRemainingLabel={t("official.totalRemaining")}
                           />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <PurchaseDocumentStatusBadge status={row.status} />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <WarehouseSendBadge
                             warehouseSent={row.warehouse_sent === true}
                             warehouseSlipStatus={row.warehouse_slip_status ?? null}
                           />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <ActionsTd>
                           <DocumentListActions
                             onView={() => void openView(row)}
                             onPrint={() => void openPrint(row)}
                             onPayment={() => void openPayment(row)}
-                            extra={
-                              <EQaimeExportButton
-                                compact
-                                onExport={(format) => exportEQaime(row, format)}
-                              />
-                            }
+                            onEQaimeExport={(format) => exportEQaime(row, format)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
                             onDelete={
@@ -329,13 +324,13 @@ export default function PurchasesPage() {
                               })
                             }
                           />
-                        </td>
-                      </tr>
+                        </ActionsTd>
+                      </Tr>
                       );
                     })}
                   </tbody>
-                </table>
-              </div>
+                </Table>
+              </TableWrap>
             )}
           </div>
             </>

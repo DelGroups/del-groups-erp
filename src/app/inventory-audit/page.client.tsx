@@ -366,7 +366,7 @@ export default function InventoryAuditPageClient() {
         }
       />
 
-      <main className="flex-1 space-y-4 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
         <div className="grid grid-cols-1 gap-3 rounded-xl border border-app bg-app-card p-4 md:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-semibold text-app-muted">{t("inventoryAudit.mode")}</label>

@@ -7,7 +7,7 @@ import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
 import Button from "@/components/ui/button";
 import Card, { CardMeta } from "@/components/ui/card";
-import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -91,7 +91,7 @@ export default function FinancePage() {
         }
       />
 
-      <main className="flex-1 space-y-4 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card>
             <CardMeta>{t("finance.totalIncome")}</CardMeta>
@@ -148,7 +148,7 @@ export default function FinancePage() {
                       <Th>{t("finance.columnAccount")}</Th>
                       <Th>{t("finance.columnDescription")}</Th>
                       <Th>{t("finance.columnSource")}</Th>
-                      <Th className="text-right">{t("common.actions")}</Th>
+                      <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
@@ -195,7 +195,7 @@ export default function FinancePage() {
                               {formatReferenceTypeLabel(tx.reference_type)}
                             </span>
                           </Td>
-                          <Td>
+                          <ActionsTd>
                             <UnifiedLedgerRowActions
                               transaction={tx}
                               canManage={canManage}
@@ -203,7 +203,7 @@ export default function FinancePage() {
                               onError={showError}
                               onSuccess={showSuccess}
                             />
-                          </Td>
+                          </ActionsTd>
                         </tr>
                       );
                     })}

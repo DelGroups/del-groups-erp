@@ -16,6 +16,7 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { FolderTree, Plus, RefreshCw, X } from "lucide-react";
@@ -199,7 +200,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <main className="flex-1 space-y-6 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
         {activeTab === "records" ? (
           <>
             <div className="app-card app-card-elevated flex items-center justify-between p-5">
@@ -223,36 +224,37 @@ export default function ExpensesPage() {
               ) : expenseRows.length === 0 ? (
                 <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
               ) : (
-                <table className="app-table">
-                  <thead className="border-b border-app bg-app-card-hover text-xs uppercase text-app-muted">
-                    <tr>
-                      <th className="px-6 py-3">{t("common.category")}</th>
-                      <th className="px-6 py-3">{t("expenses.paidAccount")}</th>
-                      <th className="px-6 py-3">{t("expenses.noteDescription")}</th>
-                      <th className="px-6 py-3">{t("finance.columnSource")}</th>
-                      <th className="px-6 py-3 text-right">{t("common.amount")}</th>
-                      <th className="px-6 py-3 text-right">{t("common.date")}</th>
-                      <th className="px-6 py-3 text-right">{t("common.actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <TableWrap className="rounded-none border-0 shadow-none">
+                  <Table>
+                    <THead>
+                      <tr>
+                        <Th>{t("common.category")}</Th>
+                        <Th>{t("expenses.paidAccount")}</Th>
+                        <Th>{t("expenses.noteDescription")}</Th>
+                        <Th>{t("finance.columnSource")}</Th>
+                        <Th className="text-right">{t("common.amount")}</Th>
+                        <Th className="text-right">{t("common.date")}</Th>
+                        <ActionsTh>{t("common.actions")}</ActionsTh>
+                      </tr>
+                    </THead>
+                    <tbody>
                     {expenseRows.map((e) => (
-                      <tr key={e.id} className="hover:bg-app-card-hover">
-                        <td className="px-6 py-4 font-semibold text-app">{e.category}</td>
-                        <td className="px-6 py-4 text-app-muted">{e.account_name || "—"}</td>
-                        <td className="px-6 py-4 text-app-muted">{e.description || e.notes || "—"}</td>
-                        <td className="px-6 py-4">
+                      <Tr key={e.id}>
+                        <Td className="font-semibold text-app">{e.category}</Td>
+                        <Td className="text-app-muted">{e.account_name || "—"}</Td>
+                        <Td className="text-app-muted">{e.description || e.notes || "—"}</Td>
+                        <Td>
                           <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
                             {formatReferenceTypeLabel(e.reference_type)}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-rose-600">
+                        </Td>
+                        <Td numeric className="font-bold text-rose-600">
                           -{e.amount.toFixed(2)} AZN
-                        </td>
-                        <td className="px-6 py-4 text-right text-xs text-app-muted">
+                        </Td>
+                        <Td numeric className="text-xs text-app-muted">
                           {new Date(e.transaction_date || e.created_at).toLocaleDateString("az-AZ")}
-                        </td>
-                        <td className="px-6 py-4">
+                        </Td>
+                        <ActionsTd>
                           <UnifiedLedgerRowActions
                             transaction={e}
                             canManage={canManage}
@@ -260,11 +262,12 @@ export default function ExpensesPage() {
                             onError={showError}
                             onSuccess={showSuccess}
                           />
-                        </td>
-                      </tr>
+                        </ActionsTd>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                  </Table>
+                </TableWrap>
               )}
             </div>
           </>

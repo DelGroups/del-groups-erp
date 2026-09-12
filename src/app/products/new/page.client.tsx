@@ -46,9 +46,9 @@ export default function NewProductPage() {
           </button>
         }
       >
-        <div className="w-full">
+        <div className="mx-auto w-full max-w-6xl">
           {loading ? (
-            <div className="w-full rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500 shadow-sm dark:border-app dark:bg-app-card dark:text-app-muted">
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-700 shadow-sm dark:border-app dark:bg-app-card dark:text-app-muted">
               {t("products.formLoading")}
             </div>
           ) : (

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import GlobalAppHeader from "@/components/layout/GlobalAppHeader";
 import AiAssistantWidget from "@/components/ai/AiAssistantWidget";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import { SidebarMenuProvider } from "@/components/layout/SidebarContext";
@@ -79,6 +80,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
             </div>
           </header>
 
+          <GlobalAppHeader />
           <div className="min-h-0 flex-1 overflow-y-auto bg-app">{content}</div>
         </div>
       </div>

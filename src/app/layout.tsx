@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
+import QueryProvider from "@/components/providers/QueryProvider";
 import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
@@ -60,7 +61,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-app text-app antialiased">
         <ThemeProvider>
           <AuthProvider>
-            <I18nProvider>{children}</I18nProvider>
+            <QueryProvider>
+              <I18nProvider>{children}</I18nProvider>
+            </QueryProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

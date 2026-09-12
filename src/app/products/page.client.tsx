@@ -11,9 +11,9 @@ import ThermalLabelPrintTemplate, {
 } from "@/components/products/ThermalLabelPrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 import ProductForm from "@/components/products/ProductForm";
-import { fetchProductsCatalog } from "@/lib/products/api";
-import { fetchPolywoodSummariesByWarehouse } from "@/lib/polywood/inventory";
-import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
+import { usePolywoodSummaries, usePolywoodWarehouseId, useProductsCatalog } from "@/hooks/useProductsCatalog";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import type { PolywoodInventorySummary } from "@/lib/polywood/types";
 import { filterProducts } from "@/lib/products/filters";
 import {
@@ -62,13 +62,15 @@ export default function ProductsPage() {
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [polywoodSummaries, setPolywoodSummaries] = useState<
-    Map<string, PolywoodInventorySummary>
-  >(new Map());
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: catalog, isLoading, isFetching, refetch } = useProductsCatalog();
+  const products = catalog?.products ?? [];
+  const categories = catalog?.categories ?? [];
+  const warehouses = catalog?.warehouses ?? [];
+  const polywoodWarehouseId = usePolywoodWarehouseId(warehouses);
+  const { data: polywoodSummaries = new Map<string, PolywoodInventorySummary>() } =
+    usePolywoodSummaries(polywoodWarehouseId);
+  const loading = isLoading || isFetching;
   const [filters, setFilters] = useState<ProductFilters>(DEFAULT_PRODUCT_FILTERS);
   const [columnVisibility, setColumnVisibility] = useState<Record<ProductColumnKey, boolean>>(
     loadColumnVisibility
@@ -96,30 +98,13 @@ export default function ProductsPage() {
     );
 
   const loadData = useCallback(async () => {
-    setLoading(true);
-    const data = await fetchProductsCatalog();
-    setProducts(data.products);
-    setCategories(data.categories);
-    setWarehouses(data.warehouses);
-    const polywoodWarehouse = data.warehouses.find(
-      (row) => row.warehouse_type === POLYWOOD_WAREHOUSE_TYPE
-    );
-    if (polywoodWarehouse) {
-      try {
-        const summaries = await fetchPolywoodSummariesByWarehouse(polywoodWarehouse.id);
-        setPolywoodSummaries(summaries);
-      } catch {
-        setPolywoodSummaries(new Map());
-      }
-    } else {
-      setPolywoodSummaries(new Map());
+    await refetch();
+    if (polywoodWarehouseId) {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.products.polywoodSummaries(polywoodWarehouseId),
+      });
     }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  }, [polywoodWarehouseId, queryClient, refetch]);
 
   useEffect(() => {
     saveColumnVisibility(columnVisibility);
@@ -141,7 +126,7 @@ export default function ProductsPage() {
     }
     setDeleteTarget(null);
     showSuccess(t("products.deleteSuccess"));
-    void loadData();
+    void queryClient.invalidateQueries({ queryKey: queryKeys.products.catalog });
   };
 
   return (
@@ -199,7 +184,7 @@ export default function ProductsPage() {
           }
         />
 
-        <main className="flex-1 space-y-4 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
           <ProductFiltersPanel
             filters={filters}
             categories={categories}

@@ -151,7 +151,7 @@ export default function CashBankPage() {
         </button>
       </header>
 
-      <main className="flex-1 space-y-6 overflow-y-auto p-6">
+      <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="app-card app-card-elevated p-5">
             <span className="text-xs font-semibold uppercase text-app-muted">

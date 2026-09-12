@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useSalesList, useInvalidateSalesList, useUpdateSalesListCache } from "@/hooks/useSalesList";
 import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
@@ -10,12 +11,12 @@ import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
-import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
-import { fetchSaleById, fetchSalesListWithMeta, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchSaleById, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "@/lib/sales/fetchSales";
 import { recordSalePaymentAction } from "@/lib/actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -34,14 +35,15 @@ import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBa
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
-import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
 export default function SalesListPage() {
   const router = useRouter();
-  const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data: sales = [], isLoading, isFetching, error: queryError, refetch } = useSalesList();
+  const invalidateSalesList = useInvalidateSalesList();
+  const { removeSale } = useUpdateSalesListCache();
+  const loading = isLoading || isFetching;
+  const loadError = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
@@ -57,31 +59,21 @@ export default function SalesListPage() {
   const canDeleteSales = can("can_delete_sales");
 
   const loadData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const { sales: rows, error } = await fetchSalesListWithMeta();
-      setSales(rows);
-      if (error) {
-        setLoadError(error);
-        showError(`${t("common.error")}: ${error}`);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t("common.error");
-      console.error("[/sales] loadData failed:", err);
-      setSales([]);
-      setLoadError(message);
+    const result = await refetch();
+    if (result.error) {
+      const message = result.error instanceof Error ? result.error.message : t("common.error");
       showError(message);
-    } finally {
-      setLoading(false);
     }
-  }, [showError, t]);
+  }, [refetch, showError, t]);
 
   const warehouseSend = useWarehouseDocumentSend(sendSaleToWarehouseAction, loadData);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (queryError) {
+      const message = queryError instanceof Error ? queryError.message : t("common.error");
+      showError(message);
+    }
+  }, [queryError, showError, t]);
 
   const filteredSales = sales.filter((s) => {
     if (!s?.id) return false;
@@ -130,9 +122,9 @@ export default function SalesListPage() {
       return;
     }
     setVoidTarget(null);
-    setSales((prev) => prev.filter((row) => row.id !== deletedId));
+    removeSale(deletedId);
     showSuccess(t("common.voidSuccessRestore"));
-    void loadData();
+    invalidateSalesList();
   };
 
   const handleDownloadCSV = () => {
@@ -185,7 +177,7 @@ export default function SalesListPage() {
           }
         />
 
-        <main className="flex-1 space-y-4 overflow-y-auto p-6">
+        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
           <DocumentListSearchBar
             value={searchTerm}
             onChange={setSearchTerm}
@@ -223,7 +215,7 @@ export default function SalesListPage() {
                       <Th numeric>{t("sales.remaining")}</Th>
                       <Th>{t("sales.docStatus")}</Th>
                       <Th>{t("sales.sendStatus")}</Th>
-                      <Th className="text-center">{t("common.actions")}</Th>
+                      <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
@@ -283,7 +275,7 @@ export default function SalesListPage() {
                             warehouseSlipStatus={sale.warehouse_slip_status ?? null}
                           />
                         </Td>
-                        <Td>
+                        <ActionsTd>
                           <DocumentListActions
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
@@ -293,12 +285,7 @@ export default function SalesListPage() {
                                 : undefined
                             }
                             onPayment={() => void openPayment(sale)}
-                            extra={
-                              <EQaimeExportButton
-                                compact
-                                onExport={(format) => exportEQaime(sale, format)}
-                              />
-                            }
+                            onEQaimeExport={(format) => exportEQaime(sale, format)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
                             onDelete={
                               canDeleteSales ? () => setVoidTarget(sale) : undefined
@@ -320,7 +307,7 @@ export default function SalesListPage() {
                               })
                             }
                           />
-                        </Td>
+                        </ActionsTd>
                       </tr>
                       );
                     })}

@@ -22,6 +22,7 @@ import {
 } from "@/lib/finance/unifiedLedger";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { Eye, Pencil, Printer, Trash2, X } from "lucide-react";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 
 interface AccountOption {
   id: string;
@@ -41,40 +42,6 @@ function formatTypeLabel(type: string, t: (key: string) => string): string {
   if (type === "EXPENSE") return t("finance.typeExpense");
   if (type === "TRANSFER") return t("finance.typeTransfer");
   return type;
-}
-
-function ActionIconButton({
-  label,
-  onClick,
-  disabled,
-  tone = "neutral",
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: "neutral" | "blue" | "rose";
-  children: React.ReactNode;
-}) {
-  const toneClass =
-    tone === "blue"
-      ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-      : tone === "rose"
-        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-        : "border-app bg-app-card-hover text-app-muted hover:bg-app-surface";
-
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${toneClass}`}
-    >
-      {children}
-    </button>
-  );
 }
 
 export default function UnifiedLedgerRowActions({
@@ -192,35 +159,38 @@ export default function UnifiedLedgerRowActions({
 
   return (
     <>
-      <div className="flex items-center justify-end gap-1.5">
-        <ActionIconButton label={t("finance.actionView")} onClick={() => setViewOpen(true)}>
-          <Eye className="h-4 w-4" />
-        </ActionIconButton>
-        <ActionIconButton
-          label={t("finance.actionEdit")}
-          tone="blue"
-          disabled={!editable}
-          onClick={() => setEditOpen(true)}
-        >
-          <Pencil className="h-4 w-4" />
-        </ActionIconButton>
-        <ActionIconButton
-          label={t("finance.actionDelete")}
-          tone="rose"
-          disabled={!deletable}
-          onClick={() => setDeleteOpen(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </ActionIconButton>
-        <ActionIconButton
-          label={t("finance.actionPrint")}
-          onClick={() =>
-            printLedgerReceipt(transaction, { title: t("finance.receiptTitle") })
-          }
-        >
-          <Printer className="h-4 w-4" />
-        </ActionIconButton>
-      </div>
+      <TableRowActionsMenu
+        items={[
+          {
+            key: "view",
+            label: t("finance.actionView"),
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => setViewOpen(true),
+          },
+          {
+            key: "edit",
+            label: t("finance.actionEdit"),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => setEditOpen(true),
+            disabled: !editable,
+          },
+          {
+            key: "print",
+            label: t("finance.actionPrint"),
+            icon: <Printer className="h-4 w-4" />,
+            onClick: () =>
+              printLedgerReceipt(transaction, { title: t("finance.receiptTitle") }),
+          },
+          {
+            key: "delete",
+            label: t("finance.actionDelete"),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setDeleteOpen(true),
+            disabled: !deletable,
+            variant: "destructive",
+          },
+        ]}
+      />
 
       {viewOpen ? (
         <div className="app-modal-overlay">
