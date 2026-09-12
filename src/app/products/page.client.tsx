@@ -10,7 +10,9 @@ import ThermalLabelPrintTemplate, {
   type ThermalLabelItem,
 } from "@/components/products/ThermalLabelPrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
-import ProductForm from "@/components/products/ProductForm";
+import ProductFormDrawer from "@/components/products/ProductFormDrawer";
+import { BulkActionBar } from "@/components/ui/table";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePolywoodSummaries, usePolywoodWarehouseId, useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
@@ -114,6 +116,8 @@ export default function ProductsPage() {
     () => filterProducts(products, filters, warehouses),
     [products, filters, warehouses]
   );
+
+  const bulk = useBulkSelection(filteredProducts, (product) => product.id);
 
   const handleDeleteProduct = async () => {
     if (!deleteTarget) return;
@@ -221,6 +225,39 @@ export default function ProductsPage() {
             </div>
           </div>
 
+          <BulkActionBar count={bulk.count} onClear={bulk.clear}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPrintJob({
+                  items: toLabelItems(bulk.selectedItems),
+                  config: printConfig,
+                })
+              }
+              disabled={bulk.count === 0}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              {t("table.printSelected")}
+            </Button>
+            {canManageProducts ? (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  const target = bulk.selectedItems[0];
+                  if (target) setDeleteTarget(target);
+                }}
+                disabled={bulk.count !== 1}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {t("common.delete")}
+              </Button>
+            ) : null}
+          </BulkActionBar>
+
           <ProductTable
             products={filteredProducts}
             warehouses={warehouses}
@@ -233,6 +270,13 @@ export default function ProductsPage() {
             onPrintLabel={(product) =>
               setPrintJob({ items: toLabelItems([product]), config: printConfig })
             }
+            bulkSelection={{
+              isSelected: bulk.isSelected,
+              toggle: bulk.toggle,
+              toggleAll: bulk.toggleAll,
+              allSelected: bulk.allSelected,
+              someSelected: bulk.someSelected,
+            }}
             emptyMessage={
               products.length === 0 ? t("products.empty") : t("products.noFilterMatch")
             }
@@ -246,31 +290,18 @@ export default function ProductsPage() {
         onUpdated={() => void loadData()}
       />
 
-      {editingProduct ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
-          <div className="my-6 w-full max-w-5xl">
-            <div className="mb-3 flex items-center justify-between rounded-xl border border-app bg-app-card px-4 py-3">
-              <h3 className="text-sm font-bold text-app">
-                {t("common.edit")}: {editingProduct.name}
-              </h3>
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditingProduct(null)}>
-                {t("common.close")}
-              </Button>
-            </div>
-            <ProductForm
-              categories={categories}
-              warehouses={warehouses}
-              allProducts={products}
-              initialProduct={editingProduct}
-              onCancel={() => setEditingProduct(null)}
-              onSuccess={() => {
-                setEditingProduct(null);
-                void loadData();
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      <ProductFormDrawer
+        open={Boolean(editingProduct)}
+        product={editingProduct}
+        categories={categories}
+        warehouses={warehouses}
+        allProducts={products}
+        onClose={() => setEditingProduct(null)}
+        onSuccess={() => {
+          setEditingProduct(null);
+          void loadData();
+        }}
+      />
 
       {printJob ? (
         <div className="print-area">

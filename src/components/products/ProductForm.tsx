@@ -22,6 +22,7 @@ import {
   formTextareaClass,
 } from "@/components/ui/form-field-styles";
 import { FormSectionCard } from "@/components/ui/form-section-card";
+import { FormStickyActions } from "@/components/ui/form-sticky-actions";
 import { parseMetricBarLengthM } from "@/lib/polywood/metricPriceConversion";
 import {
   defaultPriceEntryUnitForMeasure,
@@ -40,6 +41,8 @@ interface ProductFormProps {
   initialProduct?: Product | null;
   onSuccess?: () => void;
   onCancel?: () => void;
+  /** When true, renders inside a drawer without a fixed viewport footer. */
+  embedded?: boolean;
 }
 
 export default function ProductForm({
@@ -49,6 +52,7 @@ export default function ProductForm({
   initialProduct,
   onSuccess,
   onCancel,
+  embedded = false,
 }: ProductFormProps) {
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -312,8 +316,8 @@ export default function ProductForm({
           </p>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-          <div className="space-y-6 lg:col-span-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
+          <div className="space-y-4 lg:col-span-8">
             <FormSectionCard title={t("forms.sectionMainInfo")}>
               <div className={formRowClass}>
                 <div>
@@ -505,7 +509,7 @@ export default function ProductForm({
             ) : null}
           </div>
 
-          <div className="space-y-6 lg:col-span-1">
+          <div className="space-y-4 lg:col-span-4">
             {!isServiceCategorySelected ? (
               <>
                 <FormSectionCard title={t("forms.sectionBarcodeRules")}>
@@ -573,25 +577,47 @@ export default function ProductForm({
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-10 mt-8 flex justify-end gap-3 rounded-t-xl border-t border-slate-200 bg-white px-6 py-4 shadow-lg dark:border-app dark:bg-app-card">
-          {onCancel ? (
+        {embedded ? (
+          <div className="mt-6 flex justify-end gap-2 border-t border-app pt-4">
+            {onCancel ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="h-9 rounded-lg border border-app bg-app-card px-4 text-xs font-semibold text-app transition-colors hover:bg-app-card-hover"
+              >
+                {t("common.cancel")}
+              </button>
+            ) : null}
             <button
-              type="button"
-              onClick={onCancel}
-              className="h-10 rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-app dark:bg-app-card dark:text-app dark:hover:bg-app-card-hover"
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-5 text-xs font-semibold text-white transition-opacity disabled:opacity-50"
             >
-              {t("common.cancel")}
+              <Save className="h-4 w-4" />
+              {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
             </button>
-          ) : null}
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-6 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
-          </button>
-        </div>
+          </div>
+        ) : (
+          <FormStickyActions>
+            {onCancel ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="h-9 rounded-lg border border-app bg-app-card px-4 text-xs font-semibold text-app transition-colors hover:bg-app-card-hover"
+              >
+                {t("common.cancel")}
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[image:var(--app-gradient)] px-5 text-xs font-semibold text-white transition-opacity disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
+            </button>
+          </FormStickyActions>
+        )}
       </form>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </>

@@ -85,6 +85,12 @@ export const enMessages: Messages = {
   table: {
     paginationSummary: "Showing {start}–{end} of {total}",
     rowsPerPage: "Rows",
+    selectAll: "Select all rows",
+    selectRow: "Select row",
+    selectedCount: "{count} selected",
+    clearSelection: "Clear selection",
+    exportSelected: "Export selected",
+    printSelected: "Print selected",
     pageOf: "Page {page} of {totalPages}",
     prevPage: "Previous",
     nextPage: "Next",

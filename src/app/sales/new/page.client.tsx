@@ -18,6 +18,7 @@ export default function NewSalePage() {
       <FormLayout
         title={t("invoice.newSaleTitle")}
         subtitle={t("invoice.newSaleSubtitle")}
+        withStickyFooter
         breadcrumbs={[
           { label: t("nav.items.sales"), href: "/sales" },
           { label: t("invoice.newSaleTitle") },

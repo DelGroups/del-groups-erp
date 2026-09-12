@@ -86,6 +86,12 @@ export const azMessages = {
     pageOf: "Səhifə {page} / {totalPages}",
     prevPage: "Əvvəlki",
     nextPage: "Növbəti",
+    selectAll: "Hamısını seç",
+    selectRow: "Sətri seç",
+    selectedCount: "{count} seçildi",
+    clearSelection: "Seçimi təmizlə",
+    exportSelected: "Seçilənləri ixrac et",
+    printSelected: "Seçilənləri çap et",
   },
   breadcrumb: {
     new: "Yeni",

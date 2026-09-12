@@ -11,7 +11,21 @@ import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
-import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import {
+  ActionsTd,
+  ActionsTh,
+  BulkActionBar,
+  SelectTd,
+  SelectTh,
+  Table,
+  TableSkeletonRows,
+  TableWrap,
+  THead,
+  Th,
+  Td,
+  Tr,
+} from "@/components/ui/table";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
@@ -86,6 +100,8 @@ export default function SalesListPage() {
     );
   });
 
+  const bulk = useBulkSelection(filteredSales, (sale) => sale.id);
+
   const openView = async (row: SaleRecord) => {
     const full = await fetchSaleById(row.id);
     if (full) setViewingSale(full);
@@ -127,8 +143,8 @@ export default function SalesListPage() {
     invalidateSalesList();
   };
 
-  const handleDownloadCSV = () => {
-    if (filteredSales.length === 0) return;
+  const handleDownloadCSV = (rows = filteredSales) => {
+    if (rows.length === 0) return;
     const headers = [
       t("sales.docNo"),
       t("common.date"),
@@ -138,7 +154,7 @@ export default function SalesListPage() {
       t("sales.paid"),
       t("sales.remaining"),
     ];
-    const rows = filteredSales.map((s) => [
+    const csvRows = rows.map((s) => [
       s.doc_no ?? "",
       s.doc_date ?? "",
       `"${s.customer_name ?? ""}"`,
@@ -149,7 +165,7 @@ export default function SalesListPage() {
     ]);
     const csvContent =
       "data:text/csv;charset=utf-8,\uFEFF" +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      [headers.join(","), ...csvRows.map((e) => e.join(","))].join("\n");
     const link = document.createElement("a");
     link.href = encodeURI(csvContent);
     link.download = `${t("sales.csvFilename")}_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -169,7 +185,7 @@ export default function SalesListPage() {
           createDisabled={!canCreateInvoice}
           extraActions={
             <>
-              <Button type="button" variant="secondary" onClick={handleDownloadCSV}>
+              <Button type="button" variant="secondary" onClick={() => handleDownloadCSV()}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.csvDownload")}
               </Button>
@@ -194,10 +210,50 @@ export default function SalesListPage() {
           )}
 
           <Card padding={false}>
+            <BulkActionBar count={bulk.count} onClear={bulk.clear}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleDownloadCSV(bulk.selectedItems)}
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                {t("table.exportSelected")}
+              </Button>
+              {canDeleteSales ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    const target = bulk.selectedItems[0];
+                    if (target) setVoidTarget(target);
+                  }}
+                  disabled={bulk.count !== 1}
+                >
+                  {t("common.void")}
+                </Button>
+              ) : null}
+            </BulkActionBar>
+
             {loading ? (
-              <div className="p-12 text-center text-xs text-app-muted">{t("sales.loading")}</div>
+              <TableWrap>
+                <Table>
+                  <THead>
+                    <tr>
+                      <SelectTh checked={false} onChange={() => {}} />
+                      {Array.from({ length: 9 }).map((_, index) => (
+                        <Th key={index}>&nbsp;</Th>
+                      ))}
+                    </tr>
+                  </THead>
+                  <tbody>
+                    <TableSkeletonRows columns={9} rows={10} withActions />
+                  </tbody>
+                </Table>
+              </TableWrap>
             ) : filteredSales.length === 0 ? (
-              <div className="p-12 text-center text-xs text-app-muted">
+              <div className="p-8 text-center text-xs text-app-muted">
                 {t("sales.empty")}
               </div>
             ) : (
@@ -206,6 +262,11 @@ export default function SalesListPage() {
                 <Table>
                   <THead>
                     <tr>
+                      <SelectTh
+                        checked={bulk.allSelected}
+                        indeterminate={bulk.someSelected}
+                        onChange={bulk.toggleAll}
+                      />
                       <Th>{t("sales.docNo")}</Th>
                       <Th>{t("common.date")}</Th>
                       <Th>{t("sales.customer")}</Th>
@@ -238,7 +299,11 @@ export default function SalesListPage() {
                       );
 
                       return (
-                      <tr key={sale.id} className="transition-colors hover:bg-app-card-hover">
+                      <Tr key={sale.id}>
+                        <SelectTd
+                          checked={bulk.isSelected(sale)}
+                          onChange={() => bulk.toggle(sale)}
+                        />
                         <Td className="font-mono font-bold text-app-accent">
                           {sale.doc_no ?? "-"}
                         </Td>
@@ -308,7 +373,7 @@ export default function SalesListPage() {
                             }
                           />
                         </ActionsTd>
-                      </tr>
+                      </Tr>
                       );
                     })}
                   </tbody>

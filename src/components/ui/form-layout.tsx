@@ -15,6 +15,8 @@ export interface FormLayoutProps {
   actions?: React.ReactNode;
   /** When true, content spans the full viewport width (no max-w-7xl cap). */
   fullWidth?: boolean;
+  /** Reserve space for a fixed bottom action bar rendered inside children. */
+  withStickyFooter?: boolean;
   children: React.ReactNode;
 }
 
@@ -23,12 +25,15 @@ export function FormLayout({
   subtitle,
   actions,
   fullWidth = false,
+  withStickyFooter = false,
   children,
 }: FormLayoutProps) {
   const widthClass = fullWidth ? "w-full" : "w-full max-w-7xl mx-auto";
 
   return (
-    <div className="min-h-full pb-12 dark:bg-[color:var(--app-bg)]">
+    <div
+      className={`min-h-full dark:bg-[color:var(--app-bg)] ${withStickyFooter ? "pb-20" : "pb-12"}`}
+    >
       <div className="border-b border-app bg-app-card px-3 py-3 shadow-sm md:px-4 lg:px-5">
         <div className={`${widthClass} flex items-center justify-between gap-4`}>
           <div className="min-w-0">

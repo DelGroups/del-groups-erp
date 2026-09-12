@@ -88,6 +88,12 @@ export const ruMessages: Messages = {
     pageOf: "Страница {page} из {totalPages}",
     prevPage: "Назад",
     nextPage: "Далее",
+    selectAll: "Выбрать все строки",
+    selectRow: "Выбрать строку",
+    selectedCount: "Выбрано: {count}",
+    clearSelection: "Снять выбор",
+    exportSelected: "Экспорт выбранных",
+    printSelected: "Печать выбранных",
   },
   breadcrumb: {
     new: "Новый",

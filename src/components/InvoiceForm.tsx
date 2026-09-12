@@ -92,6 +92,7 @@ import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import { FormStickyActions } from "@/components/ui/form-sticky-actions";
 import {
   Building2,
   CheckCircle2,
@@ -1335,7 +1336,7 @@ export default function UniversalInvoiceForm({
 
   const formShellClass =
     layoutMode === "page"
-      ? "w-full space-y-4 pb-8"
+      ? "mx-auto w-full max-w-7xl space-y-4"
       : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
 
   const actionButtons = (
@@ -1404,7 +1405,7 @@ export default function UniversalInvoiceForm({
                 className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app disabled:opacity-60"
               />
             </label>
-            {layoutMode === "page" ? actionButtons : (
+            {layoutMode === "page" ? null : (
               <button
                 type="button"
                 onClick={handleClose}
@@ -1417,6 +1418,8 @@ export default function UniversalInvoiceForm({
         </div>
         {layoutMode === "modal" ? <div className="px-0">{actionButtons}</div> : null}
 
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="space-y-4 lg:col-span-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="app-card space-y-2 p-4 text-xs">
             <h3 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
@@ -1992,8 +1995,7 @@ export default function UniversalInvoiceForm({
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-6 lg:flex-row">
-          <div className="flex w-full flex-col gap-3 lg:w-[60%]">
+        <div className="flex w-full flex-col gap-3">
             <div className="flex flex-wrap gap-1 rounded-xl border border-app bg-app-card p-1">
               {(
                 [
@@ -2170,8 +2172,10 @@ export default function UniversalInvoiceForm({
           </div>
             ) : null}
           </div>
+          </div>
 
-          <div className="sticky top-6 h-fit w-full self-start lg:w-[40%]">
+          <div className="lg:col-span-4">
+          <div className="sticky top-4 h-fit w-full self-start">
             <div className="flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-4 text-slate-100">
@@ -2290,9 +2294,12 @@ export default function UniversalInvoiceForm({
               </div>
             </div>
           </div>
+          </div>
         </div>
       </div>
     </div>
+
+    {layoutMode === "page" ? <FormStickyActions>{actionButtons}</FormStickyActions> : null}
 
     {productSelectorOpen && productSelectorTargetRowId && !polywoodOnly ? (
       <InvoiceProductSelectorModal

@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn, NUMERIC_CLASS } from "@/lib/cn";
 import { useI18n } from "@/i18n/I18nProvider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const COMPACT_CELL = "px-2.5 py-1.5 text-sm";
 const COMPACT_HEAD = "px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide";
@@ -75,6 +76,133 @@ export function ActionsTh({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 export function ActionsTd({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <Td className={cn("w-12 whitespace-nowrap text-center", className)} {...props} />
+  );
+}
+
+/** Checkbox column for bulk row selection. */
+export function SelectTh({
+  checked,
+  indeterminate,
+  onChange,
+  className,
+  "aria-label": ariaLabel,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const { t } = useI18n();
+  const ref = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (ref.current) ref.current.indeterminate = Boolean(indeterminate);
+  }, [indeterminate]);
+
+  return (
+    <Th className={cn("w-10 px-2 text-center", className)}>
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        aria-label={ariaLabel ?? t("table.selectAll")}
+        className="h-3.5 w-3.5 rounded border-app text-app-accent focus:ring-app-accent/30"
+      />
+    </Th>
+  );
+}
+
+export function SelectTd({
+  checked,
+  onChange,
+  className,
+  "aria-label": ariaLabel,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Td className={cn("w-10 px-2 text-center", className)}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        aria-label={ariaLabel ?? t("table.selectRow")}
+        className="h-3.5 w-3.5 rounded border-app text-app-accent focus:ring-app-accent/30"
+      />
+    </Td>
+  );
+}
+
+export function TableSkeletonRows({
+  columns,
+  rows = 8,
+  withActions = true,
+}: {
+  columns: number;
+  rows?: number;
+  withActions?: boolean;
+}) {
+  const totalColumns = columns + (withActions ? 1 : 0);
+
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <Tr key={rowIndex}>
+          {Array.from({ length: totalColumns }).map((__, colIndex) => (
+            <Td key={colIndex}>
+              <Skeleton
+                className={cn(
+                  "h-3.5",
+                  colIndex === 0 ? "w-4" : colIndex === totalColumns - 1 ? "mx-auto h-6 w-6" : "w-full max-w-[8rem]"
+                )}
+              />
+            </Td>
+          ))}
+        </Tr>
+      ))}
+    </>
+  );
+}
+
+export interface BulkActionBarProps {
+  count: number;
+  onClear: () => void;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export function BulkActionBar({ count, onClear, children, className }: BulkActionBarProps) {
+  const { t } = useI18n();
+
+  if (count <= 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 border-b border-app bg-[color:var(--app-accent-soft)] px-2.5 py-2 text-xs",
+        className
+      )}
+    >
+      <span className="font-semibold text-app">
+        {t("table.selectedCount", { count })}
+      </span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-app-muted transition-colors hover:bg-app-card-hover hover:text-app"
+      >
+        <X className="h-3.5 w-3.5" />
+        {t("table.clearSelection")}
+      </button>
+      {children ? <div className="ms-auto flex flex-wrap items-center gap-2">{children}</div> : null}
+    </div>
   );
 }
 

@@ -12,7 +12,19 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
 import Card from "@/components/ui/card";
 import StatusBadge from "@/components/ui/status-badge";
-import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import {
+  ActionsTd,
+  ActionsTh,
+  SelectTd,
+  SelectTh,
+  Table,
+  TableSkeletonRows,
+  TableWrap,
+  THead,
+  Th,
+  Td,
+  Tr,
+} from "@/components/ui/table";
 
 function isMeterStockProduct(product: Product): boolean {
   const unit = (product.unit || "").trim().toLowerCase();
@@ -35,6 +47,13 @@ interface ProductTableProps {
   onDelete?: (product: Product) => void;
   onPrintLabel?: (product: Product) => void;
   emptyMessage?: string;
+  bulkSelection?: {
+    isSelected: (product: Product) => boolean;
+    toggle: (product: Product) => void;
+    toggleAll: () => void;
+    allSelected: boolean;
+    someSelected: boolean;
+  };
 }
 
 function isNumericColumn(key: ProductColumnKey) {
@@ -106,24 +125,52 @@ export default function ProductTable({
   onDelete,
   onPrintLabel,
   emptyMessage,
+  bulkSelection,
 }: ProductTableProps) {
   const { t } = useI18n();
   const columns = (Object.keys(visibleColumns) as ProductColumnKey[]).filter(
     (key) => visibleColumns[key]
   );
 
-  if (loading) {
-    return (
-      <Card className="text-center text-sm text-app-muted">
-        <div className="py-7">{t("products.loading")}</div>
-      </Card>
-    );
-  }
+  const skeletonDataColumns = columns.length + 4 + (bulkSelection ? 1 : 0);
 
   if (products.length === 0) {
     return (
       <Card className="text-center text-sm text-app-muted">
         <div className="py-7">{emptyMessage || t("products.empty")}</div>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card padding={false}>
+        <TableWrap>
+          <Table>
+            <THead>
+              <tr>
+                {bulkSelection ? <SelectTh checked={false} onChange={() => {}} /> : null}
+                {columns.map((key) => (
+                  <Th key={key} numeric={isNumericColumn(key)}>
+                    {t(`products.columnLabels.${key}`)}
+                  </Th>
+                ))}
+                <Th numeric>{t("products.stock")}</Th>
+                <Th numeric>{t("products.minStockLevel")}</Th>
+                <Th>{t("common.warehouse")}</Th>
+                <Th>{t("common.status")}</Th>
+                {canEdit || onPrintLabel ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
+              </tr>
+            </THead>
+            <tbody>
+              <TableSkeletonRows
+                columns={skeletonDataColumns}
+                rows={10}
+                withActions={Boolean(canEdit || onPrintLabel)}
+              />
+            </tbody>
+          </Table>
+        </TableWrap>
       </Card>
     );
   }
@@ -135,6 +182,13 @@ export default function ProductTable({
           <Table>
             <THead>
               <tr>
+                {bulkSelection ? (
+                  <SelectTh
+                    checked={bulkSelection.allSelected}
+                    indeterminate={bulkSelection.someSelected}
+                    onChange={bulkSelection.toggleAll}
+                  />
+                ) : null}
                 {columns.map((key) => (
                   <Th key={key} numeric={isNumericColumn(key)}>
                     {t(`products.columnLabels.${key}`)}
@@ -153,7 +207,13 @@ export default function ProductTable({
               {products.map((product) => {
                 const critical = isCriticalStock(product);
                 return (
-                  <tr key={product.id} className="transition-colors hover:bg-app-card-hover">
+                  <Tr key={product.id}>
+                    {bulkSelection ? (
+                      <SelectTd
+                        checked={bulkSelection.isSelected(product)}
+                        onChange={() => bulkSelection.toggle(product)}
+                      />
+                    ) : null}
                     {columns.map((key) => (
                       <Td key={key} numeric={isNumericColumn(key)}>
                         {renderCell(key, product, t)}
@@ -225,7 +285,7 @@ export default function ProductTable({
                         />
                       </ActionsTd>
                     ) : null}
-                  </tr>
+                  </Tr>
                 );
               })}
             </tbody>

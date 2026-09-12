@@ -33,7 +33,21 @@ import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { voidPurchaseAction } from "@/lib/actions/entityDelete";
 import Button from "@/components/ui/button";
-import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import {
+  ActionsTd,
+  ActionsTh,
+  BulkActionBar,
+  SelectTd,
+  SelectTh,
+  Table,
+  TableSkeletonRows,
+  TableWrap,
+  THead,
+  Th,
+  Td,
+  Tr,
+} from "@/components/ui/table";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { Plus, ShoppingBag } from "lucide-react";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
@@ -88,6 +102,8 @@ export default function PurchasesPage() {
       (p.supplier_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.supplier_company || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const bulk = useBulkSelection(filtered, (row) => row.id);
 
   const openEditById = async (purchaseId: string) => {
     const full = await fetchPurchaseById(purchaseId);
@@ -222,10 +238,41 @@ export default function PurchasesPage() {
           />
 
           <div className="app-table-wrap">
+            <BulkActionBar count={bulk.count} onClear={bulk.clear}>
+              {canDeletePurchases ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    const target = bulk.selectedItems[0];
+                    if (target) setDeleteTarget(target);
+                  }}
+                  disabled={bulk.count !== 1}
+                >
+                  {t("common.void")}
+                </Button>
+              ) : null}
+            </BulkActionBar>
+
             {loading ? (
-              <div className="p-12 text-center text-xs text-app-muted">{t("purchases.loading")}</div>
+              <TableWrap className="rounded-none border-0 shadow-none">
+                <Table>
+                  <THead>
+                    <tr>
+                      <SelectTh checked={false} onChange={() => {}} />
+                      {Array.from({ length: 8 }).map((_, index) => (
+                        <Th key={index}>&nbsp;</Th>
+                      ))}
+                    </tr>
+                  </THead>
+                  <tbody>
+                    <TableSkeletonRows columns={8} rows={10} withActions />
+                  </tbody>
+                </Table>
+              </TableWrap>
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-xs text-app-muted">
+              <div className="p-8 text-center text-xs text-app-muted">
                 {t("purchases.empty")}
               </div>
             ) : (
@@ -233,6 +280,11 @@ export default function PurchasesPage() {
                 <Table>
                   <THead>
                     <tr>
+                      <SelectTh
+                        checked={bulk.allSelected}
+                        indeterminate={bulk.someSelected}
+                        onChange={bulk.toggleAll}
+                      />
                       <Th>{t("purchases.invoiceNo")}</Th>
                       <Th>{t("common.date")}</Th>
                       <Th>{t("purchases.supplier")}</Th>
@@ -261,6 +313,10 @@ export default function PurchasesPage() {
 
                       return (
                       <Tr key={row.id}>
+                        <SelectTd
+                          checked={bulk.isSelected(row)}
+                          onChange={() => bulk.toggle(row)}
+                        />
                         <Td className="font-mono font-bold text-emerald-600">
                           {row.invoice_number}
                         </Td>
