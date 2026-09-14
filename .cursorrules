@@ -11,3 +11,9 @@
   - Table `inventory_writeoffs`: document_number, warehouse_id, checker_name, writeoff_date, notes, items JSONB, created_at.
   - Table `commission_rules`: category_name, min_sales, max_sales, commission_rate.
   - Table `consignment_orders`: customer_name, seller_name, product_name, category_name, sent_qty, sold_qty, returned_qty, remaining_qty, unit_price.
+
+## UI Design System (strict)
+
+- UI CONSISTENCY: NEVER use inline tailwind classes to create random gradients, pill-shaped buttons, or custom colored buttons. ALWAYS use the `@/components/ui/button` component and its predefined variants (default, outline, destructive, secondary).
+- CARDS: ALL sections in forms and dashboards MUST be wrapped in `@/components/ui/card` components. Do not use raw div containers with custom shadows or borders.
+- TABLES: All tables MUST have a consistent style: `border border-slate-200`, rounded corners, and a light gray header `bg-slate-50`. No borderless tables.

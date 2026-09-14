@@ -5,41 +5,69 @@ import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ProductForm from "@/components/products/ProductForm";
 import { FormLayout } from "@/components/ui/form-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useI18n } from "@/i18n/I18nProvider";
+
+function ProductFormSkeletonSection({ title }: { title?: string }) {
+  return (
+    <Card padding={false}>
+      {title ? (
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      ) : (
+        <CardHeader>
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+      )}
+      <CardContent className="space-y-4 p-6 pt-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function ProductFormSkeleton() {
   return (
     <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-12">
       <div className="flex w-full flex-col gap-6 lg:col-span-8">
-        <div className="w-full rounded-xl border border-app bg-app-card p-6 space-y-4">
-          <Skeleton className="h-4 w-32" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-        <div className="w-full rounded-xl border border-app bg-app-card p-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
+        <ProductFormSkeletonSection />
+        <Card padding={false}>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent className="p-6 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
       <div className="flex w-full flex-col gap-6 lg:col-span-4">
-        <div className="w-full rounded-xl border border-app bg-app-card p-6">
-          <Skeleton className="h-40 w-full" />
-        </div>
-        <div className="w-full rounded-xl border border-app bg-app-card p-6">
-          <Skeleton className="h-24 w-full" />
-        </div>
+        <Card padding={false}>
+          <CardHeader>
+            <Skeleton className="h-5 w-28" />
+          </CardHeader>
+          <CardContent className="p-6 pt-4">
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+        </Card>
+        <Card padding={false}>
+          <CardHeader>
+            <Skeleton className="h-5 w-36" />
+          </CardHeader>
+          <CardContent className="p-6 pt-4">
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

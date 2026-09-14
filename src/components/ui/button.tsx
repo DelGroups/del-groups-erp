@@ -2,18 +2,57 @@
 
 import React from "react";
 import Link from "next/link";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "outline";
-export type ButtonSize = "sm" | "md" | "lg";
+export const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-blue-600 text-white hover:bg-blue-700",
+        secondary:
+          "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
+        outline:
+          "border border-slate-300 bg-transparent text-slate-900 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800/80",
+        destructive: "bg-red-600 text-white hover:bg-red-700",
+        ghost:
+          "bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+      },
+      size: {
+        default: "h-10 px-4 py-2 text-sm",
+        sm: "h-9 px-3 text-sm",
+        lg: "h-11 px-8 text-base",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
 
-type CommonProps = {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
+/** @deprecated Use `default` */
+export type ButtonVariant =
+  | "default"
+  | "secondary"
+  | "outline"
+  | "destructive"
+  | "ghost"
+  | "primary"
+  | "danger";
+
+export type ButtonSize = "default" | "sm" | "lg" | "md";
+
+type CommonProps = VariantProps<typeof buttonVariants> & {
+  asChild?: boolean;
   loading?: boolean;
   className?: string;
   children?: React.ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 };
 
 export type ButtonProps = CommonProps &
@@ -22,36 +61,31 @@ export type ButtonProps = CommonProps &
     | ({ href?: never } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className">)
   );
 
-const VARIANT: Record<ButtonVariant, string> = {
-  primary:
-    "bg-[image:var(--app-gradient)] text-white shadow-sm hover:brightness-110 disabled:hover:brightness-100",
-  secondary:
-    "border border-app bg-app-card-hover text-app hover:bg-app-card disabled:hover:bg-app-card-hover",
-  danger:
-    "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:hover:bg-rose-50",
-  ghost: "text-app-muted hover:bg-app-card-hover hover:text-app",
-  outline:
-    "border border-slate-200 bg-transparent text-app hover:bg-app-card-hover dark:border-white/15",
-};
+function resolveVariant(variant?: ButtonVariant) {
+  if (variant === "primary") return "default";
+  if (variant === "danger") return "destructive";
+  return variant ?? "default";
+}
 
-const SIZE: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs",
-  md: "h-9 px-3.5 text-sm",
-  lg: "h-10 px-4 text-sm",
-};
+function resolveSize(size?: ButtonSize) {
+  if (size === "md") return "default";
+  return size ?? "default";
+}
 
-const BASE =
-  "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
-
-export default function Button({
-  variant = "primary",
-  size = "md",
-  loading = false,
+export function Button({
   className,
+  variant,
+  size,
+  asChild = false,
+  loading = false,
   children,
   ...rest
 }: ButtonProps) {
-  const classes = cn(BASE, VARIANT[variant], SIZE[size], className);
+  const classes = cn(
+    buttonVariants({ variant: resolveVariant(variant), size: resolveSize(size) }),
+    className
+  );
+
   const content = (
     <>
       {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -73,16 +107,20 @@ export default function Button({
     );
   }
 
+  const Comp = asChild ? Slot : "button";
   const buttonRest = rest as React.ButtonHTMLAttributes<HTMLButtonElement>;
+
   return (
-    <button
+    <Comp
       {...buttonRest}
-      type={buttonRest.type ?? "button"}
+      type={asChild ? undefined : buttonRest.type ?? "button"}
       className={classes}
       disabled={buttonRest.disabled || loading}
       aria-busy={loading}
     >
       {content}
-    </button>
+    </Comp>
   );
 }
+
+export default Button;
