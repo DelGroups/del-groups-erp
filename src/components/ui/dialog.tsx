@@ -17,7 +17,7 @@ export function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-[color:var(--app-overlay)] backdrop-blur-sm app-drawer-backdrop",
+        "fixed inset-0 z-[var(--erp-z-modal)] bg-[color:var(--erp-bg-overlay)] backdrop-blur-sm app-drawer-backdrop",
         className
       )}
       {...props}

@@ -1,0 +1,62 @@
+"use client";
+
+import React from "react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/cn";
+
+export interface ModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
+}
+
+/** Gentelella-styled modal wrapper over Radix Dialog. */
+export function Modal({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  className,
+}: ModalProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "max-w-lg overflow-hidden rounded-[var(--erp-radius-md)] border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-0 shadow-[var(--erp-shadow-lg)]",
+          className
+        )}
+      >
+        <DialogHeader className="border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3">
+          <DialogTitle className="erp-panel-title">{title}</DialogTitle>
+          {description ? (
+            <DialogDescription className="text-[color:var(--erp-text-muted)]">
+              {description}
+            </DialogDescription>
+          ) : null}
+        </DialogHeader>
+        <div className="px-[var(--erp-panel-padding-x)] py-[var(--erp-panel-padding-y)]">{children}</div>
+        {footer ? (
+          <div className="flex justify-end gap-2 border-t border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3">
+            {footer}
+          </div>
+        ) : null}
+        <DialogClose className="sr-only" />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default Modal;

@@ -18,7 +18,7 @@ export default function NewSalePage() {
       <FormLayout
         title={t("invoice.newSaleTitle")}
         subtitle={t("invoice.newSaleSubtitle")}
-        contentClassName="bg-slate-50 p-0"
+        contentClassName="bg-[color:var(--gt-bg-main)] p-0"
         withStickyFooter
         breadcrumbs={[
           { label: t("nav.items.sales"), href: "/sales" },

@@ -1,29 +1,33 @@
 /**
- * Canonical form control tokens — use across pages, modals, and drawers.
+ * Canonical form control tokens — Gentelella ERP design system.
+ * All values reference `--erp-*` CSS variables from `src/design-system/tokens.css`.
  */
-export const formLabelClass =
-  "mb-1.5 block text-sm font-medium text-slate-700 dark:text-app";
+
+export const formLabelClass = "erp-label";
 
 export const formControlClass =
-  "h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-600 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-app dark:bg-app-card dark:text-app dark:placeholder:text-app-muted";
+  "h-10 w-full min-w-0 rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-input)] px-3 text-[length:var(--erp-text-sm)] text-[color:var(--erp-text-main)] shadow-[var(--erp-shadow-sm)] placeholder:text-[color:var(--erp-text-placeholder)] transition-[border-color,box-shadow] duration-[var(--erp-duration-normal)] focus:border-[color:var(--erp-color-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--erp-border-focus)] disabled:cursor-not-allowed disabled:opacity-60";
+
+export const formControlErrorClass =
+  "border-[color:var(--erp-color-danger)] focus:border-[color:var(--erp-color-danger)] focus:ring-[color:var(--erp-color-danger)]/25";
 
 export const formInputClass = formControlClass;
 
 export const formNumberInputClass =
   `${formControlClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`;
 
-export const formSelectClass =
-  `${formControlClass} cursor-pointer appearance-auto pr-9`;
+export const formSelectClass = `${formControlClass} cursor-pointer appearance-auto pr-9`;
 
-export const formTextareaClass =
-  `${formControlClass} min-h-[5.5rem] resize-y py-2.5`;
+export const formTextareaClass = `${formControlClass} min-h-[5.5rem] resize-y py-2.5`;
 
-/** Wrapper for a single labeled field — prevents grid/flex collapse. */
 export const formFieldClass = "min-w-0 w-full";
 
-/** Standard two-column field row inside a section card. */
 export const formRowClass = "grid grid-cols-1 gap-4 sm:grid-cols-2";
 
-/** Input + trailing select (price, unit, etc.) */
 export const formInputGroupClass =
   "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:items-center";
+
+export const formErrorClass = "mt-1 text-[length:var(--erp-text-xs)] font-medium text-[color:var(--erp-color-danger)]";
+
+export const formHintClass =
+  "mt-1 text-[length:var(--erp-text-xs)] font-normal text-[color:var(--erp-text-muted)]";

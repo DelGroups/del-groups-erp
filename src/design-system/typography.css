@@ -1,0 +1,119 @@
+/**
+ * Gentelella ERP — Typography utilities
+ * Use these classes in pages until heading components ship in Phase 2.
+ */
+
+.erp-h1 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-3xl);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-h2 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-2xl);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-h3 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-xl);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-h4 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-lg);
+  font-weight: var(--erp-font-weight-medium);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-h5 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-base);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-main);
+}
+
+.erp-h6 {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-sm);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.erp-body {
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-sm);
+  font-weight: var(--erp-font-weight-normal);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-main);
+}
+
+.erp-body-muted {
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-sm);
+  font-weight: var(--erp-font-weight-normal);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-muted);
+}
+
+.erp-small {
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-xs);
+  font-weight: var(--erp-font-weight-normal);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-muted);
+}
+
+.erp-label {
+  display: block;
+  margin-bottom: var(--erp-space-1);
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-xs);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-normal);
+  color: var(--erp-text-main);
+}
+
+.erp-page-title {
+  margin: 0 0 var(--erp-space-5);
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-xl);
+  font-weight: var(--erp-font-weight-semibold);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-panel-title {
+  margin: 0;
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-lg);
+  font-weight: var(--erp-font-weight-medium);
+  line-height: var(--erp-leading-tight);
+  color: var(--erp-text-main);
+}
+
+.erp-panel-subtitle {
+  margin-left: var(--erp-space-1);
+  font-size: var(--erp-text-xs);
+  font-weight: var(--erp-font-weight-normal);
+  color: var(--erp-text-muted);
+}

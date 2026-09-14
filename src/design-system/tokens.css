@@ -1,0 +1,150 @@
+/**
+ * Del Groups ERP — Gentelella Design Tokens (canonical)
+ * ---------------------------------------------------------------------------
+ * RULE: Components MUST reference semantic `--erp-*` tokens only.
+ *       Never hardcode hex/rgb values in TSX or component CSS.
+ * Source: Gentelella admin template visual language.
+ */
+
+:root {
+  /* ── Brand palette ───────────────────────────────────────────────────── */
+  --erp-color-primary: #1abb9c;
+  --erp-color-primary-hover: #169f85;
+  --erp-color-primary-active: #138f77;
+  --erp-color-primary-foreground: #ffffff;
+
+  --erp-color-secondary: #2a3f54;
+  --erp-color-secondary-hover: #243447;
+  --erp-color-secondary-active: #172d42;
+  --erp-color-secondary-foreground: #ffffff;
+
+  --erp-color-success: #26b99a;
+  --erp-color-success-hover: #1f9a82;
+  --erp-color-success-foreground: #ffffff;
+
+  --erp-color-warning: #f39c12;
+  --erp-color-warning-hover: #d68910;
+  --erp-color-warning-foreground: #ffffff;
+
+  --erp-color-danger: #e74c3c;
+  --erp-color-danger-hover: #d62c1a;
+  --erp-color-danger-foreground: #ffffff;
+
+  --erp-color-info: #3498db;
+  --erp-color-info-hover: #2d83c3;
+  --erp-color-info-foreground: #ffffff;
+
+  --erp-color-link: #337ab7;
+  --erp-color-link-hover: #2e6da4;
+
+  /* ── Surfaces & backgrounds ─────────────────────────────────────────── */
+  --erp-bg-main: #f7f7f7;
+  --erp-bg-panel: #ffffff;
+  --erp-bg-sidebar: #2a3f54;
+  --erp-bg-sidebar-footer: #172d42;
+  --erp-bg-topbar: #ededed;
+  --erp-bg-table-header: #f5f7fa;
+  --erp-bg-table-row-alt: #fafbfc;
+  --erp-bg-input: #ffffff;
+  --erp-bg-overlay: rgb(42 63 84 / 0.45);
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --erp-text-main: #2a3f54;
+  --erp-text-muted: #73879c;
+  --erp-text-inverse: #ffffff;
+  --erp-text-sidebar: #e7e7e7;
+  --erp-text-sidebar-muted: #abb1b7;
+  --erp-text-placeholder: #aab2bd;
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --erp-border-default: #e6e9ed;
+  --erp-border-strong: #d9dee4;
+  --erp-border-sidebar: rgb(255 255 255 / 0.05);
+  --erp-border-focus: rgb(26 187 156 / 0.45);
+
+  /* ── Typography — families ────────────────────────────────────────── */
+  --erp-font-sans: "Helvetica Neue", Helvetica, Arial, "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --erp-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* ── Typography — scale (Gentelella uses 14px body) ───────────────── */
+  --erp-text-xs: 0.75rem; /* 12px */
+  --erp-text-sm: 0.875rem; /* 14px — base body */
+  --erp-text-base: 1rem; /* 16px */
+  --erp-text-lg: 1.125rem; /* 18px — panel titles */
+  --erp-text-xl: 1.5rem; /* 24px — page titles */
+  --erp-text-2xl: 1.875rem; /* 30px */
+  --erp-text-3xl: 2.25rem; /* 36px */
+
+  --erp-leading-tight: 1.25;
+  --erp-leading-normal: 1.5;
+  --erp-leading-relaxed: 1.625;
+
+  --erp-font-weight-normal: 400;
+  --erp-font-weight-medium: 500;
+  --erp-font-weight-semibold: 600;
+  --erp-font-weight-bold: 700;
+
+  /* ── Spacing (4px grid + Gentelella panel offsets) ────────────────── */
+  --erp-space-0: 0;
+  --erp-space-1: 0.25rem; /* 4px */
+  --erp-space-2: 0.5rem; /* 8px */
+  --erp-space-3: 0.75rem; /* 12px */
+  --erp-space-4: 1rem; /* 16px */
+  --erp-space-5: 1.25rem; /* 20px — panel margin-bottom */
+  --erp-space-6: 1.5rem; /* 24px */
+  --erp-space-8: 2rem; /* 32px */
+  --erp-space-10: 2.5rem; /* 40px */
+
+  --erp-panel-padding-x: 1.0625rem; /* 17px */
+  --erp-panel-padding-y: 0.625rem; /* 10px */
+  --erp-content-padding-x: 1.875rem; /* 30px */
+  --erp-content-padding-y: 1.25rem; /* 20px */
+
+  /* ── Layout chrome ────────────────────────────────────────────────── */
+  --erp-sidebar-width: 14.375rem; /* 230px */
+  --erp-sidebar-width-collapsed: 5rem; /* 80px */
+  --erp-topbar-height: 3.5625rem; /* 57px */
+
+  /* ── Radius (Gentelella = flat 3px) ───────────────────────────────── */
+  --erp-radius-sm: 2px;
+  --erp-radius-md: 3px;
+  --erp-radius-lg: 4px;
+  --erp-radius-full: 9999px;
+
+  /* ── Shadows (subtle, enterprise) ─────────────────────────────────── */
+  --erp-shadow-none: none;
+  --erp-shadow-sm: 0 1px 2px rgb(42 63 84 / 0.06);
+  --erp-shadow-md: 0 1px 3px rgb(42 63 84 / 0.08);
+  --erp-shadow-lg: 0 4px 12px rgb(42 63 84 / 0.12);
+
+  /* ── Motion ───────────────────────────────────────────────────────── */
+  --erp-duration-fast: 150ms;
+  --erp-duration-normal: 200ms;
+  --erp-duration-slow: 280ms;
+  --erp-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Z-index scale ────────────────────────────────────────────────── */
+  --erp-z-dropdown: 40;
+  --erp-z-sticky: 30;
+  --erp-z-sidebar: 50;
+  --erp-z-modal: 60;
+  --erp-z-toast: 70;
+
+  /* ── Legacy aliases (`--gt-*`) — migrate to `--erp-*` over time ───── */
+  --gt-bg-main: var(--erp-bg-main);
+  --gt-panel-bg: var(--erp-bg-panel);
+  --gt-sidebar-bg: var(--erp-bg-sidebar);
+  --gt-sidebar-footer: var(--erp-bg-sidebar-footer);
+  --gt-topbar-bg: var(--erp-bg-topbar);
+  --gt-table-header: var(--erp-bg-table-header);
+  --gt-accent-green: var(--erp-color-primary);
+  --gt-accent-green-hover: var(--erp-color-primary-hover);
+  --gt-navy: var(--erp-color-link);
+  --gt-text-dark: var(--erp-text-main);
+  --gt-text-primary: var(--erp-text-muted);
+  --gt-border-color: var(--erp-border-default);
+  --gt-success: var(--erp-color-success);
+  --gt-info: var(--erp-color-info);
+  --gt-warning: var(--erp-color-warning);
+  --gt-danger: var(--erp-color-danger);
+}

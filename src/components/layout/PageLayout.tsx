@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import AppTopBar from "@/components/layout/AppTopBar";
+import ERPLayout from "@/components/layout/ERPLayout";
 import CommandPalette from "@/components/layout/CommandPalette";
 import AiAssistantWidget from "@/components/ai/AiAssistantWidget";
 import PermissionGuard from "@/components/auth/PermissionGuard";
@@ -49,26 +48,23 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
         closeMobileMenu: () => setMobileMenuOpen(false),
       }}
     >
-      <div className="flex h-screen overflow-hidden bg-app">
-        {mobileMenuOpen && (
-          <button
-            type="button"
-            aria-label={t("nav.closeMenu")}
-            className="app-scrim fixed inset-0 z-40 md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-
-        <Sidebar
-          mobileOpen={mobileMenuOpen}
-          onMobileClose={() => setMobileMenuOpen(false)}
+      {mobileMenuOpen ? (
+        <button
+          type="button"
+          aria-label={t("nav.closeMenu")}
+          className="app-scrim fixed inset-0 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
         />
+      ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <AppTopBar />
-          <div className="min-h-0 flex-1 overflow-y-auto bg-app">{content}</div>
-        </div>
-      </div>
+      <ERPLayout
+        mobileMenuOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+        contentClassName="min-h-0"
+      >
+        {content}
+      </ERPLayout>
+
       <CommandPalette />
       <AiAssistantWidget />
     </SidebarMenuProvider>

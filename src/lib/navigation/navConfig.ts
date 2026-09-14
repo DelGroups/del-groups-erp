@@ -76,6 +76,7 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: Boxes,
     items: [
       { titleKey: "nav.items.products", path: "/products", icon: Package },
+      { titleKey: "nav.items.warehouseStock", path: "/inventory", icon: Boxes },
       { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
       { titleKey: "nav.items.warehouseIncoming", path: "/warehouse/incoming", icon: Package },
       { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },

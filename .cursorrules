@@ -1,21 +1,32 @@
 # Del Groups ERP Rules
 - Tech Stack: Next.js (App Router), TypeScript, Tailwind CSS, Supabase (PostgreSQL).
 - Canonical schema reference: `types/schema.sql`
-- Database Schema reference:
-  - Table `products`: code, name, category, subcategory, unit, buy_price, sell_price, stock, min_stock, barcode, color, weight, extra_info, warehouse_id.
-  - Table `customers`: code, full_name, name, phone, company_name, address, voen, balance.
-  - Table `sales`: header fields (doc_no, doc_date, customer_id, customer_name, seller_id, seller_name, warehouse_name, subtotal, discount_total, vat_total, total_amount, paid_amount, remaining_balance, delivery_type, delivery_address, delivery_fee, notes, note, payments JSONB).
-  - Table `sale_items`: normalized line items linked by sale_id (product_id, quantity, unit_price, discount_percent, vat_rate, line_total, etc.).
-  - Table `warehouses`: code, name, location, is_default.
-  - Table `categories`: name, parent_id.
-  - Table `inventory_writeoffs`: document_number, warehouse_id, checker_name, writeoff_date, notes, items JSONB, created_at.
-  - Table `commission_rules`: category_name, min_sales, max_sales, commission_rate.
-  - Table `consignment_orders`: customer_name, seller_name, product_name, category_name, sent_qty, sold_qty, returned_qty, remaining_qty, unit_price.
 
-## DreamScore UI Design System (strict)
+## Gentelella ERP Design System (mandatory)
 
-- DESIGN SYSTEM: Enforce DreamScore UI standards. Base background must be `bg-slate-50`. Cards must use `bg-white border border-slate-200/80 rounded-xl shadow-sm p-5`.
-- BUTTONS: Absolutely NO color gradients (purple, cyan, etc.). Primary buttons MUST use solid corporate blue (`bg-blue-600 hover:bg-blue-700 text-white rounded-lg`). Secondary buttons use `bg-slate-100 text-slate-700`. ALWAYS use `@/components/ui/button` variants (default, secondary, outline, destructive).
-- FORM LAYOUTS: Complex form pages (Sales Invoices, Purchases, New Products) MUST use a 12-column grid: `lg:col-span-8` for primary inputs and `lg:col-span-4` for sticky right-side summaries (`sticky top-6`).
-- DATA TABLES: All tables MUST have high density (`py-2.5`), slate header background (`bg-slate-50`), crisp borders (`border border-slate-200`), rounded corners, and a single 3-dot dropdown menu for row actions.
-- CARDS: ALL sections in forms and dashboards MUST be wrapped in `@/components/ui/card` components. Do not use raw div containers with custom shadows or borders.
+### Tokens (`src/design-system/`)
+- **Source of truth:** `tokens.css` — all `--erp-*` variables. NO hardcoded colors in components.
+- **Import:** `globals.css` → `design-system/index.css`
+- **Typography:** `.erp-h1`–`.erp-h6`, `.erp-body`, `.erp-label`, `.erp-page-title`, `.erp-panel-title`
+- Legacy `--gt-*` aliases map to `--erp-*` during migration.
+
+### Component library (`@/components/ui` or `@/components/ui/index.ts`)
+| Category | Components |
+|----------|------------|
+| Actions | `Button` — `appearance`: solid \| outline \| text; `color`: primary \| secondary \| success \| danger \| info \| warning; `size`: sm \| md \| lg |
+| Forms | `Input`, `Select`/`SelectBox`, `Checkbox`, `Radio`, `FormLabel`, `ErrorMessage`, `FormField` |
+| Layout sections | `Panel` (default section wrapper), `Card` (elevated/modal) |
+| Data | `DataTable` (declarative), `Table`+`Pagination` (enterprise grids) |
+| Feedback | `Badge`, `Alert`, `Modal`, `ToastMessage` |
+
+### App shell (`@/components/layout/`)
+- `AppLayout` / `PageLayout` — auth, command palette, AI widget
+- `ERPLayout` — Gentelella shell (sidebar 230px, topbar 57px, content padding)
+- `ERPPage` — page title + actions block
+
+### Page rules
+- Every page wraps in `PageLayout` (or `AppLayout`)
+- Sections use `<Panel title="…">` — not raw divs with custom borders
+- Forms: 12-col grid `lg:col-span-8` / `lg:col-span-4` sticky summary on complex pages
+- Tables: `DataTable` for simple lists; `Table` primitives for bulk/pagination
+- Buttons: only `@/components/ui/button` — no gradients, `rounded-[var(--erp-radius-md)]`

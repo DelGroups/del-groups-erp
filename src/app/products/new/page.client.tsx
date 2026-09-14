@@ -86,7 +86,7 @@ export default function NewProductPage() {
       <FormLayout
         title={t("products.newTitle")}
         subtitle={t("products.newSubtitle")}
-        contentClassName="bg-slate-50 p-0"
+        contentClassName="bg-[color:var(--gt-bg-main)] p-0"
         breadcrumbs={[
           { label: t("nav.items.products"), href: "/products" },
           { label: t("products.createLabel") },

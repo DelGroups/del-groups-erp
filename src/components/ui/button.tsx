@@ -7,50 +7,122 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-export const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700",
-        secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
-        outline:
-          "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800/80",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
-        ghost: "bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
-      },
-      size: {
-        default: "h-10 px-4 py-2 text-sm",
-        sm: "h-9 px-3 text-sm",
-        lg: "h-11 px-8 text-base",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+const buttonBase =
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--erp-radius-md)] border text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-normal)] shadow-none transition-[background-color,border-color,color] duration-[var(--erp-duration-normal)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--erp-border-focus)] disabled:pointer-events-none disabled:opacity-50";
 
-/** @deprecated Use `default` */
+const solidColors = {
+  primary:
+    "border-transparent bg-[color:var(--erp-color-primary)] text-[color:var(--erp-color-primary-foreground)] hover:bg-[color:var(--erp-color-primary-hover)] active:bg-[color:var(--erp-color-primary-active)]",
+  secondary:
+    "border-transparent bg-[color:var(--erp-color-secondary)] text-[color:var(--erp-color-secondary-foreground)] hover:bg-[color:var(--erp-color-secondary-hover)] active:bg-[color:var(--erp-color-secondary-active)]",
+  success:
+    "border-transparent bg-[color:var(--erp-color-success)] text-[color:var(--erp-color-success-foreground)] hover:bg-[color:var(--erp-color-success-hover)]",
+  danger:
+    "border-transparent bg-[color:var(--erp-color-danger)] text-[color:var(--erp-color-danger-foreground)] hover:bg-[color:var(--erp-color-danger-hover)]",
+  info:
+    "border-transparent bg-[color:var(--erp-color-info)] text-[color:var(--erp-color-info-foreground)] hover:bg-[color:var(--erp-color-info-hover)]",
+  warning:
+    "border-transparent bg-[color:var(--erp-color-warning)] text-[color:var(--erp-color-warning-foreground)] hover:bg-[color:var(--erp-color-warning-hover)]",
+} as const;
+
+const outlineColors = {
+  primary:
+    "border-[color:var(--erp-color-primary)] bg-transparent text-[color:var(--erp-color-primary)] hover:bg-[color:var(--erp-color-primary)]/10",
+  secondary:
+    "border-[color:var(--erp-color-secondary)] bg-transparent text-[color:var(--erp-color-secondary)] hover:bg-[color:var(--erp-color-secondary)]/10",
+  success:
+    "border-[color:var(--erp-color-success)] bg-transparent text-[color:var(--erp-color-success)] hover:bg-[color:var(--erp-color-success)]/10",
+  danger:
+    "border-[color:var(--erp-color-danger)] bg-transparent text-[color:var(--erp-color-danger)] hover:bg-[color:var(--erp-color-danger)]/10",
+  info:
+    "border-[color:var(--erp-color-info)] bg-transparent text-[color:var(--erp-color-info)] hover:bg-[color:var(--erp-color-info)]/10",
+} as const;
+
+const textColors = {
+  primary:
+    "border-transparent bg-transparent text-[color:var(--erp-color-primary)] hover:bg-[color:var(--erp-color-primary)]/10",
+  secondary:
+    "border-transparent bg-transparent text-[color:var(--erp-color-secondary)] hover:bg-[color:var(--erp-color-secondary)]/10",
+  success:
+    "border-transparent bg-transparent text-[color:var(--erp-color-success)] hover:bg-[color:var(--erp-color-success)]/10",
+  danger:
+    "border-transparent bg-transparent text-[color:var(--erp-color-danger)] hover:bg-[color:var(--erp-color-danger)]/10",
+  info:
+    "border-transparent bg-transparent text-[color:var(--erp-color-info)] hover:bg-[color:var(--erp-color-info)]/10",
+} as const;
+
+export const buttonVariants = cva(buttonBase, {
+  variants: {
+    appearance: {
+      solid: "",
+      outline: "",
+      text: "",
+    },
+    color: {
+      primary: "",
+      secondary: "",
+      success: "",
+      danger: "",
+      info: "",
+      warning: "",
+    },
+    size: {
+      sm: "px-2 py-1",
+      md: "px-3 py-1.5",
+      lg: "px-4 py-2.5",
+    },
+  },
+  compoundVariants: [
+    { appearance: "solid", color: "primary", class: solidColors.primary },
+    { appearance: "solid", color: "secondary", class: solidColors.secondary },
+    { appearance: "solid", color: "success", class: solidColors.success },
+    { appearance: "solid", color: "danger", class: solidColors.danger },
+    { appearance: "solid", color: "info", class: solidColors.info },
+    { appearance: "solid", color: "warning", class: solidColors.warning },
+    { appearance: "outline", color: "primary", class: outlineColors.primary },
+    { appearance: "outline", color: "secondary", class: outlineColors.secondary },
+    { appearance: "outline", color: "success", class: outlineColors.success },
+    { appearance: "outline", color: "danger", class: outlineColors.danger },
+    { appearance: "outline", color: "info", class: outlineColors.info },
+    { appearance: "text", color: "primary", class: textColors.primary },
+    { appearance: "text", color: "secondary", class: textColors.secondary },
+    { appearance: "text", color: "success", class: textColors.success },
+    { appearance: "text", color: "danger", class: textColors.danger },
+    { appearance: "text", color: "info", class: textColors.info },
+  ],
+  defaultVariants: {
+    appearance: "solid",
+    color: "primary",
+    size: "md",
+  },
+});
+
+export type ButtonAppearance = "solid" | "outline" | "text";
+export type ButtonColor = "primary" | "secondary" | "success" | "danger" | "info" | "warning";
+export type ButtonSize = "sm" | "md" | "lg" | "default";
+
+/** @deprecated Prefer `appearance` + `color` */
 export type ButtonVariant =
   | "default"
+  | "primary"
   | "secondary"
+  | "success"
+  | "danger"
+  | "info"
   | "outline"
   | "destructive"
-  | "ghost"
-  | "primary"
-  | "danger";
+  | "ghost";
 
-export type ButtonSize = "default" | "sm" | "lg" | "md";
-
-type CommonProps = VariantProps<typeof buttonVariants> & {
+type CommonProps = {
   asChild?: boolean;
   loading?: boolean;
   className?: string;
   children?: React.ReactNode;
-  variant?: ButtonVariant;
+  appearance?: ButtonAppearance;
+  color?: ButtonColor;
   size?: ButtonSize;
+  /** @deprecated Use `appearance` + `color` */
+  variant?: ButtonVariant;
 };
 
 export type ButtonProps = CommonProps &
@@ -59,28 +131,57 @@ export type ButtonProps = CommonProps &
     | ({ href?: never } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className">)
   );
 
-function resolveVariant(variant?: ButtonVariant) {
-  if (variant === "primary") return "default";
-  if (variant === "danger") return "destructive";
-  return variant ?? "default";
+function resolveLegacyVariant(variant?: ButtonVariant): {
+  appearance: ButtonAppearance;
+  color: ButtonColor;
+} {
+  switch (variant) {
+    case "outline":
+      return { appearance: "outline", color: "primary" };
+    case "ghost":
+      return { appearance: "text", color: "secondary" };
+    case "destructive":
+    case "danger":
+      return { appearance: "solid", color: "danger" };
+    case "secondary":
+      return { appearance: "solid", color: "secondary" };
+    case "success":
+      return { appearance: "solid", color: "success" };
+    case "info":
+      return { appearance: "solid", color: "info" };
+    case "default":
+    case "primary":
+    default:
+      return { appearance: "solid", color: "primary" };
+  }
 }
 
 function resolveSize(size?: ButtonSize) {
-  if (size === "md") return "default";
-  return size ?? "default";
+  if (size === "default") return "md";
+  return size ?? "md";
 }
 
 export function Button({
   className,
-  variant,
+  appearance,
+  color,
   size,
+  variant,
   asChild = false,
   loading = false,
   children,
   ...rest
 }: ButtonProps) {
+  const legacy = variant ? resolveLegacyVariant(variant) : null;
+  const resolvedAppearance = appearance ?? legacy?.appearance ?? "solid";
+  const resolvedColor = color ?? legacy?.color ?? "primary";
+
   const classes = cn(
-    buttonVariants({ variant: resolveVariant(variant), size: resolveSize(size) }),
+    buttonVariants({
+      appearance: resolvedAppearance,
+      color: resolvedColor,
+      size: resolveSize(size),
+    }),
     className
   );
 

@@ -28,11 +28,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/cn";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function AppTopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
+  const { displayName, loading: authLoading } = useAuth();
   const sidebarMenu = useSidebarMenu();
   const setCommandPaletteOpen = useShellStore((s) => s.setCommandPaletteOpen);
   const { theme, setTheme } = useTheme();
@@ -54,7 +56,9 @@ export default function AppTopBar() {
   }
 
   return (
-    <header className="app-glass sticky top-0 z-30 flex shrink-0 items-center gap-3 border-b border-app px-3 py-2 md:px-4">
+    <header
+      className="sticky top-0 z-[var(--erp-z-sticky)] flex h-[var(--erp-topbar-height)] shrink-0 items-center gap-3 border-b border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-topbar)] px-5"
+    >
       <button
         type="button"
         aria-label={t("nav.openMenu")}
@@ -66,7 +70,9 @@ export default function AppTopBar() {
 
       <div className="min-w-0 flex-1">
         {showBreadcrumbs ? <Breadcrumbs items={crumbs} /> : (
-          <p className="truncate text-sm font-semibold text-app">DEL GROUPS ERP</p>
+          <p className="truncate text-sm font-semibold text-[color:var(--gt-text-dark)]">
+            {t("shell.systemStatusOperational")}
+          </p>
         )}
       </div>
 
@@ -125,11 +131,15 @@ export default function AppTopBar() {
         onClick={toggleTheme}
         aria-label={t("theme.label")}
         className={cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-app text-app-muted transition-colors hover:bg-app-card-hover hover:text-app"
+          "inline-flex h-9 w-9 items-center justify-center rounded-[3px] border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)] transition-colors hover:bg-[color:var(--gt-bg-main)]"
         )}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </button>
+
+      <span className="hidden truncate text-sm font-medium text-[color:var(--gt-text-dark)] sm:inline">
+        {authLoading ? t("nav.loading") : displayName}
+      </span>
     </header>
   );
 }

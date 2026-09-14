@@ -253,7 +253,7 @@ function ItemsSectionWrap({
 }) {
   if (isPageLayout) {
     return (
-      <Card padding={false} className="overflow-visible border border-slate-200">
+      <Card padding={false} className="overflow-visible border border-[color:var(--gt-border-color)]">
         {children}
       </Card>
     );
@@ -1377,7 +1377,7 @@ export default function UniversalInvoiceForm({
     : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
   const sectionCardClass = isPageLayout ? "" : "app-card space-y-2 p-4 text-xs";
   const tableHeadClass = isPageLayout
-    ? "border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-700"
+    ? "border-b border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-dark)]"
     : "border-b bg-app-card-hover font-bold uppercase text-app";
   const tableCellClass = isPageLayout ? "px-3 py-2.5" : "px-3 py-3";
 
@@ -1394,8 +1394,9 @@ export default function UniversalInvoiceForm({
       <div className={cn("app-card space-y-2 p-4 text-xs", className)}>{children}</div>
     );
 
-  const summaryRowClass = "flex items-baseline justify-between gap-4 text-sm text-slate-600";
-  const summaryValueClass = "shrink-0 font-mono tabular-nums text-slate-900";
+  const summaryRowClass =
+    "flex items-baseline justify-between gap-4 text-sm text-[color:var(--gt-text-primary)]";
+  const summaryValueClass = "shrink-0 font-mono tabular-nums text-[color:var(--gt-text-dark)]";
 
   const actionButtons = (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1448,7 +1449,7 @@ export default function UniversalInvoiceForm({
                 </div>
                 <p className="mt-1 text-sm text-slate-500">
                   {t("invoice.docNoLabel")}:{" "}
-                  <span className="font-mono font-semibold text-blue-600">{docNo}</span>
+                  <span className="font-mono font-semibold text-[color:var(--gt-navy)]">{docNo}</span>
                 </p>
               </div>
               <label className="text-sm font-medium text-slate-600">
@@ -1515,8 +1516,8 @@ export default function UniversalInvoiceForm({
           </DetailCard>
 
           <DetailCard>
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-700">
-              <h3 className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between border-b border-[color:var(--gt-border-color)] pb-2 dark:border-slate-700">
+              <h3 className="flex items-center gap-1.5 font-bold text-[color:var(--gt-text-dark)] dark:text-slate-100">
                 <Building2 className="h-4 w-4 text-emerald-600" />
                 {t("invoice.customerInfo")}
               </h3>
@@ -1525,7 +1526,7 @@ export default function UniversalInvoiceForm({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAddCustomer((v) => !v)}
-                className="h-auto px-2 py-1 text-xs font-semibold text-blue-600"
+                className="h-auto px-2 py-1 text-xs font-semibold text-[color:var(--gt-navy)]"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 {t("invoice.newCustomer")}
@@ -1714,7 +1715,7 @@ export default function UniversalInvoiceForm({
 
         <ItemsSectionWrap isPageLayout={isPageLayout}>
           {isPageLayout ? (
-            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b border-slate-200">
+            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b border-[color:var(--gt-border-color)]">
               <CardTitle className="text-base">{t("invoice.invoiceItems")}</CardTitle>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {!polywoodOnly ? (
@@ -1766,7 +1767,7 @@ export default function UniversalInvoiceForm({
             <BarcodeScanField onScan={handleBarcodeScan} disabled={saving} />
           </div>
 
-          <div className={cn("overflow-visible", isPageLayout && "border-t border-slate-200")}>
+          <div className={cn("overflow-visible", isPageLayout && "border-t border-[color:var(--gt-border-color)]")}>
             <table className={cn("w-full text-left text-xs", isPageLayout && "border-collapse")}>
               <thead className={tableHeadClass}>
                 <tr>
@@ -2118,7 +2119,7 @@ export default function UniversalInvoiceForm({
               className={cn(
                 "flex flex-wrap gap-1 p-1",
                 isPageLayout
-                  ? "rounded-lg border border-slate-200 bg-slate-50"
+                  ? "rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)]"
                   : "rounded-xl border border-app bg-app-card"
               )}
             >
@@ -2138,10 +2139,10 @@ export default function UniversalInvoiceForm({
                     "inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold",
                     bottomTab === id
                       ? isPageLayout
-                        ? "bg-blue-600 text-white"
+                        ? "bg-[color:var(--gt-accent-green)] text-white"
                         : "bg-[image:var(--app-gradient)] text-white"
                       : isPageLayout
-                        ? "text-slate-600 hover:bg-white"
+                        ? "text-[color:var(--gt-text-primary)] hover:bg-white"
                         : "text-app-muted hover:bg-app-card-hover"
                   )}
                 >
@@ -2323,8 +2324,8 @@ export default function UniversalInvoiceForm({
                     -{displayTotals.line_discount_total.toFixed(2)}
                   </span>
                 </div>
-                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
                     {t("invoice.globalDiscount")}
                   </p>
                   <div className="flex gap-2">
@@ -2333,7 +2334,7 @@ export default function UniversalInvoiceForm({
                       onChange={(e) =>
                         setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
                       }
-                      className="w-1/3 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                      className="w-1/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-xs text-[color:var(--gt-text-dark)]"
                     >
                       <option value="percent">%</option>
                       <option value="amount">AZN</option>
@@ -2344,7 +2345,7 @@ export default function UniversalInvoiceForm({
                       step="0.01"
                       value={globalDiscountValue}
                       onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
-                      className="w-2/3 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-right font-mono text-sm text-slate-900"
+                      className="w-2/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-right font-mono text-sm text-[color:var(--gt-text-dark)]"
                     />
                   </div>
                   {displayTotals.global_discount_total > 0 ? (
@@ -2363,17 +2364,19 @@ export default function UniversalInvoiceForm({
                   </span>
                 </div>
                 {isOfficial ? (
-                  <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
                       {t("invoice.vatToggleLabel")}
                     </p>
-                    <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+                    <div className="inline-flex overflow-hidden rounded-lg border border-[color:var(--gt-border-color)]">
                       <button
                         type="button"
                         onClick={() => setVatMode("none")}
                         className={cn(
                           "px-3 py-1.5 text-xs font-semibold",
-                          vatMode === "none" ? "bg-slate-700 text-white" : "bg-white text-slate-600"
+                          vatMode === "none"
+                            ? "bg-[color:var(--gt-text-dark)] text-white"
+                            : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
                         )}
                       >
                         {t("invoice.vatOff")}
@@ -2383,7 +2386,9 @@ export default function UniversalInvoiceForm({
                         onClick={() => setVatMode("exclusive")}
                         className={cn(
                           "px-3 py-1.5 text-xs font-semibold",
-                          vatMode !== "none" ? "bg-blue-600 text-white" : "bg-white text-slate-600"
+                          vatMode !== "none"
+                            ? "bg-[color:var(--gt-accent-green)] text-white"
+                            : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
                         )}
                       >
                         {t("invoice.vatOn", { rate: defaultVatRate })}
@@ -2402,13 +2407,13 @@ export default function UniversalInvoiceForm({
                   <span className={summaryValueClass}>+{additionalExpensesTotal.toFixed(2)}</span>
                 </div>
               </div>
-              <div className="border-t border-slate-200 pt-4">
+              <div className="border-t border-[color:var(--gt-border-color)] pt-4">
                 {isOfficial ? (
                   <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
                 ) : (
                   <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-base font-bold text-slate-900">{t("invoice.grandTotal")}</span>
-                    <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-blue-600">
+                    <span className="text-base font-bold text-[color:var(--gt-text-dark)]">{t("invoice.grandTotal")}</span>
+                    <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-[color:var(--gt-accent-green)]">
                       {displayTotals.grand_total.toFixed(2)} {currency}
                     </span>
                   </div>

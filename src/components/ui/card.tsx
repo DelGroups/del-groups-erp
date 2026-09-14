@@ -3,18 +3,20 @@
 import React from "react";
 import { cn } from "@/lib/cn";
 
-/** DreamScore card shell — white surface, soft border, xl radius. */
+/** Elevated panel surface — use `Panel` for standard Gentelella sections. */
 export const cardShellClass =
-  "rounded-xl border border-slate-200/80 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+  "rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] text-[color:var(--erp-text-main)] shadow-[var(--erp-shadow-sm)]";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** When true (default), applies standard inner padding (`p-5`). */
   padding?: boolean;
 }
 
 export function Card({ className, padding = true, children, ...props }: CardProps) {
   return (
-    <div className={cn(cardShellClass, padding && "p-5", className)} {...props}>
+    <div
+      className={cn(cardShellClass, padding && "p-[var(--erp-space-5)]", className)}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -24,7 +26,7 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5 border-b border-slate-200/80 px-5 pb-4 pt-5 dark:border-slate-700",
+        "flex flex-col gap-1.5 border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] pb-4 pt-5",
         className
       )}
       {...props}
@@ -33,23 +35,18 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3
-      className={cn("text-base font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100", className)}
-      {...props}
-    />
-  );
+  return <h3 className={cn("erp-panel-title", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5 pt-4", className)} {...props} />;
+  return <div className={cn("p-[var(--erp-space-5)] pt-4", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "flex items-center border-t border-slate-200/80 px-5 pb-5 pt-4 dark:border-slate-700",
+        "flex items-center border-t border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] pb-5 pt-4",
         className
       )}
       {...props}
@@ -57,14 +54,8 @@ export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDiv
   );
 }
 
-/** @deprecated Use CardTitle with CardMeta-style classes or a subtitle in CardHeader. */
 export function CardMeta({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p
-      className={cn("text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400", className)}
-      {...props}
-    />
-  );
+  return <p className={cn("erp-small", className)} {...props} />;
 }
 
 export default Card;

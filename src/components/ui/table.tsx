@@ -6,15 +6,15 @@ import { cn, NUMERIC_CLASS } from "@/lib/cn";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const COMPACT_CELL = "px-3 py-2.5 text-sm";
+const COMPACT_CELL = "px-2 py-2.5 text-[length:var(--erp-text-sm)]";
 const COMPACT_HEAD =
-  "px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-700 bg-slate-50";
+  "px-2 py-3 text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-semibold)] uppercase tracking-wide text-[color:var(--erp-text-main)] bg-[color:var(--erp-bg-table-header)]";
 
 export function TableWrap({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "w-full overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900",
+        "w-full overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)]",
         className
       )}
     >
@@ -34,7 +34,13 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead className={cn("border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50", className)} {...props} />
+    <thead
+      className={cn(
+        "border-b-2 border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]",
+        className
+      )}
+      {...props}
+    />
   );
 }
 
@@ -290,14 +296,14 @@ export function TablePagination({
   );
 }
 
-export interface DataTableProps {
+export interface DataTableLayoutProps {
   children: React.ReactNode;
   pagination?: TablePaginationProps;
   className?: string;
 }
 
 /** Table shell with optional server-side pagination footer. */
-export function DataTable({ children, pagination, className }: DataTableProps) {
+export function DataTableLayout({ children, pagination, className }: DataTableLayoutProps) {
   return (
     <div className={cn("flex w-full flex-col overflow-hidden rounded-xl border border-app bg-app-card", className)}>
       <TableWrap className="rounded-none border-0 shadow-none">{children}</TableWrap>
@@ -305,3 +311,6 @@ export function DataTable({ children, pagination, className }: DataTableProps) {
     </div>
   );
 }
+
+/** @deprecated Use `DataTableLayout` or `@/components/ui/data-table`. */
+export const DataTable = DataTableLayout;

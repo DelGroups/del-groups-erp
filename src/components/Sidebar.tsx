@@ -107,16 +107,16 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
 
   return (
     <aside
-      className={`app-glass fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r text-[color:var(--app-sidebar-text)] transition-transform duration-300 ease-in-out md:relative md:z-20 md:translate-x-0 md:transition-[width] ${
+      className={`fixed inset-y-0 left-0 z-[var(--erp-z-sidebar)] flex h-screen w-[var(--erp-sidebar-width)] shrink-0 flex-col border-r text-[color:var(--erp-text-sidebar)] transition-transform duration-300 ease-in-out md:relative md:z-20 md:translate-x-0 md:transition-[width] ${
         mobileOpen ? "translate-x-0" : "-translate-x-full"
-      } ${desktopExpanded ? "md:w-64" : "md:w-20"}`}
+      } ${desktopExpanded ? "md:w-[var(--erp-sidebar-width)]" : "md:w-[var(--erp-sidebar-width-collapsed)]"}`}
       style={{
-        backgroundColor: "var(--app-sidebar)",
-        borderColor: "var(--app-sidebar-border)",
+        backgroundColor: "var(--erp-bg-sidebar)",
+        borderColor: "var(--erp-bg-sidebar-footer)",
       }}
     >
       <div
-        className="flex shrink-0 items-center justify-between border-b p-4"
+        className="flex shrink-0 items-center justify-between border-b border-white/5 p-[15px]"
         style={{ borderColor: "var(--app-sidebar-border)" }}
       >
         <div className="flex items-center space-x-3 overflow-hidden">
@@ -132,7 +132,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
             </div>
           )}
           <div className={`truncate ${desktopExpanded ? "md:block" : "md:hidden"}`}>
-            <h1 className="truncate text-xs font-bold tracking-wide text-app">{companyName}</h1>
+            <h1 className="truncate text-lg font-bold tracking-wide text-white">{companyName}</h1>
             <p className="text-[10px]" style={{ color: "var(--app-sidebar-muted)" }}>
               {t("nav.erpSubtitle")}
             </p>
@@ -158,7 +158,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto py-2.5">
         {visibleSections.map((section) => {
           const SectionIcon = section.icon;
           const sectionHasActive = isSectionActive(pathname, section);
@@ -207,10 +207,9 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                           key={item.path}
                           href={item.path}
                           onClick={closeMobileIfNeeded}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${
-                            active ? "nav-link-active" : "hover:bg-[color:var(--app-card-hover)]"
+                          className={`flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all duration-300 ${
+                            active ? "nav-link-active" : "text-[#E7E7E7] hover:bg-white/5"
                           }`}
-                          style={active ? undefined : { color: "var(--app-sidebar-text)" }}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t(item.titleKey)}</span>
