@@ -14,7 +14,7 @@ export function TableWrap({ className, children }: { className?: string; childre
   return (
     <div
       className={cn(
-        "w-full overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)]",
+        "w-full overflow-x-auto overflow-y-visible rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)]",
         className
       )}
     >
@@ -85,7 +85,10 @@ export function ActionsTh({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 
 export function ActionsTd({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <Td className={cn("w-12 whitespace-nowrap text-center", className)} {...props} />
+    <Td
+      className={cn("relative w-12 overflow-visible whitespace-nowrap text-center", className)}
+      {...props}
+    />
   );
 }
 
@@ -305,7 +308,7 @@ export interface DataTableLayoutProps {
 /** Table shell with optional server-side pagination footer. */
 export function DataTableLayout({ children, pagination, className }: DataTableLayoutProps) {
   return (
-    <div className={cn("flex w-full flex-col overflow-hidden rounded-xl border border-app bg-app-card", className)}>
+    <div className={cn("flex w-full flex-col rounded-xl border border-app bg-app-card", className)}>
       <TableWrap className="rounded-none border-0 shadow-none">{children}</TableWrap>
       {pagination ? <TablePagination {...pagination} /> : null}
     </div>

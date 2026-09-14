@@ -314,6 +314,12 @@ export const azMessages = {
     description: "Qeydə alınmış satış sənədlərinin siyahısı və idarə olunması",
     createLabel: "Yeni sənəd qeydiyyatı",
     searchPlaceholder: "Sənəd №, müştəri və ya anbar ilə axtar...",
+    filters: {
+      all: "Hamsı",
+      posted: "Təsdiqlənib",
+      draft: "Qaralama",
+      cancelled: "Ləğv edilib",
+    },
     loading: "Sənədlər yüklənir...",
     empty: "Satış fakturası tapılmadı.",
     docNo: "Sənəd №",

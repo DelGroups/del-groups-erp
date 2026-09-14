@@ -316,6 +316,12 @@ export const enMessages: Messages = {
     description: "List and management of recorded sales documents",
     createLabel: "New document registration",
     searchPlaceholder: "Search by doc no., customer or warehouse...",
+    filters: {
+      all: "All",
+      posted: "Confirmed",
+      draft: "Draft",
+      cancelled: "Cancelled",
+    },
     loading: "Loading documents...",
     empty: "No sales invoice found.",
     docNo: "Doc No.",

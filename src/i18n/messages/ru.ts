@@ -316,6 +316,12 @@ export const ruMessages: Messages = {
     description: "Список и управление зарегистрированными документами продаж",
     createLabel: "Новая регистрация документа",
     searchPlaceholder: "Поиск по № док., клиенту или складу...",
+    filters: {
+      all: "Все",
+      posted: "Подтверждённые",
+      draft: "Черновик",
+      cancelled: "Отменённые",
+    },
     loading: "Загрузка документов...",
     empty: "Счёт продаж не найден.",
     docNo: "№ док.",

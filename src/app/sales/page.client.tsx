@@ -1,11 +1,15 @@
 ﻿"use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSalesList, useInvalidateSalesList, useUpdateSalesListCache } from "@/hooks/useSalesList";
 import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
-import { isSalesDraft } from "@/lib/invoices/invoiceStatus";
+import {
+  isSalesDraft,
+  normalizeSalesDocumentStatus,
+  type SalesDocumentStatus,
+} from "@/lib/invoices/invoiceStatus";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
@@ -15,6 +19,7 @@ import {
   ActionsTd,
   ActionsTh,
   BulkActionBar,
+  DataTableLayout,
   SelectTd,
   SelectTh,
   Table,
@@ -25,6 +30,7 @@ import {
   Td,
   Tr,
 } from "@/components/ui/table";
+import { cn } from "@/lib/cn";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import SalesViewModal from "@/components/sales/SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
@@ -51,6 +57,17 @@ import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 
+type SalesStatusFilter = "all" | SalesDocumentStatus;
+
+const STATUS_FILTERS: Array<{ id: SalesStatusFilter; labelKey: string }> = [
+  { id: "all", labelKey: "sales.filters.all" },
+  { id: "posted", labelKey: "sales.filters.posted" },
+  { id: "draft", labelKey: "sales.filters.draft" },
+  { id: "cancelled", labelKey: "sales.filters.cancelled" },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
 export default function SalesListPage() {
   const router = useRouter();
   const { data: sales = [], isLoading, isFetching, error: queryError, refetch } = useSalesList();
@@ -59,6 +76,9 @@ export default function SalesListPage() {
   const loading = isLoading || isFetching;
   const loadError = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SalesStatusFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
   const [voidTarget, setVoidTarget] = useState<SaleRecord | null>(null);
@@ -89,16 +109,38 @@ export default function SalesListPage() {
     }
   }, [queryError, showError, t]);
 
-  const filteredSales = sales.filter((s) => {
-    if (!s?.id) return false;
+  const filteredSales = useMemo(() => {
     const q = searchTerm.toLowerCase();
-    return (
-      (s.doc_no ?? "").toLowerCase().includes(q) ||
-      (s.customer_name ?? "").toLowerCase().includes(q) ||
-      (s.warehouse_name ?? "").toLowerCase().includes(q) ||
-      getSaleWarehouseLabel(s).toLowerCase().includes(q)
-    );
-  });
+    return sales.filter((s) => {
+      if (!s?.id) return false;
+      if (
+        statusFilter !== "all" &&
+        normalizeSalesDocumentStatus(s.status) !== statusFilter
+      ) {
+        return false;
+      }
+      return (
+        (s.doc_no ?? "").toLowerCase().includes(q) ||
+        (s.customer_name ?? "").toLowerCase().includes(q) ||
+        (s.warehouse_name ?? "").toLowerCase().includes(q) ||
+        getSaleWarehouseLabel(s).toLowerCase().includes(q)
+      );
+    });
+  }, [sales, searchTerm, statusFilter]);
+
+  const paginatedSales = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredSales.slice(start, start + pageSize);
+  }, [filteredSales, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, pageSize]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredSales.length / pageSize) || 1);
+    if (page > totalPages) setPage(totalPages);
+  }, [filteredSales.length, page, pageSize]);
 
   const bulk = useBulkSelection(filteredSales, (sale) => sale.id);
 
@@ -193,7 +235,25 @@ export default function SalesListPage() {
           }
         />
 
-        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
+        <main className="app-page-content flex-1 space-y-3 pb-6 md:space-y-4">
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  statusFilter === tab.id
+                    ? "bg-[color:var(--app-accent)] text-white shadow-sm"
+                    : "border border-app bg-app-card text-app-muted hover:bg-app-card-hover hover:text-app"
+                )}
+              >
+                {t(tab.labelKey)}
+              </button>
+            ))}
+          </div>
+
           <DocumentListSearchBar
             value={searchTerm}
             onChange={setSearchTerm}
@@ -209,7 +269,7 @@ export default function SalesListPage() {
             </div>
           )}
 
-          <Card padding={false}>
+          <Card padding={false} className="overflow-visible">
             <BulkActionBar count={bulk.count} onClear={bulk.clear}>
               <Button
                 type="button"
@@ -257,9 +317,21 @@ export default function SalesListPage() {
                 {t("sales.empty")}
               </div>
             ) : (
-              <TableWrap>
-              <div className="overflow-x-auto">
-                <Table>
+              <DataTableLayout
+                className="rounded-none border-0 bg-transparent shadow-none"
+                pagination={{
+                  page,
+                  limit: pageSize,
+                  total: filteredSales.length,
+                  onPageChange: setPage,
+                  onLimitChange: (limit) => {
+                    setPageSize(limit);
+                    setPage(1);
+                  },
+                  limitOptions: PAGE_SIZE_OPTIONS,
+                }}
+              >
+                <Table className="min-w-[72rem]">
                   <THead>
                     <tr>
                       <SelectTh
@@ -267,20 +339,20 @@ export default function SalesListPage() {
                         indeterminate={bulk.someSelected}
                         onChange={bulk.toggleAll}
                       />
-                      <Th>{t("sales.docNo")}</Th>
-                      <Th>{t("common.date")}</Th>
-                      <Th>{t("sales.customer")}</Th>
-                      <Th>{t("sales.warehouse")}</Th>
-                      <Th numeric>{t("sales.totalAmount")}</Th>
-                      <Th numeric>{t("sales.paid")}</Th>
-                      <Th numeric>{t("sales.remaining")}</Th>
-                      <Th>{t("sales.docStatus")}</Th>
-                      <Th>{t("sales.sendStatus")}</Th>
+                      <Th className="min-w-[7rem]">{t("sales.docNo")}</Th>
+                      <Th className="min-w-[6rem]">{t("common.date")}</Th>
+                      <Th className="min-w-[10rem]">{t("sales.customer")}</Th>
+                      <Th className="min-w-[8rem]">{t("sales.warehouse")}</Th>
+                      <Th numeric className="min-w-[7rem]">{t("sales.totalAmount")}</Th>
+                      <Th numeric className="min-w-[6rem]">{t("sales.paid")}</Th>
+                      <Th numeric className="min-w-[7rem]">{t("sales.remaining")}</Th>
+                      <Th className="min-w-[6rem]">{t("sales.docStatus")}</Th>
+                      <Th className="min-w-[7rem]">{t("sales.sendStatus")}</Th>
                       <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
-                    {filteredSales.map((sale) => {
+                    {paginatedSales.map((sale) => {
                       const debtBreakdown = computeInvoiceDebtBreakdown(
                         {
                           isOfficial: sale.is_official,
@@ -378,8 +450,7 @@ export default function SalesListPage() {
                     })}
                   </tbody>
                 </Table>
-              </div>
-              </TableWrap>
+              </DataTableLayout>
             )}
           </Card>
         </main>
