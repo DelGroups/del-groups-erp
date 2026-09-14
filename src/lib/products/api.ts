@@ -1,4 +1,3 @@
-import { insertPolywoodPieces } from "@/lib/polywood/inventory";
 import type { PolywoodPieceInsert } from "@/lib/polywood/types";
 import { resolveServicesCategoryId } from "@/lib/products/serviceCategory";
 import { supabase } from "@/lib/supabase";
@@ -31,7 +30,7 @@ export function calculateDimensionalInitialStockMeters(
   return Math.round((fullTotal + cutsTotal) * 1000) / 1000;
 }
 
-function buildDimensionalPieceRows(
+export function buildDimensionalPieceRows(
   productId: string,
   warehouseId: string,
   baseLengthM: number,
@@ -181,52 +180,16 @@ export async function createProduct(
   input: Partial<ProductInsert> & Pick<ProductInsert, "name">,
   dimensionalInitialStock?: DimensionalInitialStockInput | null
 ): Promise<{ ok: boolean; error?: string; product?: Product }> {
-  const isDimensional = Boolean(input.is_dimensional);
-  const baseLengthM = isDimensional ? Number(input.base_length) || 0 : 0;
-
-  if (isDimensional && dimensionalInitialStock) {
-    if (!dimensionalInitialStock.warehouseId) {
-      return { ok: false, error: "Warehouse is required for dimensional initial stock" };
-    }
-    if (baseLengthM <= 0) {
-      return { ok: false, error: "Base length is required for dimensional initial stock" };
-    }
-    input.stock = calculateDimensionalInitialStockMeters(
-      baseLengthM,
-      dimensionalInitialStock.fullSheetCount,
-      dimensionalInitialStock.offCuts
-    );
-  }
-
-  const payload = buildProductInsert(input);
-
-  const { data, error } = await supabase.from("products").insert([payload]).select("*").single();
-  if (error) return { ok: false, error: error.message };
-
-  const product = data as Product;
-
-  if (isDimensional && dimensionalInitialStock) {
-    const pieceRows = buildDimensionalPieceRows(
-      product.id,
-      dimensionalInitialStock.warehouseId,
-      baseLengthM,
-      dimensionalInitialStock
-    );
-
-    if (pieceRows.length > 0) {
-      try {
-        await insertPolywoodPieces(pieceRows);
-      } catch (pieceError) {
-        await supabase.from("products").delete().eq("id", product.id);
-        return {
-          ok: false,
-          error: pieceError instanceof Error ? pieceError.message : "Failed to insert polywood pieces",
-        };
-      }
-    }
-  }
-
-  return { ok: true, product };
+  const { createProductWithRelations } = await import("@/lib/products/createProductService");
+  const result = await createProductWithRelations({
+    product: input,
+    dimensionalInitialStock,
+  });
+  return {
+    ok: result.ok,
+    error: result.error,
+    product: result.product,
+  };
 }
 
 export async function createCategory(

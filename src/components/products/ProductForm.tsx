@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import ProductPriceRowsEditor from "@/components/products/ProductPriceRowsEditor";
@@ -15,7 +15,8 @@ import {
 import ProductBarcodePanel, {
   type FormLabelSizeId,
 } from "@/components/products/ProductBarcodePanel";
-import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
+import { getCategoryFullName, updateProduct } from "@/lib/products/api";
+import { FetchTimeoutError, fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { type ProductBarcodeFormat } from "@/lib/products/generateBarcode";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
@@ -99,6 +100,7 @@ export default function ProductForm({
     : initialCategory;
 
   const [saving, setSaving] = useState(false);
+  const submitInFlightRef = useRef(false);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
   const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
   const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
@@ -237,6 +239,8 @@ export default function ProductForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitInFlightRef.current || saving) return;
+
     if (!form.name.trim()) {
       showError(t("forms.enterProductName"));
       return;
@@ -252,6 +256,7 @@ export default function ProductForm({
       }
     }
 
+    submitInFlightRef.current = true;
     setSaving(true);
     const selectedCategoryEntity =
       categories.find((cat) => cat.name === form.subcategory && cat.parent_id) ||
@@ -294,20 +299,45 @@ export default function ProductForm({
           : null,
     };
 
-    const result = isEditMode && initialProduct
-      ? await updateProduct(initialProduct.id, payload)
-      : await createProduct(payload);
-    setSaving(false);
+    try {
+      if (isEditMode && initialProduct) {
+        const result = await updateProduct(initialProduct.id, payload);
+        if (!result.ok) {
+          showError(
+            t("common.errorOccurred", {
+              message: formatRpcError(result.error, t) ?? t("common.error"),
+            })
+          );
+          return;
+        }
 
-    if (!result.ok) {
-      showError(t("common.errorOccurred", { message: formatRpcError(result.error, t) ?? t("common.error") }));
-      return;
-    }
+        const bomPayload = bomRows
+          .filter((row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0)
+          .map((row) => ({
+            componentProductId: row.componentProductId,
+            quantity: parseFloat(row.quantity) || 1,
+          }));
 
-    const savedProductId =
-      isEditMode && initialProduct ? initialProduct.id : result.product?.id;
+        const bomResult = await saveProductBomAction(
+          initialProduct.id,
+          bomPayload,
+          isComposite && !isServiceCategorySelected
+        );
 
-    if (savedProductId) {
+        if (!bomResult.success) {
+          showError(
+            t("common.errorOccurred", {
+              message: bomResult.error || t("products.bom.saveFailed"),
+            })
+          );
+          return;
+        }
+
+        showSuccess(t("common.success"));
+        onSuccess?.();
+        return;
+      }
+
       const bomPayload = bomRows
         .filter((row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0)
         .map((row) => ({
@@ -315,24 +345,52 @@ export default function ProductForm({
           quantity: parseFloat(row.quantity) || 1,
         }));
 
-      const bomResult = await saveProductBomAction(
-        savedProductId,
-        bomPayload,
-        isComposite && !isServiceCategorySelected
+      const response = await fetchWithTimeout(
+        "/api/products",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product: payload,
+            bomRows: bomPayload,
+            isComposite: isComposite && !isServiceCategorySelected,
+          }),
+        },
+        5000
       );
 
-      if (!bomResult.success) {
-        showError(
-          t("common.errorOccurred", {
-            message: bomResult.error || t("products.bom.saveFailed"),
-          })
-        );
+      const body = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        errorCode?: string;
+        data?: Product;
+      };
+
+      if (!response.ok || !body.success) {
+        const message =
+          body.errorCode === "duplicate"
+            ? t("forms.productDuplicate")
+            : formatRpcError(body.error, t) ?? t("common.error");
+        showError(t("common.errorOccurred", { message }));
         return;
       }
-    }
 
-    showSuccess(isEditMode ? t("common.success") : t("forms.productCreated"));
-    onSuccess?.();
+      showSuccess(t("forms.productCreated"));
+      onSuccess?.();
+    } catch (error) {
+      if (error instanceof FetchTimeoutError) {
+        showError(t("forms.productSaveTimeout"));
+        return;
+      }
+      showError(
+        t("common.errorOccurred", {
+          message: error instanceof Error ? error.message : t("common.error"),
+        })
+      );
+    } finally {
+      setSaving(false);
+      submitInFlightRef.current = false;
+    }
   };
 
   const formActions = (
@@ -342,7 +400,7 @@ export default function ProductForm({
           {t("common.cancel")}
         </Button>
       ) : null}
-      <Button type="submit" variant="default" loading={saving}>
+      <Button type="submit" variant="default" loading={saving} disabled={saving}>
         <Save className="h-4 w-4" />
         {saving ? t("common.saving") : isEditMode ? t("common.edit") : t("forms.saveProduct")}
       </Button>
@@ -352,6 +410,7 @@ export default function ProductForm({
   return (
     <>
       <form onSubmit={handleSubmit} className="w-full pb-4">
+        <fieldset disabled={saving} className="contents">
         {isServiceCategorySelected ? (
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             {t("forms.serviceProductHint")}
@@ -581,6 +640,7 @@ export default function ProductForm({
             </div>
           ) : null}
         </div>
+        </fieldset>
 
         {embedded ? (
           <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
