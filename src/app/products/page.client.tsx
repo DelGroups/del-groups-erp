@@ -56,11 +56,13 @@ import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { deleteProductAction } from "@/lib/actions/entityDelete";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 
 export default function ProductsPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageProducts = can("can_manage_products");
+  const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -148,30 +150,34 @@ export default function ProductsPage() {
                 </Button>
               ) : null}
 
-              <Select
-                value={paperSize}
-                onChange={(e) => setPaperSize(e.target.value as BarcodePaperSize)}
-                title={t("inventory.labelSize")}
-                className="w-auto min-w-[9rem]"
-              >
-                {BARCODE_PAPER_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {t(`barcodeSettings.paperSizes.${size}`)}
-                  </option>
-                ))}
-              </Select>
+              {barcodeModuleEnabled ? (
+                <>
+                  <Select
+                    value={paperSize}
+                    onChange={(e) => setPaperSize(e.target.value as BarcodePaperSize)}
+                    title={t("inventory.labelSize")}
+                    className="w-auto min-w-[9rem]"
+                  >
+                    {BARCODE_PAPER_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {t(`barcodeSettings.paperSizes.${size}`)}
+                      </option>
+                    ))}
+                  </Select>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setPrintJob({ items: toLabelItems(filteredProducts), config: printConfig })
-                }
-                disabled={loading || filteredProducts.length === 0}
-              >
-                <Printer className="h-4 w-4" />
-                {t("inventory.printLabel")}
-              </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setPrintJob({ items: toLabelItems(filteredProducts), config: printConfig })
+                    }
+                    disabled={loading || filteredProducts.length === 0}
+                  >
+                    <Printer className="h-4 w-4" />
+                    {t("inventory.printLabel")}
+                  </Button>
+                </>
+              ) : null}
 
               <Button href="/products/damaged-goods" variant="danger">
                 <Trash2 className="h-4 w-4" />
@@ -226,21 +232,23 @@ export default function ProductsPage() {
           </div>
 
           <BulkActionBar count={bulk.count} onClear={bulk.clear}>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPrintJob({
-                  items: toLabelItems(bulk.selectedItems),
-                  config: printConfig,
-                })
-              }
-              disabled={bulk.count === 0}
-            >
-              <Printer className="h-3.5 w-3.5" />
-              {t("table.printSelected")}
-            </Button>
+            {barcodeModuleEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPrintJob({
+                    items: toLabelItems(bulk.selectedItems),
+                    config: printConfig,
+                  })
+                }
+                disabled={bulk.count === 0}
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {t("table.printSelected")}
+              </Button>
+            ) : null}
             {canManageProducts ? (
               <Button
                 type="button"
@@ -267,8 +275,11 @@ export default function ProductsPage() {
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
             onDelete={canManageProducts ? setDeleteTarget : undefined}
-            onPrintLabel={(product) =>
-              setPrintJob({ items: toLabelItems([product]), config: printConfig })
+            onPrintLabel={
+              barcodeModuleEnabled
+                ? (product) =>
+                    setPrintJob({ items: toLabelItems([product]), config: printConfig })
+                : undefined
             }
             bulkSelection={{
               isSelected: bulk.isSelected,
@@ -303,7 +314,7 @@ export default function ProductsPage() {
         }}
       />
 
-      {printJob ? (
+      {barcodeModuleEnabled && printJob ? (
         <div className="print-area">
           <ThermalLabelPrintTemplate
             items={printJob.items}

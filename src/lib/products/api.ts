@@ -4,6 +4,7 @@ import { resolveServicesCategoryId } from "@/lib/products/serviceCategory";
 import { supabase } from "@/lib/supabase";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import { generateProductCode } from "@/types/database.types";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { generatePieceBarcode, generateProductBarcode } from "@/lib/products/generateBarcode";
 
 export interface DimensionalOffCutInput {
@@ -86,7 +87,12 @@ export function buildProductInsert(
 ): ProductInsert {
   const isDimensional = Boolean(input.is_dimensional);
   const isService = Boolean(input.is_service);
-  const barcode = input.barcode?.trim() || generateProductBarcode();
+  const trimmedBarcode = input.barcode?.trim() || "";
+  const barcode = isBarcodeModuleEnabled()
+    ? trimmedBarcode || generateProductBarcode()
+    : trimmedBarcode || null;
+  const trimmedQr = input.qr_code?.trim() || "";
+  const qrCode = isBarcodeModuleEnabled() ? trimmedQr || barcode : trimmedQr || null;
   return {
     code: input.code?.trim() || generateProductCode(),
     name: input.name.trim(),
@@ -101,7 +107,7 @@ export function buildProductInsert(
     min_stock: isService ? 0 : Number(input.min_stock) || 0,
     min_stock_level: isService ? 0 : Number(input.min_stock_level ?? input.min_stock) || 0,
     barcode,
-    qr_code: input.qr_code?.trim() || barcode,
+    qr_code: qrCode,
     extra_info: input.extra_info?.trim() || null,
     category_id: input.category_id?.trim() || null,
     is_dimensional: isDimensional,

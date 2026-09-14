@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { PermissionKey } from "@/types/database.types";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 
 interface SettingsTab {
   id: string;
@@ -106,7 +107,9 @@ const SETTINGS_TABS: SettingsTab[] = [
 export default function SettingsTabs({ activeTab }: { activeTab: string }) {
   const { can } = useAuth();
   const { t } = useI18n();
-  const tabs = SETTINGS_TABS.filter((tab) => can(tab.permission));
+  const tabs = SETTINGS_TABS.filter(
+    (tab) => can(tab.permission) && (isBarcodeModuleEnabled() || tab.id !== "barcode")
+  );
 
   return (
     <div className="app-glass flex flex-wrap gap-1 border-b border-app px-6">

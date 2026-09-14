@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { generateProductBarcode } from "@/lib/products/generateBarcode";
 import type { Category, Product } from "@/types/database.types";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -28,7 +29,10 @@ export default function QuickAddProductModal({
   const [unit, setUnit] = useState("Ədəd");
   const [buyPrice, setBuyPrice] = useState("0");
   const [sellPrice, setSellPrice] = useState("0");
-  const [barcode, setBarcode] = useState(() => generateProductBarcode());
+  const barcodeModuleEnabled = isBarcodeModuleEnabled();
+  const [barcode, setBarcode] = useState(() =>
+    barcodeModuleEnabled ? generateProductBarcode() : ""
+  );
   const [extraInfo, setExtraInfo] = useState("");
   const [saving, setSaving] = useState(false);
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
@@ -148,27 +152,29 @@ export default function QuickAddProductModal({
               ))}
             </select>
           </label>
-          <label className="block font-semibold text-app">
-            Barkod
-            <div className="mt-1 flex gap-2">
-              <input
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.preventDefault();
-                }}
-                placeholder="Avtomatik / skan"
-                className="w-full rounded-lg border px-3 py-2 text-sm font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => setBarcode(generateProductBarcode())}
-                className="shrink-0 rounded-lg border border-app px-2 py-2 text-[10px] font-bold uppercase text-app hover:bg-app-card-hover"
-              >
-                EAN-13
-              </button>
-            </div>
-          </label>
+          {barcodeModuleEnabled ? (
+            <label className="block font-semibold text-app">
+              Barkod
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.preventDefault();
+                  }}
+                  placeholder="Avtomatik / skan"
+                  className="w-full rounded-lg border px-3 py-2 text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setBarcode(generateProductBarcode())}
+                  className="shrink-0 rounded-lg border border-app px-2 py-2 text-[10px] font-bold uppercase text-app hover:bg-app-card-hover"
+                >
+                  EAN-13
+                </button>
+              </div>
+            </label>
+          ) : null}
           <label className="block font-semibold text-app">
             Alış qiyməti
             <input

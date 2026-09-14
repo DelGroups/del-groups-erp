@@ -21,9 +21,11 @@ import ThermalLabelPrintTemplate, {
   type ThermalLabelItem,
 } from "@/components/products/ThermalLabelPrintTemplate";
 import type { BarcodeLabelConfig } from "@/lib/barcode/labelConfig";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 
 export default function PolywoodPageClient() {
   const { t } = useI18n();
+  const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const branding = useCompanyBranding();
   const { config: labelConfig } = useBarcodeLabelConfig();
   const { printData: printJob, setPrintData: setPrintJob } =
@@ -309,24 +311,26 @@ export default function PolywoodPageClient() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              className="rounded p-1.5 hover:bg-app-card-hover"
-                              title={t("inventory.printLabel")}
-                              onClick={() =>
-                                setPrintJob({
-                                  items: [
-                                    productToThermalLabel(product, {
-                                      warehouseName: warehouse?.name || warehouse?.location || null,
-                                      dimensions: `${summary.full_sheet_count} × ${summary.full_sheet_length_m}m`,
-                                    }),
-                                  ],
-                                  config: labelConfig,
-                                })
-                              }
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                            </button>
+                            {barcodeModuleEnabled ? (
+                              <button
+                                type="button"
+                                className="rounded p-1.5 hover:bg-app-card-hover"
+                                title={t("inventory.printLabel")}
+                                onClick={() =>
+                                  setPrintJob({
+                                    items: [
+                                      productToThermalLabel(product, {
+                                        warehouseName: warehouse?.name || warehouse?.location || null,
+                                        dimensions: `${summary.full_sheet_count} × ${summary.full_sheet_length_m}m`,
+                                      }),
+                                    ],
+                                    config: labelConfig,
+                                  })
+                                }
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
                             <Link
                               href={`/products?highlight=${product.id}`}
                               className="rounded p-1.5 hover:bg-app-card-hover"
@@ -392,7 +396,7 @@ export default function PolywoodPageClient() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
       />
-      {printJob ? (
+      {barcodeModuleEnabled && printJob ? (
         <div className="print-area">
           <ThermalLabelPrintTemplate
             items={printJob.items}

@@ -4,15 +4,12 @@ import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import DualUnitPriceGroup from "@/components/products/DualUnitPriceGroup";
-import PriceInputWithBadge from "@/components/products/PriceInputWithBadge";
 import ProductBarcodePanel, {
   type FormLabelSizeId,
 } from "@/components/products/ProductBarcodePanel";
 import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
-import {
-  generateProductBarcode,
-  type ProductBarcodeFormat,
-} from "@/lib/products/generateBarcode";
+import { type ProductBarcodeFormat } from "@/lib/products/generateBarcode";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -80,6 +77,7 @@ export default function ProductForm({
   embedded = false,
   layout = "default",
 }: ProductFormProps) {
+  const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const isCreatePage = layout === "create-page" && !embedded;
   const rowClass = isCreatePage ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : formRowClass;
   const { t } = useI18n();
@@ -114,7 +112,7 @@ export default function ProductForm({
     sell_price_cut: String(initialProduct?.sell_price_cut ?? 0),
     stock: String(initialProduct?.stock ?? 0),
     min_stock: String(initialProduct?.min_stock ?? 5),
-    barcode: initialProduct?.barcode || (!initialProduct ? generateProductBarcode() : ""),
+    barcode: initialProduct?.barcode || "",
     extra_info: initialProduct?.extra_info || "",
     is_dimensional: Boolean(initialProduct?.is_dimensional),
     is_composite: Boolean(initialProduct?.is_composite),
@@ -133,11 +131,12 @@ export default function ProductForm({
     matchesServiceCategoryName(form.category) || matchesServiceCategoryName(form.subcategory);
 
   const metricMeasureUnit = isMetricMeasureUnit(form.unit);
-  const showMetricFields =
-    (form.is_dimensional || metricMeasureUnit) && !isServiceCategorySelected && !isComposite;
+  const showDimensionFields = !isServiceCategorySelected && !isComposite;
+  const showDualPricing = showDimensionFields;
   const standardBarLengthM = parseMetricBarLengthM(form.base_length);
   const standardWidthM = parseFloat(form.base_width) || 0;
-  const priceStorageMode = showMetricFields ? "per_meter" : "per_piece";
+  const priceStorageMode =
+    form.is_dimensional || metricMeasureUnit ? "per_meter" : "per_piece";
 
   const handleUnitChange = (unit: string) => {
     const metric = isMetricMeasureUnit(unit);
@@ -265,13 +264,19 @@ export default function ProductForm({
       category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
       buy_price: parseFloat(form.buy_price) || 0,
-      buy_price_cut: showMetricFields ? parseFloat(form.buy_price) || 0 : 0,
+      buy_price_cut:
+        form.is_dimensional || metricMeasureUnit ? parseFloat(form.buy_price) || 0 : 0,
       sell_price: parseFloat(form.sell_price) || 0,
-      sell_price_cut: showMetricFields ? parseFloat(form.sell_price) || 0 : 0,
+      sell_price_cut:
+        form.is_dimensional || metricMeasureUnit ? parseFloat(form.sell_price) || 0 : 0,
       stock: isServiceCategorySelected || isComposite || !isEditMode ? 0 : parseFloat(form.stock) || 0,
       min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
-      barcode: form.barcode || null,
-      qr_code: form.barcode || null,
+      barcode: barcodeModuleEnabled
+        ? form.barcode || null
+        : initialProduct?.barcode ?? null,
+      qr_code: barcodeModuleEnabled
+        ? form.barcode || null
+        : initialProduct?.qr_code ?? null,
       extra_info: form.extra_info || null,
       is_dimensional:
         isServiceCategorySelected || isComposite
@@ -354,7 +359,11 @@ export default function ProductForm({
         ) : null}
 
         <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-12">
-          <div className="flex w-full flex-col gap-6 lg:col-span-8">
+          <div
+            className={`flex w-full flex-col gap-6 ${
+              barcodeModuleEnabled && !isServiceCategorySelected ? "lg:col-span-8" : "lg:col-span-12"
+            }`}
+          >
             <ProductFormSection title={t("forms.sectionMainInfo")}>
               <div className={rowClass}>
                 <FormField label={t("forms.productName")} required>
@@ -448,61 +457,53 @@ export default function ProductForm({
                   </label>
                 </div>
 
-                <div
-                  className={
-                    showMetricFields
-                      ? "grid grid-cols-2 gap-4"
-                      : "grid grid-cols-1 gap-4 sm:grid-cols-2"
-                  }
-                >
-                  <FormField label={t("forms.unitMeasure")}>
-                    <select
-                      value={
-                        PRODUCT_MEASURE_UNITS.includes(
-                          form.unit as (typeof PRODUCT_MEASURE_UNITS)[number]
-                        )
-                          ? form.unit
-                          : "Ədəd"
-                      }
-                      onChange={(e) => handleUnitChange(e.target.value)}
-                      className={formSelectClass}
-                    >
-                      {PRODUCT_MEASURE_UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {measureUnitLabel(u)}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                  {showMetricFields ? (
-                    <>
-                      <FormField label={t("forms.standardBarLength")}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={form.base_length || "4.0"}
-                          onChange={(event) => set({ base_length: event.target.value })}
-                          placeholder={t("forms.lengthPlaceholder")}
-                          className={formInputClass}
-                        />
-                      </FormField>
-                      <FormField label={`${t("forms.baseWidth")} (m)`}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={form.base_width}
-                          onChange={(e) => set({ base_width: e.target.value })}
-                          placeholder={t("forms.widthPlaceholder")}
-                          className={formInputClass}
-                        />
-                      </FormField>
-                    </>
-                  ) : null}
-                </div>
+                {showDimensionFields ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label={t("forms.unitMeasure")}>
+                      <select
+                        value={
+                          PRODUCT_MEASURE_UNITS.includes(
+                            form.unit as (typeof PRODUCT_MEASURE_UNITS)[number]
+                          )
+                            ? form.unit
+                            : "Ədəd"
+                        }
+                        onChange={(e) => handleUnitChange(e.target.value)}
+                        className={formSelectClass}
+                      >
+                        {PRODUCT_MEASURE_UNITS.map((u) => (
+                          <option key={u} value={u}>
+                            {measureUnitLabel(u)}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label={t("forms.standardBarLength")}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={form.base_length || "4.0"}
+                        onChange={(event) => set({ base_length: event.target.value })}
+                        placeholder={t("forms.lengthPlaceholder")}
+                        className={formInputClass}
+                      />
+                    </FormField>
+                    <FormField label={`${t("forms.baseWidth")} (m)`}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={form.base_width}
+                        onChange={(e) => set({ base_width: e.target.value })}
+                        placeholder={t("forms.widthPlaceholder")}
+                        className={formInputClass}
+                      />
+                    </FormField>
+                  </div>
+                ) : null}
 
-                {showMetricFields ? (
+                {showDualPricing ? (
                   <DualUnitPriceGroup
                     buyStored={form.buy_price}
                     sellStored={form.sell_price}
@@ -513,24 +514,7 @@ export default function ProductForm({
                     storageMode={priceStorageMode}
                     measureUnit={form.unit}
                   />
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <PriceInputWithBadge
-                      label={t("forms.buyPrice")}
-                      value={form.buy_price}
-                      onChange={(value) => set({ buy_price: value })}
-                      badge={t("forms.badgeAznPiece")}
-                      placeholder={t("forms.sheetPricePlaceholder")}
-                    />
-                    <PriceInputWithBadge
-                      label={t("forms.sellPrice")}
-                      value={form.sell_price}
-                      onChange={(value) => set({ sell_price: value })}
-                      badge={t("forms.badgeAznPiece")}
-                      placeholder={t("forms.sellSheetPricePlaceholder")}
-                    />
-                  </div>
-                )}
+                ) : null}
               </ProductFormSection>
             ) : null}
 
@@ -545,45 +529,66 @@ export default function ProductForm({
                 <p className="text-xs text-slate-700 dark:text-app-muted">{t("products.bom.stockHint")}</p>
               </ProductFormSection>
             ) : null}
-          </div>
 
-          <div className="flex w-full flex-col gap-6 lg:col-span-4">
-            {!isServiceCategorySelected ? (
-              <>
-                <ProductFormSection title={t("forms.sectionBarcodeRules")}>
-                  <ProductBarcodePanel
-                    value={form.barcode}
-                    onChange={(barcode) => set({ barcode })}
-                    barcodeFormat={barcodeFormat}
-                    onBarcodeFormatChange={setBarcodeFormat}
-                    labelSize={labelSize}
-                    onLabelSizeChange={setLabelSize}
-                  />
-                </ProductFormSection>
-
-                <ProductFormSection title={t("forms.sectionExtraSettings")}>
-                  <div className="space-y-4">
-                    <FormField label={t("forms.minStockThreshold")}>
-                      <input
-                        type="number"
-                        value={form.min_stock}
-                        onChange={(e) => set({ min_stock: e.target.value })}
-                        className={formInputClass}
-                      />
-                    </FormField>
-                    <FormField label={t("forms.extraInfo")}>
-                      <textarea
-                        rows={4}
-                        value={form.extra_info}
-                        onChange={(e) => set({ extra_info: e.target.value })}
-                        className={formTextareaClass}
-                      />
-                    </FormField>
-                  </div>
-                </ProductFormSection>
-              </>
+            {!isServiceCategorySelected && !barcodeModuleEnabled ? (
+              <ProductFormSection title={t("forms.sectionExtraSettings")} compact>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField label={t("forms.minStockThreshold")}>
+                    <input
+                      type="number"
+                      value={form.min_stock}
+                      onChange={(e) => set({ min_stock: e.target.value })}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                  <FormField label={t("forms.extraInfo")}>
+                    <textarea
+                      rows={3}
+                      value={form.extra_info}
+                      onChange={(e) => set({ extra_info: e.target.value })}
+                      className={formTextareaClass}
+                    />
+                  </FormField>
+                </div>
+              </ProductFormSection>
             ) : null}
           </div>
+
+          {barcodeModuleEnabled && !isServiceCategorySelected ? (
+            <div className="flex w-full flex-col gap-6 lg:col-span-4">
+              <ProductFormSection title={t("forms.sectionBarcodeRules")}>
+                <ProductBarcodePanel
+                  value={form.barcode}
+                  onChange={(barcode) => set({ barcode })}
+                  barcodeFormat={barcodeFormat}
+                  onBarcodeFormatChange={setBarcodeFormat}
+                  labelSize={labelSize}
+                  onLabelSizeChange={setLabelSize}
+                />
+              </ProductFormSection>
+
+              <ProductFormSection title={t("forms.sectionExtraSettings")}>
+                <div className="space-y-4">
+                  <FormField label={t("forms.minStockThreshold")}>
+                    <input
+                      type="number"
+                      value={form.min_stock}
+                      onChange={(e) => set({ min_stock: e.target.value })}
+                      className={formInputClass}
+                    />
+                  </FormField>
+                  <FormField label={t("forms.extraInfo")}>
+                    <textarea
+                      rows={4}
+                      value={form.extra_info}
+                      onChange={(e) => set({ extra_info: e.target.value })}
+                      className={formTextareaClass}
+                    />
+                  </FormField>
+                </div>
+              </ProductFormSection>
+            </div>
+          ) : null}
         </div>
 
         {embedded ? (

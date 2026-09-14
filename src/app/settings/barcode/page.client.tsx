@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Barcode, Printer, Save } from "lucide-react";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
@@ -53,8 +55,19 @@ function ToggleRow({
 }
 
 export default function BarcodeSettingsPage() {
+  const router = useRouter();
   const { t } = useI18n();
   const { can } = useAuth();
+
+  useEffect(() => {
+    if (!isBarcodeModuleEnabled()) {
+      router.replace("/settings");
+    }
+  }, [router]);
+
+  if (!isBarcodeModuleEnabled()) {
+    return null;
+  }
   const canManage = can("can_manage_settings");
   const branding = useCompanyBranding();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();

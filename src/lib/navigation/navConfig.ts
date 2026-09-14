@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import {
   LayoutDashboard,
   Package,
@@ -148,7 +149,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.commissionRules", path: "/settings/commissions", icon: Percent },
       { titleKey: "nav.items.initialSetup", path: "/settings/initial-setup", icon: Landmark },
       { titleKey: "nav.items.backup", path: "/settings/backup", icon: Database },
-      { titleKey: "nav.items.barcode", path: "/settings/barcode", icon: Barcode },
+      ...(isBarcodeModuleEnabled()
+        ? [{ titleKey: "nav.items.barcode", path: "/settings/barcode", icon: Barcode }]
+        : []),
       { titleKey: "nav.items.crmSettings", path: "/settings/crm", icon: KanbanSquare },
       { titleKey: "nav.items.taxPayroll", path: "/settings/tax-payroll", icon: Scale },
       { titleKey: "nav.items.procurement", path: "/settings/procurement", icon: ShoppingBag },
