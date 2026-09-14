@@ -16,6 +16,8 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
+import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import Button from "@/components/ui/button";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
@@ -221,7 +223,7 @@ export default function DamagedGoodsForm({
       </div>
 
       <div className="app-table-wrap">
-        <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
+        <div className="app-table-section-bar text-xs font-bold">
           <span>{t("forms.damagedProducts")}</span>
           <button
             type="button"
@@ -234,26 +236,26 @@ export default function DamagedGoodsForm({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
+          <table className="app-table w-full text-left text-sm">
+            <thead>
               <tr>
-                <th className="w-8 p-2.5">{t("print.rowNo")}</th>
-                <th className="p-2.5">{t("dashboard.product")}</th>
-                <th className="w-24 p-2.5">{t("forms.quantity")}</th>
-                <th className="w-24 p-2.5">{t("forms.stockCol")}</th>
-                <th className="p-2.5">{t("forms.issueReason")}</th>
-                <th className="w-10 p-2.5">{t("forms.remove")}</th>
+                <th className="w-10">{t("print.rowNo")}</th>
+                <th className="min-w-[220px]">{t("dashboard.product")}</th>
+                <th className="min-w-[7rem] w-28">{t("forms.quantity")}</th>
+                <th className="min-w-[7rem] w-28">{t("forms.stockCol")}</th>
+                <th className="min-w-[12rem]">{t("forms.issueReason")}</th>
+                <th className="w-12">{t("forms.remove")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((row, idx) => (
                 <tr key={row.id}>
-                  <td className="p-2.5 font-mono text-app-muted">{idx + 1}</td>
-                  <td className="p-2.5">
+                  <td className="font-mono text-app-muted">{idx + 1}</td>
+                  <td>
                     <select
                       value={row.product_id}
                       onChange={(e) => handleProductSelect(row.id, e.target.value)}
-                      className="w-full min-w-[220px] rounded border px-2 py-1.5"
+                      className="app-table-input min-w-[220px]"
                     >
                       <option value="">{t("forms.selectProduct")}</option>
                       {products.map((p) => (
@@ -267,7 +269,7 @@ export default function DamagedGoodsForm({
                       ))}
                     </select>
                   </td>
-                  <td className="p-2.5">
+                  <td>
                     <input
                       type="number"
                       min="0"
@@ -276,13 +278,13 @@ export default function DamagedGoodsForm({
                       onChange={(e) =>
                         updateItem(row.id, { quantity: Number(e.target.value) || 0 })
                       }
-                      className="w-full rounded border px-2 py-1 text-center"
+                      className="app-table-input text-center font-mono"
                     />
                   </td>
-                  <td className="p-2.5 text-app-muted">
+                  <td className="text-app-muted">
                     {row.available_stock} {row.unit}
                   </td>
-                  <td className="p-2.5">
+                  <td>
                     <input
                       type="text"
                       value={row.issue_description}
@@ -290,10 +292,10 @@ export default function DamagedGoodsForm({
                         updateItem(row.id, { issue_description: e.target.value })
                       }
                       placeholder={t("forms.issueReasonPlaceholder")}
-                      className="w-full min-w-[180px] rounded border px-2 py-1"
+                      className="app-table-input min-w-[180px]"
                     />
                   </td>
-                  <td className="p-2.5 text-center">
+                  <td className="text-center">
                     <button
                       type="button"
                       onClick={() => removeRow(row.id)}
@@ -319,27 +321,23 @@ export default function DamagedGoodsForm({
         />
       </label>
 
-      <div className="flex justify-end gap-2">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-lg border border-app px-4 py-2.5 text-xs font-semibold text-app hover:bg-app-card-hover"
-          >
+      <FormStickyActions>
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
             {t("common.cancel")}
-          </button>
-        )}
-        <button
+          </Button>
+        ) : null}
+        <Button
           type="button"
           disabled={saving || Boolean(submitPreflightIssue)}
           title={submitPreflightHint}
+          loading={saving}
           onClick={handleSubmit}
-          className="flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {saving ? t("common.saving") : isEdit ? t("forms.saveChanges") : t("forms.confirmAndSave")}
-        </button>
-      </div>
+        </Button>
+      </FormStickyActions>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </div>
   );

@@ -50,7 +50,7 @@ export function DataTable<T extends { id?: string | number }>({
               <th
                 key={`${col.header}-${index}`}
                 className={cn(
-                  "px-2 py-3 text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-semibold)] text-[color:var(--erp-text-main)]",
+                  "px-4 py-3 text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-semibold)] text-[color:var(--erp-text-main)]",
                   alignClass[col.align ?? "left"],
                   col.headerClassName
                 )}
@@ -65,7 +65,7 @@ export function DataTable<T extends { id?: string | number }>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-2 py-6 text-center text-[color:var(--erp-text-muted)]"
+                className="px-4 py-6 text-center text-[color:var(--erp-text-muted)]"
               >
                 {emptyMessage ?? "—"}
               </td>
@@ -83,7 +83,7 @@ export function DataTable<T extends { id?: string | number }>({
                   <td
                     key={`${col.header}-${colIndex}`}
                     className={cn(
-                      "px-2 py-2.5 text-[length:var(--erp-text-sm)] text-[color:var(--erp-text-main)]",
+                      "px-4 py-3 text-[length:var(--erp-text-sm)] text-[color:var(--erp-text-main)]",
                       alignClass[col.align ?? "left"],
                       col.className
                     )}

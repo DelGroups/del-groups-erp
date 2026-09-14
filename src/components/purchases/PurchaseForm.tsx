@@ -31,6 +31,8 @@ import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocument
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { formTableInputClass } from "@/components/ui/form-field-styles";
 import {
   collectPurchaseSubmitPreflightIssues,
   preflightMessage,
@@ -677,7 +679,7 @@ export default function PurchaseForm({
 
   const formShellClass =
     layoutMode === "page"
-      ? "w-full space-y-4 pb-8"
+      ? "w-full space-y-4"
       : "space-y-4 rounded-2xl border border-app bg-app-card-hover p-5";
 
   const actionButtons = (
@@ -749,13 +751,11 @@ export default function PurchaseForm({
                 className="ml-2 w-auto"
               />
             </label>
-            {layoutMode === "page" ? actionButtons : (
-              onCancel ? (
-                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-                  <X className="h-5 w-5" />
-                </Button>
-              ) : null
-            )}
+            {layoutMode === "page" && onCancel ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                <X className="h-5 w-5" />
+              </Button>
+            ) : null}
           </div>
         </div>
         {layoutMode === "modal" ? actionButtons : null}
@@ -857,12 +857,12 @@ export default function PurchaseForm({
         />
 
         <div className="app-table-wrap">
-          <div className="flex items-center justify-between app-toolbar px-4 py-2.5 text-xs font-bold">
+          <div className="app-table-section-bar text-xs font-bold">
             <span>{t("forms.receivedProducts")}</span>
             <button
               type="button"
               onClick={addRow}
-              className="flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1 text-[11px] hover:bg-emerald-700"
+              className="btn-primary flex items-center gap-1 px-2.5 py-1.5 text-[11px]"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("forms.addRow")}
@@ -878,22 +878,22 @@ export default function PurchaseForm({
           </div>
 
           <div className="overflow-x-auto overflow-y-visible">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
+            <table className="app-table w-full text-left text-sm">
+              <thead>
                 <tr>
-                  <th className="w-8 p-2.5">№</th>
-                  <th className="p-2.5">{t("dashboard.product")}</th>
-                  <th className="w-24 p-2.5">{t("forms.quantity")}</th>
-                  <th className="w-28 p-2.5">{t("forms.buyPrice")}</th>
-                  <th className="w-24 p-2.5 text-right">{t("forms.lineTotal")}</th>
-                  <th className="w-10 p-2.5">{t("forms.remove")}</th>
+                  <th className="w-10">№</th>
+                  <th className="min-w-[240px]">{t("dashboard.product")}</th>
+                  <th className="min-w-[7rem] w-28">{t("forms.quantity")}</th>
+                  <th className="min-w-[8rem] w-32">{t("forms.buyPrice")}</th>
+                  <th className="min-w-[7rem] w-28 text-right">{t("forms.lineTotal")}</th>
+                  <th className="w-12 text-center">{t("forms.remove")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((row, idx) => (
                   <tr key={row.id}>
-                    <td className="p-2.5 font-mono text-app-muted">{idx + 1}</td>
-                    <td className="relative overflow-visible p-2.5">
+                    <td className="font-mono text-app-muted">{idx + 1}</td>
+                    <td className="relative overflow-visible">
                       <div className="flex min-w-[240px] gap-1">
                         <div className="min-w-0 flex-1">
                           <ProductCombobox
@@ -936,7 +936,7 @@ export default function PurchaseForm({
                         );
                       })()}
                     </td>
-                    <td className="p-2.5">
+                    <td>
                       <input
                         type="number"
                         min="0"
@@ -950,13 +950,13 @@ export default function PurchaseForm({
                         onChange={(e) =>
                           updateItem(row.id, { quantity: Number(e.target.value) || 0 })
                         }
-                        className="w-full rounded border px-2 py-1 text-center font-mono"
+                        className={`${formTableInputClass} text-center font-mono`}
                       />
                       {row.unit === "Metr" ? (
                         <p className="mt-0.5 text-center text-[10px] text-app-muted">m</p>
                       ) : null}
                     </td>
-                    <td className="p-2.5">
+                    <td>
                       <input
                         type="number"
                         step="0.01"
@@ -965,7 +965,7 @@ export default function PurchaseForm({
                         onChange={(e) =>
                           updateItem(row.id, { unit_price: Number(e.target.value) || 0 })
                         }
-                        className="w-full rounded border px-2 py-1 font-mono"
+                        className={`${formTableInputClass} font-mono`}
                       />
                       {(() => {
                         const product = productList.find((item) => item.id === row.product_id);
@@ -980,10 +980,10 @@ export default function PurchaseForm({
                         );
                       })()}
                     </td>
-                    <td className="p-2.5 text-right font-mono font-bold">
+                    <td className="text-right font-mono font-bold tabular-nums">
                       {row.total.toFixed(2)}
                     </td>
-                    <td className="p-2.5 text-center">
+                    <td className="text-center">
                       <button
                         type="button"
                         onClick={() => removeRow(row.id)}
@@ -999,6 +999,36 @@ export default function PurchaseForm({
           </div>
         </div>
 
+        {layoutMode === "page" ? (
+          <div className="flex w-full justify-end">
+            <div className="w-full max-w-md rounded-xl border border-app bg-app-card p-4 shadow-sm">
+              <h4 className="mb-3 text-sm font-bold text-app">{t("common.total")}</h4>
+              <div className="space-y-2 text-xs">
+                {isOfficial ? (
+                  <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-app-muted">{t("forms.purchaseTotal")}</span>
+                    <span className="font-mono font-bold">{grandTotal.toFixed(2)} AZN</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-app-muted">{t("forms.totalPaid")}</span>
+                  <span className="font-mono font-bold text-emerald-600">{totalPaid.toFixed(2)} AZN</span>
+                </div>
+                <div className="flex justify-between border-t border-app pt-2">
+                  <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
+                  <span className="font-mono font-bold text-rose-600">{debt.toFixed(2)} AZN</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-app-muted">{t("common.status")}</span>
+                  <span className="font-semibold">{status}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <DocumentAdditionalExpensesSection
           expenses={additionalExpenses}
           onChange={setAdditionalExpenses}
@@ -1007,7 +1037,7 @@ export default function PurchaseForm({
         />
 
         <div className="app-table-wrap">
-          <div className="flex items-center justify-between border-b border-app bg-app-card-hover px-4 py-2.5">
+          <div className="app-table-section-bar">
             <h4 className="flex items-center gap-1.5 text-xs font-bold text-app">
               <CreditCard className="h-4 w-4 text-emerald-600" />
               {t("forms.paymentsSection")}
@@ -1102,30 +1132,32 @@ export default function PurchaseForm({
           </div>
         </div>
 
-        <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
-          <div className="space-y-2 text-xs">
-            {isOfficial ? (
-              <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
-            ) : (
+        {layoutMode !== "page" ? (
+          <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+            <div className="space-y-2 text-xs">
+              {isOfficial ? (
+                <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-app-muted">{t("forms.purchaseTotal")}</span>
+                  <span className="font-mono font-bold">{grandTotal.toFixed(2)} AZN</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-app-muted">{t("forms.purchaseTotal")}</span>
-                <span className="font-mono font-bold">{grandTotal.toFixed(2)} AZN</span>
+                <span className="text-app-muted">{t("forms.totalPaid")}</span>
+                <span className="font-mono font-bold text-emerald-600">{totalPaid.toFixed(2)} AZN</span>
               </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("forms.totalPaid")}</span>
-              <span className="font-mono font-bold text-emerald-600">{totalPaid.toFixed(2)} AZN</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
-              <span className="font-mono font-bold text-rose-600">{debt.toFixed(2)} AZN</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-app-muted">{t("common.status")}</span>
-              <span className="font-semibold">{status}</span>
+              <div className="flex justify-between">
+                <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
+                <span className="font-mono font-bold text-rose-600">{debt.toFixed(2)} AZN</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-app-muted">{t("common.status")}</span>
+                <span className="font-semibold">{status}</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
         <label className="app-card block p-4 text-xs font-semibold text-app">
           {t("common.notes")}
@@ -1137,8 +1169,11 @@ export default function PurchaseForm({
           />
         </label>
 
-        {layoutMode === "modal" ? null : actionButtons}
       </div>
+
+      {layoutMode === "page" ? (
+        <FormStickyActions fullWidth>{actionButtons}</FormStickyActions>
+      ) : null}
 
       {showSupplierModal && (
         <QuickAddSupplierModal

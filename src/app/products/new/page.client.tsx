@@ -34,7 +34,7 @@ function ProductFormSkeletonSection({ title }: { title?: string }) {
 
 function ProductFormSkeleton() {
   return (
-    <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-12">
+    <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-12">
       <div className="flex w-full flex-col gap-6 lg:col-span-8">
         <ProductFormSkeletonSection />
         <Card padding={false}>
@@ -84,6 +84,8 @@ export default function NewProductPage() {
   return (
     <PageLayout>
       <FormLayout
+        fullWidth
+        withStickyFooter
         title={t("products.newTitle")}
         subtitle={t("products.newSubtitle")}
         contentClassName="bg-[color:var(--gt-bg-main)] p-0"
@@ -92,7 +94,7 @@ export default function NewProductPage() {
           { label: t("products.createLabel") },
         ]}
       >
-        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-6">
+        <div className="-mx-[calc(var(--erp-content-padding-x)-1.5rem)] w-[calc(100%+2*(var(--erp-content-padding-x)-1.5rem))] max-w-none space-y-6 px-6">
           {isLoading ? (
             <ProductFormSkeleton />
           ) : (

@@ -100,6 +100,7 @@ import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import {
   formControlClass,
   formLabelClass,
+  formTableInputClass,
   formTextareaClass,
 } from "@/components/ui/form-field-styles";
 import {
@@ -242,6 +243,7 @@ function resolvePolywoodRowUnitPrice(
 const INVOICE_CARD = "app-card flex h-full flex-col rounded-xl p-4 text-xs";
 const INVOICE_LABEL = formLabelClass;
 const INVOICE_INPUT = formControlClass;
+const INVOICE_TABLE_INPUT = formTableInputClass;
 const INVOICE_TEXTAREA = formTextareaClass;
 
 function ItemsSectionWrap({
@@ -1376,10 +1378,7 @@ export default function UniversalInvoiceForm({
     ? "w-full space-y-6"
     : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
   const sectionCardClass = isPageLayout ? "" : "app-card space-y-2 p-4 text-xs";
-  const tableHeadClass = isPageLayout
-    ? "border-b border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-dark)]"
-    : "border-b bg-app-card-hover font-bold uppercase text-app";
-  const tableCellClass = isPageLayout ? "px-3 py-2.5" : "px-3 py-3";
+  const tableColClass = "whitespace-nowrap";
 
   const DetailCard = ({
     children,
@@ -1500,8 +1499,12 @@ export default function UniversalInvoiceForm({
         )}
         {layoutMode === "modal" ? <div className="px-0">{actionButtons}</div> : null}
 
-        <div className={cn("grid grid-cols-1 lg:grid-cols-12", isPageLayout ? "gap-6" : "gap-4")}>
-          <div className={cn("lg:col-span-8", isPageLayout ? "space-y-6" : "space-y-4")}>
+        <div
+          className={cn(
+            isPageLayout ? "w-full space-y-6" : "grid grid-cols-1 gap-4 lg:grid-cols-12"
+          )}
+        >
+          <div className={cn(isPageLayout ? "w-full space-y-6" : "space-y-4 lg:col-span-8")}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <DetailCard>
             <h3 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
@@ -1731,7 +1734,7 @@ export default function UniversalInvoiceForm({
               </div>
             </CardHeader>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3 app-toolbar px-4 py-3 text-xs font-bold">
+            <div className="app-table-section-bar flex-wrap px-4 py-3 text-xs font-bold">
               <span className="min-w-0 truncate">{t("invoice.invoiceItems")}</span>
               <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                 {!polywoodOnly ? (
@@ -1768,27 +1771,27 @@ export default function UniversalInvoiceForm({
           </div>
 
           <div className={cn("overflow-visible", isPageLayout && "border-t border-[color:var(--gt-border-color)]")}>
-            <table className={cn("w-full text-left text-xs", isPageLayout && "border-collapse")}>
-              <thead className={tableHeadClass}>
+            <table className="app-table w-full text-left text-sm">
+              <thead>
                 <tr>
-                  <th className={cn(tableCellClass, "w-8")}>№</th>
-                  <th className={tableCellClass}>{t("invoice.productName")}</th>
+                  <th className={cn(tableColClass, "w-10")}>№</th>
+                  <th className="min-w-[220px]">{t("invoice.productName")}</th>
                   {!polywoodOnly ? (
-                    <th className={cn(tableCellClass, "w-36")}>{t("common.warehouse")}</th>
+                    <th className={cn(tableColClass, "min-w-[9rem] w-36")}>{t("common.warehouse")}</th>
                   ) : null}
-                  <th className={cn(tableCellClass, "w-20")}>{t("forms.quantity")}</th>
-                  <th className={cn(tableCellClass, "w-24")}>{t("forms.price")}</th>
-                  <th className={cn(tableCellClass, "w-20")}>{t("invoice.lineDiscount")}</th>
-                  <th className={cn(tableCellClass, "w-36")}>{t("invoice.info")}</th>
-                  <th className={cn(tableCellClass, "w-24 text-right")}>{t("forms.lineTotal")}</th>
-                  <th className={cn(tableCellClass, "w-10 text-right")} aria-label={t("common.actions")} />
+                  <th className={cn(tableColClass, "min-w-[7rem] w-28")}>{t("forms.quantity")}</th>
+                  <th className={cn(tableColClass, "min-w-[8rem] w-32")}>{t("forms.price")}</th>
+                  <th className={cn(tableColClass, "min-w-[7rem] w-28")}>{t("invoice.lineDiscount")}</th>
+                  <th className="min-w-[10rem] w-40">{t("invoice.info")}</th>
+                  <th className={cn(tableColClass, "min-w-[7rem] w-28 text-right")}>{t("forms.lineTotal")}</th>
+                  <th className={cn(tableColClass, "w-12 text-right")} aria-label={t("common.actions")} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
                 {items.map((row, idx) => (
                   <tr key={row.id} className="overflow-visible">
-                    <td className="px-3 py-3 font-mono text-app-muted">{idx + 1}</td>
-                    <td className="relative overflow-visible px-3 py-3">
+                    <td className="font-mono text-app-muted">{idx + 1}</td>
+                    <td className="relative overflow-visible">
                       <div className="min-w-[220px]">
                         <ProductCombobox
                           instanceId={row.id}
@@ -1811,11 +1814,11 @@ export default function UniversalInvoiceForm({
                       </div>
                     </td>
                     {!polywoodOnly ? (
-                      <td className="px-3 py-3">
+                      <td>
                         <select
                           value={row.warehouse_id}
                           onChange={(e) => handleWarehouseSelect(row.id, e.target.value)}
-                          className={INVOICE_INPUT}
+                          className={INVOICE_TABLE_INPUT}
                         >
                           <option value="">{t("invoice.warehouseOption")}</option>
                           {warehouses.map((w) => (
@@ -1831,7 +1834,7 @@ export default function UniversalInvoiceForm({
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="px-3 py-3 align-top">
+                    <td className="align-top">
                       {polywoodOnly && row.product_id ? (
                         <div className="mb-2 space-y-1 text-[10px] text-app-muted">
                           <p>
@@ -2015,7 +2018,7 @@ export default function UniversalInvoiceForm({
                             void handlePolywoodQuantityBlur(row.id);
                           }
                         }}
-                        className={`${INVOICE_INPUT} text-center`}
+                        className={`${INVOICE_TABLE_INPUT} text-center font-mono`}
                       />
                       {(polywoodOnly && row.polywood_sale_mode) ||
                       isPolywoodMeterLine(
@@ -2029,7 +2032,7 @@ export default function UniversalInvoiceForm({
                         </p>
                       ) : null}
                     </td>
-                    <td className="px-3 py-3">
+                    <td>
                       <input
                         type="number"
                         step="0.01"
@@ -2037,7 +2040,7 @@ export default function UniversalInvoiceForm({
                         onChange={(e) =>
                           handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
                         }
-                        className={`${INVOICE_INPUT} font-mono`}
+                        className={`${INVOICE_TABLE_INPUT} font-mono`}
                       />
                       {(() => {
                         const rowProduct = products.find((product) => product.id === row.product_id);
@@ -2058,7 +2061,7 @@ export default function UniversalInvoiceForm({
                         );
                       })()}
                     </td>
-                    <td className="px-3 py-3">
+                    <td>
                       <input
                         type="number"
                         step="0.1"
@@ -2068,22 +2071,22 @@ export default function UniversalInvoiceForm({
                             discount_percent: Number(e.target.value) || 0,
                           })
                         }
-                        className={`${INVOICE_INPUT} text-center text-amber-700`}
+                        className={`${INVOICE_TABLE_INPUT} text-center font-mono text-amber-700`}
                       />
                     </td>
-                    <td className="px-3 py-3">
+                    <td>
                       <input
                         type="text"
                         placeholder={t("invoice.notePlaceholder")}
                         value={row.extra_info}
                         onChange={(e) => handleItemChange(row.id, { extra_info: e.target.value })}
-                        className={INVOICE_INPUT}
+                        className={INVOICE_TABLE_INPUT}
                       />
                     </td>
-                    <td className={cn(tableCellClass, "text-right font-mono font-semibold tabular-nums")}>
+                    <td className="text-right font-mono font-semibold tabular-nums">
                       {row.total.toFixed(2)}
                     </td>
-                    <td className={cn(tableCellClass, "text-right")}>
+                    <td className="text-right">
                       {isPageLayout ? (
                         <TableRowActionsMenu
                           items={[
@@ -2113,6 +2116,128 @@ export default function UniversalInvoiceForm({
             </table>
           </div>
         </ItemsSectionWrap>
+
+        {isPageLayout ? (
+          <div className="flex w-full justify-end">
+            <div className="w-full max-w-md">
+              <Card className="text-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{t("common.total")}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="space-y-2">
+                    <div className={summaryRowClass}>
+                      <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
+                      <span className={summaryValueClass}>{totals.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className={cn(summaryRowClass, "text-rose-600")}>
+                      <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
+                      <span className={cn(summaryValueClass, "text-rose-600")}>
+                        -{displayTotals.line_discount_total.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
+                        {t("invoice.globalDiscount")}
+                      </p>
+                      <div className="flex gap-2">
+                        <select
+                          value={globalDiscountMode}
+                          onChange={(e) =>
+                            setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
+                          }
+                          className="w-1/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-xs text-[color:var(--gt-text-dark)]"
+                        >
+                          <option value="percent">%</option>
+                          <option value="amount">AZN</option>
+                        </select>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={globalDiscountValue}
+                          onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
+                          className="w-2/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-right font-mono text-sm text-[color:var(--gt-text-dark)]"
+                        />
+                      </div>
+                      {displayTotals.global_discount_total > 0 ? (
+                        <div className={cn(summaryRowClass, "text-rose-600")}>
+                          <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
+                          <span className={cn(summaryValueClass, "text-rose-600")}>
+                            -{displayTotals.global_discount_total.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className={cn(summaryRowClass, "text-rose-600")}>
+                      <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
+                      <span className={cn(summaryValueClass, "text-rose-600")}>
+                        -{displayTotals.discount_total.toFixed(2)}
+                      </span>
+                    </div>
+                    {isOfficial ? (
+                      <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
+                          {t("invoice.vatToggleLabel")}
+                        </p>
+                        <div className="inline-flex overflow-hidden rounded-lg border border-[color:var(--gt-border-color)]">
+                          <button
+                            type="button"
+                            onClick={() => setVatMode("none")}
+                            className={cn(
+                              "px-3 py-1.5 text-xs font-semibold",
+                              vatMode === "none"
+                                ? "bg-[color:var(--gt-text-dark)] text-white"
+                                : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
+                            )}
+                          >
+                            {t("invoice.vatOff")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVatMode("exclusive")}
+                            className={cn(
+                              "px-3 py-1.5 text-xs font-semibold",
+                              vatMode !== "none"
+                                ? "bg-[color:var(--gt-accent-green)] text-white"
+                                : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
+                            )}
+                          >
+                            {t("invoice.vatOn", { rate: defaultVatRate })}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {totals.delivery_cost > 0 && (
+                      <div className={summaryRowClass}>
+                        <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
+                        <span className={summaryValueClass}>+{totals.delivery_cost.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className={summaryRowClass}>
+                      <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
+                      <span className={summaryValueClass}>+{additionalExpensesTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-[color:var(--gt-border-color)] pt-4">
+                    {isOfficial ? (
+                      <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+                    ) : (
+                      <div className="flex items-baseline justify-between gap-4">
+                        <span className="text-base font-bold text-[color:var(--gt-text-dark)]">
+                          {t("invoice.grandTotal")}
+                        </span>
+                        <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-[color:var(--gt-accent-green)]">
+                          {displayTotals.grand_total.toFixed(2)} {currency}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : null}
 
         <BottomTabsWrap isPageLayout={isPageLayout}>
             <div
@@ -2305,123 +2430,9 @@ export default function UniversalInvoiceForm({
         </BottomTabsWrap>
           </div>
 
+          {!isPageLayout ? (
           <div className="lg:col-span-4">
-          <div className={cn("h-fit w-full self-start", isPageLayout ? "sticky top-6" : "sticky top-4")}>
-            {isPageLayout ? (
-            <Card className="text-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{t("common.total")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-              <div className="space-y-2">
-                <div className={summaryRowClass}>
-                  <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
-                  <span className={summaryValueClass}>{totals.subtotal.toFixed(2)}</span>
-                </div>
-                <div className={cn(summaryRowClass, "text-rose-600")}>
-                  <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
-                  <span className={cn(summaryValueClass, "text-rose-600")}>
-                    -{displayTotals.line_discount_total.toFixed(2)}
-                  </span>
-                </div>
-                <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
-                    {t("invoice.globalDiscount")}
-                  </p>
-                  <div className="flex gap-2">
-                    <select
-                      value={globalDiscountMode}
-                      onChange={(e) =>
-                        setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
-                      }
-                      className="w-1/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-xs text-[color:var(--gt-text-dark)]"
-                    >
-                      <option value="percent">%</option>
-                      <option value="amount">AZN</option>
-                    </select>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={globalDiscountValue}
-                      onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
-                      className="w-2/3 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-panel-bg)] px-2 py-1.5 text-right font-mono text-sm text-[color:var(--gt-text-dark)]"
-                    />
-                  </div>
-                  {displayTotals.global_discount_total > 0 ? (
-                    <div className={cn(summaryRowClass, "text-rose-600")}>
-                      <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
-                      <span className={cn(summaryValueClass, "text-rose-600")}>
-                        -{displayTotals.global_discount_total.toFixed(2)}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                <div className={cn(summaryRowClass, "text-rose-600")}>
-                  <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
-                  <span className={cn(summaryValueClass, "text-rose-600")}>
-                    -{displayTotals.discount_total.toFixed(2)}
-                  </span>
-                </div>
-                {isOfficial ? (
-                  <div className="space-y-2 rounded-lg border border-[color:var(--gt-border-color)] bg-[color:var(--gt-bg-main)] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--gt-text-primary)]">
-                      {t("invoice.vatToggleLabel")}
-                    </p>
-                    <div className="inline-flex overflow-hidden rounded-lg border border-[color:var(--gt-border-color)]">
-                      <button
-                        type="button"
-                        onClick={() => setVatMode("none")}
-                        className={cn(
-                          "px-3 py-1.5 text-xs font-semibold",
-                          vatMode === "none"
-                            ? "bg-[color:var(--gt-text-dark)] text-white"
-                            : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
-                        )}
-                      >
-                        {t("invoice.vatOff")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVatMode("exclusive")}
-                        className={cn(
-                          "px-3 py-1.5 text-xs font-semibold",
-                          vatMode !== "none"
-                            ? "bg-[color:var(--gt-accent-green)] text-white"
-                            : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
-                        )}
-                      >
-                        {t("invoice.vatOn", { rate: defaultVatRate })}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                {totals.delivery_cost > 0 && (
-                  <div className={summaryRowClass}>
-                    <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
-                    <span className={summaryValueClass}>+{totals.delivery_cost.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className={summaryRowClass}>
-                  <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
-                  <span className={summaryValueClass}>+{additionalExpensesTotal.toFixed(2)}</span>
-                </div>
-              </div>
-              <div className="border-t border-[color:var(--gt-border-color)] pt-4">
-                {isOfficial ? (
-                  <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
-                ) : (
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-base font-bold text-[color:var(--gt-text-dark)]">{t("invoice.grandTotal")}</span>
-                    <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-[color:var(--gt-accent-green)]">
-                      {displayTotals.grand_total.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                )}
-              </div>
-              </CardContent>
-            </Card>
-            ) : (
+          <div className="sticky top-4 h-fit w-full self-start">
             <div className="flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-4 text-slate-100">
@@ -2539,14 +2550,16 @@ export default function UniversalInvoiceForm({
                 )}
               </div>
             </div>
-            )}
           </div>
           </div>
+          ) : null}
         </div>
       </div>
     </div>
 
-    {layoutMode === "page" ? <FormStickyActions>{actionButtons}</FormStickyActions> : null}
+    {layoutMode === "page" ? (
+      <FormStickyActions fullWidth>{actionButtons}</FormStickyActions>
+    ) : null}
 
     {productSelectorOpen && productSelectorTargetRowId && !polywoodOnly ? (
       <InvoiceProductSelectorModal

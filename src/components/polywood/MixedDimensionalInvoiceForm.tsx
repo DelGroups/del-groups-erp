@@ -739,16 +739,16 @@ export default function MixedDimensionalInvoiceForm({
 
         <div className="px-6">
           <div className="app-table-wrap">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
+            <table className="app-table w-full text-left text-sm">
+              <thead>
                 <tr>
-                  <th className="p-2">{t("polywood.grid.type")}</th>
-                  <th className="p-2">{t("polywood.grid.product")}</th>
-                  <th className="p-2">{t("polywood.grid.unit")}</th>
-                  <th className="p-2 text-right">{t("polywood.grid.lengthQty")}</th>
-                  <th className="p-2 text-right">{t("polywood.grid.unitPrice")}</th>
-                  <th className="p-2 text-right">{t("common.total")}</th>
-                  <th className="p-2" />
+                  <th className="min-w-[8rem]">{t("polywood.grid.type")}</th>
+                  <th className="min-w-[220px]">{t("polywood.grid.product")}</th>
+                  <th className="min-w-[6rem]">{t("polywood.grid.unit")}</th>
+                  <th className="min-w-[7rem] text-right">{t("polywood.grid.lengthQty")}</th>
+                  <th className="min-w-[8rem] text-right">{t("polywood.grid.unitPrice")}</th>
+                  <th className="min-w-[7rem] text-right">{t("common.total")}</th>
+                  <th className="w-12" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-app">
@@ -759,11 +759,11 @@ export default function MixedDimensionalInvoiceForm({
                   const isAccessory = row.itemType === "accessory";
                   return (
                     <tr key={row.id}>
-                      <td className="p-2">
+                      <td>
                         <select
                           value={row.itemType}
                           onChange={(e) => handleTypeChange(row.id, e.target.value as GridItemType)}
-                          className="app-input text-xs"
+                          className="app-table-input"
                         >
                           <option value="polywood">{t("polywood.type.polywood")}</option>
                           <option value="sinelik">{t("polywood.type.sinelik")}</option>
@@ -771,13 +771,13 @@ export default function MixedDimensionalInvoiceForm({
                           <option value="service">{t("polywood.type.service")}</option>
                         </select>
                       </td>
-                      <td className="relative overflow-visible p-2">
+                      <td className="relative overflow-visible">
                         {isService ? (
                           <div className="space-y-1">
                             <select
                               value={row.productId}
                               onChange={(e) => handleProductChange(row.id, e.target.value)}
-                              className="app-input min-w-[180px] text-xs"
+                              className="app-table-input min-w-[180px]"
                             >
                               <option value="">{t("common.select")}</option>
                               <option value={ADHOC_SERVICE_PRODUCT_ID}>
@@ -797,7 +797,7 @@ export default function MixedDimensionalInvoiceForm({
                                   updateRow(row.id, { customServiceName: e.target.value })
                                 }
                                 placeholder={t("polywood.service.customServicePlaceholder")}
-                                className="app-input w-full text-xs"
+                                className="app-table-input"
                               />
                             ) : null}
                           </div>
@@ -818,14 +818,14 @@ export default function MixedDimensionalInvoiceForm({
                           />
                         )}
                       </td>
-                      <td className="p-2">
+                      <td>
                         {isDimensionalLineType(row.itemType) ? (
                           <select
                             value={row.saleMode}
                             onChange={(e) =>
                               updateRow(row.id, { saleMode: e.target.value as GridSaleMode })
                             }
-                            className="app-input text-xs"
+                            className="app-table-input"
                           >
                             <option value="full_sheet">{t("polywood.unit.sheet")}</option>
                             <option value="meter">{t("polywood.unit.meter")}</option>
@@ -838,7 +838,7 @@ export default function MixedDimensionalInvoiceForm({
                           </span>
                         )}
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">
                         <div className="flex flex-col items-end gap-1">
                           <input
                             type="number"
@@ -846,7 +846,7 @@ export default function MixedDimensionalInvoiceForm({
                             min="0"
                             value={row.amount || ""}
                             onChange={(e) => updateRow(row.id, { amount: Number(e.target.value) || 0 })}
-                            className="app-input w-24 text-right text-xs"
+                            className="app-table-input min-w-[6rem] text-right font-mono"
                             placeholder={isService ? "2" : undefined}
                           />
                           {isMeter ? (
@@ -861,26 +861,26 @@ export default function MixedDimensionalInvoiceForm({
                                   pieceCount: Math.max(1, Number(e.target.value) || 1),
                                 })
                               }
-                              className="app-input w-24 text-right text-xs"
+                              className="app-table-input min-w-[6rem] text-right font-mono"
                               placeholder={t("polywood.grid.pieceCount")}
                             />
                           ) : null}
                         </div>
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={row.unitPrice || ""}
                           onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })}
-                          className="app-input w-24 text-right text-xs"
+                          className="app-table-input min-w-[6rem] text-right font-mono"
                         />
                       </td>
-                      <td className="p-2 text-right font-mono font-semibold text-app">
+                      <td className="text-right font-mono font-semibold tabular-nums text-app">
                         {rowTotal(row).toFixed(2)}
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="text-right">
                         <button
                           type="button"
                           onClick={() => removeRow(row.id)}

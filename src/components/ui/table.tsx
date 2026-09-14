@@ -6,9 +6,9 @@ import { cn, NUMERIC_CLASS } from "@/lib/cn";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const COMPACT_CELL = "px-2 py-2.5 text-[length:var(--erp-text-sm)]";
+const COMPACT_CELL = "px-4 py-3 text-[length:var(--erp-text-sm)]";
 const COMPACT_HEAD =
-  "px-2 py-3 text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-semibold)] uppercase tracking-wide text-[color:var(--erp-text-main)] bg-[color:var(--erp-bg-table-header)]";
+  "px-4 py-3 text-[length:var(--erp-text-sm)] font-[var(--erp-font-weight-semibold)] uppercase tracking-wide text-[color:var(--erp-text-main)] bg-[color:var(--erp-bg-table-header)]";
 
 export function TableWrap({ className, children }: { className?: string; children: React.ReactNode }) {
   return (

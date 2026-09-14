@@ -56,6 +56,7 @@ export default function InitialBalanceNewPageClient() {
   return (
     <PageLayout>
       <FormLayout
+        withStickyFooter
         title={title}
         subtitle={t("initialBalance.formDescription")}
         breadcrumbs={[

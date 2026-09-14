@@ -43,7 +43,7 @@ html[data-theme="dark"] {
   --app-sidebar-text: #e2e8f0;
   --app-sidebar-muted: #94a3b8;
   --app-input-bg: rgb(15 23 42 / 0.55);
-  --app-table-header: rgb(15 23 42 / 0.45);
+  --app-table-header: #1e293b;
   --app-table-hover: rgb(99 102 241 / 0.08);
   --app-overlay: rgb(15 23 42 / 0.62);
   --app-success-soft: rgb(16 185 129 / 0.14);
@@ -84,7 +84,7 @@ html[data-theme="light"] {
   --app-sidebar-text: #e7e7e7;
   --app-sidebar-muted: #abb1b7;
   --app-input-bg: var(--gt-panel-bg);
-  --app-table-header: var(--gt-bg-main);
+  --app-table-header: var(--erp-bg-table-header);
   --app-table-hover: rgb(26 187 156 / 0.06);
   --app-overlay: rgb(42 63 84 / 0.45);
   --app-success-soft: rgb(38 185 154 / 0.12);
@@ -127,7 +127,7 @@ html[data-theme="emerald"] {
   --app-sidebar-text: #d1fae5;
   --app-sidebar-muted: #5eead4;
   --app-input-bg: rgb(15 23 42 / 0.55);
-  --app-table-header: rgb(15 23 42 / 0.45);
+  --app-table-header: #1a2e35;
   --app-table-hover: rgb(16 185 129 / 0.08);
   --app-overlay: rgb(15 23 42 / 0.62);
   --app-success-soft: rgb(16 185 129 / 0.16);
@@ -452,29 +452,45 @@ select.app-input option,
   box-shadow: var(--app-shadow);
 }
 
+/* Neutral title bar above editable grids (not the green app-toolbar gradient). */
+.app-table-section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-text);
+  background-color: var(--app-card);
+  border-bottom: 1px solid var(--app-border);
+}
+
 .app-table {
   width: 100%;
   text-align: left;
   font-size: 0.875rem;
   color: var(--app-text);
+  border-collapse: collapse;
 }
 
-.app-table thead {
+.app-table thead,
+.app-table-wrap table thead {
   position: sticky;
   top: 0;
   z-index: 2;
-  background-color: var(--app-table-header);
-  border-bottom: 1px solid var(--app-border);
+  background-color: var(--app-table-header) !important;
+  border-bottom: 1px solid var(--erp-border-default, var(--app-border)) !important;
 }
 
 .app-table th {
-  padding: 0.375rem 0.625rem;
-  font-weight: 700;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--app-text);
-  opacity: 0.85;
+  vertical-align: middle;
 }
 
 .app-table tbody tr {
@@ -488,8 +504,71 @@ select.app-input option,
 }
 
 .app-table td {
-  padding: 0.375rem 0.625rem;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+/* Embedded inputs inside editable invoice / line-item tables */
+.app-table-input {
+  display: block;
+  width: 100%;
+  min-width: 5.5rem;
+  min-height: 2.5rem;
+  border-radius: var(--erp-radius-md, 0.375rem);
+  border: 1px solid var(--erp-border-default, var(--app-border));
+  background-color: var(--app-input-bg);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--app-text);
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.app-table-input::placeholder {
+  color: var(--app-text-muted);
+  opacity: 0.75;
+}
+
+.app-table-input:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-ring);
+}
+
+.app-table-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+select.app-table-input {
+  cursor: pointer;
+  appearance: auto;
+  padding-right: 2rem;
+}
+
+/* Tables inside standard wrap inherit unified header + cell rhythm */
+.app-table-wrap table:not(.app-table) thead {
+  background-color: var(--app-table-header);
+  border-bottom: 1px solid var(--erp-border-default, var(--app-border));
+}
+
+.app-table-wrap table:not(.app-table) thead th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text);
+  vertical-align: middle;
+}
+
+.app-table-wrap table:not(.app-table) tbody td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  vertical-align: middle;
 }
 
 table:not(.app-table) tbody tr {
