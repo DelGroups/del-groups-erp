@@ -84,6 +84,62 @@ function useDualPrices(
   return { pieceDisplay, areaDisplay, onPieceChange, onAreaChange };
 }
 
+function PriceColumn({
+  title,
+  sheetLabel,
+  areaLabel,
+  sheetValue,
+  areaValue,
+  onSheetChange,
+  onAreaChange,
+  sheetBadge,
+  areaBadge,
+  sheetPlaceholder,
+  areaPlaceholder,
+  conversionHint,
+  canConvert,
+}: {
+  title: string;
+  sheetLabel: string;
+  areaLabel: string;
+  sheetValue: string;
+  areaValue: string;
+  onSheetChange: (value: string) => void;
+  onAreaChange: (value: string) => void;
+  sheetBadge: string;
+  areaBadge: string;
+  sheetPlaceholder: string;
+  areaPlaceholder: string;
+  conversionHint: string | null;
+  canConvert: boolean;
+}) {
+  return (
+    <div className="min-w-0 space-y-3 rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]/40 p-3">
+      <p className="text-[length:var(--erp-text-sm)] font-semibold text-[color:var(--erp-text-main)]">
+        {title}
+      </p>
+      <div className="space-y-3">
+        <PriceInputWithBadge
+          label={sheetLabel}
+          value={sheetValue}
+          onChange={onSheetChange}
+          badge={sheetBadge}
+          placeholder={sheetPlaceholder}
+        />
+        <PriceInputWithBadge
+          label={areaLabel}
+          value={areaValue}
+          onChange={onAreaChange}
+          badge={areaBadge}
+          placeholder={areaPlaceholder}
+          disabled={!canConvert}
+          hint={conversionHint}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function DualUnitPriceGroup({
   buyStored,
   sellStored,
@@ -99,6 +155,9 @@ export default function DualUnitPriceGroup({
   const areaBadge = areaUnit === "square_meter" ? t("forms.badgeAznSqm") : t("forms.badgeAznMeter");
   const pieceBadge = t("forms.badgeAznPiece");
   const canConvert = barLengthM > 0 && (areaUnit === "meter" || widthM > 0);
+
+  const sheetLabel = t("forms.sheetUnitPrice");
+  const areaLabel = t("forms.meterAreaPrice");
 
   const buy = useDualPrices(
     buyStored,
@@ -117,7 +176,7 @@ export default function DualUnitPriceGroup({
     areaUnit
   );
 
-  const conversionHint = (pieceValue: string, areaValue: string) => {
+  const buildHint = (pieceValue: string, areaValue: string) => {
     if (!canConvert || !pieceValue || !areaValue) return null;
     if (areaUnit === "square_meter") {
       return t("forms.priceConversionSheetToArea", {
@@ -135,48 +194,37 @@ export default function DualUnitPriceGroup({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <PriceInputWithBadge
-          label={t("forms.buyPriceSheetPiece")}
-          value={buy.pieceDisplay}
-          onChange={buy.onPieceChange}
-          badge={pieceBadge}
-          hint={conversionHint(buy.pieceDisplay, buy.areaDisplay)}
-        />
-        <PriceInputWithBadge
-          label={
-            areaUnit === "square_meter"
-              ? t("forms.buyPriceMeterArea")
-              : t("forms.buyPriceMeterOnly")
-          }
-          value={buy.areaDisplay}
-          onChange={buy.onAreaChange}
-          badge={areaBadge}
-          disabled={!canConvert}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <PriceInputWithBadge
-          label={t("forms.sellPriceSheetPiece")}
-          value={sell.pieceDisplay}
-          onChange={sell.onPieceChange}
-          badge={pieceBadge}
-          hint={conversionHint(sell.pieceDisplay, sell.areaDisplay)}
-        />
-        <PriceInputWithBadge
-          label={
-            areaUnit === "square_meter"
-              ? t("forms.sellPriceMeterArea")
-              : t("forms.sellPriceMeterOnly")
-          }
-          value={sell.areaDisplay}
-          onChange={sell.onAreaChange}
-          badge={areaBadge}
-          disabled={!canConvert}
-        />
-      </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <PriceColumn
+        title={t("forms.purchasePriceColumn")}
+        sheetLabel={sheetLabel}
+        areaLabel={areaLabel}
+        sheetValue={buy.pieceDisplay}
+        areaValue={buy.areaDisplay}
+        onSheetChange={buy.onPieceChange}
+        onAreaChange={buy.onAreaChange}
+        sheetBadge={pieceBadge}
+        areaBadge={areaBadge}
+        sheetPlaceholder={t("forms.sheetPricePlaceholder")}
+        areaPlaceholder={t("forms.meterPricePlaceholder")}
+        conversionHint={buildHint(buy.pieceDisplay, buy.areaDisplay)}
+        canConvert={canConvert}
+      />
+      <PriceColumn
+        title={t("forms.sellingPriceColumn")}
+        sheetLabel={sheetLabel}
+        areaLabel={areaLabel}
+        sheetValue={sell.pieceDisplay}
+        areaValue={sell.areaDisplay}
+        onSheetChange={sell.onPieceChange}
+        onAreaChange={sell.onAreaChange}
+        sheetBadge={pieceBadge}
+        areaBadge={areaBadge}
+        sheetPlaceholder={t("forms.sellSheetPricePlaceholder")}
+        areaPlaceholder={t("forms.sellMeterPricePlaceholder")}
+        conversionHint={buildHint(sell.pieceDisplay, sell.areaDisplay)}
+        canConvert={canConvert}
+      />
     </div>
   );
 }

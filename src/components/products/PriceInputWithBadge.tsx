@@ -9,6 +9,7 @@ interface PriceInputWithBadgeProps {
   onChange: (value: string) => void;
   badge: string;
   hint?: string | null;
+  placeholder?: string;
   disabled?: boolean;
 }
 
@@ -18,6 +19,7 @@ export default function PriceInputWithBadge({
   onChange,
   badge,
   hint,
+  placeholder,
   disabled = false,
 }: PriceInputWithBadgeProps) {
   const handleChange = (raw: string) => {
@@ -39,6 +41,7 @@ export default function PriceInputWithBadge({
           min="0"
           inputMode="decimal"
           disabled={disabled}
+          placeholder={placeholder}
           value={value}
           onChange={(event) => handleChange(event.target.value)}
           className={`${formNumberInputClass} rounded-r-none border-r-0`}

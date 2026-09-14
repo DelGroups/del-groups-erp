@@ -54,16 +54,18 @@ interface ProductFormProps {
 function ProductFormSection({
   title,
   children,
+  compact = false,
 }: {
   title: string;
   children: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <Card padding={false} className="h-full">
+    <Card padding={false}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
+      <CardContent className={compact ? "space-y-3" : "space-y-4"}>{children}</CardContent>
     </Card>
   );
 }
@@ -141,9 +143,11 @@ export default function ProductForm({
     const metric = isMetricMeasureUnit(unit);
     set({
       unit,
-      is_dimensional: metric,
+      is_dimensional: form.is_dimensional || metric,
       base_length:
-        metric && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
+        (form.is_dimensional || metric) && !(parseFloat(form.base_length) > 0)
+          ? "4.0"
+          : form.base_length,
       base_width:
         unit === "Kvadrat Metr" && !(parseFloat(form.base_width) > 0) ? "0.60" : form.base_width,
     });
@@ -162,6 +166,10 @@ export default function ProductForm({
       unit: nextUnit,
       base_length:
         checked && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
+      base_width:
+        checked && nextUnit === "Kvadrat Metr" && !(parseFloat(form.base_width) > 0)
+          ? "0.60"
+          : form.base_width,
     });
   };
 
@@ -403,7 +411,7 @@ export default function ProductForm({
             </ProductFormSection>
 
             {!isServiceCategorySelected ? (
-              <ProductFormSection title={t("forms.sectionMetricsPricing")}>
+              <ProductFormSection title={t("forms.sectionMetricsPricing")} compact>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label
                     className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
@@ -440,7 +448,13 @@ export default function ProductForm({
                   </label>
                 </div>
 
-                <div className={showMetricFields ? rowClass : "grid grid-cols-1 gap-4"}>
+                <div
+                  className={
+                    showMetricFields
+                      ? "grid grid-cols-2 gap-4"
+                      : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                  }
+                >
                   <FormField label={t("forms.unitMeasure")}>
                     <select
                       value={
@@ -461,35 +475,32 @@ export default function ProductForm({
                     </select>
                   </FormField>
                   {showMetricFields ? (
-                    <FormField label={t("forms.standardBarLength")}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={form.base_length || "4.0"}
-                        onChange={(event) => set({ base_length: event.target.value })}
-                        placeholder="4.0"
-                        className={formInputClass}
-                      />
-                    </FormField>
+                    <>
+                      <FormField label={t("forms.standardBarLength")}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.base_length || "4.0"}
+                          onChange={(event) => set({ base_length: event.target.value })}
+                          placeholder={t("forms.lengthPlaceholder")}
+                          className={formInputClass}
+                        />
+                      </FormField>
+                      <FormField label={`${t("forms.baseWidth")} (m)`}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.base_width}
+                          onChange={(e) => set({ base_width: e.target.value })}
+                          placeholder={t("forms.widthPlaceholder")}
+                          className={formInputClass}
+                        />
+                      </FormField>
+                    </>
                   ) : null}
                 </div>
-
-                {showMetricFields ? (
-                  <div className={rowClass}>
-                    <FormField label={`${t("forms.baseWidth")} (m)`}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={form.base_width}
-                        onChange={(e) => set({ base_width: e.target.value })}
-                        placeholder="0.60"
-                        className={formInputClass}
-                      />
-                    </FormField>
-                  </div>
-                ) : null}
 
                 {showMetricFields ? (
                   <DualUnitPriceGroup
@@ -503,18 +514,20 @@ export default function ProductForm({
                     measureUnit={form.unit}
                   />
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <PriceInputWithBadge
                       label={t("forms.buyPrice")}
                       value={form.buy_price}
                       onChange={(value) => set({ buy_price: value })}
                       badge={t("forms.badgeAznPiece")}
+                      placeholder={t("forms.sheetPricePlaceholder")}
                     />
                     <PriceInputWithBadge
                       label={t("forms.sellPrice")}
                       value={form.sell_price}
                       onChange={(value) => set({ sell_price: value })}
                       badge={t("forms.badgeAznPiece")}
+                      placeholder={t("forms.sellSheetPricePlaceholder")}
                     />
                   </div>
                 )}
