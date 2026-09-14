@@ -704,11 +704,13 @@ export default function UniversalInvoiceForm({
 
     const fullSheetLengthM =
       row.polywood_full_sheet_length_m || Number(prod.full_sheet_length_m) || 4;
+    const isLinear = result.unit === "Metr";
+    const meterLengthForPricing = isLinear ? result.quantity : result.lengthM;
     const unitPrice = resolveInvoiceLineUnitPrice(prod, {
       unit: result.unit,
       quantity: result.quantity,
-      polywood_sale_mode: result.unit === "Metr" ? "linear_m" : null,
-      polywood_length_m: result.lengthM,
+      polywood_sale_mode: isLinear ? "linear_m" : null,
+      polywood_length_m: meterLengthForPricing,
       polywood_full_sheet_length_m: fullSheetLengthM,
     });
 
@@ -716,11 +718,11 @@ export default function UniversalInvoiceForm({
       unit: result.unit,
       quantity: result.quantity,
       unit_price: unitPrice,
-      polywood_length_m: result.lengthM,
-      polywood_width_m: result.widthM,
+      polywood_length_m: isLinear ? meterLengthForPricing : result.lengthM,
+      polywood_width_m: result.widthM > 0 ? result.widthM : null,
       polywood_pieces: result.pieces,
       polywood_total_area_m2: result.areaM2,
-      polywood_sale_mode: result.unit === "Metr" ? "linear_m" : null,
+      polywood_sale_mode: isLinear ? "linear_m" : null,
       polywood_cut_confirmed: true,
     });
     setCutPieceModal(null);

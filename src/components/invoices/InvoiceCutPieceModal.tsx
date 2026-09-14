@@ -9,13 +9,16 @@ import { fetchAvailablePolywoodPieces } from "@/lib/polywood/inventory";
 import type { PolywoodPiece } from "@/lib/polywood/types";
 import { cn } from "@/lib/cn";
 
+export type CutPieceCalculationMode = "linear" | "area";
+
 export interface InvoiceCutPieceResult {
   lengthM: number;
   widthM: number;
   pieces: number;
-  areaM2: number;
+  areaM2: number | null;
   quantity: number;
   unit: "m²" | "Metr";
+  calculationMode: CutPieceCalculationMode;
   pieceId?: string;
 }
 
@@ -31,6 +34,10 @@ interface InvoiceCutPieceModalProps {
 
 type TabId = "stock" | "custom";
 
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
 export default function InvoiceCutPieceModal({
   open,
   productId,
@@ -42,6 +49,7 @@ export default function InvoiceCutPieceModal({
 }: InvoiceCutPieceModalProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<TabId>("stock");
+  const [calcMode, setCalcMode] = useState<CutPieceCalculationMode>("linear");
   const [loading, setLoading] = useState(false);
   const [pieces, setPieces] = useState<PolywoodPiece[]>([]);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
@@ -52,6 +60,7 @@ export default function InvoiceCutPieceModal({
   useEffect(() => {
     if (!open) return;
     setTab("stock");
+    setCalcMode("linear");
     setSelectedPieceId(null);
     setLengthM("");
     setWidthM(defaultWidthM > 0 ? String(defaultWidthM) : "");
@@ -77,46 +86,74 @@ export default function InvoiceCutPieceModal({
     };
   }, [open, productId, warehouseId]);
 
-  const customArea = useMemo(() => {
-    const length = Number(lengthM) || 0;
-    const width = Number(widthM) || 0;
-    const count = Math.max(1, Number(pieceCount) || 1);
-    if (length <= 0 || width <= 0) return 0;
-    return Math.round(length * width * count * 1000) / 1000;
-  }, [lengthM, widthM, pieceCount]);
+  const pieceQty = Math.max(1, Number(pieceCount) || 1);
+  const lengthValue = Number(lengthM) || 0;
+  const widthValue = Number(widthM) || 0;
+
+  const customLinearTotal = useMemo(() => {
+    if (lengthValue <= 0) return 0;
+    return round3(lengthValue * pieceQty);
+  }, [lengthValue, pieceQty]);
+
+  const customAreaTotal = useMemo(() => {
+    if (lengthValue <= 0 || widthValue <= 0) return 0;
+    return round3(lengthValue * widthValue * pieceQty);
+  }, [lengthValue, widthValue, pieceQty]);
 
   const selectedPiece = pieces.find((piece) => piece.id === selectedPieceId) || null;
 
+  const stockLinearTotal = selectedPiece ? round3(selectedPiece.length_m * pieceQty) : 0;
+  const stockAreaTotal =
+    selectedPiece && widthValue > 0
+      ? round3(selectedPiece.length_m * widthValue * pieceQty)
+      : 0;
+
   const applyFromStock = () => {
     if (!selectedPiece) return;
-    const width = Number(widthM) || defaultWidthM || 0;
-    const count = Math.max(1, Number(pieceCount) || 1);
-    const area = width > 0 ? selectedPiece.length_m * width * count : selectedPiece.length_m * count;
+    const width = widthValue || defaultWidthM || 0;
+    const useArea = width > 0;
+
     onApply({
       lengthM: selectedPiece.length_m,
       widthM: width,
-      pieces: count,
-      areaM2: Math.round(area * 1000) / 1000,
-      quantity: width > 0 ? Math.round(area * 1000) / 1000 : selectedPiece.length_m * count,
-      unit: width > 0 ? "m²" : "Metr",
+      pieces: pieceQty,
+      areaM2: useArea ? stockAreaTotal : null,
+      quantity: useArea ? stockAreaTotal : stockLinearTotal,
+      unit: useArea ? "m²" : "Metr",
+      calculationMode: useArea ? "area" : "linear",
       pieceId: selectedPiece.id,
     });
   };
 
   const applyCustom = () => {
-    const length = Number(lengthM) || 0;
-    const width = Number(widthM) || 0;
-    const count = Math.max(1, Number(pieceCount) || 1);
-    if (length <= 0 || width <= 0) return;
+    if (calcMode === "linear") {
+      if (lengthValue <= 0) return;
+      onApply({
+        lengthM: lengthValue,
+        widthM: widthValue,
+        pieces: pieceQty,
+        areaM2: widthValue > 0 ? round3(lengthValue * widthValue * pieceQty) : null,
+        quantity: customLinearTotal,
+        unit: "Metr",
+        calculationMode: "linear",
+      });
+      return;
+    }
+
+    if (lengthValue <= 0 || widthValue <= 0) return;
     onApply({
-      lengthM: length,
-      widthM: width,
-      pieces: count,
-      areaM2: customArea,
-      quantity: customArea,
+      lengthM: lengthValue,
+      widthM: widthValue,
+      pieces: pieceQty,
+      areaM2: customAreaTotal,
+      quantity: customAreaTotal,
       unit: "m²",
+      calculationMode: "area",
     });
   };
+
+  const customCanApply =
+    calcMode === "linear" ? customLinearTotal > 0 : customAreaTotal > 0;
 
   if (!open) return null;
 
@@ -193,7 +230,8 @@ export default function InvoiceCutPieceModal({
                 </div>
               )}
               <label className="block text-xs">
-                {t("invoice.cutPiece.width")}
+                <span>{t("invoice.cutPiece.width")}</span>
+                <span className="ml-1 text-app-muted">({t("invoice.cutPiece.widthOptional")})</span>
                 <input
                   type="number"
                   min="0"
@@ -214,56 +252,118 @@ export default function InvoiceCutPieceModal({
                   className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
                 />
               </label>
-              {selectedPiece && Number(widthM) > 0 ? (
-                <p className="text-xs text-emerald-700">
-                  {t("invoice.cutPiece.areaPreview", {
-                    area: (
-                      selectedPiece.length_m *
-                      (Number(widthM) || 0) *
-                      Math.max(1, Number(pieceCount) || 1)
-                    ).toFixed(3),
-                  })}
-                </p>
+              {selectedPiece ? (
+                widthValue > 0 ? (
+                  <p className="text-xs font-semibold text-emerald-700">
+                    {t("invoice.cutPiece.areaPreview", { area: stockAreaTotal.toFixed(3) })}
+                  </p>
+                ) : (
+                  <p className="text-xs font-semibold text-emerald-700">
+                    {t("invoice.cutPiece.lengthPreview", {
+                      length: stockLinearTotal.toFixed(3),
+                    })}
+                  </p>
+                )
               ) : null}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-xs">
-                {t("invoice.cutPiece.length")}
-                <input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={lengthM}
-                  onChange={(e) => setLengthM(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
-                />
-              </label>
-              <label className="text-xs">
-                {t("invoice.cutPiece.width")}
-                <input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  value={widthM}
-                  onChange={(e) => setWidthM(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
-                />
-              </label>
-              <label className="col-span-2 text-xs">
-                {t("invoice.cutPiece.pieces")}
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={pieceCount}
-                  onChange={(e) => setPieceCount(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
-                />
-              </label>
-              {customArea > 0 ? (
-                <p className="col-span-2 text-xs font-semibold text-emerald-700">
-                  {t("invoice.cutPiece.areaPreview", { area: customArea.toFixed(3) })}
+            <div className="space-y-3">
+              <fieldset>
+                <legend className="mb-2 text-xs font-semibold text-app">
+                  {t("invoice.cutPiece.calculationMode")}
+                </legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+                      calcMode === "linear"
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-app hover:bg-app-surface"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="cut-calc-mode"
+                      value="linear"
+                      checked={calcMode === "linear"}
+                      onChange={() => setCalcMode("linear")}
+                      className="accent-amber-600"
+                    />
+                    {t("invoice.cutPiece.modeLinear")}
+                  </label>
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+                      calcMode === "area"
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-app hover:bg-app-surface"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="cut-calc-mode"
+                      value="area"
+                      checked={calcMode === "area"}
+                      onChange={() => setCalcMode("area")}
+                      className="accent-amber-600"
+                    />
+                    {t("invoice.cutPiece.modeArea")}
+                  </label>
+                </div>
+              </fieldset>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs">
+                  {t("invoice.cutPiece.length")}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={lengthM}
+                    onChange={(e) => setLengthM(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
+                  />
+                </label>
+                <label className="text-xs">
+                  <span>{t("invoice.cutPiece.width")}</span>
+                  {calcMode === "linear" ? (
+                    <span className="ml-1 text-app-muted">
+                      ({t("invoice.cutPiece.widthOptional")})
+                    </span>
+                  ) : null}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={widthM}
+                    onChange={(e) => setWidthM(e.target.value)}
+                    required={calcMode === "area"}
+                    className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
+                  />
+                </label>
+                <label className="col-span-2 text-xs">
+                  {t("invoice.cutPiece.pieces")}
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={pieceCount}
+                    onChange={(e) => setPieceCount(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-app px-3 py-2 font-mono text-sm"
+                  />
+                </label>
+              </div>
+
+              {calcMode === "linear" && customLinearTotal > 0 ? (
+                <p className="text-xs font-semibold text-emerald-700">
+                  {t("invoice.cutPiece.lengthPreview", {
+                    length: customLinearTotal.toFixed(3),
+                  })}
+                </p>
+              ) : null}
+              {calcMode === "area" && customAreaTotal > 0 ? (
+                <p className="text-xs font-semibold text-emerald-700">
+                  {t("invoice.cutPiece.areaPreview", { area: customAreaTotal.toFixed(3) })}
                 </p>
               ) : null}
             </div>
@@ -277,11 +377,7 @@ export default function InvoiceCutPieceModal({
           <Button
             type="button"
             onClick={() => (tab === "stock" ? applyFromStock() : applyCustom())}
-            disabled={
-              tab === "stock"
-                ? !selectedPiece
-                : customArea <= 0
-            }
+            disabled={tab === "stock" ? !selectedPiece : !customCanApply}
           >
             {t("invoice.cutPiece.apply")}
           </Button>
