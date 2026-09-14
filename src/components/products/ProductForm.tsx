@@ -3,7 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
-import DualUnitPriceGroup from "@/components/products/DualUnitPriceGroup";
+import ProductPriceRowsEditor from "@/components/products/ProductPriceRowsEditor";
+import {
+  buildExtraInfoWithPriceMeta,
+  extractUserNotesFromExtraInfo,
+  parsePriceRowsFromProduct,
+  rowsToDbColumns,
+  rowsToMeta,
+  type ProductPriceRowsState,
+} from "@/lib/products/productPriceRows";
 import ProductBarcodePanel, {
   type FormLabelSizeId,
 } from "@/components/products/ProductBarcodePanel";
@@ -26,7 +34,6 @@ import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
-import { parseMetricBarLengthM } from "@/lib/polywood/metricPriceConversion";
 import {
   isMetricMeasureUnit,
   measureUnitLabel,
@@ -95,6 +102,9 @@ export default function ProductForm({
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
   const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
   const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
+  const [priceRows, setPriceRows] = useState<ProductPriceRowsState>(() =>
+    parsePriceRowsFromProduct(initialProduct)
+  );
   const [barcodeFormat, setBarcodeFormat] = useState<ProductBarcodeFormat>("EAN13");
   const [labelSize, setLabelSize] = useState<FormLabelSizeId>("50x30mm");
   const [form, setForm] = useState({
@@ -106,14 +116,10 @@ export default function ProductForm({
         ? initialCategory.name
         : initialProduct?.subcategory || "",
     unit: initialProduct?.unit || "Ədəd",
-    buy_price: String(initialProduct?.buy_price ?? 0),
-    buy_price_cut: String(initialProduct?.buy_price_cut ?? 0),
-    sell_price: String(initialProduct?.sell_price ?? 0),
-    sell_price_cut: String(initialProduct?.sell_price_cut ?? 0),
     stock: String(initialProduct?.stock ?? 0),
     min_stock: String(initialProduct?.min_stock ?? 5),
     barcode: initialProduct?.barcode || "",
-    extra_info: initialProduct?.extra_info || "",
+    extra_info: extractUserNotesFromExtraInfo(initialProduct?.extra_info),
     is_dimensional: Boolean(initialProduct?.is_dimensional),
     is_composite: Boolean(initialProduct?.is_composite),
     base_length: String(initialProduct?.base_length ?? initialProduct?.full_sheet_length_m ?? "4.0"),
@@ -132,11 +138,7 @@ export default function ProductForm({
 
   const metricMeasureUnit = isMetricMeasureUnit(form.unit);
   const showDimensionFields = !isServiceCategorySelected && !isComposite;
-  const showDualPricing = showDimensionFields;
-  const standardBarLengthM = parseMetricBarLengthM(form.base_length);
-  const standardWidthM = parseFloat(form.base_width) || 0;
-  const priceStorageMode =
-    form.is_dimensional || metricMeasureUnit ? "per_meter" : "per_piece";
+  const showPriceRows = showDimensionFields;
 
   const handleUnitChange = (unit: string) => {
     const metric = isMetricMeasureUnit(unit);
@@ -256,6 +258,9 @@ export default function ProductForm({
       categories.find((cat) => cat.name === form.category && !cat.parent_id) ||
       null;
 
+    const priceColumns = rowsToDbColumns(priceRows);
+    const priceMeta = rowsToMeta(priceRows);
+
     const payload: ProductInsert = {
       code: form.code,
       name: form.name,
@@ -263,12 +268,10 @@ export default function ProductForm({
       subcategory: form.subcategory || null,
       category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
-      buy_price: parseFloat(form.buy_price) || 0,
-      buy_price_cut:
-        form.is_dimensional || metricMeasureUnit ? parseFloat(form.buy_price) || 0 : 0,
-      sell_price: parseFloat(form.sell_price) || 0,
-      sell_price_cut:
-        form.is_dimensional || metricMeasureUnit ? parseFloat(form.sell_price) || 0 : 0,
+      buy_price: priceColumns.buy_price,
+      buy_price_cut: priceColumns.buy_price_cut,
+      sell_price: priceColumns.sell_price,
+      sell_price_cut: priceColumns.sell_price_cut,
       stock: isServiceCategorySelected || isComposite || !isEditMode ? 0 : parseFloat(form.stock) || 0,
       min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
       barcode: barcodeModuleEnabled
@@ -277,7 +280,7 @@ export default function ProductForm({
       qr_code: barcodeModuleEnabled
         ? form.barcode || null
         : initialProduct?.qr_code ?? null,
-      extra_info: form.extra_info || null,
+      extra_info: buildExtraInfoWithPriceMeta(form.extra_info, priceMeta),
       is_dimensional:
         isServiceCategorySelected || isComposite
           ? false
@@ -503,17 +506,8 @@ export default function ProductForm({
                   </div>
                 ) : null}
 
-                {showDualPricing ? (
-                  <DualUnitPriceGroup
-                    buyStored={form.buy_price}
-                    sellStored={form.sell_price}
-                    onBuyChange={(value) => set({ buy_price: value })}
-                    onSellChange={(value) => set({ sell_price: value })}
-                    barLengthM={standardBarLengthM}
-                    widthM={standardWidthM}
-                    storageMode={priceStorageMode}
-                    measureUnit={form.unit}
-                  />
+                {showPriceRows ? (
+                  <ProductPriceRowsEditor value={priceRows} onChange={setPriceRows} />
                 ) : null}
               </ProductFormSection>
             ) : null}
