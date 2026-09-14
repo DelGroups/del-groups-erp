@@ -30,46 +30,59 @@ function isDuplicateKeyError(message: string, code?: string): boolean {
   return code === "23505" || message.toLowerCase().includes("duplicate key");
 }
 
-async function saveProductBomBatch(
-  admin: SupabaseClient<Database>,
-  parentProductId: string,
-  rows: ProductBomInput[],
-  isComposite: boolean
-): Promise<{ ok: boolean; error?: string }> {
-  const { error: productError } = await admin
-    .from("products")
-    .update({ is_composite: isComposite })
-    .eq("id", parentProductId);
-
-  if (productError) return { ok: false, error: productError.message };
-
-  const { error: deleteError } = await admin
-    .from("product_bom")
-    .delete()
-    .eq("parent_product_id", parentProductId);
-
-  if (deleteError) return { ok: false, error: deleteError.message };
-
-  if (!isComposite) {
-    return { ok: true };
+function mapRpcError(message: string): CreateProductErrorCode {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("product_name_required") ||
+    normalized.includes("bom_rows_required") ||
+    normalized.includes("bom_self_reference")
+  ) {
+    return "validation";
   }
+  if (isDuplicateKeyError(message)) {
+    return "duplicate";
+  }
+  return "unknown";
+}
 
-  const payload = rows
+function serializeBomRows(rows: ProductBomInput[]) {
+  return rows
     .filter((row) => row.componentProductId && row.quantity > 0)
     .map((row) => ({
-      parent_product_id: parentProductId,
       component_product_id: row.componentProductId,
       quantity: row.quantity,
     }));
+}
 
-  if (payload.length === 0) {
-    return { ok: false, error: "Komplekt üçün ən azı bir komponent tələb olunur" };
+async function createProductViaRpc(
+  admin: SupabaseClient<Database>,
+  payload: ProductInsert,
+  bomRows: ProductBomInput[],
+  isComposite: boolean
+): Promise<CreateProductWithRelationsResult> {
+  const { data, error } = await admin.rpc("create_product_with_bom_atomic", {
+    p_product: payload as unknown as Record<string, unknown>,
+    p_bom_rows: serializeBomRows(bomRows),
+    p_is_composite: isComposite,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+      errorCode: mapRpcError(error.message),
+    };
   }
 
-  const { error: insertError } = await admin.from("product_bom").insert(payload);
-  if (insertError) return { ok: false, error: insertError.message };
+  if (!data || typeof data !== "object") {
+    return {
+      ok: false,
+      error: "Product RPC returned an empty response",
+      errorCode: "unknown",
+    };
+  }
 
-  return { ok: true };
+  return { ok: true, product: data as Product };
 }
 
 export async function createProductWithRelations(
@@ -105,54 +118,38 @@ export async function createProductWithRelations(
 
   const payload = buildProductInsert(productInput);
   const isComposite = Boolean(input.isComposite) && !payload.is_service;
+  const bomRows = input.bomRows ?? [];
 
-  const { data, error } = await admin.from("products").insert([payload]).select("*").single();
-
-  if (error) {
-    if (isDuplicateKeyError(error.message, error.code)) {
-      return {
-        ok: false,
-        error: error.message,
-        errorCode: "duplicate",
-      };
-    }
-    return { ok: false, error: error.message, errorCode: "unknown" };
+  const rpcResult = await createProductViaRpc(admin, payload, bomRows, isComposite);
+  if (!rpcResult.ok || !rpcResult.product) {
+    return rpcResult;
   }
 
-  const product = data as Product;
+  const product = rpcResult.product;
 
-  try {
-    if (isDimensional && input.dimensionalInitialStock && baseLengthM > 0) {
-      const pieceRows = buildDimensionalPieceRows(
-        product.id,
-        input.dimensionalInitialStock.warehouseId,
-        baseLengthM,
-        input.dimensionalInitialStock
-      );
+  if (isDimensional && input.dimensionalInitialStock && baseLengthM > 0) {
+    const pieceRows = buildDimensionalPieceRows(
+      product.id,
+      input.dimensionalInitialStock.warehouseId,
+      baseLengthM,
+      input.dimensionalInitialStock
+    );
 
-      if (pieceRows.length > 0) {
+    if (pieceRows.length > 0) {
+      try {
         await insertPolywoodPieces(pieceRows);
-      }
-    }
-
-    const bomRows = input.bomRows ?? [];
-    if (isComposite || bomRows.length > 0) {
-      const bomResult = await saveProductBomBatch(admin, product.id, bomRows, isComposite);
-      if (!bomResult.ok) {
+      } catch (pieceError) {
         await admin.from("products").delete().eq("id", product.id);
-        return { ok: false, error: bomResult.error, errorCode: "unknown" };
+        return {
+          ok: false,
+          error:
+            pieceError instanceof Error
+              ? pieceError.message
+              : "Failed to insert polywood pieces",
+          errorCode: "unknown",
+        };
       }
     }
-  } catch (relationError) {
-    await admin.from("products").delete().eq("id", product.id);
-    return {
-      ok: false,
-      error:
-        relationError instanceof Error
-          ? relationError.message
-          : "Related product data could not be saved",
-      errorCode: "unknown",
-    };
   }
 
   return { ok: true, product };

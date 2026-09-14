@@ -6,7 +6,11 @@ import {
   createProductWithRelations,
   type CreateProductWithRelationsInput,
 } from "@/lib/products/createProductService";
+import { PRODUCT_CREATE_REQUEST_TIMEOUT_MS } from "@/lib/products/productCreateConstants";
 import type { ProductInsert } from "@/types/database.types";
+
+export const maxDuration = 30;
+export const runtime = "nodejs";
 
 interface CreateProductBody {
   product?: Partial<ProductInsert> & Pick<ProductInsert, "name">;
@@ -62,6 +66,12 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result.product,
     },
-    { status: 201 }
+    {
+      status: 201,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Request-Timeout-Ms": String(PRODUCT_CREATE_REQUEST_TIMEOUT_MS),
+      },
+    }
   );
 }

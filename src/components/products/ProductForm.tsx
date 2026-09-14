@@ -17,6 +17,7 @@ import ProductBarcodePanel, {
 } from "@/components/products/ProductBarcodePanel";
 import { getCategoryFullName, updateProduct } from "@/lib/products/api";
 import { FetchTimeoutError, fetchWithTimeout } from "@/lib/fetchWithTimeout";
+import { PRODUCT_CREATE_REQUEST_TIMEOUT_MS } from "@/lib/products/productCreateConstants";
 import { type ProductBarcodeFormat } from "@/lib/products/generateBarcode";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
@@ -356,7 +357,7 @@ export default function ProductForm({
             isComposite: isComposite && !isServiceCategorySelected,
           }),
         },
-        5000
+        PRODUCT_CREATE_REQUEST_TIMEOUT_MS
       );
 
       const body = (await response.json().catch(() => ({}))) as {
