@@ -6,11 +6,21 @@ import { cn, NUMERIC_CLASS } from "@/lib/cn";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const COMPACT_CELL = "px-2.5 py-1.5 text-sm";
-const COMPACT_HEAD = "px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide";
+const COMPACT_CELL = "px-3 py-2.5 text-sm";
+const COMPACT_HEAD =
+  "px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-700 bg-slate-50";
 
 export function TableWrap({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("app-table-wrap w-full overflow-x-auto", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "w-full overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
@@ -24,13 +34,7 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead
-      className={cn(
-        "border-b border-app bg-[color:var(--app-table-header)] text-slate-700 dark:text-app",
-        className
-      )}
-      {...props}
-    />
+    <thead className={cn("border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50", className)} {...props} />
   );
 }
 

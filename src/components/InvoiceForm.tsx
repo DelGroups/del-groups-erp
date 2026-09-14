@@ -26,6 +26,7 @@ import {
   validateSaleInvoiceLines,
 } from "@/lib/forms/documentPreflight";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { cn } from "@/lib/cn";
 import DocumentAdditionalExpensesSection from "@/components/documents/DocumentAdditionalExpensesSection";
 import {
   parseDocumentAdditionalExpenses,
@@ -92,7 +93,10 @@ import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import Button from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import {
   formControlClass,
   formLabelClass,
@@ -239,6 +243,36 @@ const INVOICE_CARD = "app-card flex h-full flex-col rounded-xl p-4 text-xs";
 const INVOICE_LABEL = formLabelClass;
 const INVOICE_INPUT = formControlClass;
 const INVOICE_TEXTAREA = formTextareaClass;
+
+function ItemsSectionWrap({
+  isPageLayout,
+  children,
+}: {
+  isPageLayout: boolean;
+  children: React.ReactNode;
+}) {
+  if (isPageLayout) {
+    return (
+      <Card padding={false} className="overflow-visible border border-slate-200">
+        {children}
+      </Card>
+    );
+  }
+  return <div className="app-table-wrap overflow-visible">{children}</div>;
+}
+
+function BottomTabsWrap({
+  isPageLayout,
+  children,
+}: {
+  isPageLayout: boolean;
+  children: React.ReactNode;
+}) {
+  if (isPageLayout) {
+    return <Card className="flex w-full flex-col gap-3">{children}</Card>;
+  }
+  return <div className="flex w-full flex-col gap-3">{children}</div>;
+}
 
 type InvoiceBottomTab = "delivery" | "expenses" | "notes" | "payments";
 
@@ -1337,47 +1371,64 @@ export default function UniversalInvoiceForm({
 
   if (!isOpen) return null;
 
-  const formShellClass =
-    layoutMode === "page"
-      ? "mx-auto w-full max-w-7xl space-y-4"
-      : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
+  const isPageLayout = layoutMode === "page";
+  const formShellClass = isPageLayout
+    ? "w-full space-y-6"
+    : "my-6 w-full max-w-6xl space-y-4 rounded-2xl border border-app bg-app-card-hover p-5 shadow-sm";
+  const sectionCardClass = isPageLayout ? "" : "app-card space-y-2 p-4 text-xs";
+  const tableHeadClass = isPageLayout
+    ? "border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-700"
+    : "border-b bg-app-card-hover font-bold uppercase text-app";
+  const tableCellClass = isPageLayout ? "px-3 py-2.5" : "px-3 py-3";
+
+  const DetailCard = ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) =>
+    isPageLayout ? (
+      <Card className={cn("space-y-2 text-sm", className)}>{children}</Card>
+    ) : (
+      <div className={cn("app-card space-y-2 p-4 text-xs", className)}>{children}</div>
+    );
+
+  const summaryRowClass = "flex items-baseline justify-between gap-4 text-sm text-slate-600";
+  const summaryValueClass = "shrink-0 font-mono tabular-nums text-slate-900";
 
   const actionButtons = (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <button
-        type="button"
-        onClick={handleClose}
-        className="rounded-lg border border-app bg-app-card px-4 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
-      >
+      <Button type="button" variant="outline" size="sm" onClick={handleClose}>
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="secondary"
+        size="sm"
         disabled={saving || documentLocked}
+        loading={saving}
         onClick={() => void persistDocument("draft")}
-        className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
       >
         <FileText className="h-4 w-4" />
         {saving ? t("common.saving") : t("invoice.saveDraft")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="default"
+        size="sm"
         disabled={saving || documentLocked || Boolean(salePreflightIssue)}
         title={salePreflightHint}
+        loading={saving}
         onClick={() => void persistDocument("post")}
-        className="inline-flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-4 py-2 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50"
       >
         <CheckCircle2 className="h-4 w-4" />
         {saving ? t("common.saving") : t("invoice.postDocument")}
-      </button>
-      <button
-        type="button"
-        onClick={handlePrint}
-        className="inline-flex items-center gap-1 rounded-lg border border-app bg-app-card px-4 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
-      >
+      </Button>
+      <Button type="button" variant="outline" size="sm" onClick={handlePrint}>
         <Printer className="h-4 w-4" />
         {t("common.print")}
-      </button>
+      </Button>
     </div>
   );
 
@@ -1385,30 +1436,57 @@ export default function UniversalInvoiceForm({
     <>
     <div className={layoutMode === "page" ? "w-full" : "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4"}>
       <div className={formShellClass}>
-        <div className="app-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-bold text-app">
-                {polywoodOnly ? t("sales.polywoodInvoice") : t("invoice.newSaleTitle")}
-              </h2>
-              <SalesDocumentStatusBadge status={documentStatus} />
+        {isPageLayout ? (
+          <Card padding={false}>
+            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-lg">
+                    {polywoodOnly ? t("sales.polywoodInvoice") : t("invoice.newSaleTitle")}
+                  </CardTitle>
+                  <SalesDocumentStatusBadge status={documentStatus} />
+                </div>
+                <p className="mt-1 text-sm text-slate-500">
+                  {t("invoice.docNoLabel")}:{" "}
+                  <span className="font-mono font-semibold text-blue-600">{docNo}</span>
+                </p>
+              </div>
+              <label className="text-sm font-medium text-slate-600">
+                {t("invoice.docDate")}
+                <input
+                  type="date"
+                  value={docDate}
+                  disabled={documentLocked}
+                  onChange={(e) => setDocDate(e.target.value)}
+                  className={`${INVOICE_INPUT} ml-2 mt-1 w-auto`}
+                />
+              </label>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="app-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold text-app">
+                  {polywoodOnly ? t("sales.polywoodInvoice") : t("invoice.newSaleTitle")}
+                </h2>
+                <SalesDocumentStatusBadge status={documentStatus} />
+              </div>
+              <p className="text-[11px] text-app-muted">
+                {t("invoice.docNoLabel")}: <span className="font-mono font-semibold text-app-accent">{docNo}</span>
+              </p>
             </div>
-            <p className="text-[11px] text-app-muted">
-              {t("invoice.docNoLabel")}: <span className="font-mono font-semibold text-app-accent">{docNo}</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <label className="font-semibold text-app-muted">
-              {t("invoice.docDate")}
-              <input
-                type="date"
-                value={docDate}
-                disabled={documentLocked}
-                onChange={(e) => setDocDate(e.target.value)}
-                className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app disabled:opacity-60"
-              />
-            </label>
-            {layoutMode === "page" ? null : (
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <label className="font-semibold text-app-muted">
+                {t("invoice.docDate")}
+                <input
+                  type="date"
+                  value={docDate}
+                  disabled={documentLocked}
+                  onChange={(e) => setDocDate(e.target.value)}
+                  className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app disabled:opacity-60"
+                />
+              </label>
               <button
                 type="button"
                 onClick={handleClose}
@@ -1416,15 +1494,15 @@ export default function UniversalInvoiceForm({
               >
                 <X className="h-5 w-5" />
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
         {layoutMode === "modal" ? <div className="px-0">{actionButtons}</div> : null}
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="space-y-4 lg:col-span-8">
+        <div className={cn("grid grid-cols-1 lg:grid-cols-12", isPageLayout ? "gap-6" : "gap-4")}>
+          <div className={cn("lg:col-span-8", isPageLayout ? "space-y-6" : "space-y-4")}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="app-card space-y-2 p-4 text-xs">
+          <DetailCard>
             <h3 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
               <User className="h-4 w-4 text-app-accent" />
               {t("invoice.issuedBy")}
@@ -1434,22 +1512,24 @@ export default function UniversalInvoiceForm({
               value={effectiveSellerId}
               onChange={handleSellerChange}
             />
-          </div>
+          </DetailCard>
 
-          <div className="app-card space-y-2 p-4 text-xs">
-            <div className="flex items-center justify-between border-b border-app pb-2">
-              <h3 className="flex items-center gap-1.5 font-bold text-app">
+          <DetailCard>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-700">
+              <h3 className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
                 <Building2 className="h-4 w-4 text-emerald-600" />
                 {t("invoice.customerInfo")}
               </h3>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowAddCustomer((v) => !v)}
-                className="flex items-center gap-1 text-[11px] font-bold text-app-accent hover:underline"
+                className="h-auto px-2 py-1 text-xs font-semibold text-blue-600"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 {t("invoice.newCustomer")}
-              </button>
+              </Button>
             </div>
 
             {showAddCustomer && (
@@ -1502,21 +1582,23 @@ export default function UniversalInvoiceForm({
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowAddCustomer(false)}
-                    className="app-input px-2 py-1 text-app-muted"
                   >
                     {t("common.cancel")}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="sm"
                     disabled={savingCustomer}
+                    loading={savingCustomer}
                     onClick={handleSaveQuickCustomer}
-                    className="rounded bg-[image:var(--app-gradient)] px-3 py-1 font-bold text-white disabled:opacity-50"
                   >
                     {savingCustomer ? t("common.saving") : t("common.save")}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -1555,10 +1637,10 @@ export default function UniversalInvoiceForm({
                 ) : null}
               </div>
             )}
-          </div>
+          </DetailCard>
         </div>
 
-        <div className="app-card grid grid-cols-1 gap-3 p-4 text-xs md:grid-cols-4">
+        <DetailCard className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <label className="min-w-0">
             <span className={INVOICE_LABEL}>{t("invoice.paymentTerms")}</span>
             <select
@@ -1611,7 +1693,7 @@ export default function UniversalInvoiceForm({
               className={`${INVOICE_INPUT} font-mono`}
             />
           </label>
-        </div>
+        </DetailCard>
 
         <div className="px-0">
           <OfficialTransactionSection
@@ -1630,30 +1712,48 @@ export default function UniversalInvoiceForm({
           />
         </div>
 
-        <div className="app-table-wrap overflow-visible">
-          <div className="flex flex-wrap items-center justify-between gap-3 app-toolbar px-4 py-3 text-xs font-bold">
-            <span className="min-w-0 truncate">{t("invoice.invoiceItems")}</span>
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              {!polywoodOnly ? (
+        <ItemsSectionWrap isPageLayout={isPageLayout}>
+          {isPageLayout ? (
+            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b border-slate-200">
+              <CardTitle className="text-base">{t("invoice.invoiceItems")}</CardTitle>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {!polywoodOnly ? (
+                  <Button type="button" size="sm" onClick={openProductSelectorModal}>
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
+                  </Button>
+                ) : null}
+                <Button type="button" variant="secondary" size="sm" onClick={addRow}>
+                  <Plus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{t("forms.addRow")}</span>
+                </Button>
+              </div>
+            </CardHeader>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 app-toolbar px-4 py-3 text-xs font-bold">
+              <span className="min-w-0 truncate">{t("invoice.invoiceItems")}</span>
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+                {!polywoodOnly ? (
+                  <button
+                    type="button"
+                    onClick={openProductSelectorModal}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[image:var(--app-gradient)] px-3 text-xs font-bold text-white shadow-sm hover:brightness-110"
+                  >
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={openProductSelectorModal}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[image:var(--app-gradient)] px-3 text-xs font-bold text-white shadow-sm hover:brightness-110"
+                  onClick={addRow}
+                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-app bg-app-card px-3 text-xs font-semibold text-app hover:bg-app-card-hover"
                 >
-                  <Plus className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
+                  <Plus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{t("forms.addRow")}</span>
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={addRow}
-                className="inline-flex h-9 items-center gap-1 rounded-lg border border-app bg-app-card px-3 text-xs font-semibold text-app hover:bg-app-card-hover"
-              >
-                <Plus className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{t("forms.addRow")}</span>
-              </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {polywoodOnly && defaultWarehouse ? (
             <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-900">
@@ -1666,21 +1766,21 @@ export default function UniversalInvoiceForm({
             <BarcodeScanField onScan={handleBarcodeScan} disabled={saving} />
           </div>
 
-          <div className="overflow-visible">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b bg-app-card-hover font-bold uppercase text-app">
+          <div className={cn("overflow-visible", isPageLayout && "border-t border-slate-200")}>
+            <table className={cn("w-full text-left text-xs", isPageLayout && "border-collapse")}>
+              <thead className={tableHeadClass}>
                 <tr>
-                  <th className="px-3 py-3 w-8">№</th>
-                  <th className="px-3 py-3">{t("invoice.productName")}</th>
+                  <th className={cn(tableCellClass, "w-8")}>№</th>
+                  <th className={tableCellClass}>{t("invoice.productName")}</th>
                   {!polywoodOnly ? (
-                    <th className="px-3 py-3 w-36">{t("common.warehouse")}</th>
+                    <th className={cn(tableCellClass, "w-36")}>{t("common.warehouse")}</th>
                   ) : null}
-                  <th className="px-3 py-3 w-20">{t("forms.quantity")}</th>
-                  <th className="px-3 py-3 w-24">{t("forms.price")}</th>
-                  <th className="px-3 py-3 w-20">{t("invoice.lineDiscount")}</th>
-                  <th className="px-3 py-3 w-36">{t("invoice.info")}</th>
-                  <th className="px-3 py-3 w-24 text-right">{t("forms.lineTotal")}</th>
-                  <th className="px-3 py-3 w-10">{t("forms.remove")}</th>
+                  <th className={cn(tableCellClass, "w-20")}>{t("forms.quantity")}</th>
+                  <th className={cn(tableCellClass, "w-24")}>{t("forms.price")}</th>
+                  <th className={cn(tableCellClass, "w-20")}>{t("invoice.lineDiscount")}</th>
+                  <th className={cn(tableCellClass, "w-36")}>{t("invoice.info")}</th>
+                  <th className={cn(tableCellClass, "w-24 text-right")}>{t("forms.lineTotal")}</th>
+                  <th className={cn(tableCellClass, "w-10 text-right")} aria-label={t("common.actions")} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
@@ -1979,27 +2079,49 @@ export default function UniversalInvoiceForm({
                         className={INVOICE_INPUT}
                       />
                     </td>
-                    <td className="px-3 py-3 text-right font-mono font-bold tabular-nums">
+                    <td className={cn(tableCellClass, "text-right font-mono font-semibold tabular-nums")}>
                       {row.total.toFixed(2)}
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(row.id)}
-                        className="text-app-muted hover:text-rose-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <td className={cn(tableCellClass, "text-right")}>
+                      {isPageLayout ? (
+                        <TableRowActionsMenu
+                          items={[
+                            {
+                              key: "remove",
+                              label: t("forms.remove"),
+                              icon: <Trash2 className="h-4 w-4" />,
+                              onClick: () => removeRow(row.id),
+                              variant: "destructive",
+                              disabled: documentLocked,
+                            },
+                          ]}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          className="text-app-muted hover:text-rose-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </ItemsSectionWrap>
 
-        <div className="flex w-full flex-col gap-3">
-            <div className="flex flex-wrap gap-1 rounded-xl border border-app bg-app-card p-1">
+        <BottomTabsWrap isPageLayout={isPageLayout}>
+            <div
+              className={cn(
+                "flex flex-wrap gap-1 p-1",
+                isPageLayout
+                  ? "rounded-lg border border-slate-200 bg-slate-50"
+                  : "rounded-xl border border-app bg-app-card"
+              )}
+            >
               {(
                 [
                   ["delivery", t("invoice.delivery"), Truck],
@@ -2012,11 +2134,16 @@ export default function UniversalInvoiceForm({
                   key={id}
                   type="button"
                   onClick={() => setBottomTab(id)}
-                  className={`inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold ${
+                  className={cn(
+                    "inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold",
                     bottomTab === id
-                      ? "bg-[image:var(--app-gradient)] text-white"
-                      : "text-app-muted hover:bg-app-card-hover"
-                  }`}
+                      ? isPageLayout
+                        ? "bg-blue-600 text-white"
+                        : "bg-[image:var(--app-gradient)] text-white"
+                      : isPageLayout
+                        ? "text-slate-600 hover:bg-white"
+                        : "text-app-muted hover:bg-app-card-hover"
+                  )}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span className="truncate">{label}</span>
@@ -2174,11 +2301,122 @@ export default function UniversalInvoiceForm({
             </div>
           </div>
             ) : null}
-          </div>
+        </BottomTabsWrap>
           </div>
 
           <div className="lg:col-span-4">
-          <div className="sticky top-4 h-fit w-full self-start">
+          <div className={cn("h-fit w-full self-start", isPageLayout ? "sticky top-6" : "sticky top-4")}>
+            {isPageLayout ? (
+            <Card className="text-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{t("common.total")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+              <div className="space-y-2">
+                <div className={summaryRowClass}>
+                  <span className="min-w-0 truncate">{t("invoice.subtotal")}</span>
+                  <span className={summaryValueClass}>{totals.subtotal.toFixed(2)}</span>
+                </div>
+                <div className={cn(summaryRowClass, "text-rose-600")}>
+                  <span className="min-w-0 truncate">{t("invoice.lineDiscountTotal")}</span>
+                  <span className={cn(summaryValueClass, "text-rose-600")}>
+                    -{displayTotals.line_discount_total.toFixed(2)}
+                  </span>
+                </div>
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t("invoice.globalDiscount")}
+                  </p>
+                  <div className="flex gap-2">
+                    <select
+                      value={globalDiscountMode}
+                      onChange={(e) =>
+                        setGlobalDiscountMode(e.target.value as GlobalDiscountMode)
+                      }
+                      className="w-1/3 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900"
+                    >
+                      <option value="percent">%</option>
+                      <option value="amount">AZN</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={globalDiscountValue}
+                      onChange={(e) => setGlobalDiscountValue(Number(e.target.value) || 0)}
+                      className="w-2/3 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-right font-mono text-sm text-slate-900"
+                    />
+                  </div>
+                  {displayTotals.global_discount_total > 0 ? (
+                    <div className={cn(summaryRowClass, "text-rose-600")}>
+                      <span className="min-w-0 truncate">{t("invoice.globalDiscountApplied")}</span>
+                      <span className={cn(summaryValueClass, "text-rose-600")}>
+                        -{displayTotals.global_discount_total.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className={cn(summaryRowClass, "text-rose-600")}>
+                  <span className="min-w-0 truncate">{t("invoice.discountTotal")}</span>
+                  <span className={cn(summaryValueClass, "text-rose-600")}>
+                    -{displayTotals.discount_total.toFixed(2)}
+                  </span>
+                </div>
+                {isOfficial ? (
+                  <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("invoice.vatToggleLabel")}
+                    </p>
+                    <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setVatMode("none")}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-semibold",
+                          vatMode === "none" ? "bg-slate-700 text-white" : "bg-white text-slate-600"
+                        )}
+                      >
+                        {t("invoice.vatOff")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVatMode("exclusive")}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-semibold",
+                          vatMode !== "none" ? "bg-blue-600 text-white" : "bg-white text-slate-600"
+                        )}
+                      >
+                        {t("invoice.vatOn", { rate: defaultVatRate })}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {totals.delivery_cost > 0 && (
+                  <div className={summaryRowClass}>
+                    <span className="min-w-0 truncate">{t("invoice.deliveryCost")}</span>
+                    <span className={summaryValueClass}>+{totals.delivery_cost.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className={summaryRowClass}>
+                  <span className="min-w-0 truncate">{t("forms.additionalExpenses")}</span>
+                  <span className={summaryValueClass}>+{additionalExpensesTotal.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 pt-4">
+                {isOfficial ? (
+                  <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
+                ) : (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-base font-bold text-slate-900">{t("invoice.grandTotal")}</span>
+                    <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-blue-600">
+                      {displayTotals.grand_total.toFixed(2)} {currency}
+                    </span>
+                  </div>
+                )}
+              </div>
+              </CardContent>
+            </Card>
+            ) : (
             <div className="flex h-fit flex-col rounded-xl app-toolbar p-4 text-xs shadow-lg">
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between gap-4 text-slate-100">
@@ -2296,6 +2534,7 @@ export default function UniversalInvoiceForm({
                 )}
               </div>
             </div>
+            )}
           </div>
           </div>
         </div>

@@ -18,23 +18,26 @@ export default function NewSalePage() {
       <FormLayout
         title={t("invoice.newSaleTitle")}
         subtitle={t("invoice.newSaleSubtitle")}
+        contentClassName="bg-slate-50 p-0"
         withStickyFooter
         breadcrumbs={[
           { label: t("nav.items.sales"), href: "/sales" },
           { label: t("invoice.newSaleTitle") },
         ]}
       >
-        <UniversalInvoiceForm
-          isOpen
-          layoutMode="page"
-          draftId={draftId}
-          defaultType="sale"
-          onClose={goToList}
-          onSuccess={goToList}
-          onDraftSaved={(saleId) => {
-            router.replace(`/sales/new?draft=${saleId}`);
-          }}
-        />
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-6">
+          <UniversalInvoiceForm
+            isOpen
+            layoutMode="page"
+            draftId={draftId}
+            defaultType="sale"
+            onClose={goToList}
+            onSuccess={goToList}
+            onDraftSaved={(saleId) => {
+              router.replace(`/sales/new?draft=${saleId}`);
+            }}
+          />
+        </div>
       </FormLayout>
     </PageLayout>
   );

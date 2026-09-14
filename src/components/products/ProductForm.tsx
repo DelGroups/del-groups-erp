@@ -523,7 +523,7 @@ export default function ProductForm({
             ) : null}
           </div>
 
-          <div className="flex w-full flex-col gap-6 lg:col-span-4">
+          <div className="flex w-full flex-col gap-6 lg:col-span-4 lg:sticky lg:top-6 lg:self-start">
             {!isServiceCategorySelected ? (
               <>
                 <ProductFormSection title={t("forms.sectionBarcodeRules")}>

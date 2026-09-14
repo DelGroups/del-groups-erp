@@ -86,13 +86,13 @@ export default function NewProductPage() {
       <FormLayout
         title={t("products.newTitle")}
         subtitle={t("products.newSubtitle")}
-        contentClassName="p-0"
+        contentClassName="bg-slate-50 p-0"
         breadcrumbs={[
           { label: t("nav.items.products"), href: "/products" },
           { label: t("products.createLabel") },
         ]}
       >
-        <div className="mx-auto w-full max-w-6xl p-6">
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 p-6">
           {isLoading ? (
             <ProductFormSkeleton />
           ) : (

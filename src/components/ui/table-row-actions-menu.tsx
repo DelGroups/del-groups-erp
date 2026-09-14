@@ -71,7 +71,7 @@ export function TableRowActionsMenu({
         aria-controls={menuId}
         title={resolvedMenuLabel}
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-app bg-app-card text-app-muted transition-colors hover:bg-app-card-hover hover:text-app"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
       >
         <MoreVertical className="h-4 w-4" />
       </button>
@@ -81,7 +81,7 @@ export function TableRowActionsMenu({
           id={menuId}
           role="menu"
           className={cn(
-            "absolute z-40 mt-1 min-w-[11rem] overflow-hidden rounded-lg border border-app bg-app-card py-1 shadow-lg",
+            "absolute z-40 mt-1 min-w-[11rem] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg",
             align === "right" ? "right-0" : "left-0"
           )}
         >
@@ -96,7 +96,7 @@ export function TableRowActionsMenu({
                 item.onClick();
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-app transition-colors hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {item.icon ? <span className="shrink-0 text-app-muted">{item.icon}</span> : null}
               <span className="truncate">{item.label}</span>
