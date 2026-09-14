@@ -802,6 +802,41 @@ textarea:focus {
   color: var(--app-sidebar-muted);
 }
 
+/* Sidebar footer — dark-theme controls (avoid white input panels on navy sidebar) */
+.sidebar-footer .sidebar-select {
+  background-color: rgb(255 255 255 / 0.08);
+  color: var(--app-sidebar-text);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+.sidebar-footer .sidebar-select option {
+  background-color: var(--erp-bg-sidebar);
+  color: var(--app-sidebar-text);
+}
+
+.sidebar-footer .sidebar-label {
+  color: var(--app-sidebar-muted);
+}
+
+.sidebar-footer .theme-seg {
+  background-color: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+.sidebar-footer .theme-seg button {
+  color: var(--app-sidebar-muted);
+}
+
+.sidebar-footer .theme-seg button[data-active="true"] {
+  background-color: var(--gt-accent-green);
+  background-image: none;
+  color: #ffffff;
+}
+
+.sidebar-footer .bg-app-card-hover {
+  background-color: rgb(255 255 255 / 0.1);
+}
+
 .theme-seg {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

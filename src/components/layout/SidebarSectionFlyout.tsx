@@ -63,6 +63,7 @@ export default function SidebarSectionFlyout({ section, onNavigate }: SidebarSec
                       ? "nav-link-active"
                       : "text-app hover:bg-app-card-hover"
                   )}
+                  aria-current={itemActive ? "page" : undefined}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{t(item.titleKey)}</span>

@@ -171,13 +171,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                   type="button"
                   onClick={() => toggleSection(section.id)}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors duration-300 ${
-                    sectionHasActive ? "opacity-100" : "opacity-80 hover:opacity-100"
-                  }`}
-                  style={
                     sectionHasActive
-                      ? { backgroundColor: "var(--app-card-hover)" }
-                      : { color: "var(--app-sidebar-muted)" }
-                  }
+                      ? "text-[color:var(--erp-text-sidebar)]"
+                      : "text-[color:var(--erp-text-sidebar-muted)] hover:text-[color:var(--erp-text-sidebar)]"
+                  }`}
                   aria-expanded={expanded}
                 >
                   <span className="flex items-center gap-2">
@@ -207,9 +204,12 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
                           key={item.path}
                           href={item.path}
                           onClick={closeMobileIfNeeded}
-                          className={`flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all duration-300 ${
-                            active ? "nav-link-active" : "text-[#E7E7E7] hover:bg-white/5"
+                          className={`flex items-center gap-3 rounded-md px-5 py-3 text-sm font-medium transition-all duration-300 ${
+                            active
+                              ? "nav-link-active"
+                              : "text-[color:var(--erp-text-sidebar)] hover:bg-white/5"
                           }`}
+                          aria-current={active ? "page" : undefined}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t(item.titleKey)}</span>
@@ -229,8 +229,11 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
       </nav>
 
       <div
-        className="relative z-10 mt-auto shrink-0 border-t px-3 pb-8 pt-3 md:pb-32"
-        style={{ borderColor: "var(--app-sidebar-border)" }}
+        className="sidebar-footer relative z-10 mt-auto shrink-0 border-t px-3 py-3"
+        style={{
+          borderColor: "var(--app-sidebar-border)",
+          backgroundColor: "var(--erp-bg-sidebar-footer)",
+        }}
       >
         <div className={`block space-y-3 ${desktopExpanded ? "md:block" : "md:hidden"}`}>
             <div className="flex items-center gap-2 overflow-hidden">

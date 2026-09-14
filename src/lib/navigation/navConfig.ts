@@ -164,6 +164,12 @@ export function flattenNavItems(sections: NavSection[]): NavItem[] {
 
 export function isItemActive(pathname: string, path: string): boolean {
   if (path === "/") return pathname === "/";
+  if (path === "/inventory") {
+    return pathname === "/inventory";
+  }
+  if (path === "/inventory-audit") {
+    return pathname === "/inventory-audit" || pathname.startsWith("/inventory-audit/");
+  }
   if (path === "/products") {
     return (
       pathname === "/products" ||
