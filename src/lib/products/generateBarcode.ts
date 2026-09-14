@@ -28,6 +28,14 @@ export function generateProductBarcode(): string {
   return generateEan13();
 }
 
+export type ProductBarcodeFormat = "CODE128" | "EAN13" | "QR_CODE";
+
+export function generateProductBarcodeByFormat(format: ProductBarcodeFormat): string {
+  if (format === "EAN13") return generateEan13();
+  if (format === "QR_CODE") return generateShortBarcode("QR");
+  return generateShortBarcode("DG");
+}
+
 export function generatePieceBarcode(): string {
   return generateShortBarcode("PW");
 }

@@ -1,18 +1,23 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Barcode, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
-import BarcodeDisplay from "@/components/products/BarcodeDisplay";
-import QrCodeImage from "@/components/products/QrCodeImage";
+import DualUnitPriceGroup from "@/components/products/DualUnitPriceGroup";
+import PriceInputWithBadge from "@/components/products/PriceInputWithBadge";
+import ProductBarcodePanel, {
+  type FormLabelSizeId,
+} from "@/components/products/ProductBarcodePanel";
 import { createProduct, getCategoryFullName, updateProduct } from "@/lib/products/api";
-import { generateProductBarcode } from "@/lib/products/generateBarcode";
+import {
+  generateProductBarcode,
+  type ProductBarcodeFormat,
+} from "@/lib/products/generateBarcode";
 import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
-import UnitAwarePriceInput from "@/components/products/UnitAwarePriceInput";
 import ProductBomBuilder, { type BomBuilderRow } from "@/components/products/ProductBomBuilder";
 import {
   formInputClass,
@@ -26,11 +31,9 @@ import { FormField } from "@/components/ui/form-field";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
 import { parseMetricBarLengthM } from "@/lib/polywood/metricPriceConversion";
 import {
-  defaultPriceEntryUnitForMeasure,
   isMetricMeasureUnit,
   measureUnitLabel,
   PRODUCT_MEASURE_UNITS,
-  type PriceEntryUnit,
 } from "@/lib/products/productPriceUnits";
 import { fetchProductBomAction, saveProductBomAction } from "@/lib/actions/productBom";
 import { fetchProductsCatalog } from "@/lib/products/api";
@@ -92,13 +95,8 @@ export default function ProductForm({
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
   const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
   const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
-  const initialMeasureUnit = initialProduct?.unit || "Ədəd";
-  const [buyPriceUnit, setBuyPriceUnit] = useState<PriceEntryUnit>(
-    defaultPriceEntryUnitForMeasure(initialMeasureUnit)
-  );
-  const [sellPriceUnit, setSellPriceUnit] = useState<PriceEntryUnit>(
-    defaultPriceEntryUnitForMeasure(initialMeasureUnit)
-  );
+  const [barcodeFormat, setBarcodeFormat] = useState<ProductBarcodeFormat>("EAN13");
+  const [labelSize, setLabelSize] = useState<FormLabelSizeId>("50x30mm");
   const [form, setForm] = useState({
     code: initialProduct?.code || "",
     name: initialProduct?.name || "",
@@ -141,9 +139,6 @@ export default function ProductForm({
 
   const handleUnitChange = (unit: string) => {
     const metric = isMetricMeasureUnit(unit);
-    const nextEntryUnit = defaultPriceEntryUnitForMeasure(unit);
-    setBuyPriceUnit(nextEntryUnit);
-    setSellPriceUnit(nextEntryUnit);
     set({
       unit,
       is_dimensional: metric,
@@ -162,9 +157,6 @@ export default function ProductForm({
       : metricMeasureUnit
         ? "Ədəd"
         : form.unit;
-    const nextEntryUnit = defaultPriceEntryUnitForMeasure(nextUnit);
-    setBuyPriceUnit(nextEntryUnit);
-    setSellPriceUnit(nextEntryUnit);
     set({
       is_dimensional: checked,
       unit: nextUnit,
@@ -499,28 +491,33 @@ export default function ProductForm({
                   </div>
                 ) : null}
 
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <UnitAwarePriceInput
-                    label={t("forms.buyPrice")}
-                    storedValue={form.buy_price}
-                    entryUnit={buyPriceUnit}
-                    onEntryUnitChange={setBuyPriceUnit}
-                    onStoredValueChange={(value) => set({ buy_price: value })}
+                {showMetricFields ? (
+                  <DualUnitPriceGroup
+                    buyStored={form.buy_price}
+                    sellStored={form.sell_price}
+                    onBuyChange={(value) => set({ buy_price: value })}
+                    onSellChange={(value) => set({ sell_price: value })}
                     barLengthM={standardBarLengthM}
                     widthM={standardWidthM}
                     storageMode={priceStorageMode}
+                    measureUnit={form.unit}
                   />
-                  <UnitAwarePriceInput
-                    label={t("forms.sellPrice")}
-                    storedValue={form.sell_price}
-                    entryUnit={sellPriceUnit}
-                    onEntryUnitChange={setSellPriceUnit}
-                    onStoredValueChange={(value) => set({ sell_price: value })}
-                    barLengthM={standardBarLengthM}
-                    widthM={standardWidthM}
-                    storageMode={priceStorageMode}
-                  />
-                </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <PriceInputWithBadge
+                      label={t("forms.buyPrice")}
+                      value={form.buy_price}
+                      onChange={(value) => set({ buy_price: value })}
+                      badge={t("forms.badgeAznPiece")}
+                    />
+                    <PriceInputWithBadge
+                      label={t("forms.sellPrice")}
+                      value={form.sell_price}
+                      onChange={(value) => set({ sell_price: value })}
+                      badge={t("forms.badgeAznPiece")}
+                    />
+                  </div>
+                )}
               </ProductFormSection>
             ) : null}
 
@@ -541,43 +538,14 @@ export default function ProductForm({
             {!isServiceCategorySelected ? (
               <>
                 <ProductFormSection title={t("forms.sectionBarcodeRules")}>
-                  <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4">
-                    <FormField label={t("forms.barcode")} className="w-full">
-                      <input
-                        type="text"
-                        value={form.barcode}
-                        onChange={(e) => set({ barcode: e.target.value })}
-                        placeholder={t("forms.autoGenerated")}
-                        className={`${formInputClass} text-center font-mono`}
-                      />
-                    </FormField>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full max-w-sm"
-                      onClick={() => set({ barcode: generateProductBarcode() })}
-                    >
-                      <Barcode className="h-4 w-4" />
-                      {t("inventory.generateBarcode")}
-                    </Button>
-
-                    {form.barcode.trim() ? (
-                      <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-lg border border-slate-100 bg-slate-50/80 p-6 dark:border-app dark:bg-app-card-hover/50">
-                        <div className="flex w-full flex-col items-center gap-3 text-center">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-app-muted">
-                            {t("forms.barcodePreview")}
-                          </p>
-                          <BarcodeDisplay value={form.barcode} />
-                        </div>
-                        <div className="flex w-full flex-col items-center gap-3 text-center">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-app-muted">
-                            QR
-                          </p>
-                          <QrCodeImage value={form.barcode} size={96} />
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                  <ProductBarcodePanel
+                    value={form.barcode}
+                    onChange={(barcode) => set({ barcode })}
+                    barcodeFormat={barcodeFormat}
+                    onBarcodeFormatChange={setBarcodeFormat}
+                    labelSize={labelSize}
+                    onLabelSizeChange={setLabelSize}
+                  />
                 </ProductFormSection>
 
                 <ProductFormSection title={t("forms.sectionExtraSettings")}>
