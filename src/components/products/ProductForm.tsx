@@ -259,7 +259,6 @@ export default function ProductForm({
       null;
 
     const priceColumns = rowsToDbColumns(priceRows);
-    const priceMeta = rowsToMeta(priceRows);
 
     const payload: ProductInsert = {
       code: form.code,
@@ -269,9 +268,7 @@ export default function ProductForm({
       category_id: selectedCategoryEntity?.id || null,
       unit: form.unit,
       buy_price: priceColumns.buy_price,
-      buy_price_cut: priceColumns.buy_price_cut,
       sell_price: priceColumns.sell_price,
-      sell_price_cut: priceColumns.sell_price_cut,
       stock: isServiceCategorySelected || isComposite || !isEditMode ? 0 : parseFloat(form.stock) || 0,
       min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
       barcode: barcodeModuleEnabled
@@ -280,7 +277,7 @@ export default function ProductForm({
       qr_code: barcodeModuleEnabled
         ? form.barcode || null
         : initialProduct?.qr_code ?? null,
-      extra_info: buildExtraInfoWithPriceMeta(form.extra_info, priceMeta),
+      extra_info: buildExtraInfoWithPriceMeta(form.extra_info, rowsToMeta(priceRows)),
       is_dimensional:
         isServiceCategorySelected || isComposite
           ? false
