@@ -118,10 +118,40 @@ function buildPrintPageCss(widthMm: number, heightMm: number, isA4: boolean): st
     }`;
   }
 
+  // Width × height as defined by label stock (e.g. 80×50 mm). Do NOT add `landscape` here —
+  // it rotates an already-wide page 90° and yields a tall portrait sheet in Chrome/thermal drivers.
   return `@media print {
     @page {
-      size: ${widthMm}mm ${heightMm}mm landscape;
+      size: ${widthMm}mm ${heightMm}mm;
       margin: 0 !important;
+    }
+    html,
+    body {
+      width: ${widthMm}mm !important;
+      height: ${heightMm}mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+    #thermal-label-print-area {
+      width: ${widthMm}mm !important;
+      height: ${heightMm}mm !important;
+      max-width: ${widthMm}mm !important;
+      max-height: ${heightMm}mm !important;
+      overflow: hidden !important;
+    }
+    #thermal-label-print-area .thermal-print-root,
+    #thermal-label-print-area .barcode-label-print-root {
+      width: ${widthMm}mm !important;
+      height: ${heightMm}mm !important;
+    }
+    #thermal-label-print-area .thermal-label,
+    #thermal-label-print-area .barcode-label-sheet {
+      width: ${widthMm}mm !important;
+      height: ${heightMm}mm !important;
+      max-width: ${widthMm}mm !important;
+      max-height: ${heightMm}mm !important;
+      box-sizing: border-box !important;
     }
   }`;
 }
@@ -171,7 +201,7 @@ export default function ThermalLabelPrintTemplate({
               className="thermal-label barcode-label-sheet"
               style={{
                 width: `${widthMm}mm`,
-                minHeight: `${heightMm}mm`,
+                height: `${heightMm}mm`,
                 padding: `${padding}mm`,
               }}
             >
