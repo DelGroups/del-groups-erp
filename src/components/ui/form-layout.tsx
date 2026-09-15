@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/cn";
 
 export interface FormLayoutBreadcrumb {
   label: string;
@@ -15,10 +16,15 @@ export interface FormLayoutProps {
   actions?: React.ReactNode;
   /** When true, content spans the full viewport width (no max-w-7xl cap). */
   fullWidth?: boolean;
-  /** Override default content area classes (default: app-page-content space-y-4). */
+  /** Override default content area classes (default: space-y-4). */
   contentClassName?: string;
   children: React.ReactNode;
 }
+
+/** Break out of ERPLayout padding so header and body share the same width. */
+const formShellClass =
+  "-mx-[var(--erp-content-padding-x)] w-[calc(100%+2*var(--erp-content-padding-x))]";
+const formInsetClass = "px-[var(--erp-content-padding-x)]";
 
 export function FormLayout({
   title,
@@ -31,8 +37,8 @@ export function FormLayout({
   const widthClass = fullWidth ? "w-full" : "w-full max-w-7xl mx-auto";
 
   return (
-    <div className="min-h-full pb-8 dark:bg-[color:var(--app-bg)]">
-      <div className="border-b border-app bg-app-card px-3 py-3 shadow-sm md:px-4 lg:px-5">
+    <div className={cn("min-h-full pb-8", formShellClass)}>
+      <div className={cn("border-b border-app bg-app-card py-3 shadow-sm", formInsetClass)}>
         <div className={`${widthClass} flex items-center justify-between gap-4`}>
           <div className="min-w-0">
             <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-app md:text-xl">
@@ -46,7 +52,14 @@ export function FormLayout({
         </div>
       </div>
 
-      <div className={`${widthClass} ${contentClassName ?? "app-page-content space-y-4"}`}>
+      <div
+        className={cn(
+          widthClass,
+          formInsetClass,
+          "py-6",
+          contentClassName ?? "space-y-4"
+        )}
+      >
         {children}
       </div>
     </div>

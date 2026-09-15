@@ -87,26 +87,23 @@ export default function NewProductPage() {
         fullWidth
         title={t("products.newTitle")}
         subtitle={t("products.newSubtitle")}
-        contentClassName="bg-[color:var(--gt-bg-main)] p-0"
         breadcrumbs={[
           { label: t("nav.items.products"), href: "/products" },
           { label: t("products.createLabel") },
         ]}
       >
-        <div className="-mx-[calc(var(--erp-content-padding-x)-1.5rem)] w-[calc(100%+2*(var(--erp-content-padding-x)-1.5rem))] max-w-none space-y-6 px-6">
-          {isLoading ? (
-            <ProductFormSkeleton />
-          ) : (
-            <ProductForm
-              layout="create-page"
-              categories={categories}
-              warehouses={warehouses}
-              allProducts={products}
-              onCancel={() => router.push("/products")}
-              onSuccess={() => router.push("/products")}
-            />
-          )}
-        </div>
+        {isLoading ? (
+          <ProductFormSkeleton />
+        ) : (
+          <ProductForm
+            layout="create-page"
+            categories={categories}
+            warehouses={warehouses}
+            allProducts={products}
+            onCancel={() => router.push("/products")}
+            onSuccess={() => router.push("/products")}
+          />
+        )}
       </FormLayout>
     </PageLayout>
   );

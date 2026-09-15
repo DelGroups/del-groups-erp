@@ -56,7 +56,6 @@ export default function NewPurchasePage() {
         fullWidth
         title={title}
         subtitle={t("forms.purchaseFormSubtitle")}
-        contentClassName="p-0"
         breadcrumbs={[
           { label: t("nav.items.purchases"), href: "/purchases" },
           { label: title },
@@ -65,7 +64,6 @@ export default function NewPurchasePage() {
         {loading ? (
           <div className="px-6 py-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
         ) : (
-          <div className="-mx-[calc(var(--erp-content-padding-x)-1.5rem)] w-[calc(100%+2*(var(--erp-content-padding-x)-1.5rem))] max-w-none px-6">
           <PurchaseForm
             key={initialPurchase?.id || "new"}
             layoutMode="page"
@@ -81,7 +79,6 @@ export default function NewPurchasePage() {
               router.replace(`/purchases/new?draft=${purchaseId}`);
             }}
           />
-          </div>
         )}
       </FormLayout>
     </PageLayout>

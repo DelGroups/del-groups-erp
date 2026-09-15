@@ -19,25 +19,22 @@ export default function NewSalePage() {
         fullWidth
         title={t("invoice.newSaleTitle")}
         subtitle={t("invoice.newSaleSubtitle")}
-        contentClassName="bg-[color:var(--gt-bg-main)] p-0"
         breadcrumbs={[
           { label: t("nav.items.sales"), href: "/sales" },
           { label: t("invoice.newSaleTitle") },
         ]}
       >
-        <div className="-mx-[calc(var(--erp-content-padding-x)-1.5rem)] w-[calc(100%+2*(var(--erp-content-padding-x)-1.5rem))] max-w-none space-y-6 px-6">
-          <UniversalInvoiceForm
-            isOpen
-            layoutMode="page"
-            draftId={draftId}
-            defaultType="sale"
-            onClose={goToList}
-            onSuccess={goToList}
-            onDraftSaved={(saleId) => {
-              router.replace(`/sales/new?draft=${saleId}`);
-            }}
-          />
-        </div>
+        <UniversalInvoiceForm
+          isOpen
+          layoutMode="page"
+          draftId={draftId}
+          defaultType="sale"
+          onClose={goToList}
+          onSuccess={goToList}
+          onDraftSaved={(saleId) => {
+            router.replace(`/sales/new?draft=${saleId}`);
+          }}
+        />
       </FormLayout>
     </PageLayout>
   );
