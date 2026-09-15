@@ -35,7 +35,7 @@ export function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-[20%] z-50 grid w-full max-w-lg -translate-x-1/2 gap-4 border border-app bg-app-card p-0 shadow-2xl sm:rounded-xl app-drawer-backdrop",
+          "fixed left-1/2 top-[20%] z-[var(--erp-z-modal-content)] grid w-full max-w-lg -translate-x-1/2 gap-4 border border-app bg-app-card p-0 shadow-2xl sm:rounded-xl",
           className
         )}
         {...props}

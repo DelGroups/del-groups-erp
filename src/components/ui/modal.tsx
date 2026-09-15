@@ -3,9 +3,9 @@
 import React from "react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogCloseButton,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -39,7 +39,7 @@ export function Modal({
           className
         )}
       >
-        <DialogHeader className="border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3">
+        <DialogHeader className="relative border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3 pr-10">
           <DialogTitle className="erp-panel-title">{title}</DialogTitle>
           {description ? (
             <DialogDescription className="text-[color:var(--erp-text-muted)]">
@@ -53,7 +53,7 @@ export function Modal({
             {footer}
           </div>
         ) : null}
-        <DialogClose className="sr-only" />
+        <DialogCloseButton />
       </DialogContent>
     </Dialog>
   );

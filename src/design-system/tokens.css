@@ -128,6 +128,7 @@
   --erp-z-sticky: 30;
   --erp-z-sidebar: 50;
   --erp-z-modal: 60;
+  --erp-z-modal-content: 61;
   --erp-z-toast: 70;
 
   /* ── Legacy aliases (`--gt-*`) — migrate to `--erp-*` over time ───── */
