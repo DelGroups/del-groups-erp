@@ -335,7 +335,16 @@ export default function ProductsPage() {
 
       <BulkImportModal open={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
 
-      <QuickScanModal open={isScanModalOpen} onClose={() => setIsScanModalOpen(false)} />
+      <QuickScanModal
+        open={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        categories={categories}
+        onCreated={() => void loadData()}
+        onExistingProduct={(product) => {
+          setIsScanModalOpen(false);
+          setEditingProduct(product);
+        }}
+      />
 
       <CategoryManagerModal
         isOpen={categoryModalOpen}
