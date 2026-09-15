@@ -1,15 +1,24 @@
 import Papa from "papaparse";
+import {
+  buildExtraInfoWithPriceMeta,
+  rowsToDbColumns,
+  type ProductPriceRowsState,
+} from "@/lib/products/productPriceRows";
+import type { PriceEntryUnit } from "@/lib/products/productPriceUnits";
 import type { ProductInsert } from "@/types/database.types";
 
 export const BULK_IMPORT_TEMPLATE_HEADERS = [
   "Məhsul kodu",
   "Məhsul adı",
   "Kateqoriya",
-  "Alış qiyməti",
-  "Satış qiyməti",
-  "Ölçü vahidi",
   "Brend",
   "Barkod",
+  "Uzunluq (m)",
+  "En (m)",
+  "Alış qiyməti (Şət/Ədəd)",
+  "Alış qiyməti (Metr/m²)",
+  "Satış qiyməti (Şət/Ədəd)",
+  "Satış qiyməti (Metr/m²)",
 ] as const;
 
 export type BulkImportTemplateHeader = (typeof BULK_IMPORT_TEMPLATE_HEADERS)[number];
@@ -19,11 +28,16 @@ export interface BulkImportRow {
   code: string;
   name: string;
   category: string;
-  buy_price: string;
-  sell_price: string;
-  unit: string;
   brand: string;
   barcode: string;
+  base_length: string;
+  base_width: string;
+  buy_price_piece: string;
+  buy_price_meter: string;
+  sell_price_piece: string;
+  sell_price_meter: string;
+  is_dimensional: boolean;
+  unit: string;
   errors: string[];
   isValid: boolean;
 }
@@ -60,8 +74,66 @@ function parsePrice(value: string, label: string, errors: string[]): number | nu
   return parsed;
 }
 
+function parseOptionalDimension(
+  value: string,
+  label: string,
+  errors: string[]
+): number | null {
+  if (!value.trim()) return null;
+  const normalized = value.replace(",", ".").trim();
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    errors.push(`${label} düzgün rəqəm deyil`);
+    return null;
+  }
+  return parsed;
+}
+
+function hasDimensionInput(lengthRaw: string, widthRaw: string): boolean {
+  return Boolean(lengthRaw.trim() || widthRaw.trim());
+}
+
+function cutPriceUnit(width: number | null): PriceEntryUnit {
+  return width && width > 0 ? "square_meter" : "meter";
+}
+
+function buildPriceRowsState(
+  buyPiece: number,
+  buyMeter: number,
+  sellPiece: number,
+  sellMeter: number,
+  cutUnit: PriceEntryUnit
+): ProductPriceRowsState {
+  const buy = [{ id: "buy-0", price: String(buyPiece), unit: "piece" as PriceEntryUnit }];
+  const sell = [{ id: "sell-0", price: String(sellPiece), unit: "piece" as PriceEntryUnit }];
+
+  if (buyMeter > 0) {
+    buy.push({ id: "buy-1", price: String(buyMeter), unit: cutUnit });
+  }
+  if (sellMeter > 0) {
+    sell.push({ id: "sell-1", price: String(sellMeter), unit: cutUnit });
+  }
+
+  return { buy, sell };
+}
+
+export function formatBulkImportDimensions(row: BulkImportRow): string {
+  const length = row.base_length.trim();
+  const width = row.base_width.trim();
+  if (length && width) return `${length} × ${width} m`;
+  if (length) return `${length} m`;
+  if (width) return `${width} m (en)`;
+  return "—";
+}
+
+export function formatBulkImportPricePair(piece: string, meter: string): string {
+  const pieceValue = piece.trim() || "0";
+  const meterValue = meter.trim() || "0";
+  return `${pieceValue} / ${meterValue}`;
+}
+
 export function validateBulkImportRow(
-  row: Omit<BulkImportRow, "errors" | "isValid" | "rowNumber">,
+  row: Omit<BulkImportRow, "errors" | "isValid" | "rowNumber" | "is_dimensional" | "unit">,
   seenCodes: Set<string>
 ): BulkImportRow {
   const errors: string[] = [];
@@ -75,19 +147,30 @@ export function validateBulkImportRow(
   }
   if (code) seenCodes.add(code.toLowerCase());
 
-  const buyPrice = parsePrice(row.buy_price, "Alış qiyməti", errors);
-  const sellPrice = parsePrice(row.sell_price, "Satış qiyməti", errors);
+  const baseLength = parseOptionalDimension(row.base_length, "Uzunluq (m)", errors);
+  const baseWidth = parseOptionalDimension(row.base_width, "En (m)", errors);
+  const isDimensional = hasDimensionInput(row.base_length, row.base_width);
+
+  const buyPiece = parsePrice(row.buy_price_piece, "Alış qiyməti (Şət/Ədəd)", errors);
+  const buyMeter = parsePrice(row.buy_price_meter, "Alış qiyməti (Metr/m²)", errors);
+  const sellPiece = parsePrice(row.sell_price_piece, "Satış qiyməti (Şət/Ədəd)", errors);
+  const sellMeter = parsePrice(row.sell_price_meter, "Satış qiyməti (Metr/m²)", errors);
 
   return {
     ...row,
     code,
     name,
     category: row.category.trim() || "Ümumi",
-    unit: row.unit.trim() || "Ədəd",
     brand: row.brand.trim(),
     barcode: row.barcode.trim(),
-    buy_price: buyPrice === null ? row.buy_price : String(buyPrice),
-    sell_price: sellPrice === null ? row.sell_price : String(sellPrice),
+    base_length: baseLength === null ? row.base_length.trim() : String(baseLength),
+    base_width: baseWidth === null ? row.base_width.trim() : String(baseWidth),
+    buy_price_piece: buyPiece === null ? row.buy_price_piece : String(buyPiece),
+    buy_price_meter: buyMeter === null ? row.buy_price_meter : String(buyMeter),
+    sell_price_piece: sellPiece === null ? row.sell_price_piece : String(sellPiece),
+    sell_price_meter: sellMeter === null ? row.sell_price_meter : String(sellMeter),
+    is_dimensional: isDimensional,
+    unit: isDimensional ? "Metr" : "Ədəd",
     errors,
     isValid: errors.length === 0,
   };
@@ -110,30 +193,45 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
   }
 
   const seenCodes = new Set<string>();
-  const rows: BulkImportRow[] = parsed.data.map((record, index) => {
-    const base = {
-      rowNumber: index + 2,
-      code: cell(record, "Məhsul kodu"),
-      name: cell(record, "Məhsul adı"),
-      category: cell(record, "Kateqoriya"),
-      buy_price: cell(record, "Alış qiyməti"),
-      sell_price: cell(record, "Satış qiyməti"),
-      unit: cell(record, "Ölçü vahidi"),
-      brand: cell(record, "Brend"),
-      barcode: cell(record, "Barkod"),
-    };
-
-    const isEmpty = Object.values(base).every((value) => !String(value).trim());
-    if (isEmpty) {
-      return {
-        ...base,
-        errors: [] as string[],
-        isValid: false,
+  const rows: BulkImportRow[] = parsed.data
+    .map((record, index) => {
+      const base = {
+        rowNumber: index + 2,
+        code: cell(record, "Məhsul kodu"),
+        name: cell(record, "Məhsul adı"),
+        category: cell(record, "Kateqoriya"),
+        brand: cell(record, "Brend"),
+        barcode: cell(record, "Barkod"),
+        base_length: cell(record, "Uzunluq (m)"),
+        base_width: cell(record, "En (m)"),
+        buy_price_piece: cell(record, "Alış qiyməti (Şət/Ədəd)"),
+        buy_price_meter: cell(record, "Alış qiyməti (Metr/m²)"),
+        sell_price_piece: cell(record, "Satış qiyməti (Şət/Ədəd)"),
+        sell_price_meter: cell(record, "Satış qiyməti (Metr/m²)"),
       };
-    }
 
-    return validateBulkImportRow(base, seenCodes);
-  }).filter((row) => row.code || row.name || row.category || row.barcode);
+      const isEmpty = Object.values(base).every((value) => !String(value).trim());
+      if (isEmpty) {
+        return {
+          ...base,
+          is_dimensional: false,
+          unit: "Ədəd",
+          errors: [] as string[],
+          isValid: false,
+        };
+      }
+
+      return validateBulkImportRow(base, seenCodes);
+    })
+    .filter(
+      (row) =>
+        row.code ||
+        row.name ||
+        row.category ||
+        row.barcode ||
+        row.base_length ||
+        row.base_width
+    );
 
   const validCount = rows.filter((row) => row.isValid).length;
 
@@ -145,17 +243,45 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
 }
 
 export function bulkImportRowToProductInsert(row: BulkImportRow): ProductInsert {
+  const baseLength = row.base_length.trim() ? Number(row.base_length) || null : null;
+  const baseWidth = row.base_width.trim() ? Number(row.base_width) || null : null;
+  const cutUnit = cutPriceUnit(baseWidth);
+
+  const priceRows = buildPriceRowsState(
+    Number(row.buy_price_piece) || 0,
+    Number(row.buy_price_meter) || 0,
+    Number(row.sell_price_piece) || 0,
+    Number(row.sell_price_meter) || 0,
+    cutUnit
+  );
+  const priceColumns = rowsToDbColumns(priceRows);
+
+  const priceMeta = {
+    buy: priceRows.buy
+      .filter((entry) => entry.price.trim() !== "")
+      .map((entry) => ({ price: Number(entry.price) || 0, unit: entry.unit })),
+    sell: priceRows.sell
+      .filter((entry) => entry.price.trim() !== "")
+      .map((entry) => ({ price: Number(entry.price) || 0, unit: entry.unit })),
+  };
+
   return {
     code: row.code,
     name: row.name,
     category: row.category || "Ümumi",
     unit: row.unit || "Ədəd",
-    buy_price: Number(row.buy_price) || 0,
-    sell_price: Number(row.sell_price) || 0,
+    buy_price: priceColumns.buy_price,
+    buy_price_cut: priceColumns.buy_price_cut,
+    sell_price: priceColumns.sell_price,
+    sell_price_cut: priceColumns.sell_price_cut,
     stock: 0,
     min_stock: 0,
     brand: row.brand || null,
     barcode: row.barcode || null,
+    is_dimensional: row.is_dimensional,
+    base_length: row.is_dimensional ? baseLength : null,
+    base_width: row.is_dimensional ? baseWidth : null,
+    extra_info: buildExtraInfoWithPriceMeta("", priceMeta),
   };
 }
 

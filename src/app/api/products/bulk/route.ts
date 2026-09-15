@@ -8,16 +8,10 @@ import type { ProductInsert } from "@/types/database.types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-interface BulkProductInput {
+type BulkProductInput = Partial<ProductInsert> & {
   code?: string;
   name?: string;
-  category?: string;
-  unit?: string;
-  buy_price?: number;
-  sell_price?: number;
-  brand?: string | null;
-  barcode?: string | null;
-}
+};
 
 export function OPTIONS() {
   return handleOptions();
@@ -51,11 +45,17 @@ export async function POST(request: NextRequest) {
         category: row.category,
         unit: row.unit,
         buy_price: row.buy_price,
+        buy_price_cut: row.buy_price_cut,
         sell_price: row.sell_price,
+        sell_price_cut: row.sell_price_cut,
         brand: row.brand,
         barcode: row.barcode,
         stock: 0,
         min_stock: 0,
+        is_dimensional: row.is_dimensional,
+        base_length: row.base_length,
+        base_width: row.base_width,
+        extra_info: row.extra_info,
       });
       return {
         code: built.code,
@@ -64,7 +64,9 @@ export async function POST(request: NextRequest) {
         subcategory: built.subcategory,
         unit: built.unit,
         buy_price: built.buy_price,
+        buy_price_cut: built.buy_price_cut,
         sell_price: built.sell_price,
+        sell_price_cut: built.sell_price_cut,
         stock: built.stock,
         min_stock: built.min_stock,
         min_stock_level: built.min_stock_level,
@@ -72,7 +74,10 @@ export async function POST(request: NextRequest) {
         qr_code: built.qr_code,
         brand: built.brand,
         country_of_origin: built.country_of_origin,
+        extra_info: built.extra_info,
         is_dimensional: built.is_dimensional,
+        base_length: built.base_length,
+        base_width: built.base_width,
         is_service: built.is_service,
         is_composite: built.is_composite,
       } satisfies ProductInsert;

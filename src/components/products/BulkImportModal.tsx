@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import Button from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import {
-  BULK_IMPORT_TEMPLATE_HEADERS,
   bulkImportRowToProductInsert,
   downloadBulkImportTemplate,
+  formatBulkImportDimensions,
+  formatBulkImportPricePair,
   parseBulkImportCsv,
   type BulkImportRow,
 } from "@/lib/products/bulkImport";
@@ -128,7 +129,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         if (!next) handleClose();
       }}
       title={t("products.bulkImportLabel")}
-      className="max-w-4xl"
+      className="max-w-5xl"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <Button type="button" variant="secondary" onClick={handleClose} disabled={uploading}>
@@ -226,13 +227,16 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
               <table className="min-w-full text-left text-xs">
                 <thead className="sticky top-0 bg-[color:var(--erp-bg-table-header)]">
                   <tr>
-                    <th className="px-3 py-2">#</th>
-                    {BULK_IMPORT_TEMPLATE_HEADERS.map((header) => (
-                      <th key={header} className="px-3 py-2 whitespace-nowrap">
-                        {header}
-                      </th>
-                    ))}
-                    <th className="px-3 py-2">{t("products.bulkImport.status")}</th>
+                    <th className="px-2 py-2">#</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colCode")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colName")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colCategory")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBrand")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBarcode")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colDimensions")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBuyPrice")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colSellPrice")}</th>
+                    <th className="px-2 py-2">{t("products.bulkImport.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -244,16 +248,28 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                         row.isValid ? "bg-emerald-50/40" : "bg-rose-50/80"
                       )}
                     >
-                      <td className="px-3 py-2 text-app-muted">{row.rowNumber}</td>
-                      <td className="px-3 py-2 font-mono">{row.code || "—"}</td>
-                      <td className="px-3 py-2">{row.name || "—"}</td>
-                      <td className="px-3 py-2">{row.category || "—"}</td>
-                      <td className="px-3 py-2 font-mono">{row.buy_price || "0"}</td>
-                      <td className="px-3 py-2 font-mono">{row.sell_price || "0"}</td>
-                      <td className="px-3 py-2">{row.unit || "—"}</td>
-                      <td className="px-3 py-2">{row.brand || "—"}</td>
-                      <td className="px-3 py-2 font-mono">{row.barcode || "—"}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2 text-app-muted">{row.rowNumber}</td>
+                      <td className="px-2 py-2 font-mono">{row.code || "—"}</td>
+                      <td className="px-2 py-2 max-w-[10rem] truncate">{row.name || "—"}</td>
+                      <td className="px-2 py-2">{row.category || "—"}</td>
+                      <td className="px-2 py-2">{row.brand || "—"}</td>
+                      <td className="px-2 py-2 font-mono">{row.barcode || "—"}</td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {row.is_dimensional ? (
+                          <span className="font-medium text-app-accent">
+                            {formatBulkImportDimensions(row)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-2 py-2 font-mono whitespace-nowrap">
+                        {formatBulkImportPricePair(row.buy_price_piece, row.buy_price_meter)}
+                      </td>
+                      <td className="px-2 py-2 font-mono whitespace-nowrap">
+                        {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
+                      </td>
+                      <td className="px-2 py-2">
                         {row.isValid ? (
                           <span className="font-semibold text-emerald-700">
                             {t("products.bulkImport.valid")}
@@ -267,6 +283,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                 </tbody>
               </table>
             </div>
+            <p className="text-[11px] text-app-muted">{t("products.bulkImport.pricePairHint")}</p>
           </>
         ) : null}
       </div>
