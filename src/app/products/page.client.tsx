@@ -33,11 +33,13 @@ import {
   type Warehouse,
 } from "@/types/database.types";
 import {
+  FileSpreadsheet,
   FolderPlus,
   Package,
   Plus,
   Printer,
   RefreshCw,
+  ScanLine,
   Trash2,
 } from "lucide-react";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -52,6 +54,7 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Button from "@/components/ui/button";
+import { SplitButton } from "@/components/ui/split-button";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import PageHeader from "@/components/ui/page-header";
 import Select from "@/components/ui/select";
@@ -82,6 +85,8 @@ export default function ProductsPage() {
     loadColumnVisibility
   );
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [quickScanOpen, setQuickScanOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const branding = useCompanyBranding();
   const { config: labelConfig } = useBarcodeLabelConfig();
@@ -190,10 +195,26 @@ export default function ProductsPage() {
               </Button>
 
               {canManageProducts ? (
-                <Button href="/products/new">
-                  <Plus className="h-4 w-4" />
-                  {t("products.createLabel")}
-                </Button>
+                <SplitButton
+                  href="/products/new"
+                  icon={<Plus className="h-4 w-4" />}
+                  label={t("products.createLabel")}
+                  menuAriaLabel={t("products.entryMenuAria")}
+                  menuItems={[
+                    {
+                      key: "bulk-import",
+                      label: t("products.bulkImportLabel"),
+                      icon: <FileSpreadsheet className="h-4 w-4 text-emerald-600" />,
+                      onSelect: () => setBulkImportOpen(true),
+                    },
+                    {
+                      key: "quick-scan",
+                      label: t("products.quickScanLabel"),
+                      icon: <ScanLine className="h-4 w-4 text-app-accent" />,
+                      onSelect: () => setQuickScanOpen(true),
+                    },
+                  ]}
+                />
               ) : null}
             </>
             }

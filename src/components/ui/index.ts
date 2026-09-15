@@ -4,6 +4,7 @@
  */
 
 export { Button, buttonVariants, type ButtonProps, type ButtonAppearance, type ButtonColor } from "./button";
+export { SplitButton, type SplitButtonProps, type SplitButtonMenuItem } from "./split-button";
 export { default as Input, FIELD_CLASS, type InputProps } from "./input";
 export { default as Select, type SelectProps } from "./select";
 export { default as SelectBox, type SelectBoxProps } from "./select-box";
