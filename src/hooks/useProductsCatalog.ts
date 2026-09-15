@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchProductsCatalog } from "@/lib/products/api";
 import { fetchPolywoodSummariesByWarehouse } from "@/lib/polywood/inventory";
 import { POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
@@ -10,7 +11,17 @@ export function useProductsCatalog() {
   return useQuery({
     queryKey: queryKeys.products.catalog,
     queryFn: fetchProductsCatalog,
+    staleTime: 0,
   });
+}
+
+/** Call after create/update/delete so the products list shows fresh data on return. */
+export function useInvalidateProductsCatalog() {
+  const queryClient = useQueryClient();
+
+  return useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.products.catalog });
+  }, [queryClient]);
 }
 
 export function usePolywoodSummaries(warehouseId: string | null | undefined) {

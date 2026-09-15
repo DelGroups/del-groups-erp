@@ -44,6 +44,7 @@ import {
 } from "@/lib/products/productPriceUnits";
 import { fetchProductBomAction, saveProductBomAction } from "@/lib/actions/productBom";
 import { fetchProductsCatalog } from "@/lib/products/api";
+import { useInvalidateProductsCatalog } from "@/hooks/useProductsCatalog";
 
 interface ProductFormProps {
   categories: Category[];
@@ -125,6 +126,7 @@ export default function ProductForm({
   const showDrawerFooter = embedded && Boolean(formId);
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
+  const invalidateProductsCatalog = useInvalidateProductsCatalog();
   const isEditMode = Boolean(initialProduct);
 
   const categoryByName = (name?: string | null) =>
@@ -366,6 +368,7 @@ export default function ProductForm({
         }
 
         showSuccess(t("common.success"));
+        await invalidateProductsCatalog();
         onSuccess?.();
         return;
       }
@@ -408,6 +411,7 @@ export default function ProductForm({
       }
 
       showSuccess(t("forms.productCreated"));
+      await invalidateProductsCatalog();
       onSuccess?.();
     } catch (error) {
       if (error instanceof FetchTimeoutError) {
