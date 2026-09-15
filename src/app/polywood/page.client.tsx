@@ -16,6 +16,7 @@ import { Eye, Layers, Package, Pencil, Printer, RefreshCw, Trash2, Upload } from
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useBarcodeLabelConfig } from "@/hooks/useBarcodeLabelConfig";
+import PrintableLabelArea from "@/components/products/PrintableLabelArea";
 import ThermalLabelPrintTemplate, {
   productToThermalLabel,
   type ThermalLabelItem,
@@ -397,13 +398,13 @@ export default function PolywoodPageClient() {
         onConfirm={handleDelete}
       />
       {barcodeModuleEnabled && printJob ? (
-        <div className="print-area">
+        <PrintableLabelArea>
           <ThermalLabelPrintTemplate
             items={printJob.items}
             config={printJob.config}
             branding={branding}
           />
-        </div>
+        </PrintableLabelArea>
       ) : null}
     </PageLayout>
   );

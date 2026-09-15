@@ -875,6 +875,10 @@ textarea:focus {
   .print-area {
     display: none;
   }
+
+  .printable-label-area {
+    display: none !important;
+  }
 }
 
 @media print {
@@ -1405,6 +1409,102 @@ textarea:focus {
     max-width: 100%;
     height: auto;
   }
+
+  /* Barcode label print — landscape thermal stickers, UI hidden via body portal */
+  body:has(.printable-label-area) {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  body:has(.printable-label-area) > *:not(.printable-label-area) {
+    display: none !important;
+  }
+
+  .printable-label-area {
+    display: block !important;
+    width: 100vw;
+    height: 100vh;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+
+  .barcode-label-print-root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #0f172a;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  }
+
+  .barcode-label-print-root.barcode-label-print-a4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 50mm);
+    gap: 3mm;
+    align-content: start;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .barcode-label-sheet {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    overflow: hidden;
+    padding: 2mm 3mm;
+    background: #fff;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .barcode-label-print-a4 .barcode-label-sheet {
+    width: 50mm;
+    height: 30mm;
+    break-after: auto;
+    page-break-after: auto;
+    break-inside: avoid;
+  }
+
+  .barcode-label-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .barcode-label-name {
+    margin: 0;
+    width: 100%;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .barcode-label-barcode {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .barcode-label-barcode svg {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 @page thermal-58 {
@@ -1506,5 +1606,38 @@ textarea:focus {
 .thermal-label-live img {
   max-width: 100%;
   height: auto;
+}
+
+.barcode-label-preview-root {
+  color: #0f172a;
+  background: #fff;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+.barcode-label-preview-root .barcode-label-sheet {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2mm 3mm;
+  border: 1px dashed #94a3b8;
+  background: #fff;
+}
+
+.barcode-label-preview-root .barcode-label-name {
+  margin: 0;
+  width: 100%;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.barcode-label-preview-root .barcode-label-barcode {
+  display: flex;
+  width: 100%;
+  justify-content: center;
 }
 

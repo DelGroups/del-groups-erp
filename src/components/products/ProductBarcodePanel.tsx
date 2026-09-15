@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Printer, RefreshCw } from "lucide-react";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
+import PrintableLabelArea from "@/components/products/PrintableLabelArea";
 import ThermalLabelPrintTemplate, {
   type ThermalLabelItem,
 } from "@/components/products/ThermalLabelPrintTemplate";
@@ -145,13 +146,13 @@ export default function ProductBarcodePanel({
       </div>
 
       {printData ? (
-        <div className="print-area">
+        <PrintableLabelArea>
           <ThermalLabelPrintTemplate
             items={printData.items}
             config={printData.config}
             branding={branding}
           />
-        </div>
+        </PrintableLabelArea>
       ) : null}
     </>
   );

@@ -5,6 +5,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
 import ColumnVisibilityPanel from "@/components/products/ColumnVisibilityPanel";
 import ProductTable from "@/components/products/ProductTable";
+import PrintableLabelArea from "@/components/products/PrintableLabelArea";
 import ThermalLabelPrintTemplate, {
   productToThermalLabel,
   type ThermalLabelItem,
@@ -315,13 +316,13 @@ export default function ProductsPage() {
       />
 
       {barcodeModuleEnabled && printJob ? (
-        <div className="print-area">
+        <PrintableLabelArea>
           <ThermalLabelPrintTemplate
             items={printJob.items}
             config={printJob.config}
             branding={branding}
           />
-        </div>
+        </PrintableLabelArea>
       ) : null}
 
       <ConfirmDeleteModal

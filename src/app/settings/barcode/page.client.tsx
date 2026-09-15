@@ -7,6 +7,7 @@ import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
+import PrintableLabelArea from "@/components/products/PrintableLabelArea";
 import ThermalLabelPrintTemplate from "@/components/products/ThermalLabelPrintTemplate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -292,13 +293,13 @@ export default function BarcodeSettingsPage() {
         </div>
 
         {printJob ? (
-          <div className="print-area">
+          <PrintableLabelArea>
             <ThermalLabelPrintTemplate
               items={[SAMPLE_THERMAL_LABEL]}
               branding={branding}
               config={printJob}
             />
-          </div>
+          </PrintableLabelArea>
         ) : null}
 
         <ToastMessage message={toastMessage} variant={toastVariant} />
