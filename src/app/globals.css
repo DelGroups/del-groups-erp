@@ -876,6 +876,7 @@ textarea:focus {
     display: none;
   }
 
+  #thermal-label-print-area,
   .printable-label-area {
     display: none !important;
   }
@@ -889,6 +890,11 @@ textarea:focus {
   .print-area,
   .print-area * {
     visibility: visible;
+  }
+
+  #thermal-label-print-area,
+  #thermal-label-print-area * {
+    visibility: visible !important;
   }
 
   .print-area {
@@ -1411,21 +1417,24 @@ textarea:focus {
   }
 
   /* Barcode label print — landscape thermal stickers, UI hidden via body portal */
-  body:has(.printable-label-area) {
+  body:has(#thermal-label-print-area) {
     margin: 0;
     padding: 0;
     background: #fff;
   }
 
-  body:has(.printable-label-area) > *:not(.printable-label-area) {
+  body:has(#thermal-label-print-area) > *:not(#thermal-label-print-area) {
     display: none !important;
   }
 
-  .printable-label-area {
+  #thermal-label-print-area {
     display: block !important;
-    width: 100vw;
-    height: 100vh;
-    padding: 4px 8px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
     background: #fff;
   }

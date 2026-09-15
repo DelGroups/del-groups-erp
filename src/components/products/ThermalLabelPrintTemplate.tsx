@@ -2,6 +2,7 @@
 
 import React from "react";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
+import QrCodeImage from "@/components/products/QrCodeImage";
 import {
   DEFAULT_BARCODE_LABEL_CONFIG,
   isEan13Payload,
@@ -76,8 +77,21 @@ export function productToThermalLabel(
   };
 }
 
+function formatPrice(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(Number(value))) return null;
+  return `${Number(value).toFixed(2)} AZN`;
+}
+
 function resolveLinearFormat(barcode: string): "CODE128" | "EAN13" {
   return isEan13Payload(barcode) ? "EAN13" : "CODE128";
+}
+
+function resolveBarcodeFormat(config: BarcodeLabelConfig, barcode: string): "CODE128" | "EAN13" {
+  if (config.barcode_type === "EAN13") {
+    return isEan13Payload(barcode) ? "EAN13" : "CODE128";
+  }
+  if (config.barcode_type === "CODE128") return "CODE128";
+  return resolveLinearFormat(barcode);
 }
 
 function barcodeBarWidth(widthMm: number): number {
@@ -115,7 +129,7 @@ function buildPrintPageCss(widthMm: number, heightMm: number, isA4: boolean): st
 export default function ThermalLabelPrintTemplate({
   items,
   size,
-  branding: _branding,
+  branding,
   config,
   preview = false,
 }: ThermalLabelPrintTemplateProps) {
@@ -125,20 +139,22 @@ export default function ThermalLabelPrintTemplate({
     paper_size: config ? base.paper_size : size ? LEGACY_SIZE_TO_PAPER[size] : base.paper_size,
   };
   const { widthMm, heightMm } = resolveLabelDimensions(resolved);
+  const padding = resolved.margin_padding_mm;
   const isA4 = resolved.paper_size === "A4_STICKERS";
   const printable = items.filter((item) => (item.barcode || "").trim());
+  const headerTitle = resolved.header_title.trim() || branding.companyName;
+  const symbol = resolved.barcode_type;
+  const qrSize = Math.max(40, Math.min(88, Math.round(Math.min(widthMm, heightMm) * 1.4)));
 
   const rootClass = preview
-    ? "barcode-label-preview-root"
+    ? "thermal-label-live"
     : isA4
-      ? "barcode-label-print-root barcode-label-print-a4"
-      : "barcode-label-print-root";
+      ? "thermal-print-root thermal-print-a4 barcode-label-print-root barcode-label-print-a4"
+      : "thermal-print-root thermal-print-configured barcode-label-print-root";
 
   return (
     <>
-      {!preview ? (
-        <style>{buildPrintPageCss(widthMm, heightMm, isA4)}</style>
-      ) : null}
+      {!preview ? <style>{buildPrintPageCss(widthMm, heightMm, isA4)}</style> : null}
       <div
         className={rootClass}
         data-label-width-mm={widthMm}
@@ -146,30 +162,54 @@ export default function ThermalLabelPrintTemplate({
         data-label-size={resolved.paper_size}
       >
         {printable.map((item) => {
-          const format = resolveLinearFormat(item.barcode);
+          const linearFormat = resolveBarcodeFormat(resolved, item.barcode);
+          const showQr = symbol === "QR_CODE" && (preview || Boolean(item.qrCode || item.barcode));
+
           return (
             <article
               key={item.id}
-              className="barcode-label-sheet"
-              style={
-                preview
-                  ? {
-                      width: `${widthMm}mm`,
-                      minHeight: `${heightMm}mm`,
-                    }
-                  : undefined
-              }
+              className="thermal-label barcode-label-sheet"
+              style={{
+                width: `${widthMm}mm`,
+                minHeight: `${heightMm}mm`,
+                padding: `${padding}mm`,
+              }}
             >
-              <p className="barcode-label-name">{item.name}</p>
-              <div className="barcode-label-barcode">
-                <BarcodeDisplay
-                  value={item.barcode}
-                  format={format}
-                  width={barcodeBarWidth(widthMm)}
-                  height={barcodeBarHeight(heightMm)}
-                  fontSize={heightMm <= 30 ? 8 : 9}
-                  showValue
-                />
+              {(resolved.show_company_logo && branding.logoUrl) || headerTitle ? (
+                <header className="thermal-label-header">
+                  {resolved.show_company_logo && branding.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.logoUrl} alt="" className="thermal-label-logo" />
+                  ) : null}
+                  {headerTitle ? <p className="thermal-label-company">{headerTitle}</p> : null}
+                </header>
+              ) : null}
+              <h2 className="thermal-label-name barcode-label-name">{item.name}</h2>
+              {resolved.show_item_code && item.code ? (
+                <p className="thermal-label-code">{item.code}</p>
+              ) : null}
+              {resolved.show_price && formatPrice(item.price) ? (
+                <p className="thermal-label-price">{formatPrice(item.price)}</p>
+              ) : null}
+              {resolved.show_dimensions && item.dimensions ? (
+                <p className="thermal-label-meta">{item.dimensions}</p>
+              ) : null}
+              {resolved.show_warehouse_location && item.warehouseName ? (
+                <p className="thermal-label-meta">{item.warehouseName}</p>
+              ) : null}
+              <div className="thermal-label-codes barcode-label-barcode">
+                {showQr ? (
+                  <QrCodeImage value={item.qrCode || item.barcode} size={qrSize} />
+                ) : (
+                  <BarcodeDisplay
+                    value={item.barcode}
+                    format={linearFormat}
+                    width={barcodeBarWidth(widthMm)}
+                    height={barcodeBarHeight(heightMm)}
+                    fontSize={heightMm <= 30 ? 8 : 9}
+                    showValue
+                  />
+                )}
               </div>
             </article>
           );

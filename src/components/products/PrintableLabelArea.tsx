@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface PrintableLabelAreaProps {
@@ -11,11 +11,16 @@ interface PrintableLabelAreaProps {
 export default function PrintableLabelArea({ children }: PrintableLabelAreaProps) {
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
 
-  return createPortal(<div className="printable-label-area">{children}</div>, document.body);
+  return createPortal(
+    <div id="thermal-label-print-area" className="printable-label-area thermal-label-print-area">
+      {children}
+    </div>,
+    document.body
+  );
 }
