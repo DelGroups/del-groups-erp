@@ -336,7 +336,11 @@ export default function ProductsPage() {
           />
       </ListPageChrome>
 
-      <BulkImportModal open={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
+      <BulkImportModal
+        open={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onImported={() => void loadData()}
+      />
 
       <QuickScanModal
         open={isScanModalOpen}
