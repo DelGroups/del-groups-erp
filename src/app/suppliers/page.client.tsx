@@ -1,5 +1,6 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
+import ListPageChrome from "@/components/layout/ListPageChrome";
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -146,22 +147,24 @@ export default function SuppliersPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-app">{t("suppliers.pageTitle")}</h2>
-            <p className="text-sm text-app-muted">{t("suppliers.pageDescription")}</p>
-          </div>
-          <button
-            onClick={openCreateDrawer}
-            className="btn-primary disabled:opacity-50"
-            disabled={!canManageSuppliers}
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t("suppliers.createButton")}</span>
-          </button>
-        </header>
-
-        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
+      <ListPageChrome
+        header={
+          <header className="flex items-center justify-between bg-transparent px-0 py-0">
+            <div>
+              <h2 className="text-xl font-bold text-app">{t("suppliers.pageTitle")}</h2>
+              <p className="text-sm text-app-muted">{t("suppliers.pageDescription")}</p>
+            </div>
+            <button
+              onClick={openCreateDrawer}
+              className="btn-primary disabled:opacity-50"
+              disabled={!canManageSuppliers}
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t("suppliers.createButton")}</span>
+            </button>
+          </header>
+        }
+        filters={
           <div className="app-card app-card-elevated flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 absolute left-3 top-3 text-app-muted" />
@@ -181,7 +184,8 @@ export default function SuppliersPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
-
+        }
+      >
           <div className="app-table-wrap">
             {isLoading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
@@ -275,7 +279,7 @@ export default function SuppliersPage() {
               </TableWrap>
             )}
           </div>
-        </main>
+      </ListPageChrome>
 
       <SupplierFormDrawer
         open={isDrawerOpen}

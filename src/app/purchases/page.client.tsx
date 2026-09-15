@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
+import ListPageChrome from "@/components/layout/ListPageChrome";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
@@ -187,56 +188,63 @@ export default function PurchasesPage() {
 
   return (
     <PageLayout>
-        <DocumentPageHeader
-          icon={<ShoppingBag className="h-6 w-6 text-emerald-600" />}
-          title={t("purchases.title")}
-          description={t("purchases.description")}
-          extraActions={
-            <Button href="/purchases/new">
-              <Plus className="h-4 w-4" />
-              {t("purchases.createLabel")}
-            </Button>
-          }
-        />
-
-        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
-          <div className="flex flex-wrap gap-2 border-b border-app pb-2">
-            <button
-              type="button"
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                activeTab === "invoices"
-                  ? "bg-app-accent text-white"
-                  : "bg-app-card-hover text-app hover:bg-app-surface"
-              }`}
-              onClick={() => setActiveTab("invoices")}
-            >
-              {t("purchases.tabInvoices")}
-            </button>
-            <button
-              type="button"
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                activeTab === "requisitions"
-                  ? "bg-app-accent text-white"
-                  : "bg-app-card-hover text-app hover:bg-app-surface"
-              }`}
-              onClick={() => setActiveTab("requisitions")}
-            >
-              {t("purchases.tabRequisitions")}
-            </button>
-          </div>
-
+      <ListPageChrome
+        header={
+          <DocumentPageHeader
+            variant="chrome"
+            icon={<ShoppingBag className="h-6 w-6 text-emerald-600" />}
+            title={t("purchases.title")}
+            description={t("purchases.description")}
+            extraActions={
+              <Button href="/purchases/new">
+                <Plus className="h-4 w-4" />
+                {t("purchases.createLabel")}
+              </Button>
+            }
+          />
+        }
+        filters={
+          <>
+            <div className="flex flex-wrap gap-2 border-b border-app pb-2">
+              <button
+                type="button"
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeTab === "invoices"
+                    ? "bg-app-accent text-white"
+                    : "bg-app-card-hover text-app hover:bg-app-surface"
+                }`}
+                onClick={() => setActiveTab("invoices")}
+              >
+                {t("purchases.tabInvoices")}
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeTab === "requisitions"
+                    ? "bg-app-accent text-white"
+                    : "bg-app-card-hover text-app hover:bg-app-surface"
+                }`}
+                onClick={() => setActiveTab("requisitions")}
+              >
+                {t("purchases.tabRequisitions")}
+              </button>
+            </div>
+            {activeTab === "invoices" ? (
+              <DocumentListSearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder={t("purchases.searchPlaceholder")}
+                onRefresh={() => void loadData()}
+                loading={loading}
+              />
+            ) : null}
+          </>
+        }
+      >
           {activeTab === "requisitions" ? (
             <PurchaseRequisitionsPanel onOpenPurchase={(purchaseId) => void openEditById(purchaseId)} />
           ) : (
             <>
-          <DocumentListSearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder={t("purchases.searchPlaceholder")}
-            onRefresh={() => void loadData()}
-            loading={loading}
-          />
-
           <div className="app-table-wrap">
             <BulkActionBar count={bulk.count} onClear={bulk.clear}>
               {canDeletePurchases ? (
@@ -391,7 +399,7 @@ export default function PurchasesPage() {
           </div>
             </>
           )}
-        </main>
+      </ListPageChrome>
 
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSalesList, useInvalidateSalesList, useUpdateSalesListCache } from "@/hooks/useSalesList";
 import PageLayout from "@/components/layout/PageLayout";
+import ListPageChrome from "@/components/layout/ListPageChrome";
 import { useRouter } from "next/navigation";
 import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
 import {
@@ -218,50 +219,56 @@ export default function SalesListPage() {
 
   return (
     <PageLayout>
-        <DocumentPageHeader
-          icon={<ShoppingCart className="h-6 w-6 text-app-accent" />}
-          title={t("sales.title")}
-          description={t("sales.description")}
-          createLabel={t("sales.createLabel")}
-          onCreate={() => router.push("/sales/new")}
-          createDisabled={!canCreateInvoice}
-          extraActions={
-            <>
-              <Button type="button" variant="secondary" onClick={() => handleDownloadCSV()}>
-                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                {t("common.csvDownload")}
-              </Button>
-            </>
-          }
-        />
-
-        <main className="app-page-content flex-1 space-y-3 pb-6 md:space-y-4">
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_FILTERS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setStatusFilter(tab.id)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                  statusFilter === tab.id
-                    ? "bg-[color:var(--app-accent)] text-white shadow-sm"
-                    : "border border-app bg-app-card text-app-muted hover:bg-app-card-hover hover:text-app"
-                )}
-              >
-                {t(tab.labelKey)}
-              </button>
-            ))}
-          </div>
-
-          <DocumentListSearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder={t("sales.searchPlaceholder")}
-            onRefresh={() => void loadData()}
-            loading={loading}
+      <ListPageChrome
+        header={
+          <DocumentPageHeader
+            variant="chrome"
+            icon={<ShoppingCart className="h-6 w-6 text-app-accent" />}
+            title={t("sales.title")}
+            description={t("sales.description")}
+            createLabel={t("sales.createLabel")}
+            onCreate={() => router.push("/sales/new")}
+            createDisabled={!canCreateInvoice}
+            extraActions={
+              <>
+                <Button type="button" variant="secondary" onClick={() => handleDownloadCSV()}>
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  {t("common.csvDownload")}
+                </Button>
+              </>
+            }
           />
-
+        }
+        filters={
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_FILTERS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                    statusFilter === tab.id
+                      ? "bg-[color:var(--app-accent)] text-white shadow-sm"
+                      : "border border-app bg-app-card text-app-muted hover:bg-app-card-hover hover:text-app"
+                  )}
+                >
+                  {t(tab.labelKey)}
+                </button>
+              ))}
+            </div>
+            <DocumentListSearchBar
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder={t("sales.searchPlaceholder")}
+              onRefresh={() => void loadData()}
+              loading={loading}
+            />
+          </>
+        }
+        contentClassName="pb-6"
+      >
           {loadError && !loading && (
             <div className="alert-warning text-xs">
               <p className="font-semibold">{t("common.error")}</p>
@@ -453,7 +460,7 @@ export default function SalesListPage() {
               </DataTableLayout>
             )}
           </Card>
-        </main>
+      </ListPageChrome>
 
       {viewingSale && (
         <SalesViewModal

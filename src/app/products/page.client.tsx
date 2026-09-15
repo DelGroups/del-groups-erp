@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import ListPageChrome from "@/components/layout/ListPageChrome";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
 import ColumnVisibilityPanel from "@/components/products/ColumnVisibilityPanel";
 import ProductTable from "@/components/products/ProductTable";
@@ -138,11 +139,14 @@ export default function ProductsPage() {
 
   return (
     <PageLayout>
-        <PageHeader
-          icon={<Package className="h-6 w-6 text-app-accent" />}
-          title={t("products.titleWarehouse")}
-          subtitle={t("products.listSubtitle")}
-          actions={
+      <ListPageChrome
+        header={
+          <PageHeader
+            variant="chrome"
+            icon={<Package className="h-6 w-6 text-app-accent" />}
+            title={t("products.titleWarehouse")}
+            subtitle={t("products.listSubtitle")}
+            actions={
             <>
               {canManageProducts ? (
                 <Button type="button" variant="secondary" onClick={() => setCategoryModalOpen(true)}>
@@ -192,10 +196,10 @@ export default function ProductsPage() {
                 </Button>
               ) : null}
             </>
-          }
-        />
-
-        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
+            }
+          />
+        }
+        filters={
           <ProductFiltersPanel
             filters={filters}
             categories={categories}
@@ -203,7 +207,8 @@ export default function ProductsPage() {
             onChange={setFilters}
             onReset={() => setFilters(DEFAULT_PRODUCT_FILTERS)}
           />
-
+        }
+      >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-app-muted">
               {loading
@@ -293,7 +298,7 @@ export default function ProductsPage() {
               products.length === 0 ? t("products.empty") : t("products.noFilterMatch")
             }
           />
-        </main>
+      </ListPageChrome>
 
       <CategoryManagerModal
         isOpen={categoryModalOpen}

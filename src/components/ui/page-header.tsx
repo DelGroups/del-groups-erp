@@ -12,6 +12,8 @@ interface PageHeaderProps {
   icon?: React.ReactNode;
   breadcrumbs?: PageHeaderCrumb[];
   actions?: React.ReactNode;
+  /** `chrome` — inside ListPageChrome (no extra border/padding). */
+  variant?: "default" | "chrome";
   className?: string;
 }
 
@@ -21,12 +23,18 @@ export default function PageHeader({
   icon,
   breadcrumbs,
   actions,
+  variant = "default",
   className,
 }: PageHeaderProps) {
+  const isChrome = variant === "chrome";
+
   return (
     <header
       className={cn(
-        "app-glass flex flex-col justify-between gap-3 border-b border-app px-3 py-3 md:flex-row md:items-center md:px-4 lg:px-5",
+        "flex flex-col justify-between gap-3 md:flex-row md:items-center",
+        isChrome
+          ? "bg-transparent px-0 py-0"
+          : "app-glass border-b border-app px-3 py-3 md:px-4 lg:px-5",
         className
       )}
     >

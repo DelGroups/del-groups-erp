@@ -14,6 +14,8 @@ interface DocumentPageHeaderProps {
   createDisabled?: boolean;
   extraActions?: React.ReactNode;
   backLink?: { href: string; label: string };
+  /** Pass `chrome` when rendered inside ListPageChrome. */
+  variant?: "default" | "chrome";
 }
 
 export default function DocumentPageHeader({
@@ -25,11 +27,13 @@ export default function DocumentPageHeader({
   createDisabled,
   extraActions,
   backLink,
+  variant = "default",
 }: DocumentPageHeaderProps) {
   const hasActions = Boolean(extraActions) || Boolean(createLabel && onCreate);
 
   return (
     <PageHeader
+      variant={variant}
       icon={icon}
       title={title}
       subtitle={description}

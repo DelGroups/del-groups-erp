@@ -1,5 +1,6 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
+import ListPageChrome from "@/components/layout/ListPageChrome";
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -211,22 +212,24 @@ export default function CustomersPage() {
 
   return (
     <PageLayout>
-        <header className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-app">{t("customers.title")}</h2>
-            <p className="text-sm text-app-muted">{t("customers.pageDescription")}</p>
-          </div>
-          <button
-            onClick={openCreateModal}
-            className="btn-primary disabled:opacity-50"
-            disabled={!canManageCustomers}
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t("customers.createButton")}</span>
-          </button>
-        </header>
-
-        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
+      <ListPageChrome
+        header={
+          <header className="flex items-center justify-between bg-transparent px-0 py-0">
+            <div>
+              <h2 className="text-xl font-bold text-app">{t("customers.title")}</h2>
+              <p className="text-sm text-app-muted">{t("customers.pageDescription")}</p>
+            </div>
+            <button
+              onClick={openCreateModal}
+              className="btn-primary disabled:opacity-50"
+              disabled={!canManageCustomers}
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t("customers.createButton")}</span>
+            </button>
+          </header>
+        }
+        filters={
           <div className="app-card app-card-elevated flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
             <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 absolute left-3 top-3 text-app-muted" />
@@ -246,7 +249,8 @@ export default function CustomersPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
-
+        }
+      >
           <div className="app-table-wrap">
             {loading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
@@ -333,7 +337,7 @@ export default function CustomersPage() {
               </TableWrap>
             )}
           </div>
-        </main>
+      </ListPageChrome>
 
       {/* Modal Add Customer */}
       {isModalOpen && (
