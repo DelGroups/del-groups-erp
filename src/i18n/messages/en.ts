@@ -2514,6 +2514,14 @@ export const enMessages: Messages = {
     previewHint: "Preview is drawn at real millimetre size. Test print opens the browser print dialog.",
     testPrint: "Test Print",
     saved: "Label settings saved",
+    api: {
+      title: "Global Barcode API Settings",
+      description:
+        "Configure a premium barcode lookup API or fall back to the free Open Food Facts service when scanning.",
+      endpointUrl: "Custom API Endpoint URL",
+      apiKey: "API Key (Auth Token)",
+      hint: "If the endpoint is empty, Open Food Facts is used. The URL must include the [BARCODE] placeholder.",
+    },
     paperSizes: {
       "58x40mm": "58 × 40 mm",
       "80x50mm": "80 × 50 mm",

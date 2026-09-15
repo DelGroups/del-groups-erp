@@ -2513,6 +2513,14 @@ export const azMessages = {
     previewHint: "Önizləmə real millimetr ölçüsündə göstərilir. Sınaq çapı brauzerin çap dialoqunu açır.",
     testPrint: "Sınaq Çapı",
     saved: "Etiket ayarları yadda saxlanıldı",
+    api: {
+      title: "Qlobal Barkod API Tənzimləmələri",
+      description:
+        "Skan zamanı məhsul məlumatını avtomatik çəkmək üçün premium API və ya pulsuz Open Food Facts fallback.",
+      endpointUrl: "Custom API Endpoint URL",
+      apiKey: "API Key (Auth Token)",
+      hint: "Endpoint boşdursa Open Food Facts istifadə olunur. URL-də [BARCODE] placeholder mütləqdir.",
+    },
     paperSizes: {
       "58x40mm": "58 × 40 mm",
       "80x50mm": "80 × 50 mm",

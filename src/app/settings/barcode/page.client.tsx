@@ -20,6 +20,15 @@ import {
   saveBarcodeLabelConfigAction,
 } from "@/lib/actions/barcodeSettings";
 import {
+  getBarcodeLookupApiConfigAction,
+  saveBarcodeLookupApiConfigAction,
+} from "@/lib/actions/barcodeLookupSettings";
+import {
+  BARCODE_PLACEHOLDER,
+  DEFAULT_BARCODE_LOOKUP_API_CONFIG,
+  type BarcodeLookupApiConfig,
+} from "@/lib/barcode/lookupApiConfig";
+import {
   BARCODE_PAPER_SIZES,
   BARCODE_SYMBOL_TYPES,
   DEFAULT_BARCODE_LABEL_CONFIG,
@@ -73,36 +82,58 @@ export default function BarcodeSettingsPage() {
   const branding = useCompanyBranding();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [config, setConfig] = useState<BarcodeLabelConfig>(DEFAULT_BARCODE_LABEL_CONFIG);
+  const [lookupConfig, setLookupConfig] = useState<BarcodeLookupApiConfig>(
+    DEFAULT_BARCODE_LOOKUP_API_CONFIG
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { printData: printJob, setPrintData: setPrintJob } = useDocumentPrint<BarcodeLabelConfig>(400);
   const dims = resolveLabelDimensions(config);
 
   useEffect(() => {
-    void getBarcodeLabelConfigAction().then((result) => {
-      setLoading(false);
-      if (!result.success) {
-        showError(result.error);
-        return;
+    void Promise.all([getBarcodeLabelConfigAction(), getBarcodeLookupApiConfigAction()]).then(
+      ([labelResult, lookupResult]) => {
+        setLoading(false);
+        if (!labelResult.success) {
+          showError(labelResult.error);
+          return;
+        }
+        if (!lookupResult.success) {
+          showError(lookupResult.error);
+          return;
+        }
+        if (labelResult.data) setConfig(labelResult.data);
+        if (lookupResult.data) setLookupConfig(lookupResult.data);
       }
-      if (result.data) setConfig(result.data);
-    });
+    );
   }, [showError]);
 
   const patch = (partial: Partial<BarcodeLabelConfig>) => {
     setConfig((current) => ({ ...current, ...partial }));
   };
 
+  const patchLookup = (partial: Partial<BarcodeLookupApiConfig>) => {
+    setLookupConfig((current) => ({ ...current, ...partial }));
+  };
+
   const handleSave = async () => {
     if (!canManage) return;
     setSaving(true);
-    const result = await saveBarcodeLabelConfigAction(config);
+    const [labelResult, lookupResult] = await Promise.all([
+      saveBarcodeLabelConfigAction(config),
+      saveBarcodeLookupApiConfigAction(lookupConfig),
+    ]);
     setSaving(false);
-    if (!result.success) {
-      showError(result.error);
+    if (!labelResult.success) {
+      showError(labelResult.error);
       return;
     }
-    if (result.data) setConfig(result.data);
+    if (!lookupResult.success) {
+      showError(lookupResult.error);
+      return;
+    }
+    if (labelResult.data) setConfig(labelResult.data);
+    if (lookupResult.data) setLookupConfig(lookupResult.data);
     showSuccess(t("barcodeSettings.saved"));
   };
 
@@ -289,6 +320,40 @@ export default function BarcodeSettingsPage() {
                 <p className="mt-3 text-[11px] text-app-muted">{t("barcodeSettings.previewHint")}</p>
               </section>
             </div>
+
+            <section className="app-card app-card-elevated space-y-4 p-5">
+              <div>
+                <h2 className="text-sm font-bold text-app">{t("barcodeSettings.api.title")}</h2>
+                <p className="mt-1 text-xs text-app-muted">{t("barcodeSettings.api.description")}</p>
+              </div>
+
+              <label className="block text-xs font-semibold text-app-muted">
+                {t("barcodeSettings.api.endpointUrl")}
+                <input
+                  className="app-input mt-1 w-full font-mono text-xs"
+                  value={lookupConfig.custom_api_endpoint_url}
+                  disabled={!canManage}
+                  placeholder={`https://api.example.com/products?barcode=${BARCODE_PLACEHOLDER}`}
+                  onChange={(event) =>
+                    patchLookup({ custom_api_endpoint_url: event.target.value })
+                  }
+                />
+              </label>
+
+              <label className="block text-xs font-semibold text-app-muted">
+                {t("barcodeSettings.api.apiKey")}
+                <input
+                  type="password"
+                  className="app-input mt-1 w-full font-mono text-xs"
+                  value={lookupConfig.custom_api_key}
+                  disabled={!canManage}
+                  autoComplete="off"
+                  onChange={(event) => patchLookup({ custom_api_key: event.target.value })}
+                />
+              </label>
+
+              <p className="text-[11px] text-app-muted">{t("barcodeSettings.api.hint")}</p>
+            </section>
           </div>
         </div>
 

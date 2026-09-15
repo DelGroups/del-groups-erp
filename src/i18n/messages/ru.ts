@@ -2514,6 +2514,14 @@ export const ruMessages: Messages = {
     previewHint: "Предпросмотр в реальном миллиметровом масштабе. Пробная печать открывает диалог браузера.",
     testPrint: "Пробная печать",
     saved: "Настройки этикетки сохранены",
+    api: {
+      title: "Глобальные настройки API штрихкодов",
+      description:
+        "Настройте платный API поиска по штрихкоду или используйте бесплатный Open Food Facts при сканировании.",
+      endpointUrl: "Custom API Endpoint URL",
+      apiKey: "API Key (Auth Token)",
+      hint: "Если endpoint пуст, используется Open Food Facts. В URL обязателен placeholder [BARCODE].",
+    },
     paperSizes: {
       "58x40mm": "58 × 40 мм",
       "80x50mm": "80 × 50 мм",
