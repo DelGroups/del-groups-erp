@@ -13,7 +13,10 @@ export interface ListPageChromeProps {
   contentClassName?: string;
 }
 
-/** Sticky page chrome for long ERP list views — header + filters stay visible while the table scrolls. */
+/**
+ * List page shell: fixed header + filters, scrollable table body.
+ * Fills the ERP content viewport so rows never bleed through the chrome band.
+ */
 export function ListPageChrome({
   header,
   filters,
@@ -22,18 +25,32 @@ export function ListPageChrome({
   contentClassName,
 }: ListPageChromeProps) {
   return (
-    <div className={cn("flex min-h-0 flex-col", className)}>
+    <div
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden",
+        "h-[calc(100dvh-var(--erp-topbar-height)-2*var(--erp-content-padding-y))]",
+        className
+      )}
+    >
       <div
         className={cn(
-          "sticky top-0 z-[var(--erp-z-sticky)] -mx-[var(--erp-content-padding-x)] border-b border-[color:var(--erp-border-default)]",
-          "bg-[color:var(--erp-bg-main)]/95 px-[var(--erp-content-padding-x)] shadow-[var(--erp-shadow-sm)] backdrop-blur-md"
+          "shrink-0 -mx-[var(--erp-content-padding-x)] border-b border-[color:var(--erp-border-default)]",
+          "bg-[color:var(--erp-bg-main)] px-[var(--erp-content-padding-x)] shadow-[var(--erp-shadow-sm)]"
         )}
       >
         <div className="pt-1">{header}</div>
         {filters ? <div className="pb-3 pt-3">{filters}</div> : <div className="pb-1" />}
       </div>
 
-      <div className={cn("space-y-3 pt-3 md:space-y-4", contentClassName)}>{children}</div>
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+          "space-y-3 pt-3 md:space-y-4",
+          contentClassName
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }
