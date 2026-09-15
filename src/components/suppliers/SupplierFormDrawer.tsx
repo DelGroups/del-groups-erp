@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Drawer, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer } from "@/components/ui/drawer";
+import Button from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { formInputClass } from "@/components/ui/form-field-styles";
 import type { EntityType } from "@/lib/customers/entityType";
@@ -48,13 +49,20 @@ export default function SupplierFormDrawer({
       open={open}
       onClose={onClose}
       title={editing ? t("common.edit") : t("suppliers.addModalTitle")}
-      footer={
-        <DrawerFooter
-          formId={SUPPLIER_FORM_ID}
-          onCancel={onClose}
-          submitLabel={saving ? t("common.saving") : t("common.save")}
-          submitDisabled={saving}
-        />
+      headerActions={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form={SUPPLIER_FORM_ID}
+            size="sm"
+            disabled={saving}
+          >
+            {saving ? t("common.saving") : t("common.save")}
+          </Button>
+        </>
       }
     >
       <form id={SUPPLIER_FORM_ID} onSubmit={onSubmit} className="space-y-4">

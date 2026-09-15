@@ -31,7 +31,7 @@ import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocument
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
-import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { formTableInputClass } from "@/components/ui/form-field-styles";
 import {
   collectPurchaseSubmitPreflightIssues,
@@ -758,7 +758,11 @@ export default function PurchaseForm({
             ) : null}
           </div>
         </div>
-        {layoutMode === "modal" ? actionButtons : null}
+        {layoutMode === "modal" || layoutMode === "page" ? (
+          <FormActionsBar fullWidth={layoutMode === "page"} className="mb-6">
+            {actionButtons}
+          </FormActionsBar>
+        ) : null}
 
         <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
           <label className="block text-xs font-semibold text-app">
@@ -1170,10 +1174,6 @@ export default function PurchaseForm({
         </label>
 
       </div>
-
-      {layoutMode === "page" ? (
-        <FormStickyActions fullWidth>{actionButtons}</FormStickyActions>
-      ) : null}
 
       {showSupplierModal && (
         <QuickAddSupplierModal

@@ -36,7 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import Panel from "@/components/ui/panel";
 import { cn } from "@/lib/cn";
-import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import {
   isMetricMeasureUnit,
   measureUnitLabel,
@@ -437,11 +437,13 @@ export default function ProductForm({
 
   return (
     <>
-      <form
-        id={formId}
-        onSubmit={handleSubmit}
-        className={cn("w-full", !showDrawerFooter && "pb-4")}
-      >
+      <form id={formId} onSubmit={handleSubmit} className="w-full">
+        {!showDrawerFooter ? (
+          <FormActionsBar fullWidth={isCreatePage} className="mb-6">
+            {formActions}
+          </FormActionsBar>
+        ) : null}
+
         <fieldset disabled={saving} className="contents">
         {isServiceCategorySelected ? (
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
@@ -745,13 +747,6 @@ export default function ProductForm({
         </div>
         </fieldset>
 
-        {embedded && !showDrawerFooter ? (
-          <div className="mt-6 flex justify-end gap-2 border-t border-[color:var(--erp-border-default)] pt-4">
-            {formActions}
-          </div>
-        ) : !embedded ? (
-          <FormStickyActions fullWidth={isCreatePage}>{formActions}</FormStickyActions>
-        ) : null}
       </form>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </>

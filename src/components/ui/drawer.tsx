@@ -54,6 +54,8 @@ export interface DrawerProps {
   onClose: () => void;
   title: React.ReactNode;
   children: React.ReactNode;
+  /** Primary form actions (save / cancel) — shown in the header for consistent UX. */
+  headerActions?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
   closeLabel?: string;
@@ -65,6 +67,7 @@ export function Drawer({
   onClose,
   title,
   children,
+  headerActions,
   footer,
   className,
   closeLabel,
@@ -109,17 +112,20 @@ export function Drawer({
         )}
       >
         <header
-          className="flex shrink-0 items-center justify-between gap-3 border-b border-app bg-app-glass px-4 py-3 backdrop-blur-md"
+          className="flex shrink-0 flex-col gap-3 border-b border-app bg-app-glass px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
         >
-          <h2 id={titleId} className="text-base font-bold text-app">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={resolvedCloseLabel}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-card-hover hover:text-app"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <h2 id={titleId} className="min-w-0 text-base font-bold text-app">{title}</h2>
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            {headerActions}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={resolvedCloseLabel}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition-colors hover:bg-app-card-hover hover:text-app"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">

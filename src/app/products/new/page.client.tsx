@@ -85,7 +85,6 @@ export default function NewProductPage() {
     <PageLayout>
       <FormLayout
         fullWidth
-        withStickyFooter
         title={t("products.newTitle")}
         subtitle={t("products.newSubtitle")}
         contentClassName="bg-[color:var(--gt-bg-main)] p-0"

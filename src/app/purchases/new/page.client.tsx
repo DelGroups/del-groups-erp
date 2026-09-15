@@ -54,7 +54,6 @@ export default function NewPurchasePage() {
     <PageLayout>
       <FormLayout
         fullWidth
-        withStickyFooter
         title={title}
         subtitle={t("forms.purchaseFormSubtitle")}
         contentClassName="p-0"

@@ -104,7 +104,7 @@ import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import {
   formControlClass,
@@ -1602,7 +1602,11 @@ export default function UniversalInvoiceForm({
             </div>
           </div>
         )}
-        {layoutMode === "modal" ? <div className="px-0">{actionButtons}</div> : null}
+        {layoutMode === "modal" || layoutMode === "page" ? (
+          <FormActionsBar fullWidth={layoutMode === "page"} className="mb-6">
+            {actionButtons}
+          </FormActionsBar>
+        ) : null}
 
         <div
           className={cn(
@@ -2775,10 +2779,6 @@ export default function UniversalInvoiceForm({
         </div>
       </div>
     </div>
-
-    {layoutMode === "page" ? (
-      <FormStickyActions fullWidth>{actionButtons}</FormStickyActions>
-    ) : null}
 
     {productSelectorOpen && productSelectorTargetRowId && !polywoodOnly ? (
       <InvoiceProductSelectorModal

@@ -20,7 +20,7 @@ import type { Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
-import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
@@ -168,6 +168,29 @@ export default function InitialBalanceForm({
 
   return (
     <>
+      {!isLocked ? (
+        <FormActionsBar className="mb-4">
+          <button
+            type="button"
+            disabled={saving || posting}
+            onClick={() => void handleSaveDraft()}
+            className="btn-secondary inline-flex items-center gap-1 text-xs"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {t("initialBalance.saveDraft")}
+          </button>
+          <button
+            type="button"
+            disabled={saving || posting}
+            onClick={() => void handlePost()}
+            className="btn-primary inline-flex items-center gap-1 text-xs"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {posting ? t("common.saving") : t("initialBalance.postDocument")}
+          </button>
+        </FormActionsBar>
+      ) : null}
+
       <div className="app-card space-y-6 rounded-xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-app pb-3">
           <div className="flex items-center gap-2">
@@ -367,28 +390,6 @@ export default function InitialBalanceForm({
         ) : null}
 
       </div>
-      {!isLocked ? (
-        <FormStickyActions>
-          <button
-            type="button"
-            disabled={saving || posting}
-            onClick={() => void handleSaveDraft()}
-            className="btn-secondary inline-flex items-center gap-1 text-xs"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {t("initialBalance.saveDraft")}
-          </button>
-          <button
-            type="button"
-            disabled={saving || posting}
-            onClick={() => void handlePost()}
-            className="btn-primary inline-flex items-center gap-1 text-xs"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            {posting ? t("common.saving") : t("initialBalance.postDocument")}
-          </button>
-        </FormStickyActions>
-      ) : null}
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </>
   );

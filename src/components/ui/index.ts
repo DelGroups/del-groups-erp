@@ -12,6 +12,7 @@ export { Radio, type RadioProps } from "./radio";
 export { FormLabel, type FormLabelProps } from "./form-label";
 export { ErrorMessage } from "./error-message";
 export { FormField, type FormFieldProps } from "./form-field";
+export { FormActionsBar, FormStickyActions } from "./form-sticky-actions";
 export * from "./form-field-styles";
 
 export { Card, CardHeader, CardTitle, CardContent, CardFooter, CardMeta, cardShellClass } from "./card";

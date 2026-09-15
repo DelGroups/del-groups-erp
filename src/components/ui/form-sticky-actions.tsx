@@ -3,32 +3,33 @@
 import React from "react";
 import { cn } from "@/lib/cn";
 
-/** Fixed action bar pinned to the bottom of the viewport for enterprise forms. */
-export function FormStickyActions({
+/**
+ * Unified ERP form action row — place at the top of each form (or in FormLayout / drawer header).
+ * Never pins to the viewport bottom.
+ */
+export function FormActionsBar({
   children,
   className,
   fullWidth = false,
 }: {
   children: React.ReactNode;
   className?: string;
-  /** Match fluid page layouts (no max-w-7xl cap). */
+  /** Stretch to the full content width on wide page forms. */
   fullWidth?: boolean;
 }) {
   return (
     <div
+      data-form-actions
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-30",
+        "flex flex-wrap items-center justify-end gap-2 rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] px-4 py-2.5 shadow-[var(--erp-shadow-sm)]",
+        fullWidth && "w-full",
         className
       )}
     >
-      <div
-        className={cn(
-          "pointer-events-auto mx-auto flex w-full items-center justify-end gap-2 border-t border-app bg-app-card/95 px-4 py-3 shadow-[0_-4px_24px_rgba(15,23,42,0.08)] backdrop-blur-md dark:shadow-[0_-4px_24px_rgba(0,0,0,0.35)] sm:gap-3 sm:px-6",
-          fullWidth ? "max-w-none" : "max-w-7xl"
-        )}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
+
+/** @deprecated Use FormActionsBar at the top of forms instead of a bottom sticky bar. */
+export const FormStickyActions = FormActionsBar;

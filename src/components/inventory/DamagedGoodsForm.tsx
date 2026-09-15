@@ -16,7 +16,7 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
-import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import Button from "@/components/ui/button";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -152,6 +152,24 @@ export default function DamagedGoodsForm({
 
   return (
     <div className="space-y-4">
+      <FormActionsBar>
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          disabled={saving || Boolean(submitPreflightIssue)}
+          title={submitPreflightHint}
+          loading={saving}
+          onClick={handleSubmit}
+        >
+          <Save className="h-4 w-4" />
+          {saving ? t("common.saving") : isEdit ? t("forms.saveChanges") : t("forms.confirmAndSave")}
+        </Button>
+      </FormActionsBar>
+
       <div className="app-card app-card-elevated p-5">
         <div className="mb-4 flex items-center justify-between border-b border-app pb-3">
           <div>
@@ -321,23 +339,6 @@ export default function DamagedGoodsForm({
         />
       </label>
 
-      <FormStickyActions>
-        {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {t("common.cancel")}
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          disabled={saving || Boolean(submitPreflightIssue)}
-          title={submitPreflightHint}
-          loading={saving}
-          onClick={handleSubmit}
-        >
-          <Save className="h-4 w-4" />
-          {saving ? t("common.saving") : isEdit ? t("forms.saveChanges") : t("forms.confirmAndSave")}
-        </Button>
-      </FormStickyActions>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </div>
   );
