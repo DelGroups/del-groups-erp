@@ -12,6 +12,7 @@ import Select from "@/components/ui/select";
 interface ProductFiltersPanelProps {
   filters: ProductFilters;
   categories: Category[];
+  brands: string[];
   warehouses: Warehouse[];
   onChange: (filters: ProductFilters) => void;
   onReset: () => void;
@@ -20,6 +21,7 @@ interface ProductFiltersPanelProps {
 export default function ProductFiltersPanel({
   filters,
   categories,
+  brands,
   warehouses,
   onChange,
   onReset,
@@ -40,7 +42,7 @@ export default function ProductFiltersPanel({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         <label className="block text-[11px] font-semibold text-app-muted">
           {t("products.columnLabels.name")}
           <Input
@@ -74,6 +76,22 @@ export default function ProductFiltersPanel({
             {[...new Set(categories.map((c) => c.name))].map((name) => (
               <option key={name} value={name}>
                 {name}
+              </option>
+            ))}
+          </Select>
+        </label>
+
+        <label className="block text-[11px] font-semibold text-app-muted">
+          {t("products.columnLabels.brand")}
+          <Select
+            value={filters.brand}
+            onChange={(e) => set({ brand: e.target.value })}
+            className="mt-1"
+          >
+            <option value="">{t("common.all")}</option>
+            {brands.map((brand) => (
+              <option key={brand} value={brand}>
+                {brand}
               </option>
             ))}
           </Select>

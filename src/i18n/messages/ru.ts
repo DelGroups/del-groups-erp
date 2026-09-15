@@ -552,6 +552,13 @@ export const ruMessages: Messages = {
       stockHint: "Остаток рассчитывается автоматически по доступности компонентов.",
       compositeBadge: "Комплект",
     },
+    metadata: {
+      title: "Дополнительные характеристики",
+      brand: "Бренд",
+      country: "Страна производства",
+      mfgDate: "Дата производства",
+      expDate: "Срок годности",
+    },
     columnLabels: {
       name: "Название товара",
       code: "Код товара",
@@ -560,6 +567,8 @@ export const ruMessages: Messages = {
       buy_price: "Закупочная цена",
       sell_price: "Цена продажи",
       barcode: "Штрихкод",
+      brand: "Бренд",
+      country: "Страна",
       unit: "Ед. изм.",
       color: "Цвет",
       weight: "Вес",

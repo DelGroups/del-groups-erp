@@ -552,6 +552,13 @@ export const enMessages: Messages = {
       stockHint: "Stock is calculated automatically from component availability.",
       compositeBadge: "Kit",
     },
+    metadata: {
+      title: "Additional Features",
+      brand: "Brand",
+      country: "Country of origin",
+      mfgDate: "Manufacturing date",
+      expDate: "Expiry date",
+    },
     columnLabels: {
       name: "Product name",
       code: "Product code",
@@ -560,6 +567,8 @@ export const enMessages: Messages = {
       buy_price: "Buy price",
       sell_price: "Sell price",
       barcode: "Barcode",
+      brand: "Brand",
+      country: "Country",
       unit: "Unit",
       color: "Color",
       weight: "Weight",

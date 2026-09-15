@@ -115,6 +115,10 @@ function renderCell(
       );
     case "unit":
       return product.unit || "-";
+    case "brand":
+      return product.brand || "-";
+    case "country":
+      return product.country_of_origin || "-";
     case "extra_info": {
       const notes = displayExtraInfoNotes(product.extra_info);
       return (

@@ -96,6 +96,11 @@ function ProductFormSection({
   );
 }
 
+function toDateFieldValue(value?: string | null): string {
+  if (!value) return "";
+  return value.slice(0, 10);
+}
+
 function toggleOptionClass(active: boolean, disabled?: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center gap-3 rounded-[var(--erp-radius-md)] border px-3 py-2.5 text-sm transition-colors",
@@ -169,6 +174,10 @@ export default function ProductForm({
       initialProduct?.base_length ?? initialProduct?.full_sheet_length_m ?? null
     ),
     base_width: numberToFieldValue(initialProduct?.base_width),
+    brand: initialProduct?.brand || "",
+    country_of_origin: initialProduct?.country_of_origin || "",
+    mfg_date: toDateFieldValue(initialProduct?.mfg_date),
+    exp_date: toDateFieldValue(initialProduct?.exp_date),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
@@ -337,6 +346,10 @@ export default function ProductForm({
         !isServiceCategorySelected && (form.is_dimensional || form.unit === "Kvadrat Metr")
           ? parseFieldOptionalNumber(form.base_width)
           : null,
+      brand: form.brand.trim() || null,
+      country_of_origin: form.country_of_origin.trim() || null,
+      mfg_date: form.mfg_date || null,
+      exp_date: form.exp_date || null,
     };
 
     try {
@@ -701,6 +714,47 @@ export default function ProductForm({
                 ) : null}
               </ProductFormSection>
             ) : null}
+
+            <ProductFormSection
+              title={t("products.metadata.title")}
+              compact
+              embedded={isDrawerLayout}
+            >
+              <div className={rowClass}>
+                <FormField label={t("products.metadata.brand")}>
+                  <input
+                    type="text"
+                    value={form.brand}
+                    onChange={(e) => set({ brand: e.target.value })}
+                    className={formInputClass}
+                  />
+                </FormField>
+                <FormField label={t("products.metadata.country")}>
+                  <input
+                    type="text"
+                    value={form.country_of_origin}
+                    onChange={(e) => set({ country_of_origin: e.target.value })}
+                    className={formInputClass}
+                  />
+                </FormField>
+                <FormField label={t("products.metadata.mfgDate")}>
+                  <input
+                    type="date"
+                    value={form.mfg_date}
+                    onChange={(e) => set({ mfg_date: e.target.value })}
+                    className={formInputClass}
+                  />
+                </FormField>
+                <FormField label={t("products.metadata.expDate")}>
+                  <input
+                    type="date"
+                    value={form.exp_date}
+                    onChange={(e) => set({ exp_date: e.target.value })}
+                    className={formInputClass}
+                  />
+                </FormField>
+              </div>
+            </ProductFormSection>
 
             {isComposite && !isServiceCategorySelected ? (
               <ProductFormSection title={t("products.bom.isComposite")} embedded={isDrawerLayout}>

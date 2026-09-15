@@ -259,6 +259,10 @@ export interface Product {
   is_service?: boolean | null;
   /** True for kit/bundle products assembled from BOM components */
   is_composite?: boolean | null;
+  brand?: string | null;
+  country_of_origin?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
   created_at?: string | null;
 }
 
@@ -276,6 +280,8 @@ export type ProductColumnKey =
   | "sell_price"
   | "barcode"
   | "unit"
+  | "brand"
+  | "country"
   | "extra_info";
 
 export interface ProductFilters {
@@ -283,6 +289,7 @@ export interface ProductFilters {
   code: string;
   category: string;
   subcategory: string;
+  brand: string;
   warehouseId: string;
   barcode: string;
 }
@@ -292,6 +299,7 @@ export const DEFAULT_PRODUCT_FILTERS: ProductFilters = {
   code: "",
   category: "",
   subcategory: "",
+  brand: "",
   warehouseId: "",
   barcode: "",
 };

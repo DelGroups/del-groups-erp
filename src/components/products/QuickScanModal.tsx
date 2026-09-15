@@ -10,6 +10,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { Modal } from "@/components/ui/modal";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
 import { fetchProductByBarcode } from "@/lib/products/barcode";
+import { resolveCategoryFromHint } from "@/lib/products/categoryHint";
 import { parseFieldNumber } from "@/lib/forms/numericField";
 import type { Category, Product } from "@/types/database.types";
 import { cn } from "@/lib/cn";
@@ -28,21 +29,11 @@ interface LookupResponse {
     name?: string;
     image_url?: string | null;
     category?: string | null;
+    category_hint?: string | null;
+    brand?: string | null;
+    country_of_origin?: string | null;
   };
   error?: string;
-}
-
-function resolveCategoryName(apiCategory: string | null | undefined, categories: Category[]): string {
-  const parents = categories.filter((row) => !row.parent_id);
-  const fallback = parents.find((row) => row.name === "Ümumi")?.name || parents[0]?.name || "Ümumi";
-  if (!apiCategory?.trim()) return fallback;
-
-  const needle = apiCategory.toLowerCase();
-  const hit = parents.find(
-    (row) =>
-      needle.includes(row.name.toLowerCase()) || row.name.toLowerCase().includes(needle.split(",")[0]?.trim() ?? "")
-  );
-  return hit?.name || fallback;
 }
 
 export default function QuickScanModal({
@@ -62,6 +53,8 @@ export default function QuickScanModal({
   const [name, setName] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [category, setCategory] = useState("Ümumi");
+  const [brand, setBrand] = useState("");
+  const [country, setCountry] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [formUnlocked, setFormUnlocked] = useState(false);
   const [looking, setLooking] = useState(false);
@@ -74,6 +67,8 @@ export default function QuickScanModal({
     setName("");
     setSellPrice("");
     setCategory(parentCategories.find((row) => row.name === "Ümumi")?.name || parentCategories[0]?.name || "Ümumi");
+    setBrand("");
+    setCountry("");
     setImageUrl(null);
     setFormUnlocked(false);
     setLooking(false);
@@ -121,8 +116,14 @@ export default function QuickScanModal({
       }
 
       if (payload.found && payload.data) {
+        const hint = payload.data.category_hint || payload.data.category;
+        if (hint) {
+          console.info("[QuickScan] category_hint:", hint);
+        }
         setName(payload.data.name?.trim() || "");
-        setCategory(resolveCategoryName(payload.data.category, categories));
+        setBrand(payload.data.brand?.trim() || "");
+        setCountry(payload.data.country_of_origin?.trim() || "");
+        setCategory(resolveCategoryFromHint(hint, categories));
         setImageUrl(payload.data.image_url || null);
         setFormUnlocked(true);
         window.setTimeout(() => priceRef.current?.focus(), 0);
@@ -170,6 +171,8 @@ export default function QuickScanModal({
       min_stock: 0,
       barcode: barcode.trim(),
       image_url: imageUrl,
+      brand: brand.trim() || null,
+      country_of_origin: country.trim() || null,
     });
 
     const result = await createProduct(payload);
@@ -246,7 +249,8 @@ export default function QuickScanModal({
             {t("products.quickScan.miniFormTitle")}
           </p>
 
-          <label className="block space-y-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="col-span-2 block space-y-1 sm:col-span-2">
             <span className="text-xs font-semibold text-app">{t("products.name")}</span>
             <input
               ref={nameRef}
@@ -254,6 +258,26 @@ export default function QuickScanModal({
               onChange={(event) => setName(event.target.value)}
               disabled={!formUnlocked || saving}
               placeholder={t("products.namePlaceholder")}
+              className="app-input w-full"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-app">{t("products.metadata.brand")}</span>
+            <input
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              disabled={!formUnlocked || saving}
+              className="app-input w-full"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-app">{t("products.metadata.country")}</span>
+            <input
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+              disabled={!formUnlocked || saving}
               className="app-input w-full"
             />
           </label>
@@ -291,6 +315,7 @@ export default function QuickScanModal({
               )}
             </Select>
           </label>
+          </div>
         </div>
       </form>
       <ToastMessage message={toastMessage} variant={toastVariant} />

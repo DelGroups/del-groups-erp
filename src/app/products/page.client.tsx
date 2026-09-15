@@ -22,7 +22,7 @@ import { usePolywoodSummaries, usePolywoodWarehouseId, useProductsCatalog } from
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import type { PolywoodInventorySummary } from "@/lib/polywood/types";
-import { filterProducts } from "@/lib/products/filters";
+import { filterProducts, getUniqueBrands } from "@/lib/products/filters";
 import {
   loadColumnVisibility,
   saveColumnVisibility,
@@ -124,6 +124,8 @@ export default function ProductsPage() {
   useEffect(() => {
     saveColumnVisibility(columnVisibility);
   }, [columnVisibility]);
+
+  const brandOptions = useMemo(() => getUniqueBrands(products), [products]);
 
   const filteredProducts = useMemo(
     () => filterProducts(products, filters, warehouses),
@@ -235,6 +237,7 @@ export default function ProductsPage() {
           <ProductFiltersPanel
             filters={filters}
             categories={categories}
+            brands={brandOptions}
             warehouses={warehouses}
             onChange={setFilters}
             onReset={() => setFilters(DEFAULT_PRODUCT_FILTERS)}

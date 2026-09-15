@@ -15,6 +15,7 @@ export function filterProducts(
     if (!includes(product.code, filters.code)) return false;
     if (!includes(product.category, filters.category)) return false;
     if (!includes(product.subcategory, filters.subcategory)) return false;
+    if (!includes(product.brand, filters.brand)) return false;
     if (!includes(product.barcode, filters.barcode)) return false;
 
     // Products are global; warehouse filter applies to document lines, not product rows.
@@ -29,6 +30,12 @@ export function getUniqueCategories(products: Product[]): string[] {
 
 export function getUniqueSubcategories(products: Product[]): string[] {
   return [...new Set(products.map((p) => p.subcategory || "").filter(Boolean))].sort();
+}
+
+export function getUniqueBrands(products: Product[]): string[] {
+  return [...new Set(products.map((p) => p.brand || "").filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
 }
 
 export function getWarehouseName(

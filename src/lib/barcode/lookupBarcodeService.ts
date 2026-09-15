@@ -9,6 +9,9 @@ export interface BarcodeLookupData {
   name: string;
   image_url: string | null;
   category: string | null;
+  category_hint: string | null;
+  brand: string | null;
+  country_of_origin: string | null;
 }
 
 export interface BarcodeLookupResult {
@@ -44,6 +47,53 @@ function firstCategory(value: unknown): string | null {
   return null;
 }
 
+function firstBrand(value: unknown): string | null {
+  const raw = firstString(value);
+  if (!raw) return null;
+  return raw.split(",")[0]?.trim() || null;
+}
+
+function parseCountryFromProduct(product: Record<string, unknown>): string | null {
+  const fromCountries = firstString(product.countries);
+  if (fromCountries) return fromCountries.split(",")[0]?.trim() || null;
+
+  const tags = product.countries_tags;
+  if (Array.isArray(tags) && tags.length > 0) {
+    const tag = String(tags[0]);
+    const slug = tag.replace(/^en:/i, "").replace(/-/g, " ").trim();
+    if (!slug) return null;
+    return slug.charAt(0).toUpperCase() + slug.slice(1);
+  }
+
+  return firstString(product.country_of_origin, product.country);
+}
+
+export function parseOpenFoodFactsProduct(
+  product: Record<string, unknown>
+): BarcodeLookupData | null {
+  const name = firstString(
+    product.product_name,
+    product.product_name_en,
+    product.generic_name,
+    product.abbreviated_product_name
+  );
+  if (!name) return null;
+
+  const category_hint = firstCategory(product.categories);
+  const image_url = firstImage(
+    product.image_url ?? product.image_front_url ?? product.image_front_small_url
+  );
+
+  return {
+    name,
+    image_url,
+    category: category_hint,
+    category_hint,
+    brand: firstBrand(product.brands),
+    country_of_origin: parseCountryFromProduct(product),
+  };
+}
+
 export function normalizeBarcodeLookupPayload(payload: unknown): BarcodeLookupData | null {
   if (!payload || typeof payload !== "object") return null;
   const root = payload as Record<string, unknown>;
@@ -68,10 +118,17 @@ export function normalizeBarcodeLookupPayload(payload: unknown): BarcodeLookupDa
   );
   if (!name) return null;
 
+  const category_hint = firstCategory(row.categories ?? row.category);
   const image_url = firstImage(row.image_url ?? row.image_front_url ?? row.images ?? row.image);
-  const category = firstCategory(row.category ?? row.categories);
 
-  return { name, image_url, category };
+  return {
+    name,
+    image_url,
+    category: category_hint,
+    category_hint,
+    brand: firstBrand(row.brands ?? row.brand),
+    country_of_origin: parseCountryFromProduct(row),
+  };
 }
 
 function buildCustomLookupUrl(config: BarcodeLookupApiConfig, barcode: string): string {
@@ -150,7 +207,7 @@ export async function lookupBarcodeWithConfig(
       return { found: false, source: "open_food_facts", error: "Məhsul tapılmadı" };
     }
 
-    const data = normalizeBarcodeLookupPayload({ product: payload.product });
+    const data = parseOpenFoodFactsProduct(payload.product);
     if (!data) {
       return { found: false, source: "open_food_facts", error: "Məhsul tapılmadı" };
     }

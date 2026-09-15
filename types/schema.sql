@@ -261,6 +261,10 @@ CREATE TABLE IF NOT EXISTS products (
   stock NUMERIC DEFAULT 0,
   min_stock NUMERIC DEFAULT 0,
   barcode TEXT,
+  brand TEXT,
+  country_of_origin TEXT,
+  mfg_date DATE,
+  exp_date DATE,
   extra_info TEXT,
   is_composite BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()

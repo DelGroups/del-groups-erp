@@ -550,6 +550,13 @@ export const azMessages = {
       stockHint: "Stok komponentlərin mövcud miqdarından avtomatik hesablanır.",
       compositeBadge: "Komplekt",
     },
+    metadata: {
+      title: "Əlavə Xüsusiyyətlər",
+      brand: "Brend",
+      country: "İstehsalçı ölkə",
+      mfgDate: "İstehsal tarixi",
+      expDate: "Bitmə tarixi",
+    },
     columnLabels: {
       name: "Məhsul adı",
       code: "Məhsul kodu",
@@ -558,6 +565,8 @@ export const azMessages = {
       buy_price: "Alış qiyməti",
       sell_price: "Satış qiyməti",
       barcode: "Barkod",
+      brand: "Brend",
+      country: "Ölkə",
       unit: "Ölçü vahidi",
       color: "Rəng",
       weight: "Çəki",
