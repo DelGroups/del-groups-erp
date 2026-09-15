@@ -34,6 +34,8 @@ import {
 import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
+import Panel from "@/components/ui/panel";
+import { cn } from "@/lib/cn";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
 import {
   isMetricMeasureUnit,
@@ -54,24 +56,49 @@ interface ProductFormProps {
   embedded?: boolean;
   /** Polished centered layout for the dedicated create page. */
   layout?: "default" | "create-page";
+  /** Links submit button in an external drawer footer. */
+  formId?: string;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 function ProductFormSection({
   title,
   children,
   compact = false,
+  embedded = false,
 }: {
   title: string;
   children: React.ReactNode;
   compact?: boolean;
+  embedded?: boolean;
 }) {
+  const stackClass = compact ? "space-y-3" : "space-y-4";
+
+  if (embedded) {
+    return (
+      <Panel title={title} className="mb-0 shadow-none">
+        <div className={stackClass}>{children}</div>
+      </Panel>
+    );
+  }
+
   return (
     <Card padding={false}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className={compact ? "space-y-3" : "space-y-4"}>{children}</CardContent>
+      <CardContent className={stackClass}>{children}</CardContent>
     </Card>
+  );
+}
+
+function toggleOptionClass(active: boolean, disabled?: boolean) {
+  return cn(
+    "flex w-full cursor-pointer items-center gap-3 rounded-[var(--erp-radius-md)] border px-3 py-2.5 text-sm transition-colors",
+    active
+      ? "border-[color:var(--erp-color-primary)]/35 bg-[color:var(--erp-color-primary)]/8 text-[color:var(--erp-text-main)]"
+      : "border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-input)] text-[color:var(--erp-text-main)]",
+    disabled && "cursor-not-allowed opacity-50"
   );
 }
 
@@ -84,10 +111,14 @@ export default function ProductForm({
   onCancel,
   embedded = false,
   layout = "default",
+  formId,
+  onSavingChange,
 }: ProductFormProps) {
   const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const isCreatePage = layout === "create-page" && !embedded;
+  const isDrawerLayout = embedded;
   const rowClass = isCreatePage ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : formRowClass;
+  const showDrawerFooter = embedded && Boolean(formId);
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const isEditMode = Boolean(initialProduct);
@@ -211,6 +242,10 @@ export default function ProductForm({
       setCatalogProducts(data.products);
     });
   }, [catalogProducts.length]);
+
+  useEffect(() => {
+    onSavingChange?.(saving);
+  }, [saving, onSavingChange]);
 
   useEffect(() => {
     if (!initialProduct?.id || !initialProduct.is_composite) return;
@@ -402,7 +437,11 @@ export default function ProductForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="w-full pb-4">
+      <form
+        id={formId}
+        onSubmit={handleSubmit}
+        className={cn("w-full", !showDrawerFooter && "pb-4")}
+      >
         <fieldset disabled={saving} className="contents">
         {isServiceCategorySelected ? (
           <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
@@ -410,14 +449,30 @@ export default function ProductForm({
           </p>
         ) : null}
 
-        <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-12">
+        <div
+          className={
+            isDrawerLayout
+              ? "flex w-full flex-col gap-5"
+              : "grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-12"
+          }
+        >
           <div
-            className={`flex w-full flex-col gap-6 ${
-              barcodeModuleEnabled && !isServiceCategorySelected ? "lg:col-span-8" : "lg:col-span-12"
-            }`}
+            className={
+              isDrawerLayout
+                ? "flex w-full flex-col gap-5"
+                : `flex w-full flex-col gap-6 ${
+                    barcodeModuleEnabled && !isServiceCategorySelected ? "lg:col-span-8" : "lg:col-span-12"
+                  }`
+            }
           >
-            <ProductFormSection title={t("forms.sectionMainInfo")}>
-              <div className="flex items-start gap-4">
+            <ProductFormSection title={t("forms.sectionMainInfo")} embedded={isDrawerLayout}>
+              <div
+                className={
+                  isDrawerLayout
+                    ? "grid grid-cols-1 gap-4 sm:grid-cols-[5rem_minmax(0,1fr)]"
+                    : "flex items-start gap-4"
+                }
+              >
                 <ProductImageField
                   value={form.image_url || null}
                   onChange={(imageUrl) => set({ image_url: imageUrl || "" })}
@@ -427,7 +482,7 @@ export default function ProductForm({
                     showError(t("common.errorOccurred", { message }))
                   }
                 />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 space-y-4">
                   <div className={rowClass}>
                     <FormField label={t("forms.productName")} required>
                       <input
@@ -448,10 +503,8 @@ export default function ProductForm({
                       />
                     </FormField>
                   </div>
-                </div>
-              </div>
 
-              <div className={rowClass}>
+                  <div className={rowClass}>
                 <FormField label={t("common.category")} required>
                   <select
                     required
@@ -481,49 +534,49 @@ export default function ProductForm({
                     ))}
                   </select>
                 </FormField>
+                  </div>
+                </div>
               </div>
             </ProductFormSection>
 
             {!isServiceCategorySelected ? (
-              <ProductFormSection title={t("forms.sectionMetricsPricing")} compact>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label
-                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
-                      form.is_dimensional
-                        ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100"
-                        : "border-slate-200 bg-white text-slate-700 dark:border-app dark:bg-app-card dark:text-app"
-                    } ${isComposite ? "cursor-not-allowed opacity-50" : ""}`}
-                  >
+              <ProductFormSection
+                title={t("forms.sectionMetricsPricing")}
+                compact
+                embedded={isDrawerLayout}
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className={toggleOptionClass(form.is_dimensional, isComposite)}>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+                      className="h-4 w-4 accent-[color:var(--erp-color-primary)]"
                       checked={form.is_dimensional}
                       disabled={isComposite}
                       onChange={(event) => handleDimensionalToggle(event.target.checked)}
                     />
-                    <span className="font-medium">{t("forms.isDimensionalProduct")}</span>
+                    <span className="font-medium leading-snug">{t("forms.isDimensionalProduct")}</span>
                   </label>
 
-                  <label
-                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
-                      isComposite
-                        ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100"
-                        : "border-slate-200 bg-white text-slate-700 dark:border-app dark:bg-app-card dark:text-app"
-                    } ${form.is_dimensional ? "cursor-not-allowed opacity-50" : ""}`}
-                  >
+                  <label className={toggleOptionClass(isComposite, form.is_dimensional)}>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+                      className="h-4 w-4 accent-[color:var(--erp-color-primary)]"
                       checked={isComposite}
                       disabled={form.is_dimensional}
                       onChange={(e) => handleCompositeToggle(e.target.checked)}
                     />
-                    <span className="font-medium">{t("products.bom.isComposite")}</span>
+                    <span className="font-medium leading-snug">{t("products.bom.isComposite")}</span>
                   </label>
                 </div>
 
                 {showDimensionFields ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={
+                      isDrawerLayout
+                        ? "grid grid-cols-1 gap-4 sm:grid-cols-3"
+                        : "grid grid-cols-2 gap-4"
+                    }
+                  >
                     <FormField label={t("forms.unitMeasure")}>
                       <select
                         value={
@@ -569,13 +622,17 @@ export default function ProductForm({
                 ) : null}
 
                 {showPriceRows ? (
-                  <ProductPriceRowsEditor value={priceRows} onChange={setPriceRows} />
+                  <ProductPriceRowsEditor
+                    value={priceRows}
+                    onChange={setPriceRows}
+                    layout={isDrawerLayout ? "stack" : "grid"}
+                  />
                 ) : null}
               </ProductFormSection>
             ) : null}
 
             {isComposite && !isServiceCategorySelected ? (
-              <ProductFormSection title={t("products.bom.isComposite")}>
+              <ProductFormSection title={t("products.bom.isComposite")} embedded={isDrawerLayout}>
                 <ProductBomBuilder
                   products={catalogProducts}
                   parentProductId={initialProduct?.id}
@@ -587,7 +644,11 @@ export default function ProductForm({
             ) : null}
 
             {!isServiceCategorySelected && !barcodeModuleEnabled ? (
-              <ProductFormSection title={t("forms.sectionExtraSettings")} compact>
+              <ProductFormSection
+                title={t("forms.sectionExtraSettings")}
+                compact
+                embedded={isDrawerLayout}
+              >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField label={t("forms.minStockThreshold")}>
                     <input
@@ -611,9 +672,43 @@ export default function ProductForm({
                 </div>
               </ProductFormSection>
             ) : null}
+
+            {barcodeModuleEnabled && !isServiceCategorySelected && isDrawerLayout ? (
+              <ProductFormSection title={t("forms.sectionBarcodeRules")} embedded>
+                <ProductBarcodePanel
+                  value={form.barcode}
+                  onChange={(barcode) => set({ barcode })}
+                  productName={form.name}
+                  productCode={form.code}
+                  sellPrice={parseFieldNumber(priceRows.sell[0]?.price ?? "", 0) || null}
+                  layout="stacked"
+                />
+                <div className="mt-4 grid grid-cols-1 gap-4 border-t border-[color:var(--erp-border-default)] pt-4 sm:grid-cols-2">
+                  <FormField label={t("forms.minStockThreshold")}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.min_stock}
+                      onChange={(e) => set({ min_stock: e.target.value })}
+                      placeholder="0"
+                      className={formInputClass}
+                    />
+                  </FormField>
+                  <FormField label={t("forms.extraInfo")} className="sm:col-span-2">
+                    <textarea
+                      rows={3}
+                      value={form.extra_info}
+                      onChange={(e) => set({ extra_info: e.target.value })}
+                      className={formTextareaClass}
+                    />
+                  </FormField>
+                </div>
+              </ProductFormSection>
+            ) : null}
           </div>
 
-          {barcodeModuleEnabled && !isServiceCategorySelected ? (
+          {barcodeModuleEnabled && !isServiceCategorySelected && !isDrawerLayout ? (
             <div className="flex w-full flex-col gap-6 lg:col-span-4">
               <ProductFormSection title={t("forms.sectionBarcodeRules")}>
                 <ProductBarcodePanel
@@ -650,13 +745,13 @@ export default function ProductForm({
         </div>
         </fieldset>
 
-        {embedded ? (
-          <div className="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+        {embedded && !showDrawerFooter ? (
+          <div className="mt-6 flex justify-end gap-2 border-t border-[color:var(--erp-border-default)] pt-4">
             {formActions}
           </div>
-        ) : (
+        ) : !embedded ? (
           <FormStickyActions fullWidth={isCreatePage}>{formActions}</FormStickyActions>
-        )}
+        ) : null}
       </form>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </>

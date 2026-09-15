@@ -120,13 +120,23 @@ function PriceSideEditor({ title, rows, onChange }: PriceSideEditorProps) {
 interface ProductPriceRowsEditorProps {
   value: ProductPriceRowsState;
   onChange: (value: ProductPriceRowsState) => void;
+  /** Stack buy/sell blocks vertically (drawer / narrow layouts). */
+  layout?: "grid" | "stack";
 }
 
-export default function ProductPriceRowsEditor({ value, onChange }: ProductPriceRowsEditorProps) {
+export default function ProductPriceRowsEditor({
+  value,
+  onChange,
+  layout = "grid",
+}: ProductPriceRowsEditorProps) {
   const { t } = useI18n();
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div
+      className={
+        layout === "stack" ? "flex flex-col gap-4" : "grid grid-cols-1 gap-4 md:grid-cols-2"
+      }
+    >
       <PriceSideEditor
         title={t("forms.purchasePriceColumn")}
         rows={value.buy}

@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { Category, Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Drawer } from "@/components/ui/drawer";
+import { Drawer, DrawerFooter } from "@/components/ui/drawer";
 import ProductForm from "@/components/products/ProductForm";
+
+export const PRODUCT_FORM_DRAWER_ID = "product-form-drawer";
 
 interface ProductFormDrawerProps {
   open: boolean;
@@ -26,6 +28,7 @@ export default function ProductFormDrawer({
   onSuccess,
 }: ProductFormDrawerProps) {
   const { t } = useI18n();
+  const [saving, setSaving] = useState(false);
 
   if (!product) return null;
 
@@ -34,9 +37,18 @@ export default function ProductFormDrawer({
       open={open}
       onClose={onClose}
       title={`${t("common.edit")}: ${product.name}`}
-      className="sm:max-w-[52rem]"
+      className="sm:max-w-[min(44rem,96vw)]"
+      footer={
+        <DrawerFooter
+          formId={PRODUCT_FORM_DRAWER_ID}
+          onCancel={onClose}
+          submitLabel={saving ? t("common.saving") : t("common.edit")}
+          submitDisabled={saving}
+        />
+      }
     >
       <ProductForm
+        formId={PRODUCT_FORM_DRAWER_ID}
         categories={categories}
         warehouses={warehouses}
         allProducts={allProducts}
@@ -44,6 +56,7 @@ export default function ProductFormDrawer({
         onCancel={onClose}
         onSuccess={onSuccess}
         embedded
+        onSavingChange={setSaving}
       />
     </Drawer>
   );
