@@ -85,10 +85,15 @@ export default function MetricStockIntakeFields({
             min="0"
             step="1"
             disabled={disabled}
-            value={value.fullBarCount || ""}
-            onChange={(e) =>
-              onChange({ ...value, fullBarCount: Math.max(0, Number(e.target.value) || 0) })
-            }
+            value={value.fullBarCount > 0 ? String(value.fullBarCount) : ""}
+            onChange={(e) => {
+              const trimmed = e.target.value.trim();
+              onChange({
+                ...value,
+                fullBarCount: trimmed === "" ? 0 : Math.max(0, Number(trimmed) || 0),
+              });
+            }}
+            placeholder="0"
             className="mt-1 w-full rounded border border-slate-200 px-2 py-1 text-xs"
           />
         </label>

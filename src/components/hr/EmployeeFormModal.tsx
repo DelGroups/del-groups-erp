@@ -7,6 +7,7 @@ import {
   EMPLOYEE_DEPARTMENTS,
   generateEmployeeCode,
 } from "@/types/database.types";
+import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export type EmployeeFormValues = EmployeeInsert;
@@ -163,8 +164,9 @@ export default function EmployeeFormModal({
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.base_salary}
-                onChange={(e) => set({ base_salary: Number(e.target.value) || 0 })}
+                value={numberToFieldValue(form.base_salary)}
+                onChange={(e) => set({ base_salary: parseFieldNumber(e.target.value, 0) })}
+                placeholder="0.00"
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
               />
             </label>
@@ -174,8 +176,9 @@ export default function EmployeeFormModal({
                 type="number"
                 step="0.1"
                 min="0"
-                value={form.default_commission}
-                onChange={(e) => set({ default_commission: Number(e.target.value) || 0 })}
+                value={numberToFieldValue(form.default_commission)}
+                onChange={(e) => set({ default_commission: parseFieldNumber(e.target.value, 0) })}
+                placeholder="0"
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
               />
             </label>

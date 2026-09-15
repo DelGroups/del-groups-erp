@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { FormStickyActions } from "@/components/ui/form-sticky-actions";
+import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
 interface InitialBalanceFormProps {
@@ -267,13 +268,14 @@ export default function InitialBalanceForm({
                           step="0.001"
                           min="0"
                           disabled={isLocked}
-                          value={row.metric_total_meters || ""}
-                          onChange={(event) =>
+                          value={numberToFieldValue(row.metric_total_meters)}
+                          onChange={(event) => {
+                            const meters = parseFieldNumber(event.target.value, 0);
                             updateItem(row.id, {
-                              metric_total_meters: Number(event.target.value) || 0,
-                              quantity: Number(event.target.value) || 0,
-                            })
-                          }
+                              metric_total_meters: meters,
+                              quantity: meters,
+                            });
+                          }}
                           placeholder={t("initialBalance.totalMeters")}
                           className="w-full rounded border px-2 py-1"
                         />
@@ -303,10 +305,11 @@ export default function InitialBalanceForm({
                         step="0.01"
                         min="0"
                         disabled={isLocked}
-                        value={row.quantity || ""}
+                        value={numberToFieldValue(row.quantity)}
                         onChange={(event) =>
-                          updateItem(row.id, { quantity: Number(event.target.value) || 0 })
+                          updateItem(row.id, { quantity: parseFieldNumber(event.target.value, 0) })
                         }
+                        placeholder="0"
                         className="w-full rounded border px-2 py-1"
                       />
                     )}
@@ -317,10 +320,11 @@ export default function InitialBalanceForm({
                       step="0.01"
                       min="0"
                       disabled={isLocked}
-                      value={row.unit_cost}
+                      value={numberToFieldValue(row.unit_cost)}
                       onChange={(event) =>
-                        updateItem(row.id, { unit_cost: Number(event.target.value) || 0 })
+                        updateItem(row.id, { unit_cost: parseFieldNumber(event.target.value, 0) })
                       }
+                      placeholder="0.00"
                       className="w-full rounded border px-2 py-1 font-mono"
                     />
                     {row.is_metric ? (

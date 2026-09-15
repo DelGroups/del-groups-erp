@@ -7,6 +7,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { createPartnerAction, updatePartnerAction } from "@/lib/actions/partners";
 import type { PartnerFormInput, PartnerRecord } from "@/lib/partners/types";
+import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { partnerDisplayName } from "@/lib/partners/fetchPartners";
 
 type PartnerFormModalProps = {
@@ -191,10 +192,14 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved }: Pa
                     type="number"
                     min={0}
                     step="0.01"
-                    value={form.credit_limit ?? 0}
+                    value={numberToFieldValue(form.credit_limit)}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, credit_limit: Number(e.target.value) || 0 }))
+                      setForm((prev) => ({
+                        ...prev,
+                        credit_limit: parseFieldNumber(e.target.value, 0),
+                      }))
                     }
+                    placeholder="0.00"
                     className="app-input mt-1"
                   />
                 </label>

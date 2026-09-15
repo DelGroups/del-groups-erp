@@ -94,6 +94,7 @@ export default function DealFormModal({
               step="0.01"
               value={expectedValue}
               onChange={(e) => setExpectedValue(e.target.value)}
+              placeholder="0.00"
               className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
             />
           </label>

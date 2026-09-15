@@ -1765,6 +1765,12 @@ export const enMessages: Messages = {
       "1 sheet ({length}×{width} m) = {sheet} AZN → {area} AZN/m²",
     barcodePanelFormat: "Barcode format",
     barcodePanelLabelSize: "Label size",
+    printBarcode: "Print",
+    productImage: "Product image",
+    productImageAdd: "Add image",
+    productImageView: "View image",
+    productImageReplace: "Replace",
+    productImageDelete: "Remove",
     labelSizes: {
       "50x30mm": "50 × 30 mm",
       "40x25mm": "40 × 25 mm",

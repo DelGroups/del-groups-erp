@@ -8,6 +8,7 @@ import {
   updateProductionOrderAction,
   type ProductionLookups,
 } from "@/lib/actions/production";
+import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import ProductionInProgressPhase from "@/components/production/ProductionInProgressPhase";
 import {
   calcProductionCosting,
@@ -206,8 +207,9 @@ export default function ProductionWorkflowModal({
                 <input
                   type="number"
                   className="input-field mt-1 w-full"
-                  value={totalPrice}
-                  onChange={(e) => setTotalPrice(Number(e.target.value))}
+                  value={numberToFieldValue(totalPrice)}
+                  onChange={(e) => setTotalPrice(parseFieldNumber(e.target.value, 0))}
+                  placeholder="0.00"
                 />
               </label>
               <label className="block text-sm">
@@ -261,11 +263,23 @@ export default function ProductionWorkflowModal({
               </label>
               <label className="text-sm">
                 <span className="text-app-muted">Çatdırılma xərci</span>
-                <input type="number" className="input-field mt-1 w-full" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} />
+                <input
+                  type="number"
+                  className="input-field mt-1 w-full"
+                  value={numberToFieldValue(shippingCost)}
+                  onChange={(e) => setShippingCost(parseFieldNumber(e.target.value, 0))}
+                  placeholder="0.00"
+                />
               </label>
               <label className="text-sm">
                 <span className="text-app-muted">Quraşdırma xərci</span>
-                <input type="number" className="input-field mt-1 w-full" value={installationCost} onChange={(e) => setInstallationCost(Number(e.target.value))} />
+                <input
+                  type="number"
+                  className="input-field mt-1 w-full"
+                  value={numberToFieldValue(installationCost)}
+                  onChange={(e) => setInstallationCost(parseFieldNumber(e.target.value, 0))}
+                  placeholder="0.00"
+                />
               </label>
               <label className="flex items-center gap-2 text-sm sm:col-span-2">
                 <input type="checkbox" checked={shippingPaidByCustomer} onChange={(e) => setShippingPaidByCustomer(e.target.checked)} />
@@ -316,8 +330,8 @@ export default function ProductionWorkflowModal({
                   type="number"
                   className="input-field"
                   placeholder="Məbləğ"
-                  value={paymentAmount || ""}
-                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  value={numberToFieldValue(paymentAmount)}
+                  onChange={(e) => setPaymentAmount(parseFieldNumber(e.target.value, 0))}
                 />
               </div>
               <button type="button" className="btn-primary" disabled={saving} onClick={() => void savePayment()}>

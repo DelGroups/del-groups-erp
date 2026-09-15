@@ -914,8 +914,12 @@ export default function ProductionInProgressPhase({
                   min={0}
                   step="0.01"
                   className="input-field mt-1 w-full"
-                  value={expenseAmount || ""}
-                  onChange={(e) => setExpenseAmount(Number(e.target.value))}
+                  value={expenseAmount > 0 ? String(expenseAmount) : ""}
+                  onChange={(e) => {
+                    const trimmed = e.target.value.trim();
+                    setExpenseAmount(trimmed === "" ? 0 : Number(trimmed) || 0);
+                  }}
+                  placeholder="0.00"
                 />
               </label>
               <label className="block text-sm">

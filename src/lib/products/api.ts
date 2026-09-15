@@ -105,6 +105,7 @@ export function buildProductInsert(
     min_stock_level: isService ? 0 : Number(input.min_stock_level ?? input.min_stock) || 0,
     barcode,
     qr_code: qrCode,
+    image_url: input.image_url?.trim() || null,
     extra_info: input.extra_info?.trim() || null,
     category_id: input.category_id?.trim() || null,
     is_dimensional: isDimensional,

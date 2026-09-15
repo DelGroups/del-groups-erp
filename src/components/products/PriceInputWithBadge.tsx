@@ -41,7 +41,7 @@ export default function PriceInputWithBadge({
           min="0"
           inputMode="decimal"
           disabled={disabled}
-          placeholder={placeholder}
+          placeholder={placeholder ?? "0.00"}
           value={value}
           onChange={(event) => handleChange(event.target.value)}
           className={`${formNumberInputClass} rounded-r-none border-r-0`}

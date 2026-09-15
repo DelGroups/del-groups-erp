@@ -7,6 +7,7 @@ import { calcAzPayroll } from "@/lib/tax/azPayroll";
 import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
 import { fetchPendingCommissionsForEmployee } from "@/lib/commissions/api";
+import { parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface PayrollModalProps {
@@ -40,7 +41,7 @@ export default function PayrollModal({
   const [loadingCommissions, setLoadingCommissions] = useState(false);
   const [accountId, setAccountId] = useState("");
   const [monthYear, setMonthYear] = useState("");
-  const [deductions, setDeductions] = useState("0");
+  const [deductions, setDeductions] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -50,7 +51,7 @@ export default function PayrollModal({
     setMonthYear(
       new Date().toLocaleDateString(intlTag, { month: "long", year: "numeric" })
     );
-    setDeductions("0");
+    setDeductions("");
     setNotes("");
     setLoadingCommissions(true);
     void fetchPendingCommissionsForEmployee(employee.id).then((rows) => {
@@ -68,7 +69,7 @@ export default function PayrollModal({
         .reduce((s, c) => s + c.commission_amount, 0),
     [pending, selectedIds]
   );
-  const deductionNum = parseFloat(deductions) || 0;
+  const deductionNum = parseFieldNumber(deductions, 0);
   const taxBreakdown = calcAzPayroll({
     baseSalary,
     bonusesCommissions: commissionTotal,
@@ -144,6 +145,7 @@ export default function PayrollModal({
                 min="0"
                 value={deductions}
                 onChange={(e) => setDeductions(e.target.value)}
+                placeholder="0.00"
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
               />
             </label>

@@ -242,6 +242,7 @@ export interface Product {
   min_stock_level?: number | null;
   barcode?: string | null;
   qr_code?: string | null;
+  image_url?: string | null;
   extra_info?: string | null;
   warehouse_id?: string | null;
   inventory_mode?: "standard" | "polywood" | string | null;

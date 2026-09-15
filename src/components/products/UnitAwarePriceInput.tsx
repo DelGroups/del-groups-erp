@@ -46,10 +46,14 @@ export default function UnitAwarePriceInput({
   const width = widthM > 0 ? widthM : 0;
   const stored = parseFloat(storedValue) || 0;
 
-  const displayValue =
+  const convertedValue =
     storageMode === "per_meter"
       ? entryPriceFromMeter(stored, entryUnit, barLength, width)
       : entryPriceFromPiece(stored, entryUnit, barLength, width);
+  const displayValue =
+    storedValue.trim() === "" || !Number.isFinite(convertedValue) || convertedValue <= 0
+      ? ""
+      : String(convertedValue);
 
   const handleValueChange = (raw: string) => {
     if (raw.trim() === "") {
@@ -69,7 +73,7 @@ export default function UnitAwarePriceInput({
   };
 
   const hintParams = {
-    entryPrice: displayValue,
+    entryPrice: convertedValue,
     entryUnit,
     barLengthM: barLength,
     widthM: width,
@@ -102,8 +106,9 @@ export default function UnitAwarePriceInput({
           step="0.01"
           min="0"
           inputMode="decimal"
-          value={storedValue.trim() === "" ? "" : String(displayValue)}
+          value={displayValue}
           onChange={(event) => handleValueChange(event.target.value)}
+          placeholder="0.00"
           className={formNumberInputClass}
         />
         <select

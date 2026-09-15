@@ -1763,6 +1763,12 @@ export const azMessages = {
       "1 şət ({length}×{width} m) = {sheet} AZN → {area} AZN/m²",
     barcodePanelFormat: "Barkod formatı",
     barcodePanelLabelSize: "Etiket ölçüsü",
+    printBarcode: "Çap et",
+    productImage: "Məhsul şəkli",
+    productImageAdd: "Şəkil əlavə et",
+    productImageView: "Şəkli böyüt",
+    productImageReplace: "Dəyiş",
+    productImageDelete: "Sil",
     labelSizes: {
       "50x30mm": "50 × 30 mm",
       "40x25mm": "40 × 25 mm",

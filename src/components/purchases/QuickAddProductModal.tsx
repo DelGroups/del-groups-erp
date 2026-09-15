@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { parseFieldNumber } from "@/lib/forms/numericField";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { generateProductBarcode } from "@/lib/products/generateBarcode";
@@ -27,8 +28,8 @@ export default function QuickAddProductModal({
   const [category, setCategory] = useState("Ümumi");
   const [subcategory, setSubcategory] = useState("");
   const [unit, setUnit] = useState("Ədəd");
-  const [buyPrice, setBuyPrice] = useState("0");
-  const [sellPrice, setSellPrice] = useState("0");
+  const [buyPrice, setBuyPrice] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
   const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const [barcode, setBarcode] = useState(() =>
     barcodeModuleEnabled ? generateProductBarcode() : ""
@@ -62,8 +63,8 @@ export default function QuickAddProductModal({
       category: category || "Ümumi",
       subcategory: subcategory || null,
       unit,
-      buy_price: parseFloat(buyPrice) || 0,
-      sell_price: parseFloat(sellPrice) || 0,
+      buy_price: parseFieldNumber(buyPrice, 0),
+      sell_price: parseFieldNumber(sellPrice, 0),
       stock: 0,
       min_stock: 0,
       barcode: barcode || null,
@@ -183,6 +184,7 @@ export default function QuickAddProductModal({
               min="0"
               value={buyPrice}
               onChange={(e) => setBuyPrice(e.target.value)}
+              placeholder="0.00"
               className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
             />
           </label>
@@ -194,6 +196,7 @@ export default function QuickAddProductModal({
               min="0"
               value={sellPrice}
               onChange={(e) => setSellPrice(e.target.value)}
+              placeholder="0.00"
               className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
             />
           </label>

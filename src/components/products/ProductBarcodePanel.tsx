@@ -1,19 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
-import { Barcode, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Printer, RefreshCw } from "lucide-react";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
-import QrCodeImage from "@/components/products/QrCodeImage";
-import {
-  generateProductBarcodeByFormat,
-  type ProductBarcodeFormat,
-} from "@/lib/products/generateBarcode";
+import ThermalLabelPrintTemplate, {
+  type ThermalLabelItem,
+} from "@/components/products/ThermalLabelPrintTemplate";
+import { isEan13Payload, type BarcodeLabelConfig } from "@/lib/barcode/labelConfig";
+import { generateProductBarcode } from "@/lib/products/generateBarcode";
 import { formInputClass, formSelectClass } from "@/components/ui/form-field-styles";
-import { FormField } from "@/components/ui/form-field";
 import Button from "@/components/ui/button";
+import { useBarcodeLabelConfig } from "@/hooks/useBarcodeLabelConfig";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-
-const BARCODE_FORMATS: ProductBarcodeFormat[] = ["CODE128", "EAN13", "QR_CODE"];
 
 export const FORM_LABEL_SIZES = [
   { id: "50x30mm", widthMm: 50, heightMm: 30 },
@@ -27,128 +27,150 @@ export type FormLabelSizeId = (typeof FORM_LABEL_SIZES)[number]["id"];
 interface ProductBarcodePanelProps {
   value: string;
   onChange: (value: string) => void;
-  barcodeFormat: ProductBarcodeFormat;
-  onBarcodeFormatChange: (format: ProductBarcodeFormat) => void;
-  labelSize: FormLabelSizeId;
-  onLabelSizeChange: (size: FormLabelSizeId) => void;
+  productName?: string;
+  productCode?: string;
+  sellPrice?: number | null;
+}
+
+function resolveBarcodeFormat(code: string): "CODE128" | "EAN13" {
+  return isEan13Payload(code) ? "EAN13" : "CODE128";
+}
+
+function buildPrintConfig(
+  base: BarcodeLabelConfig,
+  labelSize: FormLabelSizeId,
+  barcode: string
+): BarcodeLabelConfig {
+  const selected = FORM_LABEL_SIZES.find((size) => size.id === labelSize) ?? FORM_LABEL_SIZES[0];
+  return {
+    ...base,
+    paper_size: "CUSTOM",
+    custom_width_mm: selected.widthMm,
+    custom_height_mm: selected.heightMm,
+    barcode_type: resolveBarcodeFormat(barcode),
+  };
 }
 
 export default function ProductBarcodePanel({
   value,
   onChange,
-  barcodeFormat,
-  onBarcodeFormatChange,
-  labelSize,
-  onLabelSizeChange,
+  productName = "",
+  productCode = "",
+  sellPrice = null,
 }: ProductBarcodePanelProps) {
   const { t } = useI18n();
+  const branding = useCompanyBranding();
+  const { config: labelConfig } = useBarcodeLabelConfig();
+  const [labelSize, setLabelSize] = useState<FormLabelSizeId>("50x30mm");
+  const { printData, setPrintData } = useDocumentPrint<{
+    items: ThermalLabelItem[];
+    config: BarcodeLabelConfig;
+  }>(450);
+
   const code = value.trim();
-  const selectedLabel = FORM_LABEL_SIZES.find((size) => size.id === labelSize) ?? FORM_LABEL_SIZES[0];
+  const barcodeFormat = resolveBarcodeFormat(code);
 
   const previewScale = useMemo(() => {
-    const maxWidth = 168;
-    const scale = Math.min(1, maxWidth / selectedLabel.widthMm);
+    const selected = FORM_LABEL_SIZES.find((size) => size.id === labelSize) ?? FORM_LABEL_SIZES[0];
+    const maxWidth = 112;
+    const scale = Math.min(1, maxWidth / selected.widthMm);
     return {
-      widthPx: Math.round(selectedLabel.widthMm * scale),
-      heightPx: Math.round(selectedLabel.heightMm * scale),
+      widthPx: Math.round(selected.widthMm * scale),
+      heightPx: Math.round(selected.heightMm * scale),
     };
-  }, [selectedLabel.heightMm, selectedLabel.widthMm]);
+  }, [labelSize]);
 
-  const handleGenerate = () => {
-    onChange(generateProductBarcodeByFormat(barcodeFormat));
+  const handlePrint = () => {
+    if (!code) return;
+    const item: ThermalLabelItem = {
+      id: "draft-product",
+      name: productName.trim() || t("forms.productName"),
+      code: productCode.trim() || null,
+      barcode: code,
+      price: sellPrice,
+    };
+    setPrintData({
+      items: [item],
+      config: buildPrintConfig(labelConfig, labelSize, code),
+    });
   };
 
-  const showLinearBarcode = barcodeFormat !== "QR_CODE" && code.length > 0;
-  const showQr = barcodeFormat === "QR_CODE" || barcodeFormat === "EAN13";
-
   return (
-    <div className="space-y-3">
-      <FormField label={t("forms.barcodePanelFormat")}>
-        <div className="flex flex-wrap gap-1 rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)] p-1">
-          {BARCODE_FORMATS.map((format) => {
-            const active = barcodeFormat === format;
-            return (
-              <button
-                key={format}
-                type="button"
-                onClick={() => onBarcodeFormatChange(format)}
-                className={`flex-1 rounded-[calc(var(--erp-radius-md)-2px)] px-2 py-1.5 text-[length:var(--erp-text-xs)] font-semibold transition-colors ${
-                  active
-                    ? "bg-[color:var(--erp-bg-input)] text-[color:var(--erp-text-main)] shadow-[var(--erp-shadow-sm)]"
-                    : "text-[color:var(--erp-text-muted)] hover:text-[color:var(--erp-text-main)]"
-                }`}
-              >
-                {t(`barcodeSettings.barcodeTypes.${format}`)}
-              </button>
-            );
-          })}
-        </div>
-      </FormField>
-
-      <FormField label={t("forms.barcodePanelLabelSize")}>
-        <select
-          value={labelSize}
-          onChange={(event) => onLabelSizeChange(event.target.value as FormLabelSizeId)}
-          className={formSelectClass}
-        >
-          {FORM_LABEL_SIZES.map((size) => (
-            <option key={size.id} value={size.id}>
-              {t(`forms.labelSizes.${size.id}`)}
-            </option>
-          ))}
-        </select>
-      </FormField>
-
-      <FormField label={t("forms.barcode")}>
-        <div className="flex min-w-0 gap-2">
+    <>
+      <div className="space-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <input
             type="text"
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder={t("forms.autoGenerated")}
-            className={`${formInputClass} min-w-0 flex-1 font-mono text-sm`}
+            className={`${formInputClass} min-w-[10rem] flex-1 font-mono text-sm`}
+            aria-label={t("forms.barcode")}
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="shrink-0"
-            onClick={handleGenerate}
+            onClick={() => onChange(generateProductBarcode())}
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t("inventory.generateBarcode")}</span>
-            <span className="sm:hidden">
-              <Barcode className="h-3.5 w-3.5" />
-            </span>
+            {t("inventory.generateBarcode")}
+          </Button>
+          <select
+            value={labelSize}
+            onChange={(event) => setLabelSize(event.target.value as FormLabelSizeId)}
+            className={`${formSelectClass} w-auto min-w-[6.5rem] shrink-0 py-2 text-xs`}
+            aria-label={t("forms.barcodePanelLabelSize")}
+          >
+            {FORM_LABEL_SIZES.map((size) => (
+              <option key={size.id} value={size.id}>
+                {t(`forms.labelSizes.${size.id}`)}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={handlePrint}
+            disabled={!code}
+          >
+            <Printer className="h-3.5 w-3.5" />
+            {t("forms.printBarcode")}
           </Button>
         </div>
-      </FormField>
 
-      {code ? (
-        <div
-          className="mx-auto flex flex-col items-center justify-center gap-2 rounded-[var(--erp-radius-md)] border border-dashed border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]/60 p-3"
-          style={{ maxWidth: previewScale.widthPx + 24 }}
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--erp-text-muted)]">
-            {t("forms.barcodePreview")} · {t(`forms.labelSizes.${labelSize}`)}
-          </p>
-
-          {showLinearBarcode ? (
+        {code ? (
+          <div
+            className="inline-flex flex-col items-center justify-center rounded-[var(--erp-radius-md)] border border-dashed border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]/50 px-2 py-1.5"
+            style={{
+              width: previewScale.widthPx + 16,
+              minHeight: previewScale.heightPx,
+            }}
+          >
             <BarcodeDisplay
               value={code}
-              format={barcodeFormat === "EAN13" ? "EAN13" : "CODE128"}
-              width={1}
-              height={28}
-              fontSize={9}
-              showValue={barcodeFormat !== "QR_CODE"}
+              format={barcodeFormat}
+              width={0.75}
+              height={18}
+              fontSize={7}
+              showValue
             />
-          ) : null}
+          </div>
+        ) : null}
+      </div>
 
-          {showQr ? (
-            <QrCodeImage value={code} size={barcodeFormat === "QR_CODE" ? 72 : 48} />
-          ) : null}
+      {printData ? (
+        <div className="print-area">
+          <ThermalLabelPrintTemplate
+            items={printData.items}
+            config={printData.config}
+            branding={branding}
+          />
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import {
   formNumberInputClass,
   formSelectClass,
 } from "@/components/ui/form-field-styles";
+import { numberToFieldValue } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { PriceEntryUnit } from "@/lib/products/productPriceUnits";
 import {
@@ -65,7 +66,7 @@ function PriceSideEditor({ title, rows, onChange }: PriceSideEditorProps) {
                 step="0.01"
                 min="0"
                 inputMode="decimal"
-                value={row.price}
+                value={numberToFieldValue(row.price)}
                 onChange={(event) => updateRow(row.id, { price: event.target.value })}
                 placeholder={index === 0 ? "0.00" : t("forms.optionalPricePlaceholder")}
                 className={formNumberInputClass}

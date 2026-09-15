@@ -8,6 +8,7 @@ import type { PolywoodInventorySummary } from "@/lib/polywood/types";
 import type { Product, ProductColumnKey, Warehouse } from "@/types/database.types";
 import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
+import ProductImageField from "@/components/products/ProductImageField";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
 import Card from "@/components/ui/card";
@@ -68,14 +69,22 @@ function renderCell(
   switch (key) {
     case "name":
       return (
-        <span className="font-medium text-app">
-          {product.name}
-          {product.is_composite ? (
-            <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">
-              {t("products.bom.compositeBadge")}
-            </span>
-          ) : null}
-        </span>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <ProductImageField
+            value={product.image_url || null}
+            alt={product.name}
+            size="xs"
+            editable={false}
+          />
+          <span className="min-w-0 font-medium text-app">
+            {product.name}
+            {product.is_composite ? (
+              <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700">
+                {t("products.bom.compositeBadge")}
+              </span>
+            ) : null}
+          </span>
+        </div>
       );
     case "code":
       return (

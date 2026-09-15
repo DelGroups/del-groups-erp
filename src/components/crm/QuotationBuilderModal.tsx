@@ -9,6 +9,7 @@ import {
   type CrmQuotation,
   type QuotationItem,
 } from "@/types/database.types";
+import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 
 type CatalogProduct = {
@@ -69,8 +70,8 @@ export default function QuotationBuilderModal({
 }: QuotationBuilderModalProps) {
   const { t } = useI18n();
   const [items, setItems] = useState<QuotationItem[]>([emptyItem()]);
-  const [discount, setDiscount] = useState("0");
-  const [taxRate, setTaxRate] = useState("0");
+  const [discount, setDiscount] = useState("");
+  const [taxRate, setTaxRate] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -78,10 +79,12 @@ export default function QuotationBuilderModal({
     if (!isOpen) return;
     if (quotation) {
       setItems(quotation.items_json.length ? quotation.items_json.map(withPricing) : [emptyItem()]);
-      setDiscount(String(quotation.discount || 0));
+      setDiscount(numberToFieldValue(quotation.discount));
       const subtotal = quotation.items_json.reduce((s, i) => s + i.line_total, 0);
       const taxable = Math.max(0, subtotal - quotation.discount);
-      setTaxRate(taxable > 0 ? ((quotation.tax / taxable) * 100).toFixed(1) : "0");
+      setTaxRate(
+        taxable > 0 ? numberToFieldValue((quotation.tax / taxable) * 100) : ""
+      );
       setValidUntil(quotation.valid_until || "");
       setNotes(quotation.notes || "");
       return;
@@ -89,14 +92,14 @@ export default function QuotationBuilderModal({
     const until = new Date();
     until.setDate(until.getDate() + Math.max(1, defaultValidityDays));
     setItems([emptyItem()]);
-    setDiscount("0");
-    setTaxRate("0");
+    setDiscount("");
+    setTaxRate("");
     setValidUntil(until.toISOString().slice(0, 10));
     setNotes("");
   }, [defaultValidityDays, isOpen, quotation]);
 
   const totals = useMemo(
-    () => calcQuotationTotals(items, Number(discount) || 0, Number(taxRate) || 0),
+    () => calcQuotationTotals(items, parseFieldNumber(discount, 0), parseFieldNumber(taxRate, 0)),
     [items, discount, taxRate]
   );
 
@@ -184,8 +187,10 @@ export default function QuotationBuilderModal({
                         type="number"
                         min="0.01"
                         step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 0 })}
+                        value={numberToFieldValue(item.quantity, { treatZeroAsEmpty: false })}
+                        onChange={(e) =>
+                          updateItem(index, { quantity: parseFieldNumber(e.target.value, 1) })
+                        }
                         className="w-20 rounded border px-2 py-1 font-mono text-xs"
                       />
                     </td>
@@ -194,8 +199,11 @@ export default function QuotationBuilderModal({
                         type="number"
                         min="0"
                         step="0.01"
-                        value={item.cost_price}
-                        onChange={(e) => updateItem(index, { cost_price: Number(e.target.value) || 0 })}
+                        value={numberToFieldValue(item.cost_price)}
+                        onChange={(e) =>
+                          updateItem(index, { cost_price: parseFieldNumber(e.target.value, 0) })
+                        }
+                        placeholder="0.00"
                         className="w-24 rounded border px-2 py-1 font-mono text-xs"
                       />
                     </td>
@@ -203,10 +211,11 @@ export default function QuotationBuilderModal({
                       <input
                         type="number"
                         step="0.1"
-                        value={item.margin_percent}
+                        value={numberToFieldValue(item.margin_percent, { treatZeroAsEmpty: false })}
                         onChange={(e) =>
-                          updateItem(index, { margin_percent: Number(e.target.value) || 0 })
+                          updateItem(index, { margin_percent: parseFieldNumber(e.target.value, 0) })
                         }
+                        placeholder="0"
                         className="w-20 rounded border px-2 py-1 font-mono text-xs"
                       />
                     </td>
@@ -244,6 +253,7 @@ export default function QuotationBuilderModal({
                 min="0"
                 value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
+                placeholder="0.00"
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
               />
             </label>
@@ -254,6 +264,7 @@ export default function QuotationBuilderModal({
                 min="0"
                 value={taxRate}
                 onChange={(e) => setTaxRate(e.target.value)}
+                placeholder="0"
                 className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm"
               />
             </label>
@@ -295,8 +306,8 @@ export default function QuotationBuilderModal({
               onClick={() =>
                 void onSubmit({
                   items,
-                  discount: Number(discount) || 0,
-                  taxRate: Number(taxRate) || 0,
+                  discount: parseFieldNumber(discount, 0),
+                  taxRate: parseFieldNumber(taxRate, 0),
                   validUntil,
                   notes,
                   status: "DRAFT",
@@ -312,8 +323,8 @@ export default function QuotationBuilderModal({
               onClick={() =>
                 void onSubmit({
                   items,
-                  discount: Number(discount) || 0,
-                  taxRate: Number(taxRate) || 0,
+                  discount: parseFieldNumber(discount, 0),
+                  taxRate: parseFieldNumber(taxRate, 0),
                   validUntil,
                   notes,
                   status: "SENT",
@@ -329,8 +340,8 @@ export default function QuotationBuilderModal({
               onClick={() =>
                 void onSubmit({
                   items,
-                  discount: Number(discount) || 0,
-                  taxRate: Number(taxRate) || 0,
+                  discount: parseFieldNumber(discount, 0),
+                  taxRate: parseFieldNumber(taxRate, 0),
                   validUntil,
                   notes,
                   status: "WON",

@@ -12,16 +12,15 @@ import {
   rowsToMeta,
   type ProductPriceRowsState,
 } from "@/lib/products/productPriceRows";
-import ProductBarcodePanel, {
-  type FormLabelSizeId,
-} from "@/components/products/ProductBarcodePanel";
+import ProductBarcodePanel from "@/components/products/ProductBarcodePanel";
+import ProductImageField from "@/components/products/ProductImageField";
 import { getCategoryFullName, updateProduct } from "@/lib/products/api";
 import { FetchTimeoutError, fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { PRODUCT_CREATE_REQUEST_TIMEOUT_MS } from "@/lib/products/productCreateConstants";
-import { type ProductBarcodeFormat } from "@/lib/products/generateBarcode";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { matchesServiceCategoryName } from "@/lib/products/serviceCategory";
 import { useI18n } from "@/i18n/I18nProvider";
+import { numberToFieldValue, parseFieldNumber, parseFieldOptionalNumber } from "@/lib/forms/numericField";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
@@ -108,8 +107,6 @@ export default function ProductForm({
   const [priceRows, setPriceRows] = useState<ProductPriceRowsState>(() =>
     parsePriceRowsFromProduct(initialProduct)
   );
-  const [barcodeFormat, setBarcodeFormat] = useState<ProductBarcodeFormat>("EAN13");
-  const [labelSize, setLabelSize] = useState<FormLabelSizeId>("50x30mm");
   const [form, setForm] = useState({
     code: initialProduct?.code || "",
     name: initialProduct?.name || "",
@@ -119,14 +116,17 @@ export default function ProductForm({
         ? initialCategory.name
         : initialProduct?.subcategory || "",
     unit: initialProduct?.unit || "Ədəd",
-    stock: String(initialProduct?.stock ?? 0),
-    min_stock: String(initialProduct?.min_stock ?? 5),
+    stock: numberToFieldValue(initialProduct?.stock),
+    min_stock: numberToFieldValue(initialProduct?.min_stock),
     barcode: initialProduct?.barcode || "",
+    image_url: initialProduct?.image_url || "",
     extra_info: extractUserNotesFromExtraInfo(initialProduct?.extra_info),
     is_dimensional: Boolean(initialProduct?.is_dimensional),
     is_composite: Boolean(initialProduct?.is_composite),
-    base_length: String(initialProduct?.base_length ?? initialProduct?.full_sheet_length_m ?? "4.0"),
-    base_width: String(initialProduct?.base_width ?? ""),
+    base_length: numberToFieldValue(
+      initialProduct?.base_length ?? initialProduct?.full_sheet_length_m ?? null
+    ),
+    base_width: numberToFieldValue(initialProduct?.base_width),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
@@ -148,12 +148,6 @@ export default function ProductForm({
     set({
       unit,
       is_dimensional: form.is_dimensional || metric,
-      base_length:
-        (form.is_dimensional || metric) && !(parseFloat(form.base_length) > 0)
-          ? "4.0"
-          : form.base_length,
-      base_width:
-        unit === "Kvadrat Metr" && !(parseFloat(form.base_width) > 0) ? "0.60" : form.base_width,
     });
   };
 
@@ -168,12 +162,6 @@ export default function ProductForm({
     set({
       is_dimensional: checked,
       unit: nextUnit,
-      base_length:
-        checked && !(parseFloat(form.base_length) > 0) ? "4.0" : form.base_length,
-      base_width:
-        checked && nextUnit === "Kvadrat Metr" && !(parseFloat(form.base_width) > 0)
-          ? "0.60"
-          : form.base_width,
     });
   };
 
@@ -184,8 +172,8 @@ export default function ProductForm({
       subcategory: "",
       is_dimensional: serviceCategory ? false : form.is_dimensional,
       unit: serviceCategory ? "Xidmət" : form.unit,
-      stock: serviceCategory ? "0" : form.stock,
-      min_stock: serviceCategory ? "0" : form.min_stock,
+      stock: serviceCategory ? "" : form.stock,
+      min_stock: serviceCategory ? "" : form.min_stock,
     });
   };
 
@@ -196,8 +184,8 @@ export default function ProductForm({
       is_dimensional: serviceCategory ? false : form.is_dimensional,
       is_composite: serviceCategory ? false : form.is_composite,
       unit: serviceCategory ? "Xidmət" : form.unit,
-      stock: serviceCategory ? "0" : form.stock,
-      min_stock: serviceCategory ? "0" : form.min_stock,
+      stock: serviceCategory ? "" : form.stock,
+      min_stock: serviceCategory ? "" : form.min_stock,
     });
     if (serviceCategory) {
       setIsComposite(false);
@@ -209,7 +197,7 @@ export default function ProductForm({
     setIsComposite(checked);
     set({
       is_composite: checked,
-      stock: checked ? "0" : form.stock,
+      stock: checked ? "" : form.stock,
       is_dimensional: checked ? false : form.is_dimensional,
     });
     if (!checked) {
@@ -249,7 +237,7 @@ export default function ProductForm({
 
     if (isComposite && !isServiceCategorySelected) {
       const validBomRows = bomRows.filter(
-        (row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0
+        (row) => row.componentProductId && parseFieldNumber(row.quantity, 0) > 0
       );
       if (validBomRows.length === 0) {
         showError(t("products.bom.required"));
@@ -275,14 +263,18 @@ export default function ProductForm({
       unit: form.unit,
       buy_price: priceColumns.buy_price,
       sell_price: priceColumns.sell_price,
-      stock: isServiceCategorySelected || isComposite || !isEditMode ? 0 : parseFloat(form.stock) || 0,
-      min_stock: isServiceCategorySelected ? 0 : parseFloat(form.min_stock) || 0,
+      stock:
+        isServiceCategorySelected || isComposite || !isEditMode
+          ? 0
+          : parseFieldNumber(form.stock, 0),
+      min_stock: isServiceCategorySelected ? 0 : parseFieldNumber(form.min_stock, 0),
       barcode: barcodeModuleEnabled
         ? form.barcode || null
         : initialProduct?.barcode ?? null,
       qr_code: barcodeModuleEnabled
         ? form.barcode || null
         : initialProduct?.qr_code ?? null,
+      image_url: form.image_url?.trim() || null,
       extra_info: buildExtraInfoWithPriceMeta(form.extra_info, rowsToMeta(priceRows)),
       is_dimensional:
         isServiceCategorySelected || isComposite
@@ -292,11 +284,11 @@ export default function ProductForm({
       is_service: isServiceCategorySelected,
       base_length:
         !isServiceCategorySelected && (form.is_dimensional || metricMeasureUnit)
-          ? parseFloat(form.base_length) || null
+          ? parseFieldOptionalNumber(form.base_length)
           : null,
       base_width:
         !isServiceCategorySelected && (form.is_dimensional || form.unit === "Kvadrat Metr")
-          ? parseFloat(form.base_width) || null
+          ? parseFieldOptionalNumber(form.base_width)
           : null,
     };
 
@@ -316,7 +308,7 @@ export default function ProductForm({
           .filter((row) => row.componentProductId && (parseFloat(row.quantity) || 0) > 0)
           .map((row) => ({
             componentProductId: row.componentProductId,
-            quantity: parseFloat(row.quantity) || 1,
+            quantity: parseFieldNumber(row.quantity, 1),
           }));
 
         const bomResult = await saveProductBomAction(
@@ -425,25 +417,38 @@ export default function ProductForm({
             }`}
           >
             <ProductFormSection title={t("forms.sectionMainInfo")}>
-              <div className={rowClass}>
-                <FormField label={t("forms.productName")} required>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => set({ name: e.target.value })}
-                    className={formInputClass}
-                  />
-                </FormField>
-                <FormField label={t("forms.productCode")}>
-                  <input
-                    type="text"
-                    value={form.code}
-                    onChange={(e) => set({ code: e.target.value })}
-                    placeholder={t("forms.autoGenerated")}
-                    className={formInputClass}
-                  />
-                </FormField>
+              <div className="flex items-start gap-4">
+                <ProductImageField
+                  value={form.image_url || null}
+                  onChange={(imageUrl) => set({ image_url: imageUrl || "" })}
+                  alt={form.name}
+                  editable
+                  onUploadError={(message) =>
+                    showError(t("common.errorOccurred", { message }))
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <div className={rowClass}>
+                    <FormField label={t("forms.productName")} required>
+                      <input
+                        type="text"
+                        required
+                        value={form.name}
+                        onChange={(e) => set({ name: e.target.value })}
+                        className={formInputClass}
+                      />
+                    </FormField>
+                    <FormField label={t("forms.productCode")}>
+                      <input
+                        type="text"
+                        value={form.code}
+                        onChange={(e) => set({ code: e.target.value })}
+                        placeholder={t("forms.autoGenerated")}
+                        className={formInputClass}
+                      />
+                    </FormField>
+                  </div>
+                </div>
               </div>
 
               <div className={rowClass}>
@@ -543,7 +548,7 @@ export default function ProductForm({
                         type="number"
                         step="0.01"
                         min="0"
-                        value={form.base_length || "4.0"}
+                        value={form.base_length}
                         onChange={(event) => set({ base_length: event.target.value })}
                         placeholder={t("forms.lengthPlaceholder")}
                         className={formInputClass}
@@ -587,8 +592,11 @@ export default function ProductForm({
                   <FormField label={t("forms.minStockThreshold")}>
                     <input
                       type="number"
+                      min="0"
+                      step="1"
                       value={form.min_stock}
                       onChange={(e) => set({ min_stock: e.target.value })}
+                      placeholder="0"
                       className={formInputClass}
                     />
                   </FormField>
@@ -611,26 +619,25 @@ export default function ProductForm({
                 <ProductBarcodePanel
                   value={form.barcode}
                   onChange={(barcode) => set({ barcode })}
-                  barcodeFormat={barcodeFormat}
-                  onBarcodeFormatChange={setBarcodeFormat}
-                  labelSize={labelSize}
-                  onLabelSizeChange={setLabelSize}
+                  productName={form.name}
+                  productCode={form.code}
+                  sellPrice={parseFieldNumber(priceRows.sell[0]?.price ?? "", 0) || null}
                 />
-              </ProductFormSection>
-
-              <ProductFormSection title={t("forms.sectionExtraSettings")}>
-                <div className="space-y-4">
+                <div className="mt-4 space-y-3 border-t border-[color:var(--erp-border-default)] pt-4">
                   <FormField label={t("forms.minStockThreshold")}>
                     <input
                       type="number"
+                      min="0"
+                      step="1"
                       value={form.min_stock}
                       onChange={(e) => set({ min_stock: e.target.value })}
+                      placeholder="0"
                       className={formInputClass}
                     />
                   </FormField>
                   <FormField label={t("forms.extraInfo")}>
                     <textarea
-                      rows={4}
+                      rows={3}
                       value={form.extra_info}
                       onChange={(e) => set({ extra_info: e.target.value })}
                       className={formTextareaClass}

@@ -1,3 +1,4 @@
+import { priceToFieldValue } from "@/lib/forms/numericField";
 import type { Product } from "@/types/database.types";
 import type { PriceEntryUnit } from "@/lib/products/productPriceUnits";
 
@@ -103,10 +104,7 @@ function rowsFromMetaSide(
 ): ProductPriceRow[] {
   if (!side || side.length === 0) return fallback;
   return side.map((row) =>
-    createPriceRow(
-      Number.isInteger(row.price) ? String(row.price) : row.price.toFixed(2),
-      row.unit
-    )
+    createPriceRow(priceToFieldValue(row.price), row.unit)
   );
 }
 
@@ -121,18 +119,16 @@ export function parsePriceRowsFromProduct(product?: Product | null): ProductPric
     };
   }
 
-  const buyRows: ProductPriceRow[] = [
-    createPriceRow(String(product?.buy_price ?? 0), defaultUnit),
-  ];
+  const buyRows: ProductPriceRow[] = [createPriceRow(priceToFieldValue(product?.buy_price), defaultUnit)];
   if (Number(product?.buy_price_cut) > 0) {
-    buyRows.push(createPriceRow(String(product?.buy_price_cut ?? 0), "meter"));
+    buyRows.push(createPriceRow(priceToFieldValue(product?.buy_price_cut), "meter"));
   }
 
   const sellRows: ProductPriceRow[] = [
-    createPriceRow(String(product?.sell_price ?? 0), defaultUnit),
+    createPriceRow(priceToFieldValue(product?.sell_price), defaultUnit),
   ];
   if (Number(product?.sell_price_cut) > 0) {
-    sellRows.push(createPriceRow(String(product?.sell_price_cut ?? 0), "meter"));
+    sellRows.push(createPriceRow(priceToFieldValue(product?.sell_price_cut), "meter"));
   }
 
   return { buy: buyRows, sell: sellRows };

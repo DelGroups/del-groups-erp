@@ -51,6 +51,7 @@ export default function MetricPriceInput({
         min="0"
         value={displayValue}
         onChange={(event) => handleChange(event.target.value)}
+        placeholder="0.00"
         className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
       />
       {!entryByBar && meterPrice > 0 && barLength > 0 ? (

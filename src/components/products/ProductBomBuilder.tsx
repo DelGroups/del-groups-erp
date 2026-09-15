@@ -23,7 +23,7 @@ function newRow(): BomBuilderRow {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     componentProductId: "",
-    quantity: "1",
+    quantity: "",
   };
 }
 

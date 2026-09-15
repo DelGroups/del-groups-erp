@@ -1765,6 +1765,12 @@ export const ruMessages: Messages = {
       "1 лист ({length}×{width} м) = {sheet} AZN → {area} AZN/м²",
     barcodePanelFormat: "Формат штрихкода",
     barcodePanelLabelSize: "Размер этикетки",
+    printBarcode: "Печать",
+    productImage: "Изображение товара",
+    productImageAdd: "Добавить фото",
+    productImageView: "Увеличить",
+    productImageReplace: "Заменить",
+    productImageDelete: "Удалить",
     labelSizes: {
       "50x30mm": "50 × 30 мм",
       "40x25mm": "40 × 25 мм",
