@@ -74,6 +74,11 @@ export function extractUserNotesFromExtraInfo(extraInfo: string | null | undefin
   return withoutPrefix.slice(newlineIndex + 1).trim();
 }
 
+/** User-visible notes only — strips internal @@PRICE_ROWS@@ metadata. */
+export function displayExtraInfoNotes(extraInfo: string | null | undefined): string {
+  return extractUserNotesFromExtraInfo(extraInfo);
+}
+
 export function parsePriceMetaFromExtraInfo(
   extraInfo: string | null | undefined
 ): ProductPriceRowsMeta | null {

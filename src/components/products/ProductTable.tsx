@@ -11,6 +11,7 @@ import BarcodeDisplay from "@/components/products/BarcodeDisplay";
 import ProductImageField from "@/components/products/ProductImageField";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
+import { displayExtraInfoNotes } from "@/lib/products/productPriceRows";
 import Card from "@/components/ui/card";
 import StatusBadge from "@/components/ui/status-badge";
 import {
@@ -113,12 +114,14 @@ function renderCell(
       );
     case "unit":
       return product.unit || "-";
-    case "extra_info":
+    case "extra_info": {
+      const notes = displayExtraInfoNotes(product.extra_info);
       return (
         <span className="line-clamp-2 max-w-[200px] text-app-muted">
-          {product.extra_info || "-"}
+          {notes || "-"}
         </span>
       );
+    }
     default:
       return "-";
   }
