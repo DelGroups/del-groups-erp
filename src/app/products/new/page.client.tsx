@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ProductForm from "@/components/products/ProductForm";
 import { FormLayout } from "@/components/ui/form-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProductsCatalog } from "@/hooks/useProductsCatalog";
+import { buildProductClonePrefill } from "@/lib/products/cloneProduct";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { Product } from "@/types/database.types";
 
 function ProductFormSkeletonSection({ title }: { title?: string }) {
   return (
@@ -75,18 +77,26 @@ function ProductFormSkeleton() {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { data: catalog, isLoading } = useProductsCatalog();
   const categories = catalog?.categories ?? [];
   const warehouses = catalog?.warehouses ?? [];
   const products = catalog?.products ?? [];
+  const cloneId = searchParams.get("cloneId");
+  const cloneSource = cloneId ? products.find((product) => product.id === cloneId) : null;
+  const clonePrefill = useMemo(
+    () => (cloneSource ? buildProductClonePrefill(cloneSource) : null),
+    [cloneSource]
+  );
+  const initialProduct = clonePrefill as Product | null;
 
   return (
     <PageLayout>
       <FormLayout
         fullWidth
-        title={t("products.newTitle")}
-        subtitle={t("products.newSubtitle")}
+        title={cloneSource ? t("products.cloneTitle") : t("products.newTitle")}
+        subtitle={cloneSource ? t("products.cloneSubtitle") : t("products.newSubtitle")}
         breadcrumbs={[
           { label: t("nav.items.products"), href: "/products" },
           { label: t("products.createLabel") },
@@ -100,6 +110,9 @@ export default function NewProductPage() {
             categories={categories}
             warehouses={warehouses}
             allProducts={products}
+            initialProduct={initialProduct}
+            cloneSourceId={cloneId}
+            isClone={Boolean(cloneSource)}
             onCancel={() => router.push("/products")}
             onSuccess={() => router.push("/products")}
           />

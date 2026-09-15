@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
@@ -13,6 +14,8 @@ import ThermalLabelPrintTemplate, {
 } from "@/components/products/ThermalLabelPrintTemplate";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 import ProductFormDrawer from "@/components/products/ProductFormDrawer";
+import BulkImportModal from "@/components/products/BulkImportModal";
+import QuickScanModal from "@/components/products/QuickScanModal";
 import { BulkActionBar } from "@/components/ui/table";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePolywoodSummaries, usePolywoodWarehouseId, useProductsCatalog } from "@/hooks/useProductsCatalog";
@@ -64,6 +67,7 @@ import { deleteProductAction } from "@/lib/actions/entityDelete";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageProducts = can("can_manage_products");
@@ -85,8 +89,8 @@ export default function ProductsPage() {
     loadColumnVisibility
   );
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [bulkImportOpen, setBulkImportOpen] = useState(false);
-  const [quickScanOpen, setQuickScanOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const branding = useCompanyBranding();
   const { config: labelConfig } = useBarcodeLabelConfig();
@@ -127,6 +131,13 @@ export default function ProductsPage() {
   );
 
   const bulk = useBulkSelection(filteredProducts, (product) => product.id);
+
+  const handleClone = useCallback(
+    (product: Product) => {
+      router.push(`/products/new?cloneId=${product.id}`);
+    },
+    [router]
+  );
 
   const handleDeleteProduct = async () => {
     if (!deleteTarget) return;
@@ -205,13 +216,13 @@ export default function ProductsPage() {
                       key: "bulk-import",
                       label: t("products.bulkImportLabel"),
                       icon: <FileSpreadsheet className="h-4 w-4 text-emerald-600" />,
-                      onSelect: () => setBulkImportOpen(true),
+                      onSelect: () => setIsBulkModalOpen(true),
                     },
                     {
                       key: "quick-scan",
                       label: t("products.quickScanLabel"),
                       icon: <ScanLine className="h-4 w-4 text-app-accent" />,
-                      onSelect: () => setQuickScanOpen(true),
+                      onSelect: () => setIsScanModalOpen(true),
                     },
                   ]}
                 />
@@ -301,6 +312,7 @@ export default function ProductsPage() {
             loading={loading}
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
+            onClone={canManageProducts ? handleClone : undefined}
             onDelete={canManageProducts ? setDeleteTarget : undefined}
             onPrintLabel={
               barcodeModuleEnabled
@@ -320,6 +332,10 @@ export default function ProductsPage() {
             }
           />
       </ListPageChrome>
+
+      <BulkImportModal open={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} />
+
+      <QuickScanModal open={isScanModalOpen} onClose={() => setIsScanModalOpen(false)} />
 
       <CategoryManagerModal
         isOpen={categoryModalOpen}

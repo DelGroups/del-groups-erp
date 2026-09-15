@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Pencil, Printer, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, Pencil, Printer, Trash2 } from "lucide-react";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import PolywoodStockCell from "@/components/polywood/PolywoodStockCell";
 import type { PolywoodInventorySummary } from "@/lib/polywood/types";
@@ -46,6 +46,7 @@ interface ProductTableProps {
   loading?: boolean;
   canEdit?: boolean;
   onEdit?: (product: Product) => void;
+  onClone?: (product: Product) => void;
   onDelete?: (product: Product) => void;
   onPrintLabel?: (product: Product) => void;
   emptyMessage?: string;
@@ -134,6 +135,7 @@ export default function ProductTable({
   loading,
   canEdit,
   onEdit,
+  onClone,
   onDelete,
   onPrintLabel,
   emptyMessage,
@@ -279,6 +281,16 @@ export default function ProductTable({
                                     label: t("common.edit"),
                                     icon: <Pencil className="h-4 w-4" />,
                                     onClick: () => onEdit(product),
+                                  },
+                                ]
+                              : []),
+                            ...(canEdit && onClone
+                              ? [
+                                  {
+                                    key: "clone",
+                                    label: t("products.duplicateLabel"),
+                                    icon: <Copy className="h-4 w-4" />,
+                                    onClick: () => onClone(product),
                                   },
                                 ]
                               : []),

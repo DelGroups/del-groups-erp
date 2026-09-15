@@ -51,6 +51,9 @@ interface ProductFormProps {
   warehouses: Warehouse[];
   allProducts?: Product[];
   initialProduct?: Product | null;
+  /** When duplicating, load BOM from the source product id while creating a new row. */
+  cloneSourceId?: string | null;
+  isClone?: boolean;
   onSuccess?: () => void;
   onCancel?: () => void;
   /** When true, renders inside a drawer without a fixed viewport footer. */
@@ -108,6 +111,8 @@ export default function ProductForm({
   warehouses,
   allProducts = [],
   initialProduct,
+  cloneSourceId = null,
+  isClone = false,
   onSuccess,
   onCancel,
   embedded = false,
@@ -127,7 +132,7 @@ export default function ProductForm({
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const invalidateProductsCatalog = useInvalidateProductsCatalog();
-  const isEditMode = Boolean(initialProduct);
+  const isEditMode = Boolean(initialProduct?.id) && !isClone;
 
   const categoryByName = (name?: string | null) =>
     categories.find((cat) => cat.name === (name || "").trim()) || null;
@@ -254,8 +259,9 @@ export default function ProductForm({
   }, [saving, onSavingChange]);
 
   useEffect(() => {
-    if (!initialProduct?.id || !initialProduct.is_composite) return;
-    void fetchProductBomAction(initialProduct.id).then((result) => {
+    const bomSourceId = isClone ? cloneSourceId : initialProduct?.id;
+    if (!bomSourceId || !initialProduct?.is_composite) return;
+    void fetchProductBomAction(bomSourceId).then((result) => {
       if (!result.success) return;
       setBomRows(
         result.rows.map((row) => ({
@@ -265,7 +271,7 @@ export default function ProductForm({
         }))
       );
     });
-  }, [initialProduct?.id, initialProduct?.is_composite]);
+  }, [cloneSourceId, initialProduct?.id, initialProduct?.is_composite, isClone]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
