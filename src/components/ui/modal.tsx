@@ -19,6 +19,7 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  bodyClassName?: string;
 }
 
 /** Gentelella-styled modal wrapper over Radix Dialog. */
@@ -30,12 +31,13 @@ export function Modal({
   children,
   footer,
   className,
+  bodyClassName,
 }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-w-lg overflow-hidden rounded-[var(--erp-radius-md)] border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-0 shadow-[var(--erp-shadow-lg)]",
+          "min-w-0 overflow-hidden rounded-[var(--erp-radius-md)] border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-0 shadow-[var(--erp-shadow-lg)]",
           className
         )}
       >
@@ -47,7 +49,14 @@ export function Modal({
             </DialogDescription>
           ) : null}
         </DialogHeader>
-        <div className="px-[var(--erp-panel-padding-x)] py-[var(--erp-panel-padding-y)]">{children}</div>
+        <div
+          className={cn(
+            "px-[var(--erp-panel-padding-x)] py-[var(--erp-panel-padding-y)]",
+            bodyClassName
+          )}
+        >
+          {children}
+        </div>
         {footer ? (
           <div className="flex justify-end gap-2 border-t border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3">
             {footer}
