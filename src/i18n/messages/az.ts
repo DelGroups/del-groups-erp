@@ -522,7 +522,7 @@ export const azMessages = {
       colMetraj: "Metraj hissələri",
       barcodeAuto: "avtomatik",
       pricePairHint:
-        "Qiymətlər: [Şət/Ədəd] / [Metr/m²]. Ədəd/Şit üçün İlkin Say; Metr üçün vergüllə ayrılmış metraj (məs: 4,4,3.2,1).",
+        "İlk sütun «Məhsul kodu» (məcburi), ikinci «Məhsul adı» (məcburi). Qiymətlər: [Şət/Ədəd] / [Metr/m²]. Ədəd üçün İlkin Say; Metr üçün metraj (4,4,3.2).",
     },
     quickScanLabel: "Sürətli Barkod Oxut",
     quickScanPlaceholder: "Barkodu skan edin və ya daxil edin (tezliklə).",

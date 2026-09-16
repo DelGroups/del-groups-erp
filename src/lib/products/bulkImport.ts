@@ -14,9 +14,14 @@ import {
 } from "@/lib/products/bulkImportUnits";
 import type { ProductInsert } from "@/types/database.types";
 
+/** Canonical column order — `Məhsul kodu` must remain index 0 for template + validation. */
+export const BULK_IMPORT_SKU_HEADER = "Məhsul kodu";
+export const BULK_IMPORT_NAME_HEADER = "Məhsul adı";
+export const BULK_IMPORT_REQUIRED_HEADERS = [BULK_IMPORT_SKU_HEADER, BULK_IMPORT_NAME_HEADER] as const;
+
 export const BULK_IMPORT_TEMPLATE_HEADERS = [
-  "Məhsul kodu",
-  "Məhsul adı",
+  BULK_IMPORT_SKU_HEADER,
+  BULK_IMPORT_NAME_HEADER,
   "Kateqoriya",
   "Alt kateqoriya",
   "Brend",
@@ -77,6 +82,28 @@ export interface BulkImportApiPayload {
 
 function normalizeHeader(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function validateCsvHeaderRow(fields: string[] | undefined): string | null {
+  if (!fields?.length) {
+    return "CSV başlıqları tapılmadı";
+  }
+
+  const normalized = fields.map((field) => normalizeHeader(field));
+  const skuIndex = normalized.indexOf(normalizeHeader(BULK_IMPORT_SKU_HEADER));
+  const nameIndex = normalized.indexOf(normalizeHeader(BULK_IMPORT_NAME_HEADER));
+
+  if (skuIndex === -1) {
+    return `CSV şablonunda «${BULK_IMPORT_SKU_HEADER}» sütunu tapılmadı`;
+  }
+  if (skuIndex !== 0) {
+    return `«${BULK_IMPORT_SKU_HEADER}» ilk sütun olmalıdır`;
+  }
+  if (nameIndex === -1) {
+    return `CSV şablonunda «${BULK_IMPORT_NAME_HEADER}» sütunu tapılmadı`;
+  }
+
+  return null;
 }
 
 function cell(row: Record<string, string>, header: BulkImportTemplateHeader): string {
@@ -193,8 +220,8 @@ export function validateBulkImportRow(
   const code = row.code.trim();
   const name = row.name.trim();
 
-  if (!code) errors.push("Məhsul kodu tələb olunur");
-  if (!name) errors.push("Məhsul adı tələb olunur");
+  if (!code) errors.push(`${BULK_IMPORT_SKU_HEADER} tələb olunur`);
+  if (!name) errors.push(`${BULK_IMPORT_NAME_HEADER} tələb olunur`);
   if (code && seenCodes.has(code.toLowerCase())) {
     errors.push("CSV-də təkrarlanan məhsul kodu");
   }
@@ -269,13 +296,23 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
     };
   }
 
+  const headerError = validateCsvHeaderRow(parsed.meta.fields);
+  if (headerError) {
+    return {
+      rows: [],
+      validCount: 0,
+      invalidCount: 0,
+      parseError: headerError,
+    };
+  }
+
   const seenCodes = new Set<string>();
   const rows: BulkImportRow[] = parsed.data
     .map((record, index) => {
       const base = {
         rowNumber: index + 2,
-        code: cell(record, "Məhsul kodu"),
-        name: cell(record, "Məhsul adı"),
+        code: cell(record, BULK_IMPORT_SKU_HEADER),
+        name: cell(record, BULK_IMPORT_NAME_HEADER),
         category: cell(record, "Kateqoriya"),
         subcategory: cell(record, "Alt kateqoriya"),
         brand: cell(record, "Brend"),
@@ -389,8 +426,9 @@ export function bulkImportRowToApiPayload(row: BulkImportRow): BulkImportApiPayl
 }
 
 export function downloadBulkImportTemplate(): void {
+  const fields = [...BULK_IMPORT_TEMPLATE_HEADERS];
   const csv = Papa.unparse({
-    fields: [...BULK_IMPORT_TEMPLATE_HEADERS],
+    fields,
     data: [],
   });
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });

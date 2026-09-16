@@ -275,8 +275,22 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                       )}
                     >
                       <td className="px-2 py-2 text-app-muted">{row.rowNumber}</td>
-                      <td className="px-2 py-2 font-mono">{row.code || "—"}</td>
-                      <td className="px-2 py-2 max-w-[10rem] truncate">{row.name || "—"}</td>
+                      <td
+                        className={cn(
+                          "px-2 py-2 font-mono",
+                          !row.code.trim() && "bg-rose-100 font-semibold text-rose-800"
+                        )}
+                      >
+                        {row.code || "—"}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-2 py-2 max-w-[10rem] truncate",
+                          !row.name.trim() && "bg-rose-100 font-semibold text-rose-800"
+                        )}
+                      >
+                        {row.name || "—"}
+                      </td>
                       <td className="px-2 py-2">{row.category || "—"}</td>
                       <td className="px-2 py-2">{row.subcategory || "—"}</td>
                       <td className="px-2 py-2">{row.brand || "—"}</td>
