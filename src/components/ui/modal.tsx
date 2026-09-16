@@ -37,11 +37,11 @@ export function Modal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "min-w-0 overflow-hidden rounded-[var(--erp-radius-md)] border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-0 shadow-[var(--erp-shadow-lg)]",
+          "flex max-h-[min(92dvh,92vh)] min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--erp-radius-md)] border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-0 shadow-[var(--erp-shadow-lg)]",
           className
         )}
       >
-        <DialogHeader className="relative border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3 pr-10">
+        <DialogHeader className="relative shrink-0 border-b border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3 pr-10">
           <DialogTitle className="erp-panel-title">{title}</DialogTitle>
           {description ? (
             <DialogDescription className="text-[color:var(--erp-text-muted)]">
@@ -51,14 +51,14 @@ export function Modal({
         </DialogHeader>
         <div
           className={cn(
-            "px-[var(--erp-panel-padding-x)] py-[var(--erp-panel-padding-y)]",
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-[var(--erp-panel-padding-x)] py-[var(--erp-panel-padding-y)]",
             bodyClassName
           )}
         >
           {children}
         </div>
         {footer ? (
-          <div className="flex justify-end gap-2 border-t border-[color:var(--erp-border-default)] px-[var(--erp-panel-padding-x)] py-3">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] px-[var(--erp-panel-padding-x)] py-3">
             {footer}
           </div>
         ) : null}

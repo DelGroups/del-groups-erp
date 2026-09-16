@@ -158,8 +158,8 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         if (!next) handleClose();
       }}
       title={t("products.bulkImportLabel")}
-      className="top-1/2 max-h-[92vh] w-[92vw] max-w-6xl -translate-y-1/2 sm:w-[85vw]"
-      bodyClassName="p-6"
+      className="top-1/2 w-[min(92vw,72rem)] max-w-none -translate-y-1/2 sm:w-[min(85vw,72rem)]"
+      bodyClassName="flex min-h-0 flex-col overflow-hidden p-6"
       footer={
         <div className="flex w-full items-center justify-end gap-2">
           <Button type="button" variant="secondary" onClick={handleClose} disabled={uploading}>
@@ -184,8 +184,8 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         onChange={(event) => handleFiles(event.target.files)}
       />
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-app-muted">{t("products.bulkImport.description")}</p>
           <Button type="button" variant="outline" size="sm" onClick={downloadBulkImportTemplate}>
             <Download className="h-4 w-4" />
@@ -195,7 +195,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
 
         {hasParsedPreview ? (
           <div
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]/60 px-3 py-2"
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]/60 px-3 py-2"
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault();
@@ -227,7 +227,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         ) : (
           <div
             className={cn(
-              "rounded-[var(--erp-radius-md)] border-2 border-dashed px-6 py-8 text-center transition-colors",
+              "shrink-0 rounded-[var(--erp-radius-md)] border-2 border-dashed px-6 py-8 text-center transition-colors",
               dragActive
                 ? "border-[color:var(--erp-color-primary)] bg-[color:var(--erp-color-primary)]/5"
                 : "border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-input)]/40 hover:border-[color:var(--erp-color-primary)]/40"
@@ -272,7 +272,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         )}
 
         {parseError ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {parseError}
           </p>
         ) : null}
@@ -280,7 +280,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         {hasParsedPreview ? (
           <>
             <div
-              className="mt-4 max-h-[55vh] overflow-x-auto overflow-y-auto rounded-lg border border-[color:var(--erp-border-default)] shadow-inner"
+              className="min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-lg border border-[color:var(--erp-border-default)] shadow-inner"
             >
               <table className="w-full min-w-[1500px] border-collapse text-left">
                 <thead className="sticky top-0 z-10 bg-[color:var(--erp-bg-table-header)] font-semibold shadow-[0_1px_0_var(--erp-border-default)]">
@@ -369,7 +369,9 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                 </tbody>
               </table>
             </div>
-            <p className="text-[11px] text-app-muted">{t("products.bulkImport.pricePairHint")}</p>
+            <p className="shrink-0 text-[11px] leading-snug text-app-muted">
+              {t("products.bulkImport.pricePairHint")}
+            </p>
           </>
         ) : null}
       </div>
