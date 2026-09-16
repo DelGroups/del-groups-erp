@@ -11,7 +11,7 @@ import {
   bulkImportRowToApiPayload,
   downloadBulkImportTemplate,
   formatBulkImportDimensions,
-  formatBulkImportOffcutDimensions,
+  formatBulkImportMetraj,
   formatBulkImportPricePair,
   parseBulkImportCsv,
   type BulkImportRow,
@@ -97,7 +97,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
             return {
               ...payload.product,
               _bulk: {
-                offcut: payload.offcut,
+                stock: payload.stock,
               },
             };
           }),
@@ -109,7 +109,8 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         error?: string;
         inserted?: number;
         skipped?: number;
-        insertedOffcuts?: number;
+        stockEntries?: number;
+        warning?: string;
       };
 
       if (!response.ok || !payload.success) {
@@ -117,9 +118,14 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         return;
       }
 
-      const hadOffcuts = validRows.some((row) => row.has_offcut);
-      if (hadOffcuts || (payload.insertedOffcuts ?? 0) > 0) {
-        showSuccess(t("products.bulkImport.uploadSuccessWithOffcuts"));
+      const hadInitialStock = validRows.some(
+        (row) =>
+          (row.stock_mode === "piece" && Number(row.initial_count) > 0) ||
+          (row.stock_mode === "meter" && row.metraj_pieces.length > 0)
+      );
+
+      if (hadInitialStock || (payload.stockEntries ?? 0) > 0) {
+        showSuccess(t("products.bulkImport.uploadSuccessWithStock"));
       } else {
         showSuccess(
           t("products.bulkImport.uploadSuccess", {
@@ -128,6 +134,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
           })
         );
       }
+
       onImported?.();
       handleClose();
     } catch {
@@ -252,7 +259,9 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colDimensions")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBuyPrice")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colSellPrice")}</th>
-                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colOffcuts")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colUnit")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colInitialCount")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colMetraj")}</th>
                     <th className="px-2 py-2">{t("products.bulkImport.status")}</th>
                   </tr>
                 </thead>
@@ -289,11 +298,15 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                       <td className="px-2 py-2 font-mono whitespace-nowrap">
                         {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
                       </td>
+                      <td className="px-2 py-2 whitespace-nowrap">{row.measure_unit || "—"}</td>
+                      <td className="px-2 py-2 font-mono">
+                        {row.stock_mode === "piece" ? row.initial_count || "0" : "—"}
+                      </td>
                       <td
                         className="px-2 py-2 max-w-[9rem] truncate"
-                        title={formatBulkImportOffcutDimensions(row)}
+                        title={formatBulkImportMetraj(row)}
                       >
-                        {formatBulkImportOffcutDimensions(row)}
+                        {row.stock_mode === "meter" ? formatBulkImportMetraj(row) : "—"}
                       </td>
                       <td className="px-2 py-2">
                         {row.isValid ? (

@@ -505,6 +505,8 @@ export const azMessages = {
       uploadSuccess: "{inserted} məhsul əlavə edildi. {skipped} mövcud SKU atlandı.",
       uploadSuccessWithOffcuts:
         "Məhsullar və kəsilmiş hissələr fərdi barkod ilə bazaya əlavə olundu",
+      uploadSuccessWithStock:
+        "Məhsullar və ilkin qalıqlar uğurla bazaya əlavə olundu",
       colCode: "Kod",
       colName: "Ad",
       colCategory: "Kateqoriya",
@@ -515,9 +517,12 @@ export const azMessages = {
       colBuyPrice: "Alış (Şət/m²)",
       colSellPrice: "Satış (Şət/m²)",
       colOffcuts: "Qalıq ölçü",
+      colUnit: "Vahid",
+      colInitialCount: "İlkin say",
+      colMetraj: "Metraj hissələri",
       barcodeAuto: "avtomatik",
       pricePairHint:
-        "Qiymətlər: [Şət/Ədəd] / [Metr/m²]. Qalıq hissə: Uzunluq və En sütunlarını doldurun — fərdi SKU və barkod avtomatik yaradılır.",
+        "Qiymətlər: [Şət/Ədəd] / [Metr/m²]. Ədəd/Şit üçün İlkin Say; Metr üçün vergüllə ayrılmış metraj (məs: 4,4,3.2,1).",
     },
     quickScanLabel: "Sürətli Barkod Oxut",
     quickScanPlaceholder: "Barkodu skan edin və ya daxil edin (tezliklə).",

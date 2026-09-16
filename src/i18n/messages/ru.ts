@@ -507,6 +507,7 @@ export const ruMessages: Messages = {
       uploadSuccess: "Добавлено {inserted} товаров. Пропущено {skipped} существующих SKU.",
       uploadSuccessWithOffcuts:
         "Товары и обрезки добавлены с индивидуальными штрихкодами",
+      uploadSuccessWithStock: "Товары и начальные остатки успешно добавлены",
       colCode: "Код",
       colName: "Название",
       colCategory: "Категория",
@@ -517,9 +518,12 @@ export const ruMessages: Messages = {
       colBuyPrice: "Закуп (лист/m²)",
       colSellPrice: "Продажа (лист/m²)",
       colOffcuts: "Размер обрезка",
+      colUnit: "Ед. изм.",
+      colInitialCount: "Нач. кол-во",
+      colMetraj: "Метраж",
       barcodeAuto: "авто",
       pricePairHint:
-        "Цены: [лист/шт] / [метр/m²]. Заполните длину и ширину обрезка — создастся дочерний SKU и штрихкод.",
+        "Цены: [лист/шт] / [метр/m²]. Для штук — нач. кол-во; для Metr — длины через запятую (4,4,3.2,1).",
     },
     quickScanLabel: "Быстрое сканирование штрихкода",
     quickScanPlaceholder: "Сканируйте или введите штрихкод (скоро).",

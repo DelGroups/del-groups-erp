@@ -507,6 +507,7 @@ export const enMessages: Messages = {
       uploadSuccess: "{inserted} products added. {skipped} existing SKUs skipped.",
       uploadSuccessWithOffcuts:
         "Products and off-cut pieces were added with individual barcodes",
+      uploadSuccessWithStock: "Products and opening stock were added successfully",
       colCode: "Code",
       colName: "Name",
       colCategory: "Category",
@@ -517,9 +518,12 @@ export const enMessages: Messages = {
       colBuyPrice: "Buy (sheet/m²)",
       colSellPrice: "Sell (sheet/m²)",
       colOffcuts: "Remainder size",
+      colUnit: "Unit",
+      colInitialCount: "Initial qty",
+      colMetraj: "Meter pieces",
       barcodeAuto: "auto",
       pricePairHint:
-        "Prices: [sheet/piece] / [meter/m²]. Fill remainder length and width to auto-create a child SKU and barcode.",
+        "Prices: [sheet/piece] / [meter/m²]. Use Initial qty for pieces; comma-separated lengths for Metr (e.g. 4,4,3.2,1).",
     },
     quickScanLabel: "Quick barcode scan",
     quickScanPlaceholder: "Scan or enter a barcode (coming soon).",

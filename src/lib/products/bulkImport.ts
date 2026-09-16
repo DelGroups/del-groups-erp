@@ -1,11 +1,17 @@
 import Papa from "papaparse";
-import type { BulkImportOffcutSpec } from "@/lib/products/bulkImportOffcut";
 import {
   buildExtraInfoWithPriceMeta,
   rowsToDbColumns,
   type ProductPriceRowsState,
 } from "@/lib/products/productPriceRows";
 import type { PriceEntryUnit } from "@/lib/products/productPriceUnits";
+import {
+  formatMetrajPiecesPreview,
+  normalizeBulkImportMeasureUnit,
+  parseMetrajPieces,
+  resolveBulkImportStockMode,
+  type BulkImportStockMode,
+} from "@/lib/products/bulkImportUnits";
 import type { ProductInsert } from "@/types/database.types";
 
 export const BULK_IMPORT_TEMPLATE_HEADERS = [
@@ -21,8 +27,9 @@ export const BULK_IMPORT_TEMPLATE_HEADERS = [
   "Alış qiyməti (Metr/m²)",
   "Satış qiyməti (Şət/Ədəd)",
   "Satış qiyməti (Metr/m²)",
-  "Qalıq Hissə Uzunluğu (m)",
-  "Qalıq Hissə Eni (m)",
+  "Ölçü vahidi",
+  "İlkin Say",
+  "Metraj hissələri",
 ] as const;
 
 export type BulkImportTemplateHeader = (typeof BULK_IMPORT_TEMPLATE_HEADERS)[number];
@@ -41,9 +48,11 @@ export interface BulkImportRow {
   buy_price_meter: string;
   sell_price_piece: string;
   sell_price_meter: string;
-  offcut_length: string;
-  offcut_width: string;
-  has_offcut: boolean;
+  measure_unit: string;
+  initial_count: string;
+  metraj_pieces_raw: string;
+  metraj_pieces: number[];
+  stock_mode: BulkImportStockMode;
   is_dimensional: boolean;
   unit: string;
   errors: string[];
@@ -59,7 +68,11 @@ export interface BulkImportParseResult {
 
 export interface BulkImportApiPayload {
   product: ProductInsert;
-  offcut: BulkImportOffcutSpec | null;
+  stock: {
+    mode: BulkImportStockMode;
+    initialCount: number;
+    meterPieces: number[];
+  };
 }
 
 function normalizeHeader(value: string): string {
@@ -106,11 +119,17 @@ function parseOptionalDimension(
   return parsed;
 }
 
-function hasDimensionInput(lengthRaw: string, widthRaw: string): boolean {
-  return Boolean(lengthRaw.trim() || widthRaw.trim());
+function parseInitialCount(value: string, errors: string[]): number | null {
+  if (!value.trim()) return 0;
+  const parsed = parseDecimal(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed % 1 !== 0) {
+    errors.push("İlkin Say tam ədəd olmalıdır");
+    return null;
+  }
+  return parsed;
 }
 
-function hasOffcutInput(lengthRaw: string, widthRaw: string): boolean {
+function hasDimensionInput(lengthRaw: string, widthRaw: string): boolean {
   return Boolean(lengthRaw.trim() || widthRaw.trim());
 }
 
@@ -147,24 +166,26 @@ export function formatBulkImportDimensions(row: BulkImportRow): string {
   return "—";
 }
 
-export function formatBulkImportOffcutDimensions(row: BulkImportRow): string {
-  if (!row.has_offcut) return "—";
-  const length = row.offcut_length.trim();
-  const width = row.offcut_width.trim();
-  if (length && width) return `${length} × ${width} m`;
-  return `${length || "—"} × ${width || "—"}`;
-}
-
 export function formatBulkImportPricePair(piece: string, meter: string): string {
   const pieceValue = piece.trim() || "0";
   const meterValue = meter.trim() || "0";
   return `${pieceValue} / ${meterValue}`;
 }
 
+export function formatBulkImportMetraj(row: BulkImportRow): string {
+  return formatMetrajPiecesPreview(row.metraj_pieces, row.metraj_pieces_raw);
+}
+
 export function validateBulkImportRow(
   row: Omit<
     BulkImportRow,
-    "errors" | "isValid" | "rowNumber" | "is_dimensional" | "unit" | "has_offcut"
+    | "errors"
+    | "isValid"
+    | "rowNumber"
+    | "is_dimensional"
+    | "unit"
+    | "stock_mode"
+    | "metraj_pieces"
   >,
   seenCodes: Set<string>
 ): BulkImportRow {
@@ -181,37 +202,28 @@ export function validateBulkImportRow(
 
   const baseLength = parseOptionalDimension(row.base_length, "Uzunluq (m)", errors);
   const baseWidth = parseOptionalDimension(row.base_width, "En (m)", errors);
-  const isDimensional = hasDimensionInput(row.base_length, row.base_width);
-
-  const offcutLengthRaw = row.offcut_length.trim();
-  const offcutWidthRaw = row.offcut_width.trim();
-  const offcutTouched = hasOffcutInput(offcutLengthRaw, offcutWidthRaw);
-  let offcutLength: number | null = null;
-  let offcutWidth: number | null = null;
-
-  if (offcutTouched) {
-    if (!offcutLengthRaw || !offcutWidthRaw) {
-      errors.push("Qalıq hissə üçün həm uzunluq, həm en doldurulmalıdır");
-    } else {
-      offcutLength = parseOptionalDimension(offcutLengthRaw, "Qalıq Hissə Uzunluğu (m)", errors);
-      offcutWidth = parseOptionalDimension(offcutWidthRaw, "Qalıq Hissə Eni (m)", errors);
-    }
-  }
+  const sheetDimensional = hasDimensionInput(row.base_length, row.base_width);
+  const stockMode = resolveBulkImportStockMode(row.measure_unit, sheetDimensional);
+  const normalizedUnit = normalizeBulkImportMeasureUnit(row.measure_unit, stockMode);
+  const isDimensional = sheetDimensional || stockMode === "meter";
 
   const buyPiece = parsePrice(row.buy_price_piece, "Alış qiyməti (Şət/Ədəd)", errors);
   const buyMeter = parsePrice(row.buy_price_meter, "Alış qiyməti (Metr/m²)", errors);
   const sellPiece = parsePrice(row.sell_price_piece, "Satış qiyməti (Şət/Ədəd)", errors);
   const sellMeter = parsePrice(row.sell_price_meter, "Satış qiyməti (Metr/m²)", errors);
 
-  const hasOffcut =
-    offcutLength !== null && offcutWidth !== null && offcutLength > 0 && offcutWidth > 0;
+  let initialCount = 0;
+  let metrajPieces: number[] = [];
 
-  if (hasOffcut && code) {
-    const reservedChildCode = `${code}-CUT1`.toLowerCase();
-    if (seenCodes.has(reservedChildCode)) {
-      errors.push("Kəsilmiş hissə SKU konflikti");
-    } else {
-      seenCodes.add(reservedChildCode);
+  if (stockMode === "piece") {
+    const parsedCount = parseInitialCount(row.initial_count, errors);
+    if (parsedCount !== null) initialCount = parsedCount;
+  } else {
+    if (row.metraj_pieces_raw.trim()) {
+      metrajPieces = parseMetrajPieces(row.metraj_pieces_raw);
+      if (metrajPieces.length === 0) {
+        errors.push("Metraj hissələri düzgün formatda deyil");
+      }
     }
   }
 
@@ -229,11 +241,13 @@ export function validateBulkImportRow(
     buy_price_meter: buyMeter === null ? row.buy_price_meter : String(buyMeter),
     sell_price_piece: sellPiece === null ? row.sell_price_piece : String(sellPiece),
     sell_price_meter: sellMeter === null ? row.sell_price_meter : String(sellMeter),
-    offcut_length: offcutLength === null ? offcutLengthRaw : String(offcutLength),
-    offcut_width: offcutWidth === null ? offcutWidthRaw : String(offcutWidth),
-    has_offcut: hasOffcut,
+    measure_unit: normalizedUnit,
+    initial_count: String(initialCount),
+    metraj_pieces_raw: row.metraj_pieces_raw.trim(),
+    metraj_pieces: metrajPieces,
+    stock_mode: stockMode,
     is_dimensional: isDimensional,
-    unit: isDimensional ? "Metr" : "Ədəd",
+    unit: normalizedUnit,
     errors,
     isValid: errors.length === 0,
   };
@@ -272,15 +286,17 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         buy_price_meter: cell(record, "Alış qiyməti (Metr/m²)"),
         sell_price_piece: cell(record, "Satış qiyməti (Şət/Ədəd)"),
         sell_price_meter: cell(record, "Satış qiyməti (Metr/m²)"),
-        offcut_length: cell(record, "Qalıq Hissə Uzunluğu (m)"),
-        offcut_width: cell(record, "Qalıq Hissə Eni (m)"),
+        measure_unit: cell(record, "Ölçü vahidi"),
+        initial_count: cell(record, "İlkin Say"),
+        metraj_pieces_raw: cell(record, "Metraj hissələri"),
       };
 
       const isEmpty = Object.values(base).every((value) => !String(value).trim());
       if (isEmpty) {
         return {
           ...base,
-          has_offcut: false,
+          metraj_pieces: [] as number[],
+          stock_mode: "piece" as BulkImportStockMode,
           is_dimensional: false,
           unit: "Ədəd",
           errors: [] as string[],
@@ -299,8 +315,9 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         row.barcode ||
         row.base_length ||
         row.base_width ||
-        row.offcut_length ||
-        row.offcut_width
+        row.measure_unit ||
+        row.initial_count ||
+        row.metraj_pieces_raw
     );
 
   const validCount = rows.filter((row) => row.isValid).length;
@@ -361,16 +378,14 @@ export function bulkImportRowToProductInsert(row: BulkImportRow): ProductInsert 
 }
 
 export function bulkImportRowToApiPayload(row: BulkImportRow): BulkImportApiPayload {
-  const product = buildProductFromRow(row);
-  const offcut =
-    row.has_offcut
-      ? {
-          lengthM: Number(row.offcut_length) || 0,
-          widthM: Number(row.offcut_width) || 0,
-        }
-      : null;
-
-  return { product, offcut };
+  return {
+    product: buildProductFromRow(row),
+    stock: {
+      mode: row.stock_mode,
+      initialCount: Number(row.initial_count) || 0,
+      meterPieces: row.metraj_pieces,
+    },
+  };
 }
 
 export function downloadBulkImportTemplate(): void {
