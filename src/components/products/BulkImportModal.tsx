@@ -8,9 +8,10 @@ import Button from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import {
-  bulkImportRowToProductInsert,
+  bulkImportRowToApiPayload,
   downloadBulkImportTemplate,
   formatBulkImportDimensions,
+  formatBulkImportOffcutDimensions,
   formatBulkImportPricePair,
   parseBulkImportCsv,
   type BulkImportRow,
@@ -91,7 +92,15 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          products: validRows.map((row) => bulkImportRowToProductInsert(row)),
+          products: validRows.map((row) => {
+            const payload = bulkImportRowToApiPayload(row);
+            return {
+              ...payload.product,
+              _bulk: {
+                offcut: payload.offcut,
+              },
+            };
+          }),
         }),
       });
 
@@ -100,6 +109,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         error?: string;
         inserted?: number;
         skipped?: number;
+        insertedOffcuts?: number;
       };
 
       if (!response.ok || !payload.success) {
@@ -107,12 +117,17 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         return;
       }
 
-      showSuccess(
-        t("products.bulkImport.uploadSuccess", {
-          inserted: payload.inserted ?? 0,
-          skipped: payload.skipped ?? 0,
-        })
-      );
+      const hadOffcuts = validRows.some((row) => row.has_offcut);
+      if (hadOffcuts || (payload.insertedOffcuts ?? 0) > 0) {
+        showSuccess(t("products.bulkImport.uploadSuccessWithOffcuts"));
+      } else {
+        showSuccess(
+          t("products.bulkImport.uploadSuccess", {
+            inserted: payload.inserted ?? 0,
+            skipped: payload.skipped ?? 0,
+          })
+        );
+      }
       onImported?.();
       handleClose();
     } catch {
@@ -231,11 +246,13 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colCode")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colName")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colCategory")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colSubcategory")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBrand")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBarcode")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colDimensions")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colBuyPrice")}</th>
                     <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colSellPrice")}</th>
+                    <th className="px-2 py-2 whitespace-nowrap">{t("products.bulkImport.colOffcuts")}</th>
                     <th className="px-2 py-2">{t("products.bulkImport.status")}</th>
                   </tr>
                 </thead>
@@ -252,8 +269,11 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                       <td className="px-2 py-2 font-mono">{row.code || "—"}</td>
                       <td className="px-2 py-2 max-w-[10rem] truncate">{row.name || "—"}</td>
                       <td className="px-2 py-2">{row.category || "—"}</td>
+                      <td className="px-2 py-2">{row.subcategory || "—"}</td>
                       <td className="px-2 py-2">{row.brand || "—"}</td>
-                      <td className="px-2 py-2 font-mono">{row.barcode || "—"}</td>
+                      <td className="px-2 py-2 font-mono">
+                        {row.barcode || t("products.bulkImport.barcodeAuto")}
+                      </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         {row.is_dimensional ? (
                           <span className="font-medium text-app-accent">
@@ -268,6 +288,12 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                       </td>
                       <td className="px-2 py-2 font-mono whitespace-nowrap">
                         {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
+                      </td>
+                      <td
+                        className="px-2 py-2 max-w-[9rem] truncate"
+                        title={formatBulkImportOffcutDimensions(row)}
+                      >
+                        {formatBulkImportOffcutDimensions(row)}
                       </td>
                       <td className="px-2 py-2">
                         {row.isValid ? (

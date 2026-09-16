@@ -259,6 +259,8 @@ export interface Product {
   is_service?: boolean | null;
   /** True for kit/bundle products assembled from BOM components */
   is_composite?: boolean | null;
+  /** Parent sheet product when this row is an individual off-cut piece SKU */
+  parent_id?: string | null;
   brand?: string | null;
   country_of_origin?: string | null;
   mfg_date?: string | null;
