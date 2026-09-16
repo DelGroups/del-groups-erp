@@ -47,13 +47,37 @@ async function insertMetricPieces(
 }
 
 export async function resolveBulkImportWarehouseId(admin: AdminClient): Promise<string | null> {
+  return resolveBulkImportWarehouseByLabel(admin, null);
+}
+
+function normalizeWarehouseLabel(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/** Match warehouse by name or code; empty label → default / polywood / first warehouse. */
+export async function resolveBulkImportWarehouseByLabel(
+  admin: AdminClient,
+  warehouseLabel: string | null | undefined
+): Promise<string | null> {
   const { data, error } = await admin
     .from("warehouses")
-    .select("id, is_default, warehouse_type")
+    .select("id, name, code, is_default, warehouse_type")
     .order("is_default", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error || !data?.length) return null;
+
+  const label = warehouseLabel?.trim();
+  if (label) {
+    const normalized = normalizeWarehouseLabel(label);
+    const match = data.find(
+      (row) =>
+        normalizeWarehouseLabel(row.name || "") === normalized ||
+        normalizeWarehouseLabel(row.code || "") === normalized
+    );
+    if (match?.id) return match.id;
+  }
+
   const polywood = data.find((row) => row.warehouse_type === "polywood");
   if (polywood?.id) return polywood.id;
   const defaultWarehouse = data.find((row) => row.is_default);
@@ -91,16 +115,12 @@ export async function applyBulkImportOpeningStock(params: {
 
     await admin.from("products").update({ stock: newStock }).eq("id", productId);
 
-    await admin.from("warehouse_stocks").upsert(
-      {
-        product_id: productId,
-        warehouse_id: warehouseId,
-        current_stock: newStock,
-        piece_lengths: meterPieces,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "product_id" }
-    );
+    await upsertWarehouseStockRow(admin, {
+      productId,
+      warehouseId,
+      currentStock: newStock,
+      pieceLengths: meterPieces,
+    });
 
     await recordStockMovement(admin, {
       productId,
@@ -133,15 +153,11 @@ export async function applyBulkImportOpeningStock(params: {
 
   await admin.from("products").update({ stock: newStock }).eq("id", productId);
 
-  await admin.from("warehouse_stocks").upsert(
-    {
-      product_id: productId,
-      warehouse_id: warehouseId,
-      current_stock: newStock,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "product_id" }
-  );
+  await upsertWarehouseStockRow(admin, {
+    productId,
+    warehouseId,
+    currentStock: newStock,
+  });
 
   await recordStockMovement(admin, {
     productId,
@@ -168,4 +184,39 @@ export async function applyBulkImportOpeningStock(params: {
 
 export function totalMeterStock(pieces: number[]): number {
   return roundMoney(pieces.reduce((sum, length) => sum + length, 0));
+}
+
+async function upsertWarehouseStockRow(
+  admin: AdminClient,
+  params: {
+    productId: string;
+    warehouseId: string;
+    currentStock: number;
+    pieceLengths?: number[];
+  }
+): Promise<void> {
+  const { productId, warehouseId, currentStock, pieceLengths } = params;
+  const { data: existing } = await admin
+    .from("warehouse_stocks")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("warehouse_id", warehouseId)
+    .maybeSingle();
+
+  const payload = {
+    product_id: productId,
+    warehouse_id: warehouseId,
+    current_stock: currentStock,
+    piece_lengths: pieceLengths ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing?.id) {
+    const { error } = await admin.from("warehouse_stocks").update(payload).eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await admin.from("warehouse_stocks").insert([payload]);
+  if (error) throw new Error(error.message);
 }

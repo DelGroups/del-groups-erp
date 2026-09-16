@@ -243,7 +243,7 @@ export default function InventoryPageClient() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                href={`/dashboard/warehouse/slips?productId=${row.productId}`}
+                                href={`/inventory/transfers/new?from=${row.warehouseId}&productId=${row.productId}`}
                               >
                                 <ArrowRightLeft className="h-3.5 w-3.5" />
                                 {t("inventory.actions.transfer")}

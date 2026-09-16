@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   ClipboardList,
   ClipboardCheck,
+  ArrowRightLeft,
   Database,
   Barcode,
   ScrollText,
@@ -78,6 +79,11 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { titleKey: "nav.items.products", path: "/products", icon: Package },
       { titleKey: "nav.items.warehouseStock", path: "/inventory", icon: Boxes },
+      {
+        titleKey: "nav.items.warehouseTransfers",
+        path: "/inventory/transfers/new",
+        icon: ArrowRightLeft,
+      },
       { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
       { titleKey: "nav.items.warehouseIncoming", path: "/warehouse/incoming", icon: Package },
       { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },

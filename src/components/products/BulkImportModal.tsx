@@ -295,6 +295,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colBuyPrice")}</th>
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colSellPrice")}</th>
                     <th className={cn(thClass, "min-w-[90px]")}>{t("products.bulkImport.colUnit")}</th>
+                    <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colWarehouse")}</th>
                     <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.colInitialCount")}</th>
                     <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.colMetraj")}</th>
                     <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.status")}</th>
@@ -348,6 +349,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                         {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
                       </td>
                       <td className={tdClass}>{row.measure_unit || "—"}</td>
+                      <td className={cn(tdClass, "min-w-[120px]")}>{row.warehouse || "—"}</td>
                       <td className={cn(tdClass, "font-mono")}>
                         {row.stock_mode === "piece" ? row.initial_count || "0" : "—"}
                       </td>

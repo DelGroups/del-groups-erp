@@ -4,6 +4,7 @@ import { requirePermissionApi } from "@/lib/auth/apiAuth";
 import { buildProductInsert } from "@/lib/products/api";
 import {
   applyBulkImportOpeningStock,
+  resolveBulkImportWarehouseByLabel,
   resolveBulkImportWarehouseId,
 } from "@/lib/products/bulkImportOpeningStock";
 import type { BulkImportStockMode } from "@/lib/products/bulkImportUnits";
@@ -23,6 +24,7 @@ interface BulkProductInput extends Partial<ProductInsert> {
       mode?: BulkImportStockMode;
       initialCount?: number;
       meterPieces?: number[];
+      warehouseLabel?: string | null;
     };
   };
 }
@@ -108,6 +110,7 @@ export async function POST(request: NextRequest) {
           mode: row._bulk?.stock?.mode ?? "piece",
           initialCount: Math.max(0, Math.floor(row._bulk?.stock?.initialCount ?? 0)),
           meterPieces: row._bulk?.stock?.meterPieces ?? [],
+          warehouseLabel: row._bulk?.stock?.warehouseLabel ?? null,
         },
       };
     });
@@ -144,10 +147,10 @@ export async function POST(request: NextRequest) {
   const inserted = insertedRows.length;
   const skipped = prepared.length - inserted;
 
-  const warehouseId = await resolveBulkImportWarehouseId(admin);
+  const defaultWarehouseId = await resolveBulkImportWarehouseId(admin);
   let stockEntries = 0;
 
-  if (warehouseId && inserted > 0) {
+  if (defaultWarehouseId && inserted > 0) {
     for (const productRow of insertedRows) {
       const source = prepared.find((row) => row.payload.code === productRow.code);
       if (!source) continue;
@@ -156,6 +159,11 @@ export async function POST(request: NextRequest) {
       const hasMeterStock =
         source.stock.mode === "meter" && source.stock.meterPieces.length > 0;
       if (!hasPieceStock && !hasMeterStock) continue;
+
+      const warehouseId =
+        (await resolveBulkImportWarehouseByLabel(admin, source.stock.warehouseLabel)) ??
+        defaultWarehouseId;
+      if (!warehouseId) continue;
 
       const { data: productRecord, error: productError } = await admin
         .from("products")
@@ -204,7 +212,7 @@ export async function POST(request: NextRequest) {
   );
 
   const stockWarning =
-    !warehouseId && needsStock
+    !defaultWarehouseId && needsStock
       ? "Məhsullar əlavə edildi, lakin anbar tapılmadığı üçün ilkin qalıq yazılmadı"
       : undefined;
   const schemaWarning = schemaWarnings.length > 0 ? schemaWarnings.join(" ") : undefined;

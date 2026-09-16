@@ -19,9 +19,10 @@ export const BULK_IMPORT_SKU_HEADER = "Məhsul kodu";
 export const BULK_IMPORT_NAME_HEADER = "Məhsul adı";
 export const BULK_IMPORT_REQUIRED_HEADERS = [BULK_IMPORT_SKU_HEADER, BULK_IMPORT_NAME_HEADER] as const;
 
-export const BULK_IMPORT_TEMPLATE_HEADERS = [
-  BULK_IMPORT_SKU_HEADER,
-  BULK_IMPORT_NAME_HEADER,
+/** Canonical CSV column order for template download + parsing (SKU must stay index 0). */
+export const BULK_IMPORT_CSV_HEADERS = [
+  "Məhsul kodu",
+  "Məhsul adı",
   "Kateqoriya",
   "Alt kateqoriya",
   "Brend",
@@ -33,9 +34,14 @@ export const BULK_IMPORT_TEMPLATE_HEADERS = [
   "Satış qiyməti (Şət/Ədəd)",
   "Satış qiyməti (Metr/m²)",
   "Ölçü vahidi",
+  "Anbar",
   "İlkin Say",
   "Metraj hissələri",
 ] as const;
+
+export const BULK_IMPORT_TEMPLATE_HEADERS = BULK_IMPORT_CSV_HEADERS;
+
+export const BULK_IMPORT_WAREHOUSE_HEADER = "Anbar";
 
 export type BulkImportTemplateHeader = (typeof BULK_IMPORT_TEMPLATE_HEADERS)[number];
 
@@ -54,6 +60,7 @@ export interface BulkImportRow {
   sell_price_piece: string;
   sell_price_meter: string;
   measure_unit: string;
+  warehouse: string;
   initial_count: string;
   metraj_pieces_raw: string;
   metraj_pieces: number[];
@@ -77,6 +84,7 @@ export interface BulkImportApiPayload {
     mode: BulkImportStockMode;
     initialCount: number;
     meterPieces: number[];
+    warehouseLabel?: string | null;
   };
 }
 
@@ -324,6 +332,7 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         sell_price_piece: cell(record, "Satış qiyməti (Şət/Ədəd)"),
         sell_price_meter: cell(record, "Satış qiyməti (Metr/m²)"),
         measure_unit: cell(record, "Ölçü vahidi"),
+        warehouse: cell(record, BULK_IMPORT_WAREHOUSE_HEADER),
         initial_count: cell(record, "İlkin Say"),
         metraj_pieces_raw: cell(record, "Metraj hissələri"),
       };
@@ -353,6 +362,7 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         row.base_length ||
         row.base_width ||
         row.measure_unit ||
+        row.warehouse ||
         row.initial_count ||
         row.metraj_pieces_raw
     );
@@ -421,16 +431,15 @@ export function bulkImportRowToApiPayload(row: BulkImportRow): BulkImportApiPayl
       mode: row.stock_mode,
       initialCount: Number(row.initial_count) || 0,
       meterPieces: row.metraj_pieces,
+      warehouseLabel: row.warehouse.trim() || null,
     },
   };
 }
 
 export function downloadBulkImportTemplate(): void {
-  const fields = [...BULK_IMPORT_TEMPLATE_HEADERS];
-  const csv = Papa.unparse({
-    fields,
-    data: [],
-  });
+  const csvHeaders = [...BULK_IMPORT_CSV_HEADERS];
+  const templateRow = Object.fromEntries(csvHeaders.map((header) => [header, ""]));
+  const csv = Papa.unparse([templateRow], { columns: csvHeaders });
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

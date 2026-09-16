@@ -369,6 +369,36 @@ export function generateWriteoffDocumentNumber(): string {
   return `DG-${year}-${seq}`;
 }
 
+export function generateStockTransferDocumentNumber(): string {
+  const year = new Date().getFullYear();
+  const seq = Math.floor(1000 + Math.random() * 9000);
+  return `TRN-${year}-${seq}`;
+}
+
+export interface StockTransfer {
+  id: string;
+  reference_number: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  transfer_date: string;
+  status: "pending" | "completed";
+  notes: string | null;
+  created_by: string | null;
+  created_at: string | null;
+}
+
+export interface StockTransferItem {
+  id: string;
+  transfer_id: string;
+  product_id: string;
+  offcut_id: string | null;
+  quantity: number;
+  product_code: string | null;
+  product_name: string | null;
+  unit: string | null;
+  barcode: string | null;
+}
+
 /** @deprecated use generateWriteoffDocumentNumber */
 export const generateWriteoffDocNo = generateWriteoffDocumentNumber;
 
