@@ -7,6 +7,7 @@ import {
   resolveBulkImportWarehouseId,
 } from "@/lib/products/bulkImportOpeningStock";
 import type { BulkImportStockMode } from "@/lib/products/bulkImportUnits";
+import { upsertProductsWithSchemaFallback } from "@/lib/products/bulkUpsertSchema";
 import { generateProductBarcode } from "@/lib/products/generateBarcode";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { Product, ProductInsert } from "@/types/database.types";
@@ -119,16 +120,24 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
-    .from("products")
-    .upsert(
-      prepared.map((row) => row.payload),
-      { onConflict: "code", ignoreDuplicates: true }
-    )
-    .select("id, code");
+  const {
+    data,
+    error,
+    schemaWarnings,
+  } = await upsertProductsWithSchemaFallback(
+    admin,
+    prepared.map((row) => row.payload)
+  );
 
   if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    const hint =
+      error.message.includes("schema cache") || error.message.includes("Could not find")
+        ? " Supabase-də `supabase/migrations` fayllarını (xüsusən `20260915170000_product_extended_metadata.sql`) tətbiq edin."
+        : "";
+    return NextResponse.json(
+      { success: false, error: `${error.message}${hint}` },
+      { status: 400 }
+    );
   }
 
   const insertedRows = data ?? [];
@@ -194,15 +203,19 @@ export async function POST(request: NextRequest) {
       (row.stock.mode === "meter" && row.stock.meterPieces.length > 0)
   );
 
+  const stockWarning =
+    !warehouseId && needsStock
+      ? "Məhsullar əlavə edildi, lakin anbar tapılmadığı üçün ilkin qalıq yazılmadı"
+      : undefined;
+  const schemaWarning = schemaWarnings.length > 0 ? schemaWarnings.join(" ") : undefined;
+  const warning = [stockWarning, schemaWarning].filter(Boolean).join(" ") || undefined;
+
   return NextResponse.json({
     success: true,
     inserted,
     skipped,
     stockEntries,
     total: prepared.length,
-    warning:
-      !warehouseId && needsStock
-        ? "Məhsullar əlavə edildi, lakin anbar tapılmadığı üçün ilkin qalıq yazılmadı"
-        : undefined,
+    warning,
   });
 }

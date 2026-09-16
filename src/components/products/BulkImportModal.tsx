@@ -131,16 +131,15 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
           (row.stock_mode === "meter" && row.metraj_pieces.length > 0)
       );
 
-      if (hadInitialStock || (payload.stockEntries ?? 0) > 0) {
-        showSuccess(t("products.bulkImport.uploadSuccessWithStock"));
-      } else {
-        showSuccess(
-          t("products.bulkImport.uploadSuccess", {
-            inserted: payload.inserted ?? 0,
-            skipped: payload.skipped ?? 0,
-          })
-        );
-      }
+      const successText =
+        hadInitialStock || (payload.stockEntries ?? 0) > 0
+          ? t("products.bulkImport.uploadSuccessWithStock")
+          : t("products.bulkImport.uploadSuccess", {
+              inserted: payload.inserted ?? 0,
+              skipped: payload.skipped ?? 0,
+            });
+
+      showSuccess(payload.warning ? `${successText} ${payload.warning}` : successText);
 
       onImported?.();
       handleClose();
