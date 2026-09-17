@@ -15,7 +15,7 @@ import {
 import {
   parseN8nWebhookResponse,
 } from "@/lib/ai/n8nClient";
-import { erpAgentSessionId } from "@/lib/ai/agents";
+import { erpAgentSessionId, resolveTargetAgent, type ErpAiAgentId } from "@/lib/ai/agents";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -191,11 +191,13 @@ function extractBridgeReply(parsed: unknown, parsedFallback: string): string {
 function switchPayload(
   userId: string,
   content: string,
+  target_agent: ErpAiAgentId,
   extra?: Record<string, unknown>
 ): Record<string, unknown> {
   return {
     content,
     session_id: erpAgentSessionId(userId),
+    target_agent,
     ...extra,
   };
 }
@@ -205,6 +207,7 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
   if (contentType.includes("multipart/form-data")) {
     const form = await request.formData();
     const type = String(form.get("type") || "file");
+    const target_agent = resolveTargetAgent(form.get("target_agent"));
     const file = form.get("file");
     if (!(file instanceof File) || file.size <= 0) {
       throw new Error("Fayl tələb olunur");
@@ -214,21 +217,22 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     }
     if (type === "voice") {
       const audioBase64 = await fileToBase64(file);
-      return switchPayload(userId, "", {
+      return switchPayload(userId, "", target_agent, {
         audio_base64: audioBase64,
         file_type: file.type || "audio/webm",
       });
     }
-    return buildFilePayload(userId, file);
+    return buildFilePayload(userId, file, target_agent);
   }
 
   const body = (await request.json()) as Record<string, unknown>;
   const type = String(body.type || "text");
+  const target_agent = resolveTargetAgent(body.target_agent);
 
   if (type === "voice") {
     const audio = clampString(String(body.audio_base64 || ""), Math.ceil(MAX_N8N_FILE_BYTES * 1.4));
     if (!audio) throw new Error("Səs faylı tələb olunur");
-    return switchPayload(userId, "", {
+    return switchPayload(userId, "", target_agent, {
       audio_base64: stripDataUrl(audio),
     });
   }
@@ -240,7 +244,7 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
     const buffer = Buffer.from(stripDataUrl(fileBase64), "base64");
     if (buffer.length > MAX_N8N_FILE_BYTES) throw new Error("Fayl 8 MB-dan kiçik olmalıdır");
     const fileUrl = await uploadAssistantFile(userId, buffer, fileType, "upload");
-    return switchPayload(userId, String(body.content || ""), {
+    return switchPayload(userId, String(body.content || ""), target_agent, {
       file_url: fileUrl || "",
       file_type: fileType,
       ...(fileUrl ? {} : { file_base64: stripDataUrl(fileBase64) }),
@@ -252,10 +256,11 @@ async function buildN8nPayload(request: NextRequest, userId: string): Promise<Re
   return {
     content,
     session_id: erpAgentSessionId(userId),
+    target_agent,
   };
 }
 
-async function buildFilePayload(userId: string, file: File): Promise<Record<string, unknown>> {
+async function buildFilePayload(userId: string, file: File, target_agent: ErpAiAgentId): Promise<Record<string, unknown>> {
   const mime = (file.type || "").toLowerCase();
   const resolvedType = mime || guessFileType(file.name);
   if (!ALLOWED_FILE_TYPES.has(resolvedType) && !resolvedType.startsWith("image/")) {
@@ -271,7 +276,7 @@ async function buildFilePayload(userId: string, file: File): Promise<Record<stri
   if (!fileUrl) {
     extra.file_base64 = buffer.toString("base64");
   }
-  return switchPayload(userId, file.name.slice(0, 120), extra);
+  return switchPayload(userId, file.name.slice(0, 120), target_agent, extra);
 }
 
 async function uploadAssistantFile(

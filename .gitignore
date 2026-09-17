@@ -55,3 +55,6 @@ next-env.d.ts
 /public/workbox-*.js
 /public/workbox-*.js.map
 /public/fallback-*.js
+
+.vercel
+.env*

@@ -1,13 +1,18 @@
 export const DEFAULT_ERP_AGENT = "Del";
 
+/**
+ * Must match the n8n agent workflow keys exactly (same ids as
+ * ai-agent-control-panel's lib/agents.ts AGENTS list) — n8n routes on this
+ * value, not on the display label.
+ */
 export type ErpAiAgentId =
   | "Del"
-  | "Leyla Balayeva"
+  | "Leyla"
   | "Ayda"
-  | "Kamran Qasımov"
-  | "Nigar Məmmədova"
-  | "Araz Əliyev"
-  | "Sona Rəhimli";
+  | "Kamran"
+  | "Nigar"
+  | "Araz"
+  | "Sona";
 
 export type ErpAiAgent = {
   id: ErpAiAgentId;
@@ -26,7 +31,7 @@ export const ERP_AI_AGENTS: readonly ErpAiAgent[] = [
     isDefault: true,
   },
   {
-    id: "Leyla Balayeva",
+    id: "Leyla",
     emoji: "👑",
     label: "Leyla Balayeva",
     role: "Orchestrator",
@@ -38,25 +43,25 @@ export const ERP_AI_AGENTS: readonly ErpAiAgent[] = [
     role: "Müştəri Xidmətləri & Qəbul",
   },
   {
-    id: "Kamran Qasımov",
+    id: "Kamran",
     emoji: "📐",
     label: "Kamran Qasımov",
     role: "Mühəndis & Qıymət",
   },
   {
-    id: "Nigar Məmmədova",
+    id: "Nigar",
     emoji: "📈",
     label: "Nigar Məmmədova",
     role: "Marketing Strategiyası",
   },
   {
-    id: "Araz Əliyev",
+    id: "Araz",
     emoji: "🔍",
     label: "Araz Əliyev",
     role: "Bazar Araşdırması",
   },
   {
-    id: "Sona Rəhimli",
+    id: "Sona",
     emoji: "🎨",
     label: "Sona Rəhimli",
     role: "Kreativ Məzmun",
