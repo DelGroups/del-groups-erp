@@ -132,8 +132,14 @@ function renderCell(
   }
 }
 
+function warehouseNameForProduct(product: Product, warehouses: Warehouse[]): string {
+  if (!product.warehouse_id) return "—";
+  return warehouses.find((w) => w.id === product.warehouse_id)?.name ?? "—";
+}
+
 export default function ProductTable({
   products,
+  warehouses,
   polywoodSummaries,
   visibleColumns,
   loading,
@@ -253,7 +259,7 @@ export default function ProductTable({
                     <Td numeric className="text-app-muted">
                       {productMinStock(product)} {product.unit}
                     </Td>
-                    <Td className="text-app-muted">—</Td>
+                    <Td className="text-app-muted">{warehouseNameForProduct(product, warehouses)}</Td>
                     <Td>
                       {critical ? (
                         <StatusBadge tone="low-stock">

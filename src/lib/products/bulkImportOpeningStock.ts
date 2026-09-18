@@ -70,12 +70,24 @@ export async function resolveBulkImportWarehouseByLabel(
   const label = warehouseLabel?.trim();
   if (label) {
     const normalized = normalizeWarehouseLabel(label);
-    const match = data.find(
+    const exact = data.find(
       (row) =>
         normalizeWarehouseLabel(row.name || "") === normalized ||
         normalizeWarehouseLabel(row.code || "") === normalized
     );
-    if (match?.id) return match.id;
+    if (exact?.id) return exact.id;
+
+    const partial = data.find((row) => {
+      const name = normalizeWarehouseLabel(row.name || "");
+      const code = normalizeWarehouseLabel(row.code || "");
+      if (!name && !code) return false;
+      return (
+        name.includes(normalized) ||
+        normalized.includes(name) ||
+        (code && (code.includes(normalized) || normalized.includes(code)))
+      );
+    });
+    if (partial?.id) return partial.id;
   }
 
   const polywood = data.find((row) => row.warehouse_type === "polywood");
@@ -145,7 +157,7 @@ export async function applyBulkImportOpeningStock(params: {
     return true;
   }
 
-  const qty = Math.max(0, Math.floor(initialCount));
+  const qty = Math.max(0, Math.round(initialCount * 1000) / 1000);
   if (qty <= 0) return false;
 
   const oldStock = Number(product.stock) || 0;

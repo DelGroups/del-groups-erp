@@ -29,6 +29,28 @@ interface BulkProductInput extends Partial<ProductInsert> {
   };
 }
 
+const CODE_LOOKUP_CHUNK = 200;
+
+async function loadProductIdsByCode(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  codes: string[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const unique = [...new Set(codes.map((code) => code.trim()).filter(Boolean))];
+
+  for (let i = 0; i < unique.length; i += CODE_LOOKUP_CHUNK) {
+    const chunk = unique.slice(i, i + CODE_LOOKUP_CHUNK);
+    const { data, error } = await admin.from("products").select("id, code").in("code", chunk);
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      const code = (row.code ?? "").trim();
+      if (code) map.set(code.toLowerCase(), row.id as string);
+    }
+  }
+
+  return map;
+}
+
 function toUpsertPayload(built: ProductInsert) {
   return {
     code: built.code,
@@ -108,7 +130,7 @@ export async function POST(request: NextRequest) {
         payload: toUpsertPayload(built),
         stock: {
           mode: row._bulk?.stock?.mode ?? "piece",
-          initialCount: Math.max(0, Math.floor(row._bulk?.stock?.initialCount ?? 0)),
+          initialCount: Math.max(0, Number(row._bulk?.stock?.initialCount) || 0),
           meterPieces: row._bulk?.stock?.meterPieces ?? [],
           warehouseLabel: row._bulk?.stock?.warehouseLabel ?? null,
         },
@@ -149,26 +171,54 @@ export async function POST(request: NextRequest) {
 
   const defaultWarehouseId = await resolveBulkImportWarehouseId(admin);
   let stockEntries = 0;
+  const warehouseResolveWarnings: string[] = [];
 
-  if (defaultWarehouseId && inserted > 0) {
-    for (const productRow of insertedRows) {
-      const source = prepared.find((row) => row.payload.code === productRow.code);
-      if (!source) continue;
+  let productIdsByCode: Map<string, string>;
+  try {
+    productIdsByCode = await loadProductIdsByCode(
+      admin,
+      prepared.map((row) => row.payload.code ?? "")
+    );
+  } catch (lookupError) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: lookupError instanceof Error ? lookupError.message : "Məhsul kodları tapılmadı",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (defaultWarehouseId) {
+    for (const source of prepared) {
+      const codeKey = source.payload.code?.trim().toLowerCase();
+      if (!codeKey) continue;
+
+      const productId = productIdsByCode.get(codeKey);
+      if (!productId) continue;
 
       const hasPieceStock = source.stock.mode === "piece" && source.stock.initialCount > 0;
       const hasMeterStock =
         source.stock.mode === "meter" && source.stock.meterPieces.length > 0;
-      if (!hasPieceStock && !hasMeterStock) continue;
 
       const warehouseId =
         (await resolveBulkImportWarehouseByLabel(admin, source.stock.warehouseLabel)) ??
         defaultWarehouseId;
-      if (!warehouseId) continue;
+
+      if (source.stock.warehouseLabel?.trim() && warehouseId === defaultWarehouseId) {
+        warehouseResolveWarnings.push(source.payload.code ?? codeKey);
+      }
+
+      if (warehouseId) {
+        await admin.from("products").update({ warehouse_id: warehouseId }).eq("id", productId);
+      }
+
+      if (!hasPieceStock && !hasMeterStock) continue;
 
       const { data: productRecord, error: productError } = await admin
         .from("products")
         .select("*")
-        .eq("id", productRow.id)
+        .eq("id", productId)
         .maybeSingle();
 
       if (productError || !productRecord) {
@@ -181,9 +231,9 @@ export async function POST(request: NextRequest) {
       try {
         const applied = await applyBulkImportOpeningStock({
           admin,
-          productId: productRow.id,
+          productId,
           product: productRecord as Product,
-          warehouseId,
+          warehouseId: warehouseId ?? defaultWarehouseId,
           mode: source.stock.mode,
           initialCount: source.stock.initialCount,
           meterPieces: source.stock.meterPieces,
@@ -216,7 +266,11 @@ export async function POST(request: NextRequest) {
       ? "Məhsullar əlavə edildi, lakin anbar tapılmadığı üçün ilkin qalıq yazılmadı"
       : undefined;
   const schemaWarning = schemaWarnings.length > 0 ? schemaWarnings.join(" ") : undefined;
-  const warning = [stockWarning, schemaWarning].filter(Boolean).join(" ") || undefined;
+  const warehouseWarning =
+    warehouseResolveWarnings.length > 0
+      ? `Bəzi sətirlərdə anbar adı uyğunlaşdırılmadı (default anbar): ${warehouseResolveWarnings.slice(0, 5).join(", ")}${warehouseResolveWarnings.length > 5 ? "…" : ""}`
+      : undefined;
+  const warning = [stockWarning, schemaWarning, warehouseWarning].filter(Boolean).join(" ") || undefined;
 
   return NextResponse.json({
     success: true,

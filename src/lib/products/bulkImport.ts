@@ -157,8 +157,8 @@ function parseOptionalDimension(
 function parseInitialCount(value: string, errors: string[]): number | null {
   if (!value.trim()) return 0;
   const parsed = parseDecimal(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed % 1 !== 0) {
-    errors.push("İlkin Say tam ədəd olmalıdır");
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    errors.push("İlkin Say düzgün rəqəm deyil");
     return null;
   }
   return parsed;

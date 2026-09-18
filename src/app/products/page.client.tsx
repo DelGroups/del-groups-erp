@@ -73,7 +73,7 @@ export default function ProductsPage() {
   const canManageProducts = can("can_manage_products");
   const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deleteQueue, setDeleteQueue] = useState<Product[]>([]);
   const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
   const { data: catalog, isLoading, isFetching, refetch } = useProductsCatalog();
@@ -141,18 +141,43 @@ export default function ProductsPage() {
     [router]
   );
 
-  const handleDeleteProduct = async () => {
-    if (!deleteTarget) return;
+  const handleDeleteProducts = async () => {
+    if (deleteQueue.length === 0) return;
     setDeleting(true);
-    const result = await deleteProductAction(deleteTarget.id);
-    setDeleting(false);
-    if (!result.success) {
-      showError(result.error || t("common.error"));
-      return;
+    let deleted = 0;
+    let failed = 0;
+    let lastError = "";
+
+    for (const product of deleteQueue) {
+      const result = await deleteProductAction(product.id);
+      if (result.success) {
+        deleted += 1;
+      } else {
+        failed += 1;
+        lastError = result.error || t("common.error");
+      }
     }
-    setDeleteTarget(null);
-    showSuccess(t("products.deleteSuccess"));
+
+    const queuedCount = deleteQueue.length;
+    setDeleting(false);
+    setDeleteQueue([]);
+    bulk.clear();
     void queryClient.invalidateQueries({ queryKey: queryKeys.products.catalog });
+
+    if (deleted > 0) {
+      showSuccess(
+        queuedCount === 1
+          ? t("products.deleteSuccess")
+          : failed > 0
+            ? t("products.bulkDeleteSuccess", { deleted, failed })
+            : t("products.bulkDeleteAllSuccess", { deleted })
+      );
+    }
+    if (failed > 0 && deleted === 0) {
+      showError(lastError);
+    } else if (failed > 0) {
+      showError(t("products.bulkDeletePartial", { failed, error: lastError }));
+    }
   };
 
   return (
@@ -295,11 +320,8 @@ export default function ProductsPage() {
                 type="button"
                 variant="danger"
                 size="sm"
-                onClick={() => {
-                  const target = bulk.selectedItems[0];
-                  if (target) setDeleteTarget(target);
-                }}
-                disabled={bulk.count !== 1}
+                onClick={() => setDeleteQueue(bulk.selectedItems)}
+                disabled={bulk.count === 0}
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 {t("common.delete")}
@@ -316,7 +338,7 @@ export default function ProductsPage() {
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
             onClone={canManageProducts ? handleClone : undefined}
-            onDelete={canManageProducts ? setDeleteTarget : undefined}
+            onDelete={canManageProducts ? (product) => setDeleteQueue([product]) : undefined}
             onPrintLabel={
               barcodeModuleEnabled
                 ? (product) =>
@@ -384,11 +406,16 @@ export default function ProductsPage() {
       ) : null}
 
       <ConfirmDeleteModal
-        open={Boolean(deleteTarget)}
-        itemName={deleteTarget?.name}
+        open={deleteQueue.length > 0}
+        itemName={deleteQueue.length === 1 ? deleteQueue[0]?.name : undefined}
+        message={
+          deleteQueue.length > 1
+            ? t("products.bulkDeleteConfirm", { count: deleteQueue.length })
+            : undefined
+        }
         loading={deleting}
-        onConfirm={() => void handleDeleteProduct()}
-        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDeleteProducts()}
+        onCancel={() => setDeleteQueue([])}
       />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
