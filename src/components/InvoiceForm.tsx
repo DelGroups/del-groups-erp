@@ -128,6 +128,22 @@ import {
   X,
 } from "lucide-react";
 
+function InvoiceDetailCard({
+  isPageLayout,
+  children,
+  className,
+}: {
+  isPageLayout: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return isPageLayout ? (
+    <Card className={cn("space-y-2 text-sm", className)}>{children}</Card>
+  ) : (
+    <div className={cn("app-card space-y-2 p-4 text-xs", className)}>{children}</div>
+  );
+}
+
 export interface InvoiceFormProps {
   isOpen: boolean;
   onClose?: () => void;
@@ -1491,19 +1507,6 @@ export default function UniversalInvoiceForm({
   const sectionCardClass = isPageLayout ? "" : "app-card space-y-2 p-4 text-xs";
   const tableColClass = "whitespace-nowrap";
 
-  const DetailCard = ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) =>
-    isPageLayout ? (
-      <Card className={cn("space-y-2 text-sm", className)}>{children}</Card>
-    ) : (
-      <div className={cn("app-card space-y-2 p-4 text-xs", className)}>{children}</div>
-    );
-
   const summaryRowClass =
     "flex items-baseline justify-between gap-4 text-sm text-[color:var(--gt-text-primary)]";
   const summaryValueClass = "shrink-0 font-mono tabular-nums text-[color:var(--gt-text-dark)]";
@@ -1621,7 +1624,7 @@ export default function UniversalInvoiceForm({
         >
           <div className={cn(isPageLayout ? "w-full space-y-6" : "space-y-4 lg:col-span-8")}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <DetailCard>
+          <InvoiceDetailCard isPageLayout={isPageLayout}>
             <h3 className="flex items-center gap-1.5 border-b border-app pb-2 font-bold text-app">
               <User className="h-4 w-4 text-app-accent" />
               {t("invoice.issuedBy")}
@@ -1631,9 +1634,9 @@ export default function UniversalInvoiceForm({
               value={effectiveSellerId}
               onChange={handleSellerChange}
             />
-          </DetailCard>
+          </InvoiceDetailCard>
 
-          <DetailCard>
+          <InvoiceDetailCard isPageLayout={isPageLayout}>
             <div className="flex items-center justify-between border-b border-[color:var(--gt-border-color)] pb-2 dark:border-slate-700">
               <h3 className="flex items-center gap-1.5 font-bold text-[color:var(--gt-text-dark)] dark:text-slate-100">
                 <Building2 className="h-4 w-4 text-emerald-600" />
@@ -1659,7 +1662,7 @@ export default function UniversalInvoiceForm({
                     placeholder={t("invoice.fullNamePlaceholder")}
                     value={newCustomerData.full_name}
                     onChange={(e) =>
-                      setNewCustomerData({ ...newCustomerData, full_name: e.target.value })
+                      setNewCustomerData((prev) => ({ ...prev, full_name: e.target.value }))
                     }
                     className="col-span-2 rounded border border-app p-1.5"
                   />
@@ -1668,7 +1671,7 @@ export default function UniversalInvoiceForm({
                     placeholder={t("common.phone")}
                     value={newCustomerData.phone}
                     onChange={(e) =>
-                      setNewCustomerData({ ...newCustomerData, phone: e.target.value })
+                      setNewCustomerData((prev) => ({ ...prev, phone: e.target.value }))
                     }
                     className="rounded border border-app p-1.5"
                   />
@@ -1677,7 +1680,7 @@ export default function UniversalInvoiceForm({
                     placeholder={t("invoice.voen")}
                     value={newCustomerData.voen}
                     onChange={(e) =>
-                      setNewCustomerData({ ...newCustomerData, voen: e.target.value })
+                      setNewCustomerData((prev) => ({ ...prev, voen: e.target.value }))
                     }
                     className="rounded border border-app p-1.5"
                   />
@@ -1686,7 +1689,7 @@ export default function UniversalInvoiceForm({
                     placeholder={t("common.company")}
                     value={newCustomerData.company_name}
                     onChange={(e) =>
-                      setNewCustomerData({ ...newCustomerData, company_name: e.target.value })
+                      setNewCustomerData((prev) => ({ ...prev, company_name: e.target.value }))
                     }
                     className="rounded border border-app p-1.5"
                   />
@@ -1695,7 +1698,7 @@ export default function UniversalInvoiceForm({
                     placeholder={t("invoice.addressLabel")}
                     value={newCustomerData.address}
                     onChange={(e) =>
-                      setNewCustomerData({ ...newCustomerData, address: e.target.value })
+                      setNewCustomerData((prev) => ({ ...prev, address: e.target.value }))
                     }
                     className="rounded border border-app p-1.5"
                   />
@@ -1756,10 +1759,13 @@ export default function UniversalInvoiceForm({
                 ) : null}
               </div>
             )}
-          </DetailCard>
+          </InvoiceDetailCard>
         </div>
 
-        <DetailCard className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <InvoiceDetailCard
+          isPageLayout={isPageLayout}
+          className="grid grid-cols-1 gap-3 md:grid-cols-4"
+        >
           <label className="min-w-0">
             <span className={INVOICE_LABEL}>{t("invoice.paymentTerms")}</span>
             <select
@@ -1812,7 +1818,7 @@ export default function UniversalInvoiceForm({
               className={`${INVOICE_INPUT} font-mono`}
             />
           </label>
-        </DetailCard>
+        </InvoiceDetailCard>
 
         <div className="px-0">
           <OfficialTransactionSection
@@ -2428,7 +2434,7 @@ export default function UniversalInvoiceForm({
                             className={cn(
                               "px-3 py-1.5 text-xs font-semibold",
                               vatMode !== "none"
-                                ? "bg-[color:var(--gt-accent-green)] text-white"
+                                ? "bg-[color:var(--gt-accent-green)] text-[color:var(--app-primary-foreground)]"
                                 : "bg-[color:var(--gt-panel-bg)] text-[color:var(--gt-text-primary)]"
                             )}
                           >
@@ -2493,7 +2499,7 @@ export default function UniversalInvoiceForm({
                     "inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold",
                     bottomTab === id
                       ? isPageLayout
-                        ? "bg-[color:var(--gt-accent-green)] text-white"
+                        ? "bg-[color:var(--gt-accent-green)] text-[color:var(--app-primary-foreground)]"
                         : "bg-[image:var(--app-gradient)] text-white"
                       : isPageLayout
                         ? "text-[color:var(--gt-text-primary)] hover:bg-white"
