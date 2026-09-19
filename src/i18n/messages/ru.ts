@@ -81,9 +81,9 @@ export const ruMessages: Messages = {
   },
   theme: {
     label: "Тема",
-    dark: "Ночной сланец",
-    light: "Чистое облако",
-    emerald: "Изумрудный океан",
+    graphite: "Графит",
+    daylight: "Дневной свет",
+    midnight: "Полночь",
   },
   table: {
     paginationSummary: "Показано {start}–{end} из {total}",

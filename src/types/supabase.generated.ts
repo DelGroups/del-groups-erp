@@ -2862,6 +2862,22 @@ export type Database = {
         Args: { p_purchase_id: string; p_reason?: string }
         Returns: Json
       }
+      reverse_journal_entry: {
+        Args: { p_entry_id: string; p_reason?: string; p_date?: string }
+        Returns: string
+      }
+      reverse_document_journals: {
+        Args: { p_document_id: string; p_reason?: string }
+        Returns: number
+      }
+      reverse_orphaned_document_journals: {
+        Args: { p_reason?: string }
+        Returns: number
+      }
+      is_accounting_period_closed: {
+        Args: { p_date: string }
+        Returns: boolean
+      }
     }
     Enums: {
       slip_status: "pending" | "approved" | "rejected"

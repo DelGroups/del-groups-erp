@@ -7,9 +7,9 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { THEMES, type ThemeId } from "@/theme/types";
 
 const THEME_ICONS: Record<ThemeId, React.ComponentType<{ className?: string }>> = {
-  dark: Moon,
-  light: Sun,
-  emerald: Palette,
+  graphite: Moon,
+  daylight: Sun,
+  midnight: Palette,
 };
 
 interface ThemeSwitcherProps {

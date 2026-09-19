@@ -79,9 +79,9 @@ export const azMessages = {
   },
   theme: {
     label: "Görünüş",
-    dark: "Gecə şiferi",
-    light: "Təmiz bulud",
-    emerald: "Zümrüd okean",
+    graphite: "Qrafit",
+    daylight: "Gündüz işığı",
+    midnight: "Gecə yarısı",
   },
   table: {
     paginationSummary: "{start}–{end} / cəmi {total}",

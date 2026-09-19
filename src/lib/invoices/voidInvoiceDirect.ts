@@ -264,19 +264,27 @@ export async function voidSaleInvoiceDirect(saleId: string): Promise<VoidInvoice
     await deleteDocumentCashTransactions(client, "sale", saleId, docLabel);
     await deleteLinkedWarehouseSlips(client, "sale", saleId);
 
-    const { error: deleteItemsError } = await client
-      .from("sale_items")
-      .delete()
-      .eq("sale_id", saleId);
+    // A posted document is cancelled, never deleted. The ledger is corrected by a
+    // reversing (storno) entry and the document keeps its number and its lines.
+    // Deleting the row used to strand its journal lines: that is how 262.00 AZN of
+    // phantom receivable and revenue outlived a voided invoice, and how document
+    // number SS-2026-00001 came to be issued twice.
+    const { error: reverseError } = await client.rpc("reverse_document_journals", {
+      p_document_id: saleId,
+      p_reason: `Satış fakturası ${docLabel} ləğv edildi`,
+    });
 
-    if (deleteItemsError) {
-      return { success: false, error: deleteItemsError.message };
+    if (reverseError) {
+      return { success: false, error: reverseError.message };
     }
 
-    const { error: deleteSaleError } = await client.from("sales").delete().eq("id", saleId);
+    const { error: cancelSaleError } = await client
+      .from("sales")
+      .update({ status: "cancelled" })
+      .eq("id", saleId);
 
-    if (deleteSaleError) {
-      return { success: false, error: deleteSaleError.message };
+    if (cancelSaleError) {
+      return { success: false, error: cancelSaleError.message };
     }
 
     if (sale.customer_id) {
@@ -336,22 +344,24 @@ export async function voidPurchaseInvoiceDirect(
 
     await deleteLinkedWarehouseSlips(client, "purchase", purchaseId);
 
-    const { error: deleteItemsError } = await client
-      .from("purchase_items")
-      .delete()
-      .eq("purchase_id", purchaseId);
+    // Same rule as sales: reverse the ledger, then cancel. Never delete a document
+    // that has postings behind it.
+    const { error: reversePurchaseError } = await client.rpc("reverse_document_journals", {
+      p_document_id: purchaseId,
+      p_reason: `Alış fakturası ${docLabel} ləğv edildi`,
+    });
 
-    if (deleteItemsError) {
-      return { success: false, error: deleteItemsError.message };
+    if (reversePurchaseError) {
+      return { success: false, error: reversePurchaseError.message };
     }
 
-    const { error: deletePurchaseError } = await client
+    const { error: cancelPurchaseError } = await client
       .from("purchases")
-      .delete()
+      .update({ status: "cancelled" })
       .eq("id", purchaseId);
 
-    if (deletePurchaseError) {
-      return { success: false, error: deletePurchaseError.message };
+    if (cancelPurchaseError) {
+      return { success: false, error: cancelPurchaseError.message };
     }
 
     return { success: true };

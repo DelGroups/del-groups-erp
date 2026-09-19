@@ -5,7 +5,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 export default function SonnerProvider() {
   const { theme } = useTheme();
-  const sonnerTheme = theme === "light" ? "light" : "dark";
+  const sonnerTheme = theme === "daylight" ? "light" : "dark";
 
   return (
     <Toaster

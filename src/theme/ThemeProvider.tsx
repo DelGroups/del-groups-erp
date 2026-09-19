@@ -34,7 +34,7 @@ function readStoredTheme(): ThemeId {
 function applyThemeToDocument(theme: ThemeId) {
   const root = document.documentElement;
   root.setAttribute("data-theme", theme);
-  root.style.colorScheme = theme === "light" ? "light" : "dark";
+  root.style.colorScheme = theme === "daylight" ? "light" : "dark";
   root.classList.add("theme-transition");
   window.setTimeout(() => root.classList.remove("theme-transition"), 320);
 }

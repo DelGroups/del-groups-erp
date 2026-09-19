@@ -208,12 +208,18 @@ function filterProductsForWarehouse(
   warehouses: Warehouse[]
 ): Product[] {
   if (!warehouseId) return products;
-  const polywoodWarehouse = isPolywoodWarehouseRow(warehouseId, warehouses);
-  return products.filter((product) => {
-    const dimensional = isPolywoodProductRow(product);
-    if (polywoodWarehouse) return dimensional;
-    return !dimensional;
-  });
+
+  // A Polywood warehouse row only holds dimensional stock, so narrow it.
+  if (isPolywoodWarehouseRow(warehouseId, warehouses)) {
+    return products.filter((product) => isPolywoodProductRow(product));
+  }
+
+  // A normal warehouse row shows the WHOLE catalogue. Dimensional products were
+  // hidden here, which made roughly two thirds of the catalogue unreachable from
+  // the sales invoice: searching a real code such as PW-301-M answered "product
+  // not found". Selecting one is safe because handleProductSelect already moves
+  // the row onto the Polywood warehouse.
+  return products;
 }
 
 interface Account {

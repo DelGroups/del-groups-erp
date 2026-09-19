@@ -81,9 +81,9 @@ export const enMessages: Messages = {
   },
   theme: {
     label: "Theme",
-    dark: "Midnight Slate",
-    light: "Clean Cloud",
-    emerald: "Emerald Ocean",
+    graphite: "Graphite",
+    daylight: "Daylight",
+    midnight: "Midnight Indigo",
   },
   table: {
     paginationSummary: "Showing {start}–{end} of {total}",

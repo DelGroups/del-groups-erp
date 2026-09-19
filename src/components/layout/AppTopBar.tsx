@@ -45,10 +45,10 @@ export default function AppTopBar() {
   );
 
   const showBreadcrumbs = shouldShowGlobalBreadcrumbs(pathname) && crumbs.length > 0;
-  const isDark = theme === "dark" || theme === "emerald";
+  const isDark = theme !== "daylight";
 
   const toggleTheme = () => {
-    setTheme(isDark ? "light" : "dark");
+    setTheme(isDark ? "daylight" : "graphite");
   };
 
   if (pathname.startsWith("/login") || pathname.startsWith("/auth")) {

@@ -1,7 +1,7 @@
-export const THEMES = ["dark", "light", "emerald"] as const;
+export const THEMES = ["graphite", "daylight", "midnight"] as const;
 export type ThemeId = (typeof THEMES)[number];
 
-export const DEFAULT_THEME: ThemeId = "dark";
+export const DEFAULT_THEME: ThemeId = "graphite";
 export const THEME_STORAGE_KEY = "erp_theme";
 
 export function isThemeId(value: string | null | undefined): value is ThemeId {
