@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { Employee, EmployeeInsert } from "@/types/database.types";
-import {
-  EMPLOYEE_DEPARTMENTS,
-  generateEmployeeCode,
-} from "@/types/database.types";
+import { EMPLOYEE_DEPARTMENTS, generateEmployeeCode } from "@/types/database.types";
+import type { EmployeeDepartmentRow } from "@/lib/hr/employeeDepartments";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -15,16 +13,24 @@ export type EmployeeFormValues = EmployeeInsert;
 interface EmployeeFormModalProps {
   isOpen: boolean;
   initial?: Employee | null;
+  departments: EmployeeDepartmentRow[];
   saving?: boolean;
   onClose: () => void;
   onSubmit: (values: EmployeeFormValues) => void | Promise<void>;
 }
 
-const emptyForm = (): EmployeeFormValues => ({
+function departmentOptions(departments: EmployeeDepartmentRow[]) {
+  if (departments.length > 0) {
+    return departments.map((d) => ({ value: d.code, label: d.name }));
+  }
+  return EMPLOYEE_DEPARTMENTS.map((d) => ({ value: d.value, label: d.label }));
+}
+
+const emptyForm = (defaultDepartment = "general"): EmployeeFormValues => ({
   employee_code: generateEmployeeCode(),
   full_name: "",
   role: "",
-  department: "general",
+  department: defaultDepartment,
   phone: null,
   base_salary: 0,
   default_commission: 0,
@@ -41,12 +47,15 @@ const emptyForm = (): EmployeeFormValues => ({
 export default function EmployeeFormModal({
   isOpen,
   initial,
+  departments,
   saving,
   onClose,
   onSubmit,
 }: EmployeeFormModalProps) {
   const { t } = useI18n();
-  const [form, setForm] = useState<EmployeeFormValues>(emptyForm());
+  const options = departmentOptions(departments);
+  const defaultDepartment = options[0]?.value ?? "general";
+  const [form, setForm] = useState<EmployeeFormValues>(emptyForm(defaultDepartment));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,9 +78,9 @@ export default function EmployeeFormModal({
         documents_json: initial.documents_json ?? {},
       });
     } else {
-      setForm(emptyForm());
+      setForm(emptyForm(defaultDepartment));
     }
-  }, [isOpen, initial]);
+  }, [isOpen, initial, defaultDepartment]);
 
   if (!isOpen) return null;
 
@@ -123,7 +132,7 @@ export default function EmployeeFormModal({
                 onChange={(e) => set({ department: e.target.value })}
                 className="app-input mt-1 text-sm"
               >
-                {EMPLOYEE_DEPARTMENTS.map((d) => (
+                {options.map((d) => (
                   <option key={d.value} value={d.value}>
                     {d.label}
                   </option>

@@ -9,13 +9,11 @@ import EmployeeDetailModal from "@/components/hr/EmployeeDetailModal";
 import AdvanceFormModal from "@/components/hr/AdvanceFormModal";
 import LeaveFormModal from "@/components/hr/LeaveFormModal";
 import PayPayrollModal from "@/components/hr/PayPayrollModal";
+import { fetchAccounts, fetchEmployees } from "@/lib/hr/employees";
 import {
-  createEmployee,
-  deleteEmployee,
-  fetchAccounts,
-  fetchEmployees,
-  updateEmployee,
-} from "@/lib/hr/employees";
+  fetchEmployeeDepartments,
+  type EmployeeDepartmentRow,
+} from "@/lib/hr/employeeDepartments";
 import {
   fetchEmployeeAdvances,
   fetchEmployeeLeaves,
@@ -23,11 +21,15 @@ import {
 } from "@/lib/hr/payroll";
 import {
   calculateMonthlyPayrollAction,
+  createEmployeeAction,
   createEmployeeLeaveAction,
+  deleteEmployeeAction,
   payEmployeeAdvanceAction,
   payPayrollRunAction,
+  updateEmployeeAction,
   updateEmployeeLeaveStatusAction,
 } from "@/lib/actions/hr";
+import EmployeeDepartmentManagerModal from "@/components/hr/EmployeeDepartmentManagerModal";
 import type {
   Employee,
   EmployeeAdvance,
@@ -52,7 +54,9 @@ import {
   Trash2,
   UserCheck,
   Users,
+  Building2,
 } from "lucide-react";
+import Button from "@/components/ui/button";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -74,6 +78,8 @@ export default function EmployeesPage() {
 
   const [activeTab, setActiveTab] = useState<HrTab>("directory");
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<EmployeeDepartmentRow[]>([]);
+  const [departmentsModalOpen, setDepartmentsModalOpen] = useState(false);
   const [accounts, setAccounts] = useState<{ id: string; name: string; balance: number }[]>([]);
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
@@ -97,14 +103,16 @@ export default function EmployeesPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [emps, accs, runs, adv, lv] = await Promise.all([
+    const [emps, depts, accs, runs, adv, lv] = await Promise.all([
       fetchEmployees(),
+      fetchEmployeeDepartments(false),
       fetchAccounts(),
       fetchPayrollRuns(payrollMonth, payrollYear),
       fetchEmployeeAdvances(),
       fetchEmployeeLeaves(),
     ]);
     setEmployees(emps);
+    setDepartments(depts);
     setAccounts(accs);
     setPayrollRuns(runs);
     setAdvances(adv);
@@ -125,9 +133,9 @@ export default function EmployeesPage() {
         e.employee_code.toLowerCase().includes(q) ||
         e.role.toLowerCase().includes(q) ||
         (e.fin_code || "").toLowerCase().includes(q) ||
-        getDepartmentLabel(e.department).toLowerCase().includes(q)
+        getDepartmentLabel(e.department, departments).toLowerCase().includes(q)
     );
-  }, [employees, searchTerm]);
+  }, [employees, searchTerm, departments]);
 
   const leaveBalanceByEmployee = useMemo(() => {
     const year = new Date().getFullYear();
@@ -163,10 +171,10 @@ export default function EmployeesPage() {
   const handleSaveEmployee = async (values: EmployeeFormValues) => {
     setSaving(true);
     const result = editingEmployee
-      ? await updateEmployee(editingEmployee.id, values)
-      : await createEmployee(values);
+      ? await updateEmployeeAction(editingEmployee.id, values)
+      : await createEmployeeAction(values);
     setSaving(false);
-    if (!result.ok) {
+    if (!result.success) {
       showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
       return;
     }
@@ -177,8 +185,8 @@ export default function EmployeesPage() {
 
   const handleDelete = async (emp: Employee) => {
     if (!confirm(t("common.confirmDelete", { name: emp.full_name }))) return;
-    const result = await deleteEmployee(emp.id);
-    if (!result.ok) showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
+    const result = await deleteEmployeeAction(emp.id);
+    if (!result.success) showError(t("employees.errorPrefix") + formatRpcError(result.error, t));
     else void loadData();
   };
 
@@ -279,6 +287,14 @@ export default function EmployeesPage() {
         description={t("employees.pageDescription")}
         createLabel={headerAction?.label}
         onCreate={headerAction?.onClick}
+        extraActions={
+          canManageHr && activeTab === "directory" ? (
+            <Button appearance="outline" onClick={() => setDepartmentsModalOpen(true)}>
+              <Building2 className="h-4 w-4" />
+              {t("employees.departments.manage")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
@@ -334,7 +350,7 @@ export default function EmployeesPage() {
                           <Td className="font-mono font-bold">{emp.employee_code}</Td>
                           <Td className="font-semibold">{emp.full_name}</Td>
                           <Td>{emp.role || "—"}</Td>
-                          <Td>{getDepartmentLabel(emp.department)}</Td>
+                          <Td>{getDepartmentLabel(emp.department, departments)}</Td>
                           <Td>
                             <StatusBadge status={emp.status} label={getEmployeeStatusLabel(emp.status)} />
                           </Td>
@@ -678,13 +694,22 @@ export default function EmployeesPage() {
       <EmployeeFormModal
         isOpen={formOpen}
         initial={editingEmployee}
+        departments={departments}
         saving={saving}
         onClose={() => setFormOpen(false)}
         onSubmit={handleSaveEmployee}
       />
 
+      <EmployeeDepartmentManagerModal
+        isOpen={departmentsModalOpen}
+        departments={departments}
+        onClose={() => setDepartmentsModalOpen(false)}
+        onUpdated={() => void loadData()}
+      />
+
       <EmployeeDetailModal
         employee={detailEmployee}
+        departments={departments}
         onClose={() => setDetailEmployee(null)}
         onEdit={canManageHr ? () => detailEmployee && openEdit(detailEmployee) : undefined}
       />

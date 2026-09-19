@@ -978,6 +978,15 @@ export const ruMessages: Messages = {
     saved: "Сотрудник сохранён.",
     payrollSuccess: "Зарплата выплачена. Комиссии закрыты и записаны в журнал.",
     errorPrefix: "Ошибка: ",
+    departments: {
+      title: "Отделы",
+      manage: "Отделы",
+      add: "Новый отдел",
+      namePlaceholder: "Название отдела",
+      codePlaceholder: "Код (напр. sales)",
+      empty: "Отделы не заданы.",
+      deleteConfirm: "Удалить этот отдел?",
+    },
     tabs: {
       directory: "Каталог сотрудников",
       payroll: "Зарплата и ведомость",

@@ -1538,7 +1538,12 @@ export interface ProcessPayrollResult {
   payrollId?: string;
 }
 
-export function getDepartmentLabel(dept: string): string {
+export function getDepartmentLabel(
+  dept: string,
+  departments?: { code: string; name: string }[]
+): string {
+  const fromDb = departments?.find((d) => d.code === dept)?.name;
+  if (fromDb) return fromDb;
   return EMPLOYEE_DEPARTMENTS.find((d) => d.value === dept)?.label ?? dept;
 }
 

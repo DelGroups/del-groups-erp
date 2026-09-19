@@ -4,16 +4,19 @@ import React from "react";
 import { X } from "lucide-react";
 import type { Employee } from "@/types/database.types";
 import { getDepartmentLabel, getEmployeeStatusLabel } from "@/types/database.types";
+import type { EmployeeDepartmentRow } from "@/lib/hr/employeeDepartments";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface EmployeeDetailModalProps {
   employee: Employee | null;
+  departments?: EmployeeDepartmentRow[];
   onClose: () => void;
   onEdit?: () => void;
 }
 
 export default function EmployeeDetailModal({
   employee,
+  departments,
   onClose,
   onEdit,
 }: EmployeeDetailModalProps) {
@@ -35,7 +38,10 @@ export default function EmployeeDetailModal({
 
         <div className="grid grid-cols-2 gap-3 p-5 text-xs">
           <Detail label={t("employees.role")} value={employee.role || "—"} />
-          <Detail label={t("employees.department")} value={getDepartmentLabel(employee.department)} />
+          <Detail
+            label={t("employees.department")}
+            value={getDepartmentLabel(employee.department, departments)}
+          />
           <Detail label={t("common.status")} value={getEmployeeStatusLabel(employee.status)} />
           <Detail label={t("common.phone")} value={employee.phone || "—"} />
           <Detail label={t("employees.finCode")} value={employee.fin_code || "—"} />

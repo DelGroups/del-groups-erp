@@ -977,6 +977,15 @@ export const azMessages = {
     saved: "İşçi məlumatları yadda saxlanıldı.",
     payrollSuccess: "Maaş uğurla ödənildi. Komissiyalar bağlandı və maliyyə jurnalına yazıldı.",
     errorPrefix: "Xəta: ",
+    departments: {
+      title: "Şöbələr",
+      manage: "Şöbələr",
+      add: "Yeni şöbə",
+      namePlaceholder: "Şöbə adı",
+      codePlaceholder: "Kod (məs: satis)",
+      empty: "Şöbə qeydiyyatı boşdur.",
+      deleteConfirm: "Bu şöbə silinsin?",
+    },
     tabs: {
       directory: "İşçilər kataloqu",
       payroll: "Maaş və Bordro",

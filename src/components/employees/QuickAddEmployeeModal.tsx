@@ -2,9 +2,8 @@
 
 import React, { useState } from "react";
 import { Save, X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import type { Employee } from "@/types/database.types";
-import { normalizeEmployee } from "@/types/database.types";
+import { createEmployeeAction } from "@/lib/actions/hr";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 
@@ -34,30 +33,48 @@ export default function QuickAddEmployeeModal({
 
     setSaving(true);
     const employeeCode = `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
-    const { data, error } = await supabase
-      .from("employees")
-      .insert([
-        {
-          employee_code: employeeCode,
-          full_name: fullName.trim(),
-          role: role.trim() || "Usta",
-          department: "İstehsalat",
-          phone: phone.trim() || null,
-          base_salary: 0,
-          default_commission: 0,
-          status: "active",
-        },
-      ])
-      .select("*")
-      .single();
+    const result = await createEmployeeAction({
+      employee_code: employeeCode,
+      full_name: fullName.trim(),
+      role: role.trim() || "Usta",
+      department: "furniture",
+      phone: phone.trim() || null,
+      base_salary: 0,
+      default_commission: 0,
+      status: "active",
+      fin_code: null,
+      iban: null,
+      bank_name: null,
+      hire_date: null,
+      contract_end_date: null,
+      emergency_phone: null,
+      documents_json: {},
+    });
     setSaving(false);
 
-    if (error || !data) {
-      showError("Xəta: " + (error?.message || "Usta yaradılmadı"));
+    if (!result.success) {
+      showError("Xəta: " + (result.error || "Usta yaradılmadı"));
       return;
     }
 
-    onCreated(normalizeEmployee(data as Record<string, unknown>));
+    onCreated({
+      id: "",
+      employee_code: employeeCode,
+      full_name: fullName.trim(),
+      role: role.trim() || "Usta",
+      department: "furniture",
+      phone: phone.trim() || null,
+      base_salary: 0,
+      default_commission: 0,
+      status: "active",
+      fin_code: null,
+      iban: null,
+      bank_name: null,
+      hire_date: null,
+      contract_end_date: null,
+      emergency_phone: null,
+      documents_json: {},
+    });
     onClose();
   };
 

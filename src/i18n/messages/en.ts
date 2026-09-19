@@ -978,6 +978,15 @@ export const enMessages: Messages = {
     saved: "Employee saved.",
     payrollSuccess: "Payroll paid successfully. Commissions closed and recorded in finance journal.",
     errorPrefix: "Error: ",
+    departments: {
+      title: "Departments",
+      manage: "Departments",
+      add: "New department",
+      namePlaceholder: "Department name",
+      codePlaceholder: "Code (e.g. sales)",
+      empty: "No departments yet.",
+      deleteConfirm: "Delete this department?",
+    },
     tabs: {
       directory: "Employee directory",
       payroll: "Payroll engine",
