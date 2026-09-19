@@ -31,7 +31,11 @@ export async function updateEmployee(
 ): Promise<{ ok: boolean; error?: string }> {
   const patch: Record<string, unknown> = {};
 
-  if (payload.employee_code != null) patch.employee_code = payload.employee_code.trim();
+  if (payload.employee_code != null) {
+    const employeeCode = payload.employee_code.trim();
+    patch.employee_code = employeeCode;
+    patch.code = employeeCode;
+  }
   if (payload.full_name != null) patch.full_name = payload.full_name.trim();
   if (payload.role != null) patch.role = payload.role.trim();
   if (payload.department != null) patch.department = payload.department.trim();

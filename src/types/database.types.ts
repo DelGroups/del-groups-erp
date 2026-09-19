@@ -1337,6 +1337,8 @@ export interface Employee {
 
 /** Exact column names sent to Supabase `employees` table. */
 export type EmployeeDbInsert = {
+  /** NOT NULL record key on `employees`; derived in toEmployeeDbRow. */
+  code: string;
   employee_code: string;
   full_name: string;
   role: string;
@@ -1354,11 +1356,19 @@ export type EmployeeDbInsert = {
   documents_json?: Record<string, unknown>;
 };
 
-export type EmployeeInsert = EmployeeDbInsert;
+/** What a form supplies. `code` is derived in toEmployeeDbRow, never typed by hand. */
+export type EmployeeInsert = Omit<EmployeeDbInsert, "code">;
 
 export function toEmployeeDbRow(payload: EmployeeInsert): EmployeeDbInsert {
+  // `employees` carries two code columns: `code` (NOT NULL, the record key shown
+  // in listings) and `employee_code` (the HR-facing number). Only the second was
+  // ever filled, so every insert failed with a raw not-null violation and no
+  // employee could be created from the UI at all. Both now share one value.
+  const employeeCode = payload.employee_code.trim() || generateEmployeeCode();
+
   return {
-    employee_code: payload.employee_code.trim() || generateEmployeeCode(),
+    code: employeeCode,
+    employee_code: employeeCode,
     full_name: payload.full_name.trim(),
     role: payload.role.trim(),
     department: payload.department.trim() || "general",
