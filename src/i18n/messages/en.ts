@@ -208,6 +208,7 @@ export const enMessages: Messages = {
     invalidTotalPrice: "Project or sale price must be greater than zero.",
     forbidden: "You do not have permission for this operation.",
     overpayment: "Payment amount cannot exceed the remaining balance.",
+    duplicateInvoiceNumber: "This invoice number already exists. Refresh and save again.",
   },
   auth: {
     loginTitle: "Sign in to ERP Management System",

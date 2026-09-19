@@ -1395,7 +1395,7 @@ export default function UniversalInvoiceForm({
     });
 
     const salesPayload: SaleInsert = {
-      doc_no: docNo.includes(".....") ? "" : docNo,
+      doc_no: savedSaleId && !docNo.includes(".....") ? docNo : "",
       doc_date: docDate,
       customer_id: selectedCustomerId,
       customer_name: selectedCustomer ? customerLabel(selectedCustomer, t) : "",
@@ -1433,7 +1433,7 @@ export default function UniversalInvoiceForm({
       header: salesPayload,
       items: saleItems,
       payments,
-      docNo: salesPayload.doc_no || docNo,
+      docNo: salesPayload.doc_no,
       additionalExpenses,
       officialFields,
       mode,

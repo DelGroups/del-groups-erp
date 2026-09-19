@@ -206,6 +206,7 @@ export const azMessages = {
     invalidTotalPrice: "Layihə və ya satış qiyməti sıfırdan böyük olmalıdır.",
     forbidden: "Bu əməliyyat üçün icazəniz yoxdur.",
     overpayment: "Ödənilən məbləğ qalan borcdan çox ola bilməz.",
+    duplicateInvoiceNumber: "Bu sənəd nömrəsi artıq mövcuddur. Səhifəni yeniləyib yenidən saxlayın.",
   },
   auth: {
     loginTitle: "ERP İdarəetmə Sisteminə giriş",

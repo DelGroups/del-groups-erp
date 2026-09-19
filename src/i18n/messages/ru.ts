@@ -208,6 +208,7 @@ export const ruMessages: Messages = {
     invalidTotalPrice: "Цена проекта или продажи должна быть больше нуля.",
     forbidden: "У вас нет прав на эту операцию.",
     overpayment: "Сумма оплаты не может превышать остаток долга.",
+    duplicateInvoiceNumber: "Этот номер счёта уже существует. Обновите страницу и сохраните снова.",
   },
   auth: {
     loginTitle: "Вход в ERP систему управления",

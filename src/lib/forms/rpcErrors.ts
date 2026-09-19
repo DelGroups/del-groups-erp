@@ -53,6 +53,11 @@ const RPC_ERROR_RULES: RpcErrorRule[] = [
     match: (raw) => /overpayment|Qalan borc/i.test(raw),
     key: "rpcErrors.overpayment",
   },
+  {
+    match: (raw) =>
+      /sales_invoice_number_key|duplicate key.*invoice_number/i.test(raw),
+    key: "rpcErrors.duplicateInvoiceNumber",
+  },
 ];
 
 /** Map Postgres / RPC error strings to localized user-facing messages. */
