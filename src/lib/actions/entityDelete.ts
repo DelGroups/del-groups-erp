@@ -1,10 +1,16 @@
 "use server";
 
+import { requirePermissionAction } from "@/lib/auth/serverActionAuth";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import {
   voidPurchaseInvoiceDirect,
   voidSaleInvoiceDirect,
 } from "@/lib/invoices/voidInvoiceDirect";
+import {
+  friendlyProductDeleteError,
+  purgeProductDependencies,
+} from "@/lib/products/deleteProductService";
 
 export type DeleteActionResult = { success: boolean; error?: string };
 
@@ -69,8 +75,18 @@ export async function deleteSupplierAction(supplierId: string): Promise<DeleteAc
 export async function deleteProductAction(productId: string): Promise<DeleteActionResult> {
   if (!productId?.trim()) return { success: false, error: "Məhsul tapılmadı" };
 
-  const client = await createSupabaseServerClient();
-  const { count: saleItemCount } = await client
+  try {
+    await requirePermissionAction("can_manage_products");
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "İcazə yoxdur",
+    };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { count: saleItemCount } = await admin
     .from("sale_items")
     .select("id", { count: "exact", head: true })
     .eq("product_id", productId);
@@ -79,7 +95,7 @@ export async function deleteProductAction(productId: string): Promise<DeleteActi
     return { success: false, error: "Satış sətri olan məhsul silinə bilməz" };
   }
 
-  const { count: purchaseItemCount } = await client
+  const { count: purchaseItemCount } = await admin
     .from("purchase_items")
     .select("id", { count: "exact", head: true })
     .eq("product_id", productId);
@@ -88,8 +104,16 @@ export async function deleteProductAction(productId: string): Promise<DeleteActi
     return { success: false, error: "Alış sətri olan məhsul silinə bilməz" };
   }
 
-  const { error } = await client.from("products").delete().eq("id", productId);
-  return error ? { success: false, error: error.message } : { success: true };
+  const purge = await purgeProductDependencies(admin, productId);
+  if (!purge.success) {
+    return { success: false, error: friendlyProductDeleteError(purge.error ?? "") };
+  }
+
+  const { error } = await admin.from("products").delete().eq("id", productId);
+  if (error) {
+    return { success: false, error: friendlyProductDeleteError(error.message) };
+  }
+  return { success: true };
 }
 
 export async function deleteContractAction(contractId: string): Promise<DeleteActionResult> {
