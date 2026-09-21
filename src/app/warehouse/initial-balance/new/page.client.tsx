@@ -7,7 +7,7 @@ import { FormLayout } from "@/components/ui/form-layout";
 import InitialBalanceForm from "@/components/initialBalance/InitialBalanceForm";
 import { fetchInitialBalanceByIdAction } from "@/lib/initialBalance/actions";
 import { fetchProductsCatalog } from "@/lib/products/api";
-import type { InitialBalanceDocument } from "@/lib/initialBalance/types";
+import type { InitialBalanceDocument, InitialBalanceEntryType } from "@/lib/initialBalance/types";
 import type { Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -15,6 +15,8 @@ export default function InitialBalanceNewPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft");
+  const typeParam = searchParams.get("type");
+  const defaultEntryType: InitialBalanceEntryType = typeParam === "receipt" ? "receipt" : "opening_balance";
   const { t } = useI18n();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -70,6 +72,7 @@ export default function InitialBalanceNewPageClient() {
             products={products}
             warehouses={warehouses}
             initialDocument={initialDocument}
+            defaultEntryType={defaultEntryType}
             onSuccess={() => {
               void goToList();
             }}

@@ -1,5 +1,3 @@
-import { parseCustomPieceLengths } from "@/lib/polywood/metricReceive";
-
 export type BulkImportStockMode = "piece" | "meter";
 
 const PIECE_UNIT_ALIASES = new Set([
@@ -39,14 +37,4 @@ export function normalizeBulkImportMeasureUnit(
   const trimmed = unitRaw.trim();
   if (trimmed) return trimmed;
   return mode === "meter" ? "Metr" : "Ədəd";
-}
-
-export function parseMetrajPieces(raw: string): number[] {
-  return parseCustomPieceLengths(raw);
-}
-
-export function formatMetrajPiecesPreview(pieces: number[], raw: string): string {
-  if (raw.trim()) return raw.trim();
-  if (pieces.length === 0) return "—";
-  return pieces.map((length) => `${length}m`).join(", ");
 }

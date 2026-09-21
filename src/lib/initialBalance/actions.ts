@@ -5,7 +5,11 @@ import { isFullSheetLength } from "@/lib/polywood/constants";
 import { isMetricProduct, resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import { generatePieceBarcode } from "@/lib/products/generateBarcode";
-import type { SaveInitialBalanceInput, InitialBalanceDocument } from "@/lib/initialBalance/types";
+import type {
+  SaveInitialBalanceInput,
+  InitialBalanceDocument,
+  InitialBalanceEntryType,
+} from "@/lib/initialBalance/types";
 import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { Product } from "@/types/database.types";
@@ -26,18 +30,36 @@ function toNumberArray(raw: unknown): number[] {
     .map((value) => Math.round(value * 1000) / 1000);
 }
 
-async function nextDocNo(admin: ReturnType<typeof createSupabaseAdminClient>): Promise<string> {
-  const { data, error } = await admin.rpc("next_initial_balance_doc_no");
+const DOC_NO_PREFIX: Record<InitialBalanceEntryType, string> = {
+  opening_balance: "IQ",
+  receipt: "DG",
+};
+
+const REFERENCE_TYPE: Record<InitialBalanceEntryType, string> = {
+  opening_balance: "initial_balance",
+  receipt: "stock_receipt",
+};
+
+async function nextDocNo(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  entryType: InitialBalanceEntryType
+): Promise<string> {
+  const prefix = DOC_NO_PREFIX[entryType];
+  const { data, error } = await admin.rpc("next_initial_balance_doc_no", { p_prefix: prefix });
   if (!error && typeof data === "string" && data.trim()) return data;
   const year = new Date().getFullYear();
-  return `IQ-${year}-${Math.floor(1000 + Math.random() * 9000)}`;
+  return `${prefix}-${year}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-export async function peekInitialBalanceDocNoAction(): Promise<InitialBalanceActionResult<string>> {
+export async function peekInitialBalanceDocNoAction(
+  entryType: InitialBalanceEntryType = "opening_balance"
+): Promise<InitialBalanceActionResult<string>> {
   try {
-    await requirePermissionAction("can_writeoff_inventory");
+    await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
-    const { data, error } = await admin.rpc("peek_next_initial_balance_doc_no");
+    const { data, error } = await admin.rpc("peek_next_initial_balance_doc_no", {
+      p_prefix: DOC_NO_PREFIX[entryType],
+    });
     if (error) return { success: false, error: error.message };
     return { success: true, data: (data as string) || "" };
   } catch (err) {
@@ -50,7 +72,7 @@ export async function fetchInitialBalanceListAction(): Promise<
   InitialBalanceActionResult<InitialBalanceDocument[]>
 > {
   try {
-    await requirePermissionAction("can_writeoff_inventory");
+    await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("inventory_initial_balances")
@@ -70,7 +92,7 @@ export async function fetchInitialBalanceByIdAction(
   id: string
 ): Promise<InitialBalanceActionResult<InitialBalanceDocument>> {
   try {
-    await requirePermissionAction("can_writeoff_inventory");
+    await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
@@ -118,7 +140,7 @@ export async function saveInitialBalanceDraftAction(
   input: SaveInitialBalanceInput
 ): Promise<InitialBalanceActionResult<{ id: string; document_number: string }>> {
   try {
-    const { user, profile } = await requirePermissionAction("can_writeoff_inventory");
+    const { user, profile } = await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
 
     if (!input.items.length) {
@@ -155,6 +177,7 @@ export async function saveInitialBalanceDraftAction(
           doc_date: input.doc_date,
           warehouse_id: input.warehouse_id,
           warehouse_name: input.warehouse_name,
+          entry_type: input.entry_type,
           notes: input.notes?.trim() || null,
           total_amount: totalAmount,
           updated_at: new Date().toISOString(),
@@ -164,7 +187,7 @@ export async function saveInitialBalanceDraftAction(
       if (updateError) return { success: false, error: updateError.message };
       await admin.from("inventory_initial_balance_items").delete().eq("document_id", documentId);
     } else {
-      documentNumber = await nextDocNo(admin);
+      documentNumber = await nextDocNo(admin, input.entry_type);
       const { data: created, error: createError } = await admin
         .from("inventory_initial_balances")
         .insert([
@@ -173,6 +196,7 @@ export async function saveInitialBalanceDraftAction(
             doc_date: input.doc_date,
             warehouse_id: input.warehouse_id,
             warehouse_name: input.warehouse_name,
+            entry_type: input.entry_type,
             notes: input.notes?.trim() || null,
             status: "draft",
             total_amount: totalAmount,
@@ -259,7 +283,7 @@ export async function postInitialBalanceDocumentAction(
   documentId: string
 ): Promise<InitialBalanceActionResult<{ document_number: string }>> {
   try {
-    const { user } = await requirePermissionAction("can_writeoff_inventory");
+    const { user } = await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
 
     const { data: header, error: headerError } = await admin
@@ -287,6 +311,8 @@ export async function postInitialBalanceDocumentAction(
     if (!items?.length) return { success: false, error: "Document has no line items" };
 
     const warehouseId = header.warehouse_id as string;
+    const entryType = (header.entry_type as InitialBalanceEntryType) || "opening_balance";
+    const referenceType = REFERENCE_TYPE[entryType];
 
     for (const item of items) {
       const productId = item.product_id as string;
@@ -344,7 +370,7 @@ export async function postInitialBalanceDocumentAction(
             piece_lengths: pieceLengths,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "product_id" }
+          { onConflict: "product_id,warehouse_id" }
         );
 
         await recordStockMovement(admin, {
@@ -353,17 +379,17 @@ export async function postInitialBalanceDocumentAction(
           movementType: "in",
           quantity: addedQty,
           unit: "Metr",
-          referenceType: "initial_balance",
+          referenceType,
           referenceId: documentId,
           sourceLineId: item.id as string,
-          description: `Initial balance ${header.document_number}`,
+          description: `${header.document_number}`,
           createdBy: user.id,
         });
 
         await admin.rpc("create_inventory_batch", {
           p_product_id: productId,
           p_document_id: documentId,
-          p_document_type: "initial_balance",
+          p_document_type: referenceType,
           p_unit_cost: unitCost,
           p_quantity: addedQty,
         });
@@ -388,7 +414,7 @@ export async function postInitialBalanceDocumentAction(
             current_stock: newStock,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "product_id" }
+          { onConflict: "product_id,warehouse_id" }
         );
 
         await recordStockMovement(admin, {
@@ -397,17 +423,17 @@ export async function postInitialBalanceDocumentAction(
           movementType: "in",
           quantity: qty,
           unit: (item.unit as string) || "Ədəd",
-          referenceType: "initial_balance",
+          referenceType,
           referenceId: documentId,
           sourceLineId: item.id as string,
-          description: `Initial balance ${header.document_number}`,
+          description: `${header.document_number}`,
           createdBy: user.id,
         });
 
         await admin.rpc("create_inventory_batch", {
           p_product_id: productId,
           p_document_id: documentId,
-          p_document_type: "initial_balance",
+          p_document_type: referenceType,
           p_unit_cost: unitCost,
           p_quantity: qty,
         });
@@ -440,7 +466,7 @@ export async function cancelInitialBalanceDocumentAction(
   documentId: string
 ): Promise<InitialBalanceActionResult> {
   try {
-    await requirePermissionAction("can_writeoff_inventory");
+    await requirePermissionAction("can_manage_products");
     const admin = createSupabaseAdminClient();
     const { data: header } = await admin
       .from("inventory_initial_balances")

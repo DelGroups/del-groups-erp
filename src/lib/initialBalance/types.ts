@@ -1,4 +1,5 @@
 export type InitialBalanceStatus = "draft" | "posted" | "cancelled";
+export type InitialBalanceEntryType = "opening_balance" | "receipt";
 
 export interface InitialBalanceLineItem {
   id: string;
@@ -21,6 +22,7 @@ export interface InitialBalanceDocument {
   warehouse_id: string;
   warehouse_name: string | null;
   notes: string | null;
+  entry_type: InitialBalanceEntryType;
   status: InitialBalanceStatus;
   total_amount: number;
   created_by_name: string | null;
@@ -34,6 +36,7 @@ export interface SaveInitialBalanceInput {
   doc_date: string;
   warehouse_id: string;
   warehouse_name: string;
+  entry_type: InitialBalanceEntryType;
   notes?: string;
   items: Array<{
     product_id: string;

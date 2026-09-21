@@ -6,9 +6,7 @@ import {
 } from "@/lib/products/productPriceRows";
 import type { PriceEntryUnit } from "@/lib/products/productPriceUnits";
 import {
-  formatMetrajPiecesPreview,
   normalizeBulkImportMeasureUnit,
-  parseMetrajPieces,
   resolveBulkImportStockMode,
   type BulkImportStockMode,
 } from "@/lib/products/bulkImportUnits";
@@ -34,14 +32,9 @@ export const BULK_IMPORT_CSV_HEADERS = [
   "Satış qiyməti (Şət/Ədəd)",
   "Satış qiyməti (Metr/m²)",
   "Ölçü vahidi",
-  "Anbar",
-  "İlkin Say",
-  "Metraj hissələri",
 ] as const;
 
 export const BULK_IMPORT_TEMPLATE_HEADERS = BULK_IMPORT_CSV_HEADERS;
-
-export const BULK_IMPORT_WAREHOUSE_HEADER = "Anbar";
 
 export type BulkImportTemplateHeader = (typeof BULK_IMPORT_TEMPLATE_HEADERS)[number];
 
@@ -60,10 +53,6 @@ export interface BulkImportRow {
   sell_price_piece: string;
   sell_price_meter: string;
   measure_unit: string;
-  warehouse: string;
-  initial_count: string;
-  metraj_pieces_raw: string;
-  metraj_pieces: number[];
   stock_mode: BulkImportStockMode;
   is_dimensional: boolean;
   unit: string;
@@ -80,12 +69,6 @@ export interface BulkImportParseResult {
 
 export interface BulkImportApiPayload {
   product: ProductInsert;
-  stock: {
-    mode: BulkImportStockMode;
-    initialCount: number;
-    meterPieces: number[];
-    warehouseLabel?: string | null;
-  };
 }
 
 function normalizeHeader(value: string): string {
@@ -154,16 +137,6 @@ function parseOptionalDimension(
   return parsed;
 }
 
-function parseInitialCount(value: string, errors: string[]): number | null {
-  if (!value.trim()) return 0;
-  const parsed = parseDecimal(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    errors.push("İlkin Say düzgün rəqəm deyil");
-    return null;
-  }
-  return parsed;
-}
-
 function hasDimensionInput(lengthRaw: string, widthRaw: string): boolean {
   return Boolean(lengthRaw.trim() || widthRaw.trim());
 }
@@ -207,20 +180,10 @@ export function formatBulkImportPricePair(piece: string, meter: string): string 
   return `${pieceValue} / ${meterValue}`;
 }
 
-export function formatBulkImportMetraj(row: BulkImportRow): string {
-  return formatMetrajPiecesPreview(row.metraj_pieces, row.metraj_pieces_raw);
-}
-
 export function validateBulkImportRow(
   row: Omit<
     BulkImportRow,
-    | "errors"
-    | "isValid"
-    | "rowNumber"
-    | "is_dimensional"
-    | "unit"
-    | "stock_mode"
-    | "metraj_pieces"
+    "errors" | "isValid" | "rowNumber" | "is_dimensional" | "unit" | "stock_mode"
   >,
   seenCodes: Set<string>
 ): BulkImportRow {
@@ -247,21 +210,6 @@ export function validateBulkImportRow(
   const sellPiece = parsePrice(row.sell_price_piece, "Satış qiyməti (Şət/Ədəd)", errors);
   const sellMeter = parsePrice(row.sell_price_meter, "Satış qiyməti (Metr/m²)", errors);
 
-  let initialCount = 0;
-  let metrajPieces: number[] = [];
-
-  if (stockMode === "piece") {
-    const parsedCount = parseInitialCount(row.initial_count, errors);
-    if (parsedCount !== null) initialCount = parsedCount;
-  } else {
-    if (row.metraj_pieces_raw.trim()) {
-      metrajPieces = parseMetrajPieces(row.metraj_pieces_raw);
-      if (metrajPieces.length === 0) {
-        errors.push("Metraj hissələri düzgün formatda deyil");
-      }
-    }
-  }
-
   return {
     ...row,
     code,
@@ -277,9 +225,6 @@ export function validateBulkImportRow(
     sell_price_piece: sellPiece === null ? row.sell_price_piece : String(sellPiece),
     sell_price_meter: sellMeter === null ? row.sell_price_meter : String(sellMeter),
     measure_unit: normalizedUnit,
-    initial_count: String(initialCount),
-    metraj_pieces_raw: row.metraj_pieces_raw.trim(),
-    metraj_pieces: metrajPieces,
     stock_mode: stockMode,
     is_dimensional: isDimensional,
     unit: normalizedUnit,
@@ -332,16 +277,12 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         sell_price_piece: cell(record, "Satış qiyməti (Şət/Ədəd)"),
         sell_price_meter: cell(record, "Satış qiyməti (Metr/m²)"),
         measure_unit: cell(record, "Ölçü vahidi"),
-        warehouse: cell(record, BULK_IMPORT_WAREHOUSE_HEADER),
-        initial_count: cell(record, "İlkin Say"),
-        metraj_pieces_raw: cell(record, "Metraj hissələri"),
       };
 
       const isEmpty = Object.values(base).every((value) => !String(value).trim());
       if (isEmpty) {
         return {
           ...base,
-          metraj_pieces: [] as number[],
           stock_mode: "piece" as BulkImportStockMode,
           is_dimensional: false,
           unit: "Ədəd",
@@ -361,10 +302,7 @@ export function parseBulkImportCsv(text: string): BulkImportParseResult {
         row.barcode ||
         row.base_length ||
         row.base_width ||
-        row.measure_unit ||
-        row.warehouse ||
-        row.initial_count ||
-        row.metraj_pieces_raw
+        row.measure_unit
     );
 
   const validCount = rows.filter((row) => row.isValid).length;
@@ -427,12 +365,6 @@ export function bulkImportRowToProductInsert(row: BulkImportRow): ProductInsert 
 export function bulkImportRowToApiPayload(row: BulkImportRow): BulkImportApiPayload {
   return {
     product: buildProductFromRow(row),
-    stock: {
-      mode: row.stock_mode,
-      initialCount: Number(row.initial_count) || 0,
-      meterPieces: row.metraj_pieces,
-      warehouseLabel: row.warehouse.trim() || null,
-    },
   };
 }
 

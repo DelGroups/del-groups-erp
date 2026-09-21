@@ -2,16 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { handleOptions } from "@/lib/apiSecurity";
 import { requirePermissionApi } from "@/lib/auth/apiAuth";
 import { buildProductInsert } from "@/lib/products/api";
-import {
-  applyBulkImportOpeningStock,
-  resolveBulkImportWarehouseByLabel,
-  resolveBulkImportWarehouseId,
-} from "@/lib/products/bulkImportOpeningStock";
-import type { BulkImportStockMode } from "@/lib/products/bulkImportUnits";
 import { upsertProductsWithSchemaFallback } from "@/lib/products/bulkUpsertSchema";
 import { generateProductBarcode } from "@/lib/products/generateBarcode";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
-import type { Product, ProductInsert } from "@/types/database.types";
+import type { ProductInsert } from "@/types/database.types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,36 +13,6 @@ export const maxDuration = 60;
 interface BulkProductInput extends Partial<ProductInsert> {
   code?: string;
   name?: string;
-  _bulk?: {
-    stock?: {
-      mode?: BulkImportStockMode;
-      initialCount?: number;
-      meterPieces?: number[];
-      warehouseLabel?: string | null;
-    };
-  };
-}
-
-const CODE_LOOKUP_CHUNK = 200;
-
-async function loadProductIdsByCode(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  codes: string[]
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const unique = [...new Set(codes.map((code) => code.trim()).filter(Boolean))];
-
-  for (let i = 0; i < unique.length; i += CODE_LOOKUP_CHUNK) {
-    const chunk = unique.slice(i, i + CODE_LOOKUP_CHUNK);
-    const { data, error } = await admin.from("products").select("id, code").in("code", chunk);
-    if (error) throw new Error(error.message);
-    for (const row of data ?? []) {
-      const code = (row.code ?? "").trim();
-      if (code) map.set(code.toLowerCase(), row.id as string);
-    }
-  }
-
-  return map;
 }
 
 function toUpsertPayload(built: ProductInsert) {
@@ -126,15 +90,7 @@ export async function POST(request: NextRequest) {
         extra_info: row.extra_info,
       });
 
-      return {
-        payload: toUpsertPayload(built),
-        stock: {
-          mode: row._bulk?.stock?.mode ?? "piece",
-          initialCount: Math.max(0, Number(row._bulk?.stock?.initialCount) || 0),
-          meterPieces: row._bulk?.stock?.meterPieces ?? [],
-          warehouseLabel: row._bulk?.stock?.warehouseLabel ?? null,
-        },
-      };
+      return toUpsertPayload(built);
     });
 
   if (prepared.length === 0) {
@@ -145,14 +101,7 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createSupabaseAdminClient();
-  const {
-    data,
-    error,
-    schemaWarnings,
-  } = await upsertProductsWithSchemaFallback(
-    admin,
-    prepared.map((row) => row.payload)
-  );
+  const { data, error, schemaWarnings } = await upsertProductsWithSchemaFallback(admin, prepared);
 
   if (error) {
     const hint =
@@ -168,115 +117,12 @@ export async function POST(request: NextRequest) {
   const insertedRows = data ?? [];
   const inserted = insertedRows.length;
   const skipped = prepared.length - inserted;
-
-  const defaultWarehouseId = await resolveBulkImportWarehouseId(admin);
-  let stockEntries = 0;
-  const warehouseResolveWarnings: string[] = [];
-
-  let productIdsByCode: Map<string, string>;
-  try {
-    productIdsByCode = await loadProductIdsByCode(
-      admin,
-      prepared.map((row) => row.payload.code ?? "")
-    );
-  } catch (lookupError) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: lookupError instanceof Error ? lookupError.message : "Məhsul kodları tapılmadı",
-      },
-      { status: 400 }
-    );
-  }
-
-  if (defaultWarehouseId) {
-    for (const source of prepared) {
-      const codeKey = source.payload.code?.trim().toLowerCase();
-      if (!codeKey) continue;
-
-      const productId = productIdsByCode.get(codeKey);
-      if (!productId) continue;
-
-      const hasPieceStock = source.stock.mode === "piece" && source.stock.initialCount > 0;
-      const hasMeterStock =
-        source.stock.mode === "meter" && source.stock.meterPieces.length > 0;
-
-      const warehouseId =
-        (await resolveBulkImportWarehouseByLabel(admin, source.stock.warehouseLabel)) ??
-        defaultWarehouseId;
-
-      if (source.stock.warehouseLabel?.trim() && warehouseId === defaultWarehouseId) {
-        warehouseResolveWarnings.push(source.payload.code ?? codeKey);
-      }
-
-      if (warehouseId) {
-        await admin.from("products").update({ warehouse_id: warehouseId }).eq("id", productId);
-      }
-
-      if (!hasPieceStock && !hasMeterStock) continue;
-
-      const { data: productRecord, error: productError } = await admin
-        .from("products")
-        .select("*")
-        .eq("id", productId)
-        .maybeSingle();
-
-      if (productError || !productRecord) {
-        return NextResponse.json(
-          { success: false, error: productError?.message || "Məhsul tapılmadı" },
-          { status: 400 }
-        );
-      }
-
-      try {
-        const applied = await applyBulkImportOpeningStock({
-          admin,
-          productId,
-          product: productRecord as Product,
-          warehouseId: warehouseId ?? defaultWarehouseId,
-          mode: source.stock.mode,
-          initialCount: source.stock.initialCount,
-          meterPieces: source.stock.meterPieces,
-          userId: auth.user?.id ?? null,
-        });
-        if (applied) stockEntries += 1;
-      } catch (stockError) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              stockError instanceof Error
-                ? stockError.message
-                : "İlkin qalıq yazılmadı",
-          },
-          { status: 400 }
-        );
-      }
-    }
-  }
-
-  const needsStock = prepared.some(
-    (row) =>
-      (row.stock.mode === "piece" && row.stock.initialCount > 0) ||
-      (row.stock.mode === "meter" && row.stock.meterPieces.length > 0)
-  );
-
-  const stockWarning =
-    !defaultWarehouseId && needsStock
-      ? "Məhsullar əlavə edildi, lakin anbar tapılmadığı üçün ilkin qalıq yazılmadı"
-      : undefined;
-  const schemaWarning = schemaWarnings.length > 0 ? schemaWarnings.join(" ") : undefined;
-  const warehouseWarning =
-    warehouseResolveWarnings.length > 0
-      ? `Bəzi sətirlərdə anbar adı uyğunlaşdırılmadı (default anbar): ${warehouseResolveWarnings.slice(0, 5).join(", ")}${warehouseResolveWarnings.length > 5 ? "…" : ""}`
-      : undefined;
-  const warning = [stockWarning, schemaWarning, warehouseWarning].filter(Boolean).join(" ") || undefined;
+  const warning = schemaWarnings.length > 0 ? schemaWarnings.join(" ") : undefined;
 
   return NextResponse.json({
     success: true,
     inserted,
     skipped,
-    stockEntries,
     total: prepared.length,
     warning,
   });

@@ -30,14 +30,22 @@ export default function InitialBalanceListPageClient() {
     <PageLayout>
       <PageHeader
         title={t("initialBalance.listTitle")}
-        description={t("initialBalance.listDescription")}
+        subtitle={t("initialBalance.listDescription")}
         actions={
-          <Link href="/warehouse/initial-balance/new">
-            <Button className="inline-flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              {t("initialBalance.newDocument")}
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/warehouse/initial-balance/new?type=opening_balance">
+              <Button variant="outline" className="inline-flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                {t("initialBalance.entryTypeOpeningBalance")}
+              </Button>
+            </Link>
+            <Link href="/warehouse/initial-balance/new?type=receipt">
+              <Button className="inline-flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                {t("initialBalance.entryTypeReceipt")}
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -47,6 +55,7 @@ export default function InitialBalanceListPageClient() {
             <tr>
               <th className="px-3 py-2 text-left">{t("initialBalance.docNo")}</th>
               <th className="px-3 py-2 text-left">{t("common.date")}</th>
+              <th className="px-3 py-2 text-left">{t("initialBalance.entryType")}</th>
               <th className="px-3 py-2 text-left">{t("common.warehouse")}</th>
               <th className="px-3 py-2 text-right">{t("initialBalance.totalValue")}</th>
               <th className="px-3 py-2 text-left">{t("common.status")}</th>
@@ -56,13 +65,13 @@ export default function InitialBalanceListPageClient() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-app-muted">
+                <td colSpan={7} className="px-3 py-8 text-center text-app-muted">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-app-muted">
+                <td colSpan={7} className="px-3 py-8 text-center text-app-muted">
                   {t("initialBalance.emptyList")}
                 </td>
               </tr>
@@ -78,6 +87,11 @@ export default function InitialBalanceListPageClient() {
                     </Link>
                   </td>
                   <td className="px-3 py-2">{row.doc_date}</td>
+                  <td className="px-3 py-2">
+                    {row.entry_type === "receipt"
+                      ? t("initialBalance.entryTypeReceipt")
+                      : t("initialBalance.entryTypeOpeningBalance")}
+                  </td>
                   <td className="px-3 py-2">{row.warehouse_name || "—"}</td>
                   <td className="px-3 py-2 text-right font-mono">
                     {Number(row.total_amount || 0).toFixed(2)} AZN

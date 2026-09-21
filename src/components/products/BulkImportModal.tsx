@@ -11,7 +11,6 @@ import {
   bulkImportRowToApiPayload,
   downloadBulkImportTemplate,
   formatBulkImportDimensions,
-  formatBulkImportMetraj,
   formatBulkImportPricePair,
   parseBulkImportCsv,
   type BulkImportRow,
@@ -99,15 +98,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          products: validRows.map((row) => {
-            const payload = bulkImportRowToApiPayload(row);
-            return {
-              ...payload.product,
-              _bulk: {
-                stock: payload.stock,
-              },
-            };
-          }),
+          products: validRows.map((row) => bulkImportRowToApiPayload(row).product),
         }),
       });
 
@@ -116,7 +107,6 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         error?: string;
         inserted?: number;
         skipped?: number;
-        stockEntries?: number;
         warning?: string;
       };
 
@@ -125,19 +115,10 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
         return;
       }
 
-      const hadInitialStock = validRows.some(
-        (row) =>
-          (row.stock_mode === "piece" && Number(row.initial_count) > 0) ||
-          (row.stock_mode === "meter" && row.metraj_pieces.length > 0)
-      );
-
-      const successText =
-        hadInitialStock || (payload.stockEntries ?? 0) > 0
-          ? t("products.bulkImport.uploadSuccessWithStock")
-          : t("products.bulkImport.uploadSuccess", {
-              inserted: payload.inserted ?? 0,
-              skipped: payload.skipped ?? 0,
-            });
+      const successText = t("products.bulkImport.uploadSuccess", {
+        inserted: payload.inserted ?? 0,
+        skipped: payload.skipped ?? 0,
+      });
 
       showSuccess(payload.warning ? `${successText} ${payload.warning}` : successText);
 
@@ -295,9 +276,6 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colBuyPrice")}</th>
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colSellPrice")}</th>
                     <th className={cn(thClass, "min-w-[90px]")}>{t("products.bulkImport.colUnit")}</th>
-                    <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colWarehouse")}</th>
-                    <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.colInitialCount")}</th>
-                    <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.colMetraj")}</th>
                     <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.status")}</th>
                   </tr>
                 </thead>
@@ -349,13 +327,6 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                         {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
                       </td>
                       <td className={tdClass}>{row.measure_unit || "—"}</td>
-                      <td className={cn(tdClass, "min-w-[120px]")}>{row.warehouse || "—"}</td>
-                      <td className={cn(tdClass, "font-mono")}>
-                        {row.stock_mode === "piece" ? row.initial_count || "0" : "—"}
-                      </td>
-                      <td className={cn(tdClass, "min-w-[160px] max-w-[200px] truncate")} title={formatBulkImportMetraj(row)}>
-                        {row.stock_mode === "meter" ? formatBulkImportMetraj(row) : "—"}
-                      </td>
                       <td className={cn(tdClass, "min-w-[160px] whitespace-normal")}>
                         {row.isValid ? (
                           <span className="font-semibold text-emerald-700">

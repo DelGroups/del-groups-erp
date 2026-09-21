@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, FileText, Plus, Save, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, FileText, Layers, Plus, Save, Trash2 } from "lucide-react";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import BarcodeScanField from "@/components/documents/BarcodeScanField";
+import CategoryBulkSelectModal from "@/components/initialBalance/CategoryBulkSelectModal";
+import { findProductByBarcodeInList } from "@/lib/products/barcode";
+import { resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import {
   applyProductToInitialBalanceLine,
   calcInitialBalanceLineTotal,
   createEmptyInitialBalanceLine,
+  formatPieceLengthsInput,
   parsePieceLengthsInput,
   syncMetricLineFromPieces,
 } from "@/lib/initialBalance/helpers";
@@ -15,7 +20,12 @@ import {
   postInitialBalanceDocumentAction,
   saveInitialBalanceDraftAction,
 } from "@/lib/initialBalance/actions";
-import type { InitialBalanceDocument, InitialBalanceLineItem } from "@/lib/initialBalance/types";
+import { fetchWarehouseStockForProductsAction } from "@/lib/inventory/warehouseStockLookup";
+import type {
+  InitialBalanceDocument,
+  InitialBalanceEntryType,
+  InitialBalanceLineItem,
+} from "@/lib/initialBalance/types";
 import type { Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
@@ -28,6 +38,7 @@ interface InitialBalanceFormProps {
   products: Product[];
   warehouses: Warehouse[];
   initialDocument?: InitialBalanceDocument | null;
+  defaultEntryType?: InitialBalanceEntryType;
   onSuccess?: (documentId: string) => void;
 }
 
@@ -35,6 +46,7 @@ export default function InitialBalanceForm({
   products,
   warehouses,
   initialDocument = null,
+  defaultEntryType = "opening_balance",
   onSuccess,
 }: InitialBalanceFormProps) {
   const { t } = useI18n();
@@ -42,6 +54,9 @@ export default function InitialBalanceForm({
   const isPosted = initialDocument?.status === "posted";
   const isLocked = isPosted || initialDocument?.status === "cancelled";
 
+  const [entryType, setEntryType] = useState<InitialBalanceEntryType>(
+    initialDocument?.entry_type || defaultEntryType
+  );
   const [docNo, setDocNo] = useState(initialDocument?.document_number || "");
   const [docDate, setDocDate] = useState(
     initialDocument?.doc_date || new Date().toISOString().slice(0, 10)
@@ -56,13 +71,38 @@ export default function InitialBalanceForm({
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
   const [documentId, setDocumentId] = useState(initialDocument?.id || "");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [warehouseStock, setWarehouseStock] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (initialDocument?.document_number) return;
-    void peekInitialBalanceDocNoAction().then((result) => {
+    void peekInitialBalanceDocNoAction(entryType).then((result) => {
       if (result.success && result.data) setDocNo(result.data);
     });
-  }, [initialDocument?.document_number]);
+  }, [initialDocument?.document_number, entryType]);
+
+  const productIds = useMemo(
+    () => items.map((row) => row.product_id).filter(Boolean),
+    [items]
+  );
+
+  const productsById = useMemo(() => new Map(products.map((product) => [product.id, product])), [
+    products,
+  ]);
+
+  useEffect(() => {
+    if (!warehouseId || productIds.length === 0) {
+      setWarehouseStock({});
+      return;
+    }
+    let cancelled = false;
+    void fetchWarehouseStockForProductsAction(productIds, warehouseId).then((result) => {
+      if (!cancelled && result.success) setWarehouseStock(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [warehouseId, productIds]);
 
   const warehouseName =
     warehouses.find((warehouse) => warehouse.id === warehouseId)?.name || "";
@@ -104,11 +144,82 @@ export default function InitialBalanceForm({
     updateItem(rowId, applyProductToInitialBalanceLine(row, product));
   };
 
+  const addOrIncrementProduct = useCallback(
+    (product: Product) => {
+      setItems((prev) => {
+        const existingIndex = prev.findIndex((row) => row.product_id === product.id);
+        if (existingIndex >= 0) {
+          const existing = prev[existingIndex];
+          let next: InitialBalanceLineItem;
+          if (existing.is_metric) {
+            const barLengthM = resolveStandardBarLengthM(product);
+            const lengths = [...parsePieceLengthsInput(existing.piece_lengths_input), barLengthM];
+            next = syncMetricLineFromPieces({
+              ...existing,
+              piece_lengths_input: formatPieceLengthsInput(lengths),
+            });
+          } else {
+            next = { ...existing, quantity: (existing.quantity || 0) + 1 };
+            next.line_total = calcInitialBalanceLineTotal(next);
+          }
+          return prev.map((row, index) => (index === existingIndex ? next : row));
+        }
+
+        const emptyIndex = prev.findIndex((row) => !row.product_id);
+        const filled = applyProductToInitialBalanceLine(createEmptyInitialBalanceLine(), product);
+        if (filled.is_metric) {
+          const barLengthM = resolveStandardBarLengthM(product);
+          Object.assign(filled, syncMetricLineFromPieces({
+            ...filled,
+            piece_lengths_input: formatPieceLengthsInput([barLengthM]),
+          }));
+        } else {
+          filled.quantity = 1;
+          filled.line_total = calcInitialBalanceLineTotal(filled);
+        }
+
+        if (emptyIndex >= 0) {
+          return prev.map((row, index) => (index === emptyIndex ? filled : row));
+        }
+        return [...prev, filled];
+      });
+    },
+    []
+  );
+
+  const handleScan = useCallback(
+    async (code: string) => {
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      const byCode = findProductByBarcodeInList(products, trimmed);
+      const byName =
+        byCode ||
+        products.find((product) => product.name.trim().toLowerCase() === trimmed.toLowerCase()) ||
+        null;
+      if (!byName) {
+        showError(t("initialBalance.scanNotFound", { code: trimmed }));
+        return;
+      }
+      addOrIncrementProduct(byName);
+    },
+    [products, addOrIncrementProduct, showError, t]
+  );
+
+  const existingProductIds = useMemo(
+    () => new Set(items.map((row) => row.product_id).filter(Boolean)),
+    [items]
+  );
+
+  const handleCategorySelectConfirm = (selected: Product[]) => {
+    selected.forEach((product) => addOrIncrementProduct(product));
+  };
+
   const buildPayload = () => ({
     id: documentId || null,
     doc_date: docDate,
     warehouse_id: warehouseId,
     warehouse_name: warehouseName,
+    entry_type: entryType,
     notes,
     items: items
       .filter((row) => row.product_id)
@@ -208,7 +319,7 @@ export default function InitialBalanceForm({
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <label className="block text-xs font-semibold text-app">
             {t("initialBalance.docNo")}
             <input value={docNo} readOnly className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
@@ -238,6 +349,18 @@ export default function InitialBalanceForm({
               ))}
             </select>
           </label>
+          <label className="block text-xs font-semibold text-app">
+            {t("initialBalance.entryType")}
+            <select
+              value={entryType}
+              disabled={isLocked || Boolean(initialDocument)}
+              onChange={(event) => setEntryType(event.target.value as InitialBalanceEntryType)}
+              className="app-input mt-1 text-sm"
+            >
+              <option value="opening_balance">{t("initialBalance.entryTypeOpeningBalance")}</option>
+              <option value="receipt">{t("initialBalance.entryTypeReceipt")}</option>
+            </select>
+          </label>
           <label className="block text-xs font-semibold text-app md:col-span-1">
             {t("initialBalance.totalValue")}
             <input
@@ -246,7 +369,7 @@ export default function InitialBalanceForm({
               className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
             />
           </label>
-          <label className="block text-xs font-semibold text-app md:col-span-4">
+          <label className="block text-xs font-semibold text-app md:col-span-5">
             {t("common.notes")}
             <textarea
               rows={2}
@@ -258,12 +381,37 @@ export default function InitialBalanceForm({
           </label>
         </div>
 
+        {!isLocked ? (
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-dashed border-amber-500/40 bg-amber-50/40 p-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <BarcodeScanField
+                onScan={handleScan}
+                autoFocus
+                disabled={!warehouseId}
+                label={t("initialBalance.scanPlaceholder")}
+                placeholder={t("initialBalance.scanPlaceholder")}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setCategoryModalOpen(true)}
+              className="btn-secondary inline-flex shrink-0 items-center gap-1.5 text-xs"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              {t("initialBalance.categoryButton")}
+            </button>
+          </div>
+        ) : null}
+
         <div className="overflow-x-auto rounded-xl border border-app">
           <table className="min-w-full text-xs">
             <thead className="bg-app-card-hover text-app-muted">
               <tr>
+                <th className="px-3 py-2 text-left">{t("initialBalance.colNumber")}</th>
+                <th className="px-3 py-2 text-left">{t("products.bulkImport.colBarcode")}</th>
                 <th className="px-3 py-2 text-left">{t("forms.productName")}</th>
                 <th className="px-3 py-2 text-left">{t("forms.unitMeasure")}</th>
+                <th className="px-3 py-2 text-right">{t("initialBalance.availableStock")}</th>
                 <th className="px-3 py-2 text-left">{t("initialBalance.qtyOrBreakdown")}</th>
                 <th className="px-3 py-2 text-left">{t("initialBalance.unitCost")}</th>
                 <th className="px-3 py-2 text-right">{t("initialBalance.lineTotal")}</th>
@@ -271,8 +419,12 @@ export default function InitialBalanceForm({
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => (
+              {items.map((row, rowIndex) => (
                 <tr key={row.id} className="border-t border-app align-top">
+                  <td className="px-3 py-2 text-app-muted">{rowIndex + 1}</td>
+                  <td className="px-3 py-2 font-mono text-app-muted">
+                    {productsById.get(row.product_id)?.barcode || "—"}
+                  </td>
                   <td className="px-3 py-2 min-w-[220px]">
                     <ProductCombobox
                       products={products}
@@ -283,6 +435,11 @@ export default function InitialBalanceForm({
                     />
                   </td>
                   <td className="px-3 py-2">{row.unit || "—"}</td>
+                  <td className="px-3 py-2 text-right font-mono text-app-muted">
+                    {row.product_id
+                      ? `${numberToFieldValue(warehouseStock[row.product_id] ?? 0)} ${row.unit || ""}`
+                      : "—"}
+                  </td>
                   <td className="px-3 py-2 min-w-[220px]">
                     {row.is_metric ? (
                       <div className="space-y-2">
@@ -390,6 +547,13 @@ export default function InitialBalanceForm({
         ) : null}
 
       </div>
+      <CategoryBulkSelectModal
+        open={categoryModalOpen}
+        products={products}
+        existingProductIds={existingProductIds}
+        onClose={() => setCategoryModalOpen(false)}
+        onConfirm={handleCategorySelectConfirm}
+      />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </>
   );

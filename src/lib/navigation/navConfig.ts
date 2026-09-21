@@ -85,7 +85,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: ArrowRightLeft,
       },
       { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
-      { titleKey: "nav.items.warehouseIncoming", path: "/warehouse/incoming", icon: Package },
       { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },
       { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
       { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },
@@ -121,6 +120,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { titleKey: "nav.items.payments", path: "/dashboard/payments", icon: Wallet },
       { titleKey: "nav.items.expenses", path: "/expenses", icon: Receipt },
       { titleKey: "nav.items.finance", path: "/finance", icon: CircleDollarSign },
+      {
+        titleKey: "nav.items.financialOpeningBalances",
+        path: "/finance/opening-balances",
+        icon: Landmark,
+      },
     ],
   },
   {
