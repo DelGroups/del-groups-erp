@@ -1622,6 +1622,16 @@ export const azMessages = {
     localeAz: "Azərbaycan",
     localeEn: "English",
     localeRu: "Русский",
+    resendLink: "Yenidən link göndər",
+    resendLinkSending: "Göndərilir...",
+    resendLinkSuccess: "Link uğurla göndərildi",
+    resendLinkFailed: "Link göndərilmədi",
+    deleteUser: "İstifadəçini tam sil",
+    deleteConfirmTitle: "İstifadəçini tam silmək",
+    deleteConfirmMessage:
+      "{name} istifadəçisini bazadan tam silmək istədiyinizə əminsiniz? Bu əməliyyat GERİ QAYTARILA BİLMƏZ.",
+    deleteSuccess: "{name} uğurla silindi",
+    deleteFailed: "İstifadəçi silinmədi",
   },
   damagedGoods: {
     title: "Zədələnmə Çıxışı",

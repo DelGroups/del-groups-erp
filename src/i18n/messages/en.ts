@@ -1624,6 +1624,16 @@ export const enMessages: Messages = {
     localeAz: "Azerbaijani",
     localeEn: "English",
     localeRu: "Russian",
+    resendLink: "Resend link",
+    resendLinkSending: "Sending...",
+    resendLinkSuccess: "Link sent successfully",
+    resendLinkFailed: "Link could not be sent",
+    deleteUser: "Delete user permanently",
+    deleteConfirmTitle: "Permanently delete user",
+    deleteConfirmMessage:
+      "Are you sure you want to permanently delete {name} from the database? This action CANNOT be undone.",
+    deleteSuccess: "{name} was deleted successfully",
+    deleteFailed: "User could not be deleted",
   },
   damagedGoods: {
     title: "Damaged Goods Write-off",

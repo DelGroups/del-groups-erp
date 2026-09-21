@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { handleOptions, jsonWithCors } from "@/lib/apiSecurity";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { canAssignRole, requirePermissionApi } from "@/lib/auth/apiAuth";
+import { ADMIN_ROLE_NAME, isAdminRole } from "@/types/database.types";
 import {
   clampString,
   EMAIL_PATTERN,
@@ -180,4 +181,69 @@ export async function PATCH(
     success: true,
     user: updatedProfile,
   });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePermissionApi("can_manage_users");
+  if (auth.error) return auth.error;
+
+  const { id: userId } = await context.params;
+  if (!isValidUuid(userId)) {
+    return NextResponse.json({ error: "Etibarsız istifadəçi identifikatoru" }, { status: 400 });
+  }
+
+  if (userId === auth.user.id) {
+    return NextResponse.json({ error: "Öz hesabınızı silə bilməzsiniz" }, { status: 400 });
+  }
+
+  let admin;
+  try {
+    admin = createSupabaseAdminClient();
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Server konfiqurasiya xətası" },
+      { status: 500 }
+    );
+  }
+
+  const { data: targetProfile, error: profileFetchError } = await admin
+    .from("profiles")
+    .select("id, full_name, email, roles(name)")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileFetchError || !targetProfile) {
+    return NextResponse.json({ error: "İstifadəçi tapılmadı" }, { status: 404 });
+  }
+
+  const rolesField = targetProfile.roles as { name?: string } | { name?: string }[] | null;
+  const targetRoleName = Array.isArray(rolesField) ? rolesField[0]?.name : rolesField?.name;
+
+  if (targetRoleName === ADMIN_ROLE_NAME && !isAdminRole(auth.profile?.role)) {
+    return NextResponse.json(
+      { error: "Admin istifadəçini yalnız sistem administratoru silə bilər" },
+      { status: 403 }
+    );
+  }
+
+  const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+
+  if (deleteError) {
+    const looksLikeReferentialBlock = /foreign key|violat|database error deleting user/i.test(
+      deleteError.message
+    );
+    return NextResponse.json(
+      {
+        error: looksLikeReferentialBlock
+          ? "Bu istifadəçi sistemdə sənədlər (satış, alış, jurnal və s.) yaratdığı üçün tam silinə bilməz. Əvəzində hesabı deaktiv edin."
+          : deleteError.message,
+      },
+      { status: 409 }
+    );
+  }
+
+  return jsonWithCors({ success: true });
 }

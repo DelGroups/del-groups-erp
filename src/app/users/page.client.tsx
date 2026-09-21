@@ -6,7 +6,9 @@ import {
   Mail,
   Pencil,
   Search,
+  Send,
   ShieldCheck,
+  Trash2,
   TriangleAlert,
   UserPlus,
   Users as UsersIcon,
@@ -15,6 +17,8 @@ import {
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { fetchAllProfiles, fetchRoles } from "@/lib/auth/profile";
@@ -355,6 +359,9 @@ function UsersView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showInvite, setShowInvite] = useState(false);
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -415,6 +422,45 @@ function UsersView() {
         : t("users.activated", { name: profile.full_name || profile.email || "" })
     );
     await loadData();
+  };
+
+  const handleResendLink = async (profile: UserProfile) => {
+    setError("");
+    setResendingId(profile.id);
+    try {
+      const response = await fetch("/api/users/resend-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: profile.id }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(payload.error || t("users.resendLinkFailed"));
+        return;
+      }
+      flash(t("users.resendLinkSuccess"));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setError("");
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(payload.error || t("users.deleteFailed"));
+        return;
+      }
+      flash(t("users.deleteSuccess", { name: deleteTarget.full_name || deleteTarget.email || "" }));
+      setDeleteTarget(null);
+      await loadData();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredProfiles = useMemo(() => {
@@ -530,29 +576,41 @@ function UsersView() {
                     {formatDate(profile.created_at)}
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingProfile(profile)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-[image:var(--app-gradient)] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:brightness-110"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleToggleActive(profile)}
-                        disabled={profile.id === currentUser?.id}
-                        title={
-                          profile.id === currentUser?.id
-                            ? t("common.cannotDeactivateSelf")
-                            : undefined
-                        }
-                        className="rounded-lg border border-app px-3 py-1.5 text-[11px] font-semibold text-app-muted transition-colors hover:bg-app-card-hover disabled:opacity-40"
-                      >
-                        {profile.is_active ? t("common.deactivate") : t("common.activate")}
-                      </button>
-                    </div>
+                    <TableRowActionsMenu
+                      items={[
+                        {
+                          key: "edit",
+                          label: t("common.edit"),
+                          icon: <Pencil className="h-4 w-4" />,
+                          onClick: () => setEditingProfile(profile),
+                        },
+                        {
+                          key: "toggle-active",
+                          label: profile.is_active ? t("common.deactivate") : t("common.activate"),
+                          icon: <ShieldCheck className="h-4 w-4" />,
+                          disabled: profile.id === currentUser?.id,
+                          onClick: () => void handleToggleActive(profile),
+                        },
+                        {
+                          key: "resend-link",
+                          label:
+                            resendingId === profile.id
+                              ? t("users.resendLinkSending")
+                              : t("users.resendLink"),
+                          icon: <Send className="h-4 w-4" />,
+                          disabled: resendingId === profile.id,
+                          onClick: () => void handleResendLink(profile),
+                        },
+                        {
+                          key: "delete",
+                          label: t("users.deleteUser"),
+                          icon: <Trash2 className="h-4 w-4" />,
+                          variant: "destructive",
+                          disabled: profile.id === currentUser?.id,
+                          onClick: () => setDeleteTarget(profile),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))
@@ -593,6 +651,21 @@ function UsersView() {
           }}
         />
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        title={t("users.deleteConfirmTitle")}
+        message={
+          deleteTarget
+            ? t("users.deleteConfirmMessage", {
+                name: deleteTarget.full_name || deleteTarget.email || "",
+              })
+            : undefined
+        }
+        loading={deleting}
+        onConfirm={() => void handleDeleteUser()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

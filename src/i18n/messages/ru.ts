@@ -1624,6 +1624,16 @@ export const ruMessages: Messages = {
     localeAz: "Azərbaycan",
     localeEn: "English",
     localeRu: "Русский",
+    resendLink: "Отправить ссылку повторно",
+    resendLinkSending: "Отправляется...",
+    resendLinkSuccess: "Ссылка успешно отправлена",
+    resendLinkFailed: "Не удалось отправить ссылку",
+    deleteUser: "Удалить пользователя полностью",
+    deleteConfirmTitle: "Полное удаление пользователя",
+    deleteConfirmMessage:
+      "Вы уверены, что хотите полностью удалить {name} из базы данных? Это действие НЕОБРАТИМО.",
+    deleteSuccess: "{name} успешно удалён",
+    deleteFailed: "Не удалось удалить пользователя",
   },
   damagedGoods: {
     title: "Списание брака",
