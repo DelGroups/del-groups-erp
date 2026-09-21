@@ -91,6 +91,7 @@ export default function SalesListPage() {
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const canCreateInvoice = can("can_create_invoice");
+  const canEditSales = can("can_edit_sales");
   const canDeleteSales = can("can_delete_sales");
 
   const loadData = useCallback(async () => {
@@ -424,7 +425,7 @@ export default function SalesListPage() {
                             onView={() => void openView(sale)}
                             onPrint={() => void openPrint(sale)}
                             onEdit={
-                              isSalesDraft(sale.status)
+                              canEditSales && isSalesDraft(sale.status)
                                 ? () => router.push(`/sales/new?draft=${sale.id}`)
                                 : undefined
                             }
