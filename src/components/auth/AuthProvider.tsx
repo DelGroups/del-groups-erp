@@ -69,10 +69,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const loadProfile = useCallback(
     async (nextUser: User) => {
+      // /update-password, /auth/set-password (and friends) manage their own
+      // session lifecycle around a one-time invite/recovery token
+      // (see establishInviteSession). A profile-fetch hiccup there must not
+      // force-sign-out and hard-redirect to /login mid-flow — that's what
+      // was stranding invited/reset users and burning their one-time link.
+      // Read the path fresh (not from a closed-over `pathname`) since the
+      // onAuthStateChange subscription below is set up once on mount.
+      const onPublicAuthPath =
+        typeof window !== "undefined" && isPublicAuthPath(window.location.pathname);
+
       const { row, error } = await fetchProfileQueryRow(supabase, nextUser.id);
 
       if (error || !row) {
         console.warn("[auth] Profile missing or fetch failed:", error);
+        if (onPublicAuthPath) {
+          clearAuthState();
+          return false;
+        }
         await signOutAndRedirect("/login?error=no_profile");
         return false;
       }
@@ -80,6 +94,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const data = row as ProfileQueryRow;
 
       if (data.is_active === false) {
+        if (onPublicAuthPath) {
+          clearAuthState();
+          return false;
+        }
         await signOutAndRedirect("/login?error=account_inactive");
         return false;
       }
@@ -99,7 +117,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setProfile(toUserProfile(data));
       return true;
     },
-    []
+    [clearAuthState]
   );
 
   useEffect(() => {
