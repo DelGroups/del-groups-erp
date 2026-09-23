@@ -1894,6 +1894,7 @@ export const ruMessages: Messages = {
     minStockThreshold: "Минимальный порог",
     extraInfo: "Доп. информация",
     saveProduct: "Сохранить товар",
+    saveAndDuplicate: "Сохранить и дублировать",
     enterProductName: "Введите название товара",
     productCreated: "Товар успешно добавлен",
     productSaveTimeout:

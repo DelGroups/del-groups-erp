@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Save } from "lucide-react";
+import { Copy, Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import ProductPriceRowsEditor from "@/components/products/ProductPriceRowsEditor";
 import {
@@ -148,6 +148,7 @@ export default function ProductForm({
 
   const [saving, setSaving] = useState(false);
   const submitInFlightRef = useRef(false);
+  const nameFieldRef = useRef<HTMLInputElement>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
   const [isComposite, setIsComposite] = useState(Boolean(initialProduct?.is_composite));
   const [bomRows, setBomRows] = useState<BomBuilderRow[]>([]);
@@ -282,8 +283,25 @@ export default function ProductForm({
     });
   }, [cloneSourceId, initialProduct?.id, initialProduct?.is_composite, isClone]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  type SubmitAction = "SAVE_ONLY" | "SAVE_AND_DUPLICATE";
+
+  // Clears only the fields that must be unique per product (name, barcode/QR,
+  // image, and the manually-entered code, which is DB-unique-constrained),
+  // keeping category, prices, dimensions and every other repetitive field so
+  // an operator can rapid-fire near-identical variants (same product,
+  // different size/color) without re-entering the shared data each time.
+  const resetForDuplicate = () => {
+    setForm((prev) => ({
+      ...prev,
+      code: "",
+      name: "",
+      barcode: "",
+      image_url: "",
+    }));
+    nameFieldRef.current?.focus();
+  };
+
+  const submitProduct = async (action: SubmitAction) => {
     if (submitInFlightRef.current || saving) return;
 
     if (!form.name.trim()) {
@@ -431,7 +449,11 @@ export default function ProductForm({
 
       showSuccess(t("forms.productCreated"));
       await invalidateProductsCatalog();
-      onSuccess?.();
+      if (action === "SAVE_AND_DUPLICATE") {
+        resetForDuplicate();
+      } else {
+        onSuccess?.();
+      }
     } catch (error) {
       if (error instanceof FetchTimeoutError) {
         showError(t("forms.productSaveTimeout"));
@@ -448,11 +470,27 @@ export default function ProductForm({
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void submitProduct("SAVE_ONLY");
+  };
+
   const formActions = (
     <>
       {onCancel ? (
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("common.cancel")}
+        </Button>
+      ) : null}
+      {!isEditMode ? (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={saving}
+          onClick={() => void submitProduct("SAVE_AND_DUPLICATE")}
+        >
+          <Copy className="h-4 w-4" />
+          {t("forms.saveAndDuplicate")}
         </Button>
       ) : null}
       <Button type="submit" variant="default" loading={saving} disabled={saving}>
@@ -516,6 +554,7 @@ export default function ProductForm({
                     <>
                       <FormField label={t("forms.productName")} required>
                         <input
+                          ref={nameFieldRef}
                           type="text"
                           required
                           value={form.name}
@@ -569,6 +608,7 @@ export default function ProductForm({
                       <div className={rowClass}>
                         <FormField label={t("forms.productName")} required>
                           <input
+                            ref={nameFieldRef}
                             type="text"
                             required
                             value={form.name}

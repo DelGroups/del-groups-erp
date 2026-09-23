@@ -1892,6 +1892,7 @@ export const azMessages = {
     minStockThreshold: "Minimum Hədd",
     extraInfo: "Əlavə məlumat",
     saveProduct: "Məhsulu yadda saxla",
+    saveAndDuplicate: "Yadda saxla və Kopyala",
     enterProductName: "Məhsul adını daxil edin",
     productCreated: "Məhsul uğurla əlavə olundu",
     productSaveTimeout:

@@ -1894,6 +1894,7 @@ export const enMessages: Messages = {
     minStockThreshold: "Minimum threshold",
     extraInfo: "Additional info",
     saveProduct: "Save product",
+    saveAndDuplicate: "Save & Duplicate",
     enterProductName: "Enter product name",
     productCreated: "Product added successfully",
     productSaveTimeout:
