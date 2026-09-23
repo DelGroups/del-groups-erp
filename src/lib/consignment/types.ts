@@ -1,9 +1,9 @@
-export const CONSIGNMENT_DISPATCH_STATUSES = ["pending", "delivered", "returned"] as const;
+export const CONSIGNMENT_DISPATCH_STATUSES = ["pending", "delivered", "returned", "initial_balance"] as const;
 export type ConsignmentDispatchStatus = (typeof CONSIGNMENT_DISPATCH_STATUSES)[number];
 
 export const CONSIGNMENT_AGING_DAYS = 90;
 
-export const CONSIGNMENT_DOCUMENT_TYPES = ["DISPATCH", "RETURN", "ACTUAL_SALE"] as const;
+export const CONSIGNMENT_DOCUMENT_TYPES = ["DISPATCH", "RETURN", "ACTUAL_SALE", "INITIAL_BALANCE"] as const;
 export type ConsignmentDocumentType = (typeof CONSIGNMENT_DOCUMENT_TYPES)[number];
 
 export interface ConsignmentHistoryEntry {

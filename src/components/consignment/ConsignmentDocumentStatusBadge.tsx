@@ -14,6 +14,14 @@ const TONE_BY_TYPE: Record<ConsignmentDocumentType, StatusTone> = {
   DISPATCH: "neutral",
   RETURN: "warning",
   ACTUAL_SALE: "success",
+  INITIAL_BALANCE: "low-stock",
+};
+
+const LABEL_KEY_BY_TYPE: Record<ConsignmentDocumentType, string> = {
+  DISPATCH: "consignments.docTypeDispatch",
+  RETURN: "consignments.docTypeReturn",
+  ACTUAL_SALE: "consignments.docTypeActualSale",
+  INITIAL_BALANCE: "consignments.docTypeInitialBalance",
 };
 
 export default function ConsignmentDocumentStatusBadge({
@@ -21,12 +29,7 @@ export default function ConsignmentDocumentStatusBadge({
   className = "",
 }: ConsignmentDocumentStatusBadgeProps) {
   const { t } = useI18n();
-  const label =
-    documentType === "DISPATCH"
-      ? t("consignments.docTypeDispatch")
-      : documentType === "RETURN"
-        ? t("consignments.docTypeReturn")
-        : t("consignments.docTypeActualSale");
+  const label = t(LABEL_KEY_BY_TYPE[documentType]);
 
   return (
     <StatusBadge tone={TONE_BY_TYPE[documentType]} className={className}>

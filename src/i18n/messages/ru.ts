@@ -1241,6 +1241,12 @@ export const ruMessages: Messages = {
     settlementSelectPartnerFirst: "Выберите партнёра, чтобы загрузить остаток консигнации",
     settlementNothingEntered: "Введите количество продано или возвращено",
     settlementQtyExceedsRemaining: "{name}: продано + возвращено превышает остаток",
+    opTypeInitialBalance: "Ввести начальный остаток",
+    initialBalanceDescription: "Зафиксируйте остаток консигнации, который уже был у партнёра до запуска системы — со склада ничего не списывается",
+    initialBalanceSuccess: "Начальный остаток успешно зафиксирован",
+    colInitialQty: "Начальное кол-во",
+    confirmInitialBalance: "Подтвердить начальный остаток",
+    docTypeInitialBalance: "Начальный остаток",
     print: {
       deliveryTitle: "Накладная консигнационной отгрузки",
       settlementTitle: "Месячный отчёт консигнационных продаж",

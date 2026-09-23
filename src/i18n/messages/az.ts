@@ -1239,6 +1239,12 @@ export const azMessages = {
     settlementSelectPartnerFirst: "Tərəfdaş seçin ki, əmanət qalığı yüklənsin",
     settlementNothingEntered: "Satılan və ya qaytarılan miqdar daxil edin",
     settlementQtyExceedsRemaining: "{name}: satılan + qaytarılan miqdar qalıqdan çoxdur",
+    opTypeInitialBalance: "İlkin Qalıq Daxil Et",
+    initialBalanceDescription: "Sistem işə salınmazdan əvvəl tərəfdaşda mövcud olan əmanət qalığını daxil edin — əsas anbardan heç nə çıxılmır",
+    initialBalanceSuccess: "İlkin qalıq uğurla qeydə alındı",
+    colInitialQty: "İlkin Say",
+    confirmInitialBalance: "İlkin Qalığı Təsdiqlə",
+    docTypeInitialBalance: "İlkin Qalıq",
     print: {
       deliveryTitle: "Əmanət mal çıxışı qaiməsi",
       settlementTitle: "Aylıq əmanət satış hesabatı",

@@ -36,7 +36,7 @@ import type {
   ConsignmentMonthlyReport,
   ConsignmentReturn,
 } from "@/lib/consignment/types";
-import { Handshake, Printer, FileSpreadsheet, PackageMinus, ReceiptText, RotateCcw, Plus } from "lucide-react";
+import { Handshake, Printer, FileSpreadsheet, PackageMinus, PackagePlus, ReceiptText, RotateCcw, Plus } from "lucide-react";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
@@ -167,6 +167,7 @@ export default function ConsignmentPage() {
     const unassigned = t("consignments.unassignedRep");
     const map = new Map<string, ConsignmentRepPerformanceRow>();
     for (const d of dispatches) {
+      if (d.status === "initial_balance") continue;
       const key = d.sales_rep_id || d.sales_rep_name || "unassigned";
       const repName = d.sales_rep_name || unassigned;
       const row = map.get(key) || { repName, dispatched: 0, sold: 0 };
@@ -188,7 +189,7 @@ export default function ConsignmentPage() {
   const historyRows: HistoryRow[] = useMemo(() => {
     const fromDispatches: HistoryRow[] = dispatches.map((d) => ({
       id: `dispatch-${d.id}`,
-      document_type: "DISPATCH",
+      document_type: d.status === "initial_balance" ? "INITIAL_BALANCE" : "DISPATCH",
       doc_no: d.dispatch_no,
       partner_name: d.partner_name || null,
       sales_rep_name: d.sales_rep_name,
@@ -342,6 +343,14 @@ export default function ConsignmentPage() {
             </button>
             {canManage && (
               <>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={() => router.push("/consignments/initial-balance/new")}
+                >
+                  <PackagePlus className="h-3.5 w-3.5" />
+                  {t("consignments.opTypeInitialBalance")}
+                </button>
                 <button
                   type="button"
                   className="btn-secondary text-xs"
@@ -575,7 +584,7 @@ export default function ConsignmentPage() {
                           {row.total_value.toFixed(2)} {t("common.currency")}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {row.document_type !== "RETURN" && (
+                          {row.document_type !== "RETURN" && row.document_type !== "INITIAL_BALANCE" && (
                             <button
                               type="button"
                               className="btn-secondary text-xs"

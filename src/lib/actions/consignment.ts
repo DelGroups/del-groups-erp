@@ -667,3 +667,86 @@ export async function resolveConsignmentBarcodeAction(
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
   }
 }
+
+export interface ConsignmentProductLookup {
+  product_id: string;
+  product_code: string | null;
+  product_name: string;
+  category: string | null;
+  unit: string;
+  sell_price: number;
+}
+
+// Initial-balance entry has no source warehouse (nothing is being deducted
+// from anywhere - the stock already left the main warehouse in the past),
+// so this is a plain barcode->product lookup with no stock check at all.
+export async function resolveConsignmentProductBarcodeAction(
+  barcode: string
+): Promise<ConsignmentActionResult<ConsignmentProductLookup>> {
+  try {
+    await requirePermissionAction("can_view_consignments");
+    const trimmed = barcode.trim();
+    if (!trimmed) return { success: false, error: "Barkod boşdur" };
+
+    const admin = createSupabaseAdminClient();
+    const { data: product } = await admin
+      .from("products")
+      .select("id, code, name, category, unit, sell_price, barcode, is_service")
+      .eq("barcode", trimmed)
+      .maybeSingle();
+    const p = (product || {}) as Record<string, unknown>;
+    if (!product || p.is_service) {
+      return { success: false, error: "Məhsul tapılmadı" };
+    }
+
+    return {
+      success: true,
+      data: {
+        product_id: str(p.id),
+        product_code: (p.code as string) || null,
+        product_name: str(p.name),
+        category: (p.category as string) || null,
+        unit: (p.unit as string) || "Ədəd",
+        sell_price: num(p.sell_price),
+      },
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function setConsignmentInitialBalanceAtomicAction(input: {
+  dispatch_no?: string | null;
+  partner_id: string;
+  balance_date: string;
+  notes?: string | null;
+  items: ConsignmentDispatchItem[];
+}): Promise<ConsignmentActionResult<ConsignmentDispatch>> {
+  try {
+    const { user } = await requirePermissionAction("can_manage_consignments");
+    const admin = createSupabaseAdminClient();
+    const items = input.items.filter((item) => item.product_id && item.quantity > 0);
+    if (!input.partner_id) return { success: false, error: "Tərəfdaş seçin" };
+    if (!items.length) return { success: false, error: "Ən azı bir məhsul əlavə edin" };
+
+    const { data, error } = await admin.rpc("set_consignment_initial_balance_atomic", {
+      p_payload: {
+        dispatch_no: input.dispatch_no || null,
+        partner_id: input.partner_id,
+        balance_date: input.balance_date,
+        notes: input.notes || null,
+        items,
+        created_by: user.id,
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return {
+      success: true,
+      data: mapDispatch(data as Record<string, unknown>, (data as Record<string, unknown>)?.partner_name as string),
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}

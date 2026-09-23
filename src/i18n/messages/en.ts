@@ -1241,6 +1241,12 @@ export const enMessages: Messages = {
     settlementSelectPartnerFirst: "Select a partner to load their consignment stock",
     settlementNothingEntered: "Enter a sold or returned quantity",
     settlementQtyExceedsRemaining: "{name}: sold + returned quantity exceeds the balance",
+    opTypeInitialBalance: "Enter Opening Balance",
+    initialBalanceDescription: "Record consignment stock a partner already held before this system launched — nothing is deducted from the main warehouse",
+    initialBalanceSuccess: "Opening balance recorded successfully",
+    colInitialQty: "Opening Qty",
+    confirmInitialBalance: "Confirm Opening Balance",
+    docTypeInitialBalance: "Opening Balance",
     print: {
       deliveryTitle: "Consignment delivery receipt",
       settlementTitle: "Monthly consignment settlement statement",
