@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
-import type { Customer } from "@/types/database.types";
+import type { Customer, PriceTier } from "@/types/database.types";
 import type { EntityType } from "@/lib/customers/entityType";
 import { entityTypeLabel } from "@/lib/customers/entityType";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -47,6 +47,7 @@ export default function CustomersPage() {
     address: "",
     voen: "",
     entity_type: "physical" as EntityType,
+    default_price_tier: "retail" as PriceTier,
   });
   const [viewBalance, setViewBalance] = useState(0);
 
@@ -95,6 +96,7 @@ export default function CustomersPage() {
       address: formData.address.trim() || null,
       entity_type: entityType,
       voen: entityType === "legal" ? trimmedVoen : trimmedVoen || null,
+      default_price_tier: formData.default_price_tier,
     };
   };
 
@@ -151,6 +153,7 @@ export default function CustomersPage() {
         address: "",
         voen: "",
         entity_type: "physical",
+        default_price_tier: "retail",
       });
       setViewBalance(0);
     }
@@ -183,6 +186,7 @@ export default function CustomersPage() {
       address: "",
       voen: "",
       entity_type: "physical",
+      default_price_tier: "retail",
     });
     setIsModalOpen(true);
   };
@@ -199,6 +203,7 @@ export default function CustomersPage() {
       address: customer.address || "",
       voen: customer.voen || "",
       entity_type: customer.entity_type === "legal" ? "legal" : "physical",
+      default_price_tier: customer.default_price_tier || "retail",
     });
     setIsModalOpen(true);
   };
@@ -453,6 +458,27 @@ export default function CustomersPage() {
                   </div>
                 </>
               )}
+
+              <div>
+                <label className="block text-xs font-medium text-app mb-1">
+                  {t("customers.defaultPriceTier")}
+                </label>
+                <select
+                  name="default_price_tier"
+                  value={formData.default_price_tier}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      default_price_tier: e.target.value as PriceTier,
+                    })
+                  }
+                  className="app-input"
+                >
+                  <option value="retail">{t("customers.priceTierRetail")}</option>
+                  <option value="wholesale">{t("customers.priceTierWholesale")}</option>
+                  <option value="distributor">{t("customers.priceTierDistributor")}</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block text-xs font-medium text-app mb-1">{t("common.contactPhone")}</label>

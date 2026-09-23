@@ -179,6 +179,8 @@ export default function ProductForm({
     country_of_origin: initialProduct?.country_of_origin || "",
     mfg_date: toDateFieldValue(initialProduct?.mfg_date),
     exp_date: toDateFieldValue(initialProduct?.exp_date),
+    price_wholesale: numberToFieldValue(initialProduct?.price_wholesale),
+    price_distributor: numberToFieldValue(initialProduct?.price_distributor),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
@@ -368,6 +370,8 @@ export default function ProductForm({
       country_of_origin: form.country_of_origin.trim() || null,
       mfg_date: form.mfg_date || null,
       exp_date: form.exp_date || null,
+      price_wholesale: isServiceCategorySelected ? null : parseFieldOptionalNumber(form.price_wholesale),
+      price_distributor: isServiceCategorySelected ? null : parseFieldOptionalNumber(form.price_distributor),
     };
 
     try {
@@ -751,6 +755,41 @@ export default function ProductForm({
                     onChange={setPriceRows}
                     layout={isDrawerLayout ? "stack" : "grid"}
                   />
+                ) : null}
+
+                {showPriceRows ? (
+                  <div className="space-y-3 border-t border-[color:var(--erp-border-default)] pt-4">
+                    <div>
+                      <p className="text-sm font-semibold">{t("forms.priceTiers")}</p>
+                      <p className="text-xs text-slate-700 dark:text-app-muted">
+                        {t("forms.priceTiersHint")}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField label={t("forms.priceWholesale")}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.price_wholesale}
+                          onChange={(e) => set({ price_wholesale: e.target.value })}
+                          placeholder={t("forms.priceTierPlaceholder")}
+                          className={formInputClass}
+                        />
+                      </FormField>
+                      <FormField label={t("forms.priceDistributor")}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.price_distributor}
+                          onChange={(e) => set({ price_distributor: e.target.value })}
+                          placeholder={t("forms.priceTierPlaceholder")}
+                          className={formInputClass}
+                        />
+                      </FormField>
+                    </div>
+                  </div>
                 ) : null}
               </ProductFormSection>
             ) : null}

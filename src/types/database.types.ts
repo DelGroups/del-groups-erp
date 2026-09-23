@@ -237,6 +237,9 @@ export interface Product {
   sell_price: number | null;
   /** Cut/custom-length sell price per meter for metric products */
   sell_price_cut?: number | null;
+  /** Optional price-tier overrides; null means "fall back to sell_price" (the retail tier) */
+  price_wholesale?: number | null;
+  price_distributor?: number | null;
   stock: number | null;
   min_stock?: number | null;
   min_stock_level?: number | null;
@@ -501,6 +504,8 @@ export type SaleItemInsert = Omit<SaleItemRow, "id" | "created_at"> & {
   sale_id: string;
 };
 
+export type PriceTier = "retail" | "wholesale" | "distributor";
+
 export interface Customer {
   id: string;
   code?: string | null;
@@ -512,6 +517,7 @@ export interface Customer {
   voen?: string | null;
   entity_type?: "physical" | "legal" | null;
   balance?: number | null;
+  default_price_tier?: PriceTier | null;
   created_at?: string | null;
 }
 

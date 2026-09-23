@@ -8,6 +8,7 @@ import {
   calcSaleTotals,
   createEmptySaleItem,
   type Customer,
+  type PriceTier,
   type SaleInsert,
   type SaleItem,
   type SalePayment,
@@ -176,6 +177,8 @@ interface Product {
   unit?: string;
   sell_price?: number;
   sell_price_cut?: number | null;
+  price_wholesale?: number | null;
+  price_distributor?: number | null;
   sale_price?: number;
   price?: number;
   stock?: number;
@@ -253,7 +256,9 @@ function employeeLabel(e: Employee, t: (key: string) => string) {
   return e.full_name || e.name || t("invoice.anonymousEmployee");
 }
 
-function productPrice(p: Product) {
+function productPrice(p: Product, tier?: PriceTier | null) {
+  if (tier === "wholesale" && p.price_wholesale != null) return Number(p.price_wholesale) || 0;
+  if (tier === "distributor" && p.price_distributor != null) return Number(p.price_distributor) || 0;
   return Number(p.sell_price ?? p.sale_price ?? p.price) || 0;
 }
 
@@ -915,7 +920,7 @@ export default function UniversalInvoiceForm({
       unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
       unit_price: polywoodRow
         ? resolvePolywoodRowUnitPrice(prod, polywoodDraftRow)
-        : productPrice(prod),
+        : productPrice(prod, selectedCustomer?.default_price_tier),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: resolveLineVatRate(prod),
       available_stock: stockResult.availableStock,
