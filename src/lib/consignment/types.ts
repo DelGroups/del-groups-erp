@@ -3,6 +3,21 @@ export type ConsignmentDispatchStatus = (typeof CONSIGNMENT_DISPATCH_STATUSES)[n
 
 export const CONSIGNMENT_AGING_DAYS = 90;
 
+export const CONSIGNMENT_DOCUMENT_TYPES = ["DISPATCH", "RETURN", "ACTUAL_SALE"] as const;
+export type ConsignmentDocumentType = (typeof CONSIGNMENT_DOCUMENT_TYPES)[number];
+
+export interface ConsignmentHistoryEntry {
+  id: string;
+  document_type: ConsignmentDocumentType;
+  doc_no: string;
+  partner_id: string;
+  partner_name: string | null;
+  sales_rep_name: string | null;
+  date: string;
+  total_value: number;
+  created_at: string | null;
+}
+
 export const DEFAULT_CONSIGNMENT_TERMS_AZ = `1. Bu sənəd malların əmanət (konsiqnasiya) şərtləri ilə tərəfdaşa təhvilini təsdiqləyir.
 2. Malın mülkiyyəti DEL GROUPS MMC-yə məxsusdur və satılana qədər anbar qalığı tərəfdaşın öhdəliyindədir.
 3. Tərəfdaş aylıq satış hesabatı təqdim edir; satılan miqdar əmanət qalığından çox ola bilməz.
@@ -44,6 +59,8 @@ export interface ConsignmentDispatch {
   status: ConsignmentDispatchStatus;
   items: ConsignmentDispatchItem[];
   notes: string | null;
+  sales_rep_id: string | null;
+  sales_rep_name: string | null;
   created_at: string | null;
 }
 
@@ -75,6 +92,15 @@ export interface ConsignmentSoldItem {
   total_price: number;
 }
 
+export interface ConsignmentReturnedItem {
+  product_id: string;
+  product_code: string | null;
+  product_name: string;
+  quantity: number;
+  unit: string | null;
+  unit_price: number;
+}
+
 export interface ConsignmentMonthlyReport {
   id: string;
   report_no: string;
@@ -82,9 +108,12 @@ export interface ConsignmentMonthlyReport {
   partner_name?: string | null;
   report_period: string;
   sold_items: ConsignmentSoldItem[];
+  returned_items: ConsignmentReturnedItem[];
   total_amount: number;
   invoice_id: string | null;
   notes: string | null;
+  sales_rep_id: string | null;
+  sales_rep_name: string | null;
   created_at: string | null;
 }
 
@@ -107,6 +136,12 @@ export function remainingAfterMovement(
   returned: number
 ): number {
   return Math.max(0, Number(delivered || 0) - Number(sold || 0) - Number(returned || 0));
+}
+
+export function generateConsignmentDocNo(prefix: string): string {
+  const year = new Date().getFullYear();
+  const seq = Math.floor(10000 + Math.random() * 90000);
+  return `${prefix}-${year}-${seq}`;
 }
 
 export function agingDays(lastDispatchAt: string | null, now = Date.now()): number {

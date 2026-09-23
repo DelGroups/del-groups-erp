@@ -2,7 +2,7 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
-import { incrementStandardStock } from "@/lib/production/inventory";
+import { adjustProductStockAtWarehouse, getProductStockAtWarehouse } from "@/lib/inventory/warehouseProductStock";
 import {
   agingDays,
   remainingAfterMovement,
@@ -13,9 +13,10 @@ import {
   type ConsignmentMonthlyReport,
   type ConsignmentPartner,
   type ConsignmentReturn,
+  type ConsignmentReturnedItem,
   type ConsignmentSoldItem,
 } from "@/lib/consignment/types";
-import type { Customer, Product, Warehouse } from "@/types/database.types";
+import type { Customer, Employee, Product, Warehouse } from "@/types/database.types";
 
 export type ConsignmentActionResult<T = void> =
   | { success: true; data?: T }
@@ -78,6 +79,8 @@ function mapDispatch(row: Record<string, unknown>, partnerName?: string | null):
     status: (row.status as ConsignmentDispatch["status"]) || "delivered",
     items: parseItems(row.items),
     notes: (row.notes as string) || null,
+    sales_rep_id: (row.sales_rep_id as string) || null,
+    sales_rep_name: (row.sales_rep_name as string) || null,
     created_at: (row.created_at as string) || null,
   };
 }
@@ -113,6 +116,21 @@ function mapInventory(
   };
 }
 
+function mapReturn(row: Record<string, unknown>, partnerName?: string | null): ConsignmentReturn {
+  return {
+    id: str(row.id),
+    return_no: str(row.return_no),
+    partner_id: str(row.partner_id),
+    partner_name: partnerName || null,
+    warehouse_id: (row.warehouse_id as string) || null,
+    warehouse_name: (row.warehouse_name as string) || null,
+    return_date: str(row.return_date),
+    items: parseItems(row.items),
+    notes: (row.notes as string) || null,
+    created_at: (row.created_at as string) || null,
+  };
+}
+
 function mapReport(row: Record<string, unknown>, partnerName?: string | null): ConsignmentMonthlyReport {
   const soldRaw = Array.isArray(row.sold_items) ? row.sold_items : [];
   const sold_items: ConsignmentSoldItem[] = soldRaw.map((item) => {
@@ -126,6 +144,18 @@ function mapReport(row: Record<string, unknown>, partnerName?: string | null): C
       total_price: num(r.total_price),
     };
   });
+  const returnedRaw = Array.isArray(row.returned_items) ? row.returned_items : [];
+  const returned_items: ConsignmentReturnedItem[] = returnedRaw.map((item) => {
+    const r = (item || {}) as Record<string, unknown>;
+    return {
+      product_id: str(r.product_id),
+      product_code: (r.product_code as string) || null,
+      product_name: str(r.product_name),
+      quantity: num(r.quantity),
+      unit: (r.unit as string) || null,
+      unit_price: num(r.unit_price),
+    };
+  });
   return {
     id: str(row.id),
     report_no: str(row.report_no),
@@ -133,9 +163,12 @@ function mapReport(row: Record<string, unknown>, partnerName?: string | null): C
     partner_name: partnerName || null,
     report_period: str(row.report_period),
     sold_items,
+    returned_items,
     total_amount: num(row.total_amount),
     invoice_id: (row.invoice_id as string) || null,
     notes: (row.notes as string) || null,
+    sales_rep_id: (row.sales_rep_id as string) || null,
+    sales_rep_name: (row.sales_rep_name as string) || null,
     created_at: (row.created_at as string) || null,
   };
 }
@@ -145,6 +178,7 @@ export interface ConsignmentLookups {
   products: Product[];
   warehouses: Warehouse[];
   customers: Customer[];
+  salesReps: Employee[];
 }
 
 export async function fetchConsignmentLookupsAction(): Promise<
@@ -153,11 +187,12 @@ export async function fetchConsignmentLookupsAction(): Promise<
   try {
     await requirePermissionAction("can_view_consignments");
     const admin = createSupabaseAdminClient();
-    const [partners, products, warehouses, customers] = await Promise.all([
+    const [partners, products, warehouses, customers, employees] = await Promise.all([
       admin.from("consignment_partners").select("*").order("name"),
       admin.from("products").select("*").order("name"),
       admin.from("warehouses").select("*").order("name"),
       admin.from("customers").select("*").order("full_name"),
+      admin.from("employees").select("*").eq("status", "active").order("full_name"),
     ]);
     return {
       success: true,
@@ -166,6 +201,7 @@ export async function fetchConsignmentLookupsAction(): Promise<
         products: (products.data as Product[]) || [],
         warehouses: (warehouses.data as Warehouse[]) || [],
         customers: (customers.data as Customer[]) || [],
+        salesReps: (employees.data as Employee[]) || [],
       },
     };
   } catch (err) {
@@ -266,13 +302,46 @@ export async function listConsignmentDispatchesAction(): Promise<
   }
 }
 
-export async function createConsignmentDispatchAction(input: {
+export async function listConsignmentReturnsAction(): Promise<
+  ConsignmentActionResult<ConsignmentReturn[]>
+> {
+  try {
+    await requirePermissionAction("can_view_consignments");
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("consignment_returns")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) return { success: false, error: error.message };
+    const { data: partners } = await admin.from("consignment_partners").select("id, name, company_name");
+    const nameById = new Map(
+      ((partners || []) as Record<string, unknown>[]).map((p) => [
+        str(p.id),
+        str(p.company_name || p.name),
+      ])
+    );
+    return {
+      success: true,
+      data: ((data || []) as Record<string, unknown>[]).map((row) =>
+        mapReturn(row, nameById.get(str(row.partner_id)))
+      ),
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function createConsignmentDispatchAtomicAction(input: {
+  dispatch_no?: string | null;
   partner_id: string;
   warehouse_id: string;
   warehouse_name?: string | null;
   dispatch_date: string;
   notes?: string | null;
   items: ConsignmentDispatchItem[];
+  sales_rep_id?: string | null;
+  sales_rep_name?: string | null;
 }): Promise<ConsignmentActionResult<ConsignmentDispatch>> {
   try {
     const { user } = await requirePermissionAction("can_manage_consignments");
@@ -282,118 +351,22 @@ export async function createConsignmentDispatchAction(input: {
     if (!input.warehouse_id) return { success: false, error: "Anbar seçin" };
     if (!items.length) return { success: false, error: "Ən azı bir məhsul əlavə edin" };
 
-    for (const item of items) {
-      const { data: product } = await admin
-        .from("products")
-        .select("id, name, stock")
-        .eq("id", item.product_id)
-        .maybeSingle();
-      if (!product) return { success: false, error: `${item.product_name}: məhsul tapılmadı` };
-      const stock = num((product as { stock?: number }).stock);
-      if (stock + 1e-9 < item.quantity) {
-        return {
-          success: false,
-          error: `${item.product_name}: anbar stoku kifayət etmir (mövcud: ${stock})`,
-        };
-      }
-    }
-
-    for (const item of items) {
-      const { data: product } = await admin
-        .from("products")
-        .select("stock")
-        .eq("id", item.product_id)
-        .maybeSingle();
-      const current = num((product as { stock?: number } | null)?.stock);
-      const { error } = await admin
-        .from("products")
-        .update({ stock: current - item.quantity })
-        .eq("id", item.product_id);
-      if (error) return { success: false, error: error.message };
-    }
-
-    const dispatchNo = createDocNo("CD");
-    const { data: dispatch, error } = await admin
-      .from("consignment_dispatches")
-      .insert([
-        {
-          dispatch_no: dispatchNo,
-          partner_id: input.partner_id,
-          warehouse_id: input.warehouse_id,
-          warehouse_name: input.warehouse_name || null,
-          dispatch_date: input.dispatch_date,
-          status: "delivered",
-          items,
-          notes: input.notes?.trim() || null,
-          created_by: user.id,
-        },
-      ])
-      .select("*")
-      .single();
-    if (error || !dispatch) return { success: false, error: error?.message || "Qaimə yazılmadı" };
-
-    const now = new Date().toISOString();
-    for (const item of items) {
-      const { data: existing } = await admin
-        .from("consignment_inventory")
-        .select("*")
-        .eq("partner_id", input.partner_id)
-        .eq("product_id", item.product_id)
-        .maybeSingle();
-
-      if (existing) {
-        const row = existing as Record<string, unknown>;
-        const delivered = num(row.delivered_qty) + item.quantity;
-        const sold = num(row.sold_qty);
-        const returned = num(row.returned_qty);
-        await admin
-          .from("consignment_inventory")
-          .update({
-            delivered_qty: delivered,
-            remaining_qty: remainingAfterMovement(delivered, sold, returned),
-            unit_price: item.unit_price || num(row.unit_price),
-            product_name: item.product_name,
-            product_code: item.product_code,
-            category: item.category,
-            unit: item.unit,
-            last_dispatch_at: now,
-            updated_at: now,
-          })
-          .eq("id", str(row.id));
-      } else {
-        await admin.from("consignment_inventory").insert([
-          {
-            partner_id: input.partner_id,
-            product_id: item.product_id,
-            product_code: item.product_code,
-            product_name: item.product_name,
-            category: item.category,
-            unit: item.unit || "Ədəd",
-            delivered_qty: item.quantity,
-            sold_qty: 0,
-            returned_qty: 0,
-            remaining_qty: item.quantity,
-            unit_price: item.unit_price,
-            last_dispatch_at: now,
-            updated_at: now,
-          },
-        ]);
-      }
-    }
-
-    const { data: partner } = await admin
-      .from("consignment_partners")
-      .select("name, company_name")
-      .eq("id", input.partner_id)
-      .maybeSingle();
-    return {
-      success: true,
-      data: mapDispatch(
-        dispatch as Record<string, unknown>,
-        str((partner as { company_name?: string; name?: string } | null)?.company_name ||
-          (partner as { name?: string } | null)?.name)
-      ),
-    };
+    const { data, error } = await admin.rpc("create_consignment_dispatch_atomic", {
+      p_payload: {
+        dispatch_no: input.dispatch_no || null,
+        partner_id: input.partner_id,
+        warehouse_id: input.warehouse_id,
+        warehouse_name: input.warehouse_name || null,
+        dispatch_date: input.dispatch_date,
+        notes: input.notes || null,
+        sales_rep_id: input.sales_rep_id || null,
+        sales_rep_name: input.sales_rep_name || null,
+        items,
+        created_by: user.id,
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: mapDispatch(data as Record<string, unknown>, (data as Record<string, unknown>)?.partner_name as string) };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
@@ -445,6 +418,7 @@ export async function createConsignmentReturnAction(input: {
     const admin = createSupabaseAdminClient();
     const wanted = input.items.filter((item) => item.product_id && item.quantity > 0);
     if (!wanted.length) return { success: false, error: "Qaytarılacaq məhsul seçin" };
+    if (!input.warehouse_id) return { success: false, error: "Anbar seçin" };
 
     const snapshot: ConsignmentDispatchItem[] = [];
     for (const item of wanted) {
@@ -498,8 +472,7 @@ export async function createConsignmentReturnAction(input: {
           updated_at: now,
         })
         .eq("id", str(row.id));
-      const restored = await incrementStandardStock(admin, item.product_id, item.quantity);
-      if (!restored.ok) return { success: false, error: restored.error || "Anbara qaytarılmadı" };
+      await adjustProductStockAtWarehouse(admin, item.product_id, input.warehouse_id, item.quantity);
     }
 
     const { data: ret, error } = await admin
@@ -580,11 +553,15 @@ export async function listConsignmentReportsAction(): Promise<
   }
 }
 
-export async function saveConsignmentMonthlyReportAction(input: {
+export async function settleConsignmentPartnerAtomicAction(input: {
+  report_no?: string | null;
   partner_id: string;
   report_period: string;
   notes?: string | null;
-  sold_items: { product_id: string; quantity_sold: number; unit_price?: number }[];
+  return_warehouse_id?: string | null;
+  lines: { product_id: string; quantity_sold: number; quantity_returned: number; unit_price?: number }[];
+  sales_rep_id?: string | null;
+  sales_rep_name?: string | null;
 }): Promise<ConsignmentActionResult<ConsignmentMonthlyReport>> {
   try {
     const { user } = await requirePermissionAction("can_manage_consignments");
@@ -593,155 +570,98 @@ export async function saveConsignmentMonthlyReportAction(input: {
     if (!/^\d{4}-\d{2}$/.test(input.report_period)) {
       return { success: false, error: "Dövr YYYY-MM formatında olmalıdır" };
     }
-
-    const { data: existing } = await admin
-      .from("consignment_monthly_reports")
-      .select("id")
-      .eq("partner_id", input.partner_id)
-      .eq("report_period", input.report_period)
-      .maybeSingle();
-    if (existing) return { success: false, error: "Bu tərəfdaş üçün həmin ay artıq hesabat yazılıb" };
-
-    const soldItems: ConsignmentSoldItem[] = [];
-    for (const line of input.sold_items.filter((item) => item.quantity_sold > 0)) {
-      const { data: inv } = await admin
-        .from("consignment_inventory")
-        .select("*")
-        .eq("partner_id", input.partner_id)
-        .eq("product_id", line.product_id)
-        .maybeSingle();
-      if (!inv) return { success: false, error: "Məhsul tərəfdaş stokunda yoxdur" };
-      const row = inv as Record<string, unknown>;
-      const remaining = remainingAfterMovement(
-        num(row.delivered_qty),
-        num(row.sold_qty),
-        num(row.returned_qty)
-      );
-      if (line.quantity_sold - remaining > 1e-9) {
-        return {
-          success: false,
-          error: `${str(row.product_name)}: satılan miqdar qalıqdan (${remaining}) çoxdur`,
-        };
-      }
-      const unitPrice = line.unit_price != null ? num(line.unit_price) : num(row.unit_price);
-      soldItems.push({
-        product_id: line.product_id,
-        product_code: (row.product_code as string) || null,
-        product_name: str(row.product_name),
-        quantity_sold: line.quantity_sold,
-        unit_price: unitPrice,
-        total_price: line.quantity_sold * unitPrice,
-      });
-    }
-
-    if (!soldItems.length) return { success: false, error: "Satılan məhsul daxil edin" };
-    const totalAmount = soldItems.reduce((sum, item) => sum + item.total_price, 0);
-
-    const { data: partner } = await admin
-      .from("consignment_partners")
-      .select("*")
-      .eq("id", input.partner_id)
-      .maybeSingle();
-    if (!partner) return { success: false, error: "Tərəfdaş tapılmadı" };
-    const partnerRow = partner as Record<string, unknown>;
-    const partnerName = str(partnerRow.company_name || partnerRow.name);
-
-    const now = new Date().toISOString();
-    for (const item of soldItems) {
-      const { data: inv } = await admin
-        .from("consignment_inventory")
-        .select("*")
-        .eq("partner_id", input.partner_id)
-        .eq("product_id", item.product_id)
-        .maybeSingle();
-      const row = inv as Record<string, unknown>;
-      const sold = num(row.sold_qty) + item.quantity_sold;
-      const delivered = num(row.delivered_qty);
-      const returned = num(row.returned_qty);
-      await admin
-        .from("consignment_inventory")
-        .update({
-          sold_qty: sold,
-          remaining_qty: remainingAfterMovement(delivered, sold, returned),
-          updated_at: now,
-        })
-        .eq("id", str(row.id));
-    }
-
-    const invoiceNo = createDocNo("CNS");
-    const { data: sale, error: saleError } = await admin
-      .from("sales")
-      .insert([
-        {
-          doc_no: invoiceNo,
-          invoice_number: invoiceNo,
-          doc_date: `${input.report_period}-01`,
-          customer_id: (partnerRow.customer_id as string) || null,
-          customer_name: partnerName,
-          warehouse_name: `Əmanət / ${partnerName}`,
-          subtotal: totalAmount,
-          discount_total: 0,
-          vat_total: 0,
-          total_amount: totalAmount,
-          paid_amount: 0,
-          remaining_balance: totalAmount,
-          note: `Əmanət satış hesabatı ${input.report_period}`,
-          notes: `Consignment settlement ${input.report_period}`,
-        },
-      ])
-      .select("id")
-      .single();
-    if (saleError || !sale) return { success: false, error: saleError?.message || "Faktura yaradılmadı" };
-
-    const saleId = str((sale as Record<string, unknown>).id);
-    const { error: itemsError } = await admin.from("sale_items").insert(
-      soldItems.map((item) => ({
-        sale_id: saleId,
-        product_id: item.product_id,
-        product_code: item.product_code,
-        product_name: item.product_name,
-        warehouse_id: null,
-        warehouse_name: `Əmanət / ${partnerName}`,
-        quantity: item.quantity_sold,
-        unit: "Ədəd",
-        unit_price: item.unit_price,
-        discount_percent: 0,
-        vat_rate: 0,
-        line_total: item.total_price,
-        extra_info: null,
-      })) as never
+    const lines = input.lines.filter(
+      (line) => line.product_id && (line.quantity_sold > 0 || line.quantity_returned > 0)
     );
-    if (itemsError) return { success: false, error: itemsError.message };
+    if (!lines.length) return { success: false, error: "Satılan və ya qaytarılan məhsul daxil edin" };
 
-    if (partnerRow.customer_id) {
-      const { error: arError } = await admin.rpc("refresh_customer_ar_balance", {
-        p_customer_id: String(partnerRow.customer_id),
-      });
-      if (arError) {
-        return { success: false, error: arError.message };
-      }
+    const { data, error } = await admin.rpc("settle_consignment_partner_atomic", {
+      p_payload: {
+        report_no: input.report_no || null,
+        partner_id: input.partner_id,
+        report_period: input.report_period,
+        notes: input.notes || null,
+        return_warehouse_id: input.return_warehouse_id || null,
+        sales_rep_id: input.sales_rep_id || null,
+        sales_rep_name: input.sales_rep_name || null,
+        lines,
+        created_by: user.id,
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return {
+      success: true,
+      data: mapReport(data as Record<string, unknown>, (data as Record<string, unknown>)?.partner_name as string),
+    };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export interface ConsignmentBarcodeLine {
+  product_id: string;
+  product_code: string | null;
+  product_name: string;
+  category: string | null;
+  unit: string;
+  sell_price: number;
+  available_stock: number;
+}
+
+// "Mövcud Qalıq" (live stock at the selected warehouse) as a server action, not
+// a direct client-side call to an admin-client helper - createSupabaseAdminClient()
+// must never run in the browser (see src/lib/supabaseAdmin.ts).
+export async function fetchConsignmentSourceStockAction(
+  productId: string,
+  warehouseId: string
+): Promise<ConsignmentActionResult<number>> {
+  try {
+    await requirePermissionAction("can_view_consignments");
+    if (!productId || !warehouseId) return { success: true, data: 0 };
+    const admin = createSupabaseAdminClient();
+    const stock = await getProductStockAtWarehouse(admin, productId, warehouseId);
+    return { success: true, data: stock };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function resolveConsignmentBarcodeAction(
+  barcode: string,
+  warehouseId: string
+): Promise<ConsignmentActionResult<ConsignmentBarcodeLine>> {
+  try {
+    await requirePermissionAction("can_view_consignments");
+    const trimmed = barcode.trim();
+    if (!trimmed) return { success: false, error: "Barkod boşdur" };
+    if (!warehouseId) return { success: false, error: "Əvvəlcə anbar seçin" };
+
+    const admin = createSupabaseAdminClient();
+    const { data: product } = await admin
+      .from("products")
+      .select("id, code, name, category, unit, sell_price, barcode, is_service")
+      .eq("barcode", trimmed)
+      .maybeSingle();
+    const p = (product || {}) as Record<string, unknown>;
+    if (!product || p.is_service) {
+      return { success: false, error: "Məhsul tapılmadı" };
     }
 
-    const reportNo = createDocNo("CM");
-    const { data: report, error } = await admin
-      .from("consignment_monthly_reports")
-      .insert([
-        {
-          report_no: reportNo,
-          partner_id: input.partner_id,
-          report_period: input.report_period,
-          sold_items: soldItems,
-          total_amount: totalAmount,
-          invoice_id: saleId,
-          notes: input.notes?.trim() || null,
-          created_by: user.id,
-        },
-      ])
-      .select("*")
-      .single();
-    if (error || !report) return { success: false, error: error?.message || "Hesabat yazılmadı" };
-
-    return { success: true, data: mapReport(report as Record<string, unknown>, partnerName) };
+    const available = await getProductStockAtWarehouse(admin, str(p.id), warehouseId);
+    return {
+      success: true,
+      data: {
+        product_id: str(p.id),
+        product_code: (p.code as string) || null,
+        product_name: str(p.name),
+        category: (p.category as string) || null,
+        unit: (p.unit as string) || "Ədəd",
+        sell_price: num(p.sell_price),
+        available_stock: available,
+      },
+    };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };

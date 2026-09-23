@@ -1,10 +1,17 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import ConsignmentDeliveryPrintTemplate from "@/components/consignment/ConsignmentDeliveryPrintTemplate";
+import ConsignmentKpiCards from "@/components/consignment/ConsignmentKpiCards";
+import ConsignmentRepPerformanceChart, {
+  type ConsignmentRepPerformanceRow,
+} from "@/components/consignment/ConsignmentRepPerformanceChart";
+import ConsignmentReturnModal from "@/components/consignment/ConsignmentReturnModal";
+import ConsignmentDocumentStatusBadge from "@/components/consignment/ConsignmentDocumentStatusBadge";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentReportToInvoicePrint";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -12,28 +19,41 @@ import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/lib/supabase";
 import {
-  createConsignmentDispatchAction,
   createConsignmentReturnAction,
   fetchConsignmentLookupsAction,
   listConsignmentDispatchesAction,
   listConsignmentInventoryAction,
   listConsignmentReportsAction,
-  saveConsignmentMonthlyReportAction,
+  listConsignmentReturnsAction,
   saveConsignmentPartnerAction,
   type ConsignmentLookups,
 } from "@/lib/actions/consignment";
 import type {
   ConsignmentDispatch,
   ConsignmentDispatchItem,
+  ConsignmentDocumentType,
   ConsignmentInventoryRow,
   ConsignmentMonthlyReport,
+  ConsignmentReturn,
 } from "@/lib/consignment/types";
-import { Handshake, Printer, FileSpreadsheet, Plus } from "lucide-react";
+import { Handshake, Printer, FileSpreadsheet, PackageMinus, ReceiptText, RotateCcw, Plus } from "lucide-react";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 
-type TabId = "partners" | "dispatch" | "inventory" | "settlement" | "alerts";
+type TabId = "inventory" | "history" | "partners" | "alerts";
+
+interface HistoryRow {
+  id: string;
+  document_type: ConsignmentDocumentType;
+  doc_no: string;
+  partner_name: string | null;
+  sales_rep_name: string | null;
+  date: string;
+  total_value: number;
+  created_at: string | null;
+  raw: ConsignmentDispatch | ConsignmentReturn | ConsignmentMonthlyReport;
+}
 
 function downloadWorkbook(filename: string, sheetName: string, rows: (string | number)[][]) {
   const wb = XLSX.utils.book_new();
@@ -46,20 +66,27 @@ function currentPeriod() {
   return new Date().toISOString().slice(0, 7);
 }
 
+function dispatchValue(items: ConsignmentDispatchItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+}
+
 export default function ConsignmentPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const { can } = useAuth();
   const canManage = can("can_manage_consignments");
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [tab, setTab] = useState<TabId>("inventory");
   const [lookups, setLookups] = useState<ConsignmentLookups | null>(null);
   const [dispatches, setDispatches] = useState<ConsignmentDispatch[]>([]);
+  const [returns, setReturns] = useState<ConsignmentReturn[]>([]);
   const [inventory, setInventory] = useState<ConsignmentInventoryRow[]>([]);
   const [reports, setReports] = useState<ConsignmentMonthlyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const { printData: printDispatch, setPrintData: setPrintDispatch } =
     useDocumentPrint<ConsignmentDispatch>();
@@ -67,32 +94,22 @@ export default function ConsignmentPage() {
 
   const [partnerId, setPartnerId] = useState("");
   const [category, setCategory] = useState("all");
-  const [period, setPeriod] = useState(currentPeriod());
 
   const [partnerName, setPartnerName] = useState("");
   const [partnerCompany, setPartnerCompany] = useState("");
   const [partnerPhone, setPartnerPhone] = useState("");
   const [partnerCustomerId, setPartnerCustomerId] = useState("");
 
-  const [warehouseId, setWarehouseId] = useState("");
-  const [dispatchDate, setDispatchDate] = useState(new Date().toISOString().slice(0, 10));
-  const [dispatchNotes, setDispatchNotes] = useState("");
-  const [dispatchLines, setDispatchLines] = useState<{ product_id: string; quantity: string }[]>([
-    { product_id: "", quantity: "1" },
-  ]);
-
   const [returnWarehouseId, setReturnWarehouseId] = useState("");
   const [returnQtyByProduct, setReturnQtyByProduct] = useState<Record<string, string>>({});
-
-  const [soldQtyByProduct, setSoldQtyByProduct] = useState<Record<string, string>>({});
-  const [soldPriceByProduct, setSoldPriceByProduct] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [look, disp, inv, reps, settings] = await Promise.all([
+    const [look, disp, ret, inv, reps, settings] = await Promise.all([
       fetchConsignmentLookupsAction(),
       listConsignmentDispatchesAction(),
+      listConsignmentReturnsAction(),
       listConsignmentInventoryAction(),
       listConsignmentReportsAction(),
       supabase.from("settings").select("company_name").limit(1).maybeSingle(),
@@ -100,6 +117,7 @@ export default function ConsignmentPage() {
     if (!look.success) setError(look.error || t("consignments.loadError"));
     else setLookups(look.data || null);
     if (disp.success) setDispatches(disp.data || []);
+    if (ret.success) setReturns(ret.data || []);
     if (inv.success) setInventory(inv.data || []);
     if (reps.success) setReports(reps.data || []);
     if (settings.data?.company_name) setCompanyName(String(settings.data.company_name));
@@ -123,25 +141,88 @@ export default function ConsignmentPage() {
     [inventory, partnerId]
   );
 
-  const totals = useMemo(() => {
-    return filteredInventory.reduce(
-      (acc, row) => {
-        acc.delivered += row.delivered_qty;
-        acc.sold += row.sold_qty;
-        acc.returned += row.returned_qty;
-        acc.remaining += row.remaining_qty;
-        acc.value += row.remaining_qty * row.unit_price;
-        return acc;
-      },
-      { delivered: 0, sold: 0, returned: 0, remaining: 0, value: 0 }
-    );
-  }, [filteredInventory]);
-
-  const agingRows = inventory.filter((row) => row.is_aging);
   const categories = useMemo(() => {
     const set = new Set(inventory.map((row) => row.category).filter(Boolean) as string[]);
     return [...set];
   }, [inventory]);
+
+  const agingRows = inventory.filter((row) => row.is_aging);
+
+  const kpiStockValue = useMemo(
+    () => inventory.reduce((sum, row) => sum + row.remaining_qty * row.unit_price, 0),
+    [inventory]
+  );
+  const kpiSoldThisMonth = useMemo(() => {
+    const thisMonth = currentPeriod();
+    return reports
+      .filter((r) => r.report_period === thisMonth)
+      .reduce((sum, r) => sum + r.total_amount, 0);
+  }, [reports]);
+  const kpiPendingReturnsValue = useMemo(
+    () => agingRows.reduce((sum, row) => sum + row.remaining_qty * row.unit_price, 0),
+    [agingRows]
+  );
+
+  const repPerformance: ConsignmentRepPerformanceRow[] = useMemo(() => {
+    const unassigned = t("consignments.unassignedRep");
+    const map = new Map<string, ConsignmentRepPerformanceRow>();
+    for (const d of dispatches) {
+      const key = d.sales_rep_id || d.sales_rep_name || "unassigned";
+      const repName = d.sales_rep_name || unassigned;
+      const row = map.get(key) || { repName, dispatched: 0, sold: 0 };
+      row.dispatched += dispatchValue(d.items);
+      row.repName = repName;
+      map.set(key, row);
+    }
+    for (const r of reports) {
+      const key = r.sales_rep_id || r.sales_rep_name || "unassigned";
+      const repName = r.sales_rep_name || unassigned;
+      const row = map.get(key) || { repName, dispatched: 0, sold: 0 };
+      row.sold += r.total_amount;
+      row.repName = repName;
+      map.set(key, row);
+    }
+    return [...map.values()].sort((a, b) => b.dispatched - a.dispatched);
+  }, [dispatches, reports, t]);
+
+  const historyRows: HistoryRow[] = useMemo(() => {
+    const fromDispatches: HistoryRow[] = dispatches.map((d) => ({
+      id: `dispatch-${d.id}`,
+      document_type: "DISPATCH",
+      doc_no: d.dispatch_no,
+      partner_name: d.partner_name || null,
+      sales_rep_name: d.sales_rep_name,
+      date: d.dispatch_date,
+      total_value: dispatchValue(d.items),
+      created_at: d.created_at,
+      raw: d,
+    }));
+    const fromReturns: HistoryRow[] = returns.map((r) => ({
+      id: `return-${r.id}`,
+      document_type: "RETURN",
+      doc_no: r.return_no,
+      partner_name: r.partner_name || null,
+      sales_rep_name: null,
+      date: r.return_date,
+      total_value: dispatchValue(r.items),
+      created_at: r.created_at,
+      raw: r,
+    }));
+    const fromReports: HistoryRow[] = reports.map((rep) => ({
+      id: `report-${rep.id}`,
+      document_type: "ACTUAL_SALE",
+      doc_no: rep.report_no,
+      partner_name: rep.partner_name || null,
+      sales_rep_name: rep.sales_rep_name,
+      date: `${rep.report_period}-01`,
+      total_value: rep.total_amount,
+      created_at: rep.created_at,
+      raw: rep,
+    }));
+    return [...fromDispatches, ...fromReturns, ...fromReports].sort((a, b) =>
+      (b.created_at || "").localeCompare(a.created_at || "")
+    );
+  }, [dispatches, returns, reports]);
 
   const handleSavePartner = async () => {
     setSaving(true);
@@ -163,54 +244,15 @@ export default function ConsignmentPage() {
     await load();
   };
 
-  const handleDispatch = async () => {
-    const warehouse = lookups?.warehouses.find((w) => w.id === warehouseId);
-    const items: ConsignmentDispatchItem[] = [];
-    for (const line of dispatchLines) {
-      const product = lookups?.products.find((p) => p.id === line.product_id);
-      if (!product) continue;
-      items.push({
-        product_id: product.id,
-        product_code: product.code,
-        product_name: product.name,
-        category: product.category,
-        unit: product.unit,
-        quantity: Number(line.quantity) || 0,
-        unit_price: Number(product.sell_price) || 0,
-      });
-    }
-    setSaving(true);
-    const result = await createConsignmentDispatchAction({
-      partner_id: partnerId,
-      warehouse_id: warehouseId,
-      warehouse_name: warehouse?.name || null,
-      dispatch_date: dispatchDate,
-      notes: dispatchNotes,
-      items,
-    });
-    setSaving(false);
-    if (!result.success) {
-      showError(formatRpcError(result.error, t));
-      return;
-    }
-    if (!result.data) {
-      showError(t("common.error"));
-      return;
-    }
-    setDispatchLines([{ product_id: "", quantity: "1" }]);
-    await load();
-    setPrintDispatch(result.data);
-  };
-
   const handleReturn = async () => {
-    const warehouse = lookups?.warehouses.find((w) => w.id === (returnWarehouseId || warehouseId));
+    const warehouse = lookups?.warehouses.find((w) => w.id === returnWarehouseId);
     const items = Object.entries(returnQtyByProduct)
       .map(([product_id, qty]) => ({ product_id, quantity: Number(qty) || 0 }))
       .filter((item) => item.quantity > 0);
     setSaving(true);
     const result = await createConsignmentReturnAction({
       partner_id: partnerId,
-      warehouse_id: warehouse?.id || warehouseId,
+      warehouse_id: returnWarehouseId,
       warehouse_name: warehouse?.name || null,
       return_date: new Date().toISOString().slice(0, 10),
       items,
@@ -221,35 +263,15 @@ export default function ConsignmentPage() {
       return;
     }
     setReturnQtyByProduct({});
+    setReturnModalOpen(false);
     await load();
   };
 
-  const handleSettlement = async () => {
-    const sold_items = partnerInventory
-      .map((row) => ({
-        product_id: row.product_id,
-        quantity_sold: Number(soldQtyByProduct[row.product_id] || 0),
-        unit_price: Number(soldPriceByProduct[row.product_id] || row.unit_price),
-      }))
-      .filter((item) => item.quantity_sold > 0);
-    setSaving(true);
-    const result = await saveConsignmentMonthlyReportAction({
-      partner_id: partnerId,
-      report_period: period,
-      sold_items,
-    });
-    setSaving(false);
-    if (!result.success) {
-      showError(formatRpcError(result.error, t));
-      return;
+  const handlePrintHistoryRow = (row: HistoryRow) => {
+    if (row.document_type === "DISPATCH") setPrintDispatch(row.raw as ConsignmentDispatch);
+    else if (row.document_type === "ACTUAL_SALE") {
+      invoicePrint.requestPrint(mapConsignmentReportToInvoicePrint(row.raw as ConsignmentMonthlyReport));
     }
-    if (!result.data) {
-      showError(t("common.error"));
-      return;
-    }
-    setSoldQtyByProduct({});
-    await load();
-    invoicePrint.requestPrint(mapConsignmentReportToInvoicePrint(result.data));
   };
 
   const exportInventory = () => {
@@ -297,8 +319,7 @@ export default function ConsignmentPage() {
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "inventory", label: t("consignments.tabStock") },
-    { id: "dispatch", label: t("consignments.tabDispatch") },
-    { id: "settlement", label: t("consignments.tabSettlement") },
+    { id: "history", label: t("consignments.tabHistory") },
     { id: "partners", label: t("consignments.tabPartners") },
     { id: "alerts", label: t("consignments.tabAlerts") },
   ];
@@ -319,6 +340,34 @@ export default function ConsignmentPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               {t("consignments.exportSettlements")}
             </button>
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={() => router.push("/consignments/dispatch/new")}
+                >
+                  <PackageMinus className="h-3.5 w-3.5" />
+                  {t("consignments.opTypeDispatch")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={() => router.push("/consignments/settlement/new")}
+                >
+                  <ReceiptText className="h-3.5 w-3.5" />
+                  {t("consignments.opTypeActualSale")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary text-xs"
+                  onClick={() => setReturnModalOpen(true)}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("consignments.opTypeReturn")}
+                </button>
+              </>
+            )}
           </>
         }
       />
@@ -329,6 +378,15 @@ export default function ConsignmentPage() {
             {error}
           </div>
         )}
+
+        <ConsignmentKpiCards
+          totalStockValue={kpiStockValue}
+          soldThisMonth={kpiSoldThisMonth}
+          pendingReturnsCount={agingRows.length}
+          pendingReturnsValue={kpiPendingReturnsValue}
+        />
+
+        <ConsignmentRepPerformanceChart data={repPerformance} />
 
         {agingRows.length > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -447,15 +505,6 @@ export default function ConsignmentPage() {
                     ))}
                   </select>
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
-                  <StatCard label={t("consignments.sent")} value={totals.delivered} />
-                  <StatCard label={t("consignments.sold")} value={totals.sold} />
-                  <StatCard label={t("consignments.remaining")} value={totals.remaining} />
-                  <StatCard
-                    label={t("consignments.stockValue")}
-                    value={`${totals.value.toFixed(2)} ${t("common.currency")}`}
-                  />
-                </div>
                 <div className="overflow-x-auto rounded-xl border border-app">
                   <table className="min-w-full text-sm">
                     <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
@@ -498,239 +547,55 @@ export default function ConsignmentPage() {
               </section>
             )}
 
-            {tab === "dispatch" && (
-              <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-                <div className="rounded-xl border border-app bg-app-surface p-4 space-y-3">
-                  <h3 className="font-semibold">{t("consignments.sendModalTitle")}</h3>
-                  <select
-                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                    value={partnerId}
-                    onChange={(e) => setPartnerId(e.target.value)}
-                  >
-                    <option value="">{t("consignments.partner")}</option>
-                    {(lookups?.partners || []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.company_name || p.name}
-                      </option>
+            {tab === "history" && (
+              <section className="overflow-x-auto rounded-xl border border-app">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
+                    <tr>
+                      <th className="px-3 py-2">{t("consignments.docType")}</th>
+                      <th className="px-3 py-2">{t("consignments.docNo")}</th>
+                      <th className="px-3 py-2">{t("consignments.partner")}</th>
+                      <th className="px-3 py-2">{t("consignments.salesRep")}</th>
+                      <th className="px-3 py-2">{t("common.date")}</th>
+                      <th className="px-3 py-2 text-right">{t("consignments.totalValue")}</th>
+                      <th className="px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyRows.map((row) => (
+                      <tr key={row.id} className="border-t border-app">
+                        <td className="px-3 py-2">
+                          <ConsignmentDocumentStatusBadge documentType={row.document_type} />
+                        </td>
+                        <td className="px-3 py-2 font-semibold">{row.doc_no}</td>
+                        <td className="px-3 py-2">{row.partner_name || "-"}</td>
+                        <td className="px-3 py-2">{row.sales_rep_name || "-"}</td>
+                        <td className="px-3 py-2">{row.date}</td>
+                        <td className="px-3 py-2 text-right font-bold">
+                          {row.total_value.toFixed(2)} {t("common.currency")}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {row.document_type !== "RETURN" && (
+                            <button
+                              type="button"
+                              className="btn-secondary text-xs"
+                              onClick={() => handlePrintHistoryRow(row)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </select>
-                  <select
-                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                    value={warehouseId}
-                    onChange={(e) => setWarehouseId(e.target.value)}
-                  >
-                    <option value="">{t("common.warehouse")}</option>
-                    {(lookups?.warehouses || []).map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="date"
-                    className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                    value={dispatchDate}
-                    onChange={(e) => setDispatchDate(e.target.value)}
-                  />
-                  {dispatchLines.map((line, idx) => (
-                    <div key={idx} className="grid grid-cols-[1fr_90px] gap-2">
-                      <select
-                        className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                        value={line.product_id}
-                        onChange={(e) =>
-                          setDispatchLines((prev) =>
-                            prev.map((row, i) => (i === idx ? { ...row, product_id: e.target.value } : row))
-                          )
-                        }
-                      >
-                        <option value="">{t("forms.selectProduct")}</option>
-                        {(lookups?.products || []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.code} — {p.name} ({p.stock})
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={0.001}
-                        className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                        value={line.quantity}
-                        onChange={(e) =>
-                          setDispatchLines((prev) =>
-                            prev.map((row, i) => (i === idx ? { ...row, quantity: e.target.value } : row))
-                          )
-                        }
-                      />
-                    </div>
-                  ))}
-                  {canManage && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-secondary self-start text-xs"
-                        onClick={() => setDispatchLines((prev) => [...prev, { product_id: "", quantity: "1" }])}
-                      >
-                        {t("forms.addRow")}
-                      </button>
-                      <textarea
-                        className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                        rows={2}
-                        placeholder={t("common.notes")}
-                        value={dispatchNotes}
-                        onChange={(e) => setDispatchNotes(e.target.value)}
-                      />
-                      <button type="button" className="btn-primary text-xs" disabled={saving} onClick={handleDispatch}>
-                        {saving ? t("common.saving") : t("consignments.confirmSend")}
-                      </button>
-                    </>
-                  )}
-                </div>
-                <div className="rounded-xl border border-app bg-app-surface p-4">
-                  <h3 className="mb-3 font-semibold">{t("consignments.recentDispatches")}</h3>
-                  <div className="space-y-2">
-                    {dispatches.slice(0, 12).map((d) => (
-                      <div key={d.id} className="flex items-center justify-between rounded-lg border border-app p-3">
-                        <div>
-                          <p className="font-semibold">{d.dispatch_no}</p>
-                          <p className="text-xs text-app-muted">
-                            {d.partner_name} · {d.dispatch_date}
-                          </p>
-                        </div>
-                        <button type="button" className="btn-secondary text-xs" onClick={() => setPrintDispatch(d)}>
-                          <Printer className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {tab === "settlement" && (
-              <section className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <select
-                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                    value={partnerId}
-                    onChange={(e) => setPartnerId(e.target.value)}
-                  >
-                    <option value="">{t("consignments.partner")}</option>
-                    {(lookups?.partners || []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.company_name || p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="month"
-                    className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                    value={period}
-                    onChange={(e) => setPeriod(e.target.value)}
-                  />
-                </div>
-                {!partnerId ? (
-                  <p className="text-sm text-app-muted">{t("consignments.selectPartnerFirst")}</p>
-                ) : (
-                  <div className="overflow-x-auto rounded-xl border border-app">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
-                        <tr>
-                          <th className="px-3 py-2">{t("print.product")}</th>
-                          <th className="px-3 py-2 text-right">{t("consignments.remaining")}</th>
-                          <th className="px-3 py-2">{t("consignments.soldThisMonth")}</th>
-                          <th className="px-3 py-2">{t("consignments.price")}</th>
-                          <th className="px-3 py-2">{t("consignments.returnQty")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {partnerInventory
-                          .filter((row) => row.remaining_qty > 0)
-                          .map((row) => {
-                            const sold = Number(soldQtyByProduct[row.product_id] || 0);
-                            const oversold = sold > row.remaining_qty;
-                            return (
-                              <tr key={row.id} className="border-t border-app">
-                                <td className="px-3 py-2">{row.product_name}</td>
-                                <td className="px-3 py-2 text-right font-bold">{row.remaining_qty}</td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={row.remaining_qty}
-                                    className={`w-24 rounded-lg border px-2 py-1 ${
-                                      oversold ? "border-red-500" : "border-app"
-                                    }`}
-                                    value={soldQtyByProduct[row.product_id] || ""}
-                                    onChange={(e) =>
-                                      setSoldQtyByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
-                                    }
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="number"
-                                    className="w-24 rounded-lg border border-app px-2 py-1"
-                                    value={soldPriceByProduct[row.product_id] ?? String(row.unit_price)}
-                                    onChange={(e) =>
-                                      setSoldPriceByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
-                                    }
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={row.remaining_qty}
-                                    className="w-24 rounded-lg border border-app px-2 py-1"
-                                    value={returnQtyByProduct[row.product_id] || ""}
-                                    onChange={(e) =>
-                                      setReturnQtyByProduct((prev) => ({ ...prev, [row.product_id]: e.target.value }))
-                                    }
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {canManage && partnerId && (
-                  <div className="flex flex-wrap gap-2">
-                    <select
-                      className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
-                      value={returnWarehouseId || warehouseId}
-                      onChange={(e) => setReturnWarehouseId(e.target.value)}
-                    >
-                      <option value="">{t("common.warehouse")}</option>
-                      {(lookups?.warehouses || []).map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="button" className="btn-secondary text-xs" disabled={saving} onClick={handleReturn}>
-                      {t("consignments.confirmReturn")}
-                    </button>
-                    <button type="button" className="btn-primary text-xs" disabled={saving} onClick={handleSettlement}>
-                      {saving ? t("consignments.confirming") : t("consignments.confirmSettlement")}
-                    </button>
-                  </div>
-                )}
-                <div className="rounded-xl border border-app bg-app-surface p-4">
-                  <h3 className="mb-3 font-semibold">{t("consignments.recentSettlements")}</h3>
-                  {reports.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between border-t border-app py-2 text-sm">
-                      <span>
-                        {r.report_no} · {r.partner_name} · {r.report_period} · {r.total_amount.toFixed(2)}{" "}
-                        {t("common.currency")}
-                      </span>
-                      <button type="button" className="btn-secondary text-xs" onClick={() => invoicePrint.requestPrint(mapConsignmentReportToInvoicePrint(r))}>
-                        <Printer className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    {historyRows.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-6 text-center text-app-muted">
+                          {t("consignments.historyEmpty")}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </section>
             )}
 
@@ -769,6 +634,21 @@ export default function ConsignmentPage() {
         )}
       </div>
 
+      <ConsignmentReturnModal
+        open={returnModalOpen}
+        onOpenChange={setReturnModalOpen}
+        lookups={lookups}
+        saving={saving}
+        partnerId={partnerId}
+        setPartnerId={setPartnerId}
+        partnerInventory={partnerInventory}
+        returnWarehouseId={returnWarehouseId}
+        setReturnWarehouseId={setReturnWarehouseId}
+        returnQtyByProduct={returnQtyByProduct}
+        setReturnQtyByProduct={setReturnQtyByProduct}
+        onReturn={handleReturn}
+      />
+
       {printDispatch && (
         <div className="print-area">
           <ConsignmentDeliveryPrintTemplate data={printDispatch} companyName={companyName} />
@@ -784,14 +664,5 @@ export default function ConsignmentPage() {
       />
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl border border-app bg-app-surface p-4">
-      <p className="text-xs text-app-muted">{label}</p>
-      <p className="mt-1 text-lg font-bold">{value}</p>
-    </div>
   );
 }
