@@ -15,6 +15,8 @@ export interface InvoiceProductLike {
   sell_price_cut?: number | null;
   sale_price?: number | null;
   price?: number | null;
+  price_wholesale?: number | null;
+  price_distributor?: number | null;
   extra_info?: string | null;
   inventory_mode?: string | null;
   is_dimensional?: boolean | null;
@@ -29,6 +31,22 @@ export interface InvoiceLinePricingContext {
   polywood_sale_mode?: "linear_m" | "full_sheet" | null;
   polywood_length_m?: number | null;
   polywood_full_sheet_length_m?: number;
+  /** Wholesale/distributor override the flat (piece) price only; retail = product.sell_price. */
+  priceTier?: "retail" | "wholesale" | "distributor" | null;
+}
+
+/** Flat/piece price resolved for the given tier; retail (or no override set) falls back to sell_price. */
+function resolveTieredFlatPrice(
+  product: InvoiceProductLike,
+  tier: InvoiceLinePricingContext["priceTier"]
+): number {
+  if (tier === "wholesale" && product.price_wholesale != null) {
+    return Number(product.price_wholesale) || 0;
+  }
+  if (tier === "distributor" && product.price_distributor != null) {
+    return Number(product.price_distributor) || 0;
+  }
+  return Number(product.sell_price ?? product.sale_price ?? product.price) || 0;
 }
 
 export function isDimensionalInvoiceProduct(product: InvoiceProductLike | null | undefined): boolean {
@@ -126,20 +144,20 @@ export function resolveInvoiceLineUnitPrice(
   }
 
   if (!entryUnit) {
-    return Number(product.sell_price ?? product.sale_price ?? product.price) || 0;
+    return resolveTieredFlatPrice(product, context.priceTier);
   }
 
   if (entryUnit === "meter") {
     return Number(product.sell_price_cut) > 0
       ? Number(product.sell_price_cut)
-      : Number(product.sell_price) || 0;
+      : resolveTieredFlatPrice(product, context.priceTier);
   }
   if (entryUnit === "square_meter") {
     return Number(product.sell_price_cut) > 0
       ? Number(product.sell_price_cut)
-      : Number(product.sell_price) || 0;
+      : resolveTieredFlatPrice(product, context.priceTier);
   }
-  return Number(product.sell_price ?? product.sale_price ?? product.price) || 0;
+  return resolveTieredFlatPrice(product, context.priceTier);
 }
 
 export function defaultInvoiceUnitForProduct(

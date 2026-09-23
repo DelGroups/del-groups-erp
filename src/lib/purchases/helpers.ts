@@ -43,8 +43,24 @@ export function calcPurchaseLineTotal(quantity: number, unitPrice: number): numb
   return (Number(quantity) || 0) * (Number(unitPrice) || 0);
 }
 
+/** AZN-equivalent multiplier for a line: 1 for AZN (or unset), else its exchange_rate. */
+function purchaseLineAznMultiplier(item: Pick<PurchaseLineItem, "currency" | "exchange_rate">): number {
+  if (!item.currency || item.currency === "AZN") return 1;
+  return Number(item.exchange_rate) || 1;
+}
+
 export function calcPurchaseGrandTotal(items: PurchaseLineItem[]): number {
-  return items.reduce((sum, item) => sum + item.total, 0);
+  return items.reduce((sum, item) => sum + item.total * purchaseLineAznMultiplier(item), 0);
+}
+
+/** Per-currency subtotal for footer display: unconverted line totals grouped by currency. */
+export function calcPurchaseCurrencyBreakdown(items: PurchaseLineItem[]): Record<string, number> {
+  const breakdown: Record<string, number> = {};
+  for (const item of items) {
+    const currency = item.currency || "AZN";
+    breakdown[currency] = (breakdown[currency] || 0) + item.total;
+  }
+  return breakdown;
 }
 
 export function purchaseLineItemsToRows(
@@ -60,5 +76,8 @@ export function purchaseLineItemsToRows(
     unit: item.unit || "Ədəd",
     unit_price: item.unit_price,
     total_price: item.total,
+    price_tier: item.price_tier,
+    currency: item.currency,
+    exchange_rate: item.exchange_rate,
   }));
 }

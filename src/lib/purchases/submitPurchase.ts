@@ -24,6 +24,7 @@ export interface SubmitPurchasePayload {
     vat_rate?: number | null;
     vat_amount?: number | null;
     grand_total?: number | null;
+    currency_breakdown?: Record<string, number> | null;
   };
   items: PurchaseLineItem[];
   invoiceNumber: string;
@@ -79,6 +80,9 @@ function buildDraftRpcPayload(payload: SubmitPurchasePayload, validItems: Purcha
       unit: item.unit || "Ədəd",
       unit_price: item.unit_price,
       total_price: item.total,
+      price_tier: item.price_tier || "retail",
+      currency: item.currency || "AZN",
+      exchange_rate: item.exchange_rate || 1,
     })),
     payments,
     additional_expenses: documentExpensesToRpcPayload(payload.additionalExpenses || []),

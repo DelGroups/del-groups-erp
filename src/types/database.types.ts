@@ -16,6 +16,8 @@ type DbRow<T> = {
 };
 
 /** Form line item (UI) — persisted in sale_items table */
+export type InvoiceCurrency = "AZN" | "USD" | "EUR";
+
 export interface SaleItem {
   id: string;
   product_id: string;
@@ -31,6 +33,12 @@ export interface SaleItem {
   available_stock?: number;
   total: number;
   extra_info: string;
+  /** Which product price column unit_price was resolved from; undefined = retail */
+  price_tier?: PriceTier;
+  /** Line's own currency; undefined = AZN */
+  currency?: InvoiceCurrency;
+  /** Rate to convert this line into AZN for the invoice's blended total; undefined = 1 */
+  exchange_rate?: number;
   /** Polywood: sell by linear meters or full sheets */
   polywood_sale_mode?: "linear_m" | "full_sheet" | null;
   polywood_length_m?: number | null;
@@ -80,9 +88,16 @@ export function calcLineTotal(
   return qty * price - (qty * price * disc) / 100;
 }
 
+/** AZN-equivalent multiplier for a line: 1 for AZN (or unset), else its exchange_rate. */
+export function lineAznMultiplier(item: Pick<SaleItem, "currency" | "exchange_rate">): number {
+  if (!item.currency || item.currency === "AZN") return 1;
+  return Number(item.exchange_rate) || 1;
+}
+
 export function calcSubtotal(items: SaleItem[]): number {
   return items.reduce(
-    (sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
+    (sum, item) =>
+      sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0) * lineAznMultiplier(item),
     0
   );
 }
@@ -93,7 +108,8 @@ export function calcDiscountTotal(items: SaleItem[]): number {
       sum +
       (Number(item.quantity) || 0) *
         (Number(item.unit_price) || 0) *
-        ((Number(item.discount_percent) || 0) / 100),
+        ((Number(item.discount_percent) || 0) / 100) *
+        lineAznMultiplier(item),
     0
   );
 }
@@ -101,8 +117,19 @@ export function calcDiscountTotal(items: SaleItem[]): number {
 export function calcVatTotal(items: SaleItem[]): number {
   return items.reduce((sum, item) => {
     const lineNet = calcLineTotal(item.quantity, item.unit_price, item.discount_percent);
-    return sum + lineNet * ((Number(item.vat_rate) || 0) / 100);
+    return sum + lineNet * ((Number(item.vat_rate) || 0) / 100) * lineAznMultiplier(item);
   }, 0);
+}
+
+/** Per-currency subtotal for footer display: unconverted line totals grouped by currency. */
+export function calcCurrencyBreakdown(items: SaleItem[]): Record<string, number> {
+  const breakdown: Record<string, number> = {};
+  for (const item of items) {
+    const currency = item.currency || "AZN";
+    const lineNet = calcLineTotal(item.quantity, item.unit_price, item.discount_percent);
+    breakdown[currency] = (breakdown[currency] || 0) + lineNet;
+  }
+  return breakdown;
 }
 
 export function calcDeliveryCost(
@@ -240,6 +267,9 @@ export interface Product {
   /** Optional price-tier overrides; null means "fall back to sell_price" (the retail tier) */
   price_wholesale?: number | null;
   price_distributor?: number | null;
+  /** Optional buy-price-tier overrides; null means "fall back to buy_price" */
+  buy_price_wholesale?: number | null;
+  buy_price_distributor?: number | null;
   stock: number | null;
   min_stock?: number | null;
   min_stock_level?: number | null;
@@ -741,6 +771,7 @@ export interface Supplier {
   quality_score?: number | null;
   delivery_speed_score?: number | null;
   rating_count?: number | null;
+  default_price_tier?: PriceTier | null;
   created_at?: string | null;
 }
 
@@ -757,6 +788,12 @@ export interface PurchaseLineItem {
   metric_receive_mode?: "full_bars" | "custom_pieces" | null;
   metric_full_bar_count?: number;
   metric_custom_lengths?: string;
+  /** Which product buy-price column unit_price was resolved from; undefined = retail */
+  price_tier?: PriceTier;
+  /** Line's own currency; undefined = AZN */
+  currency?: InvoiceCurrency;
+  /** Rate to convert this line into AZN for the invoice's blended total; undefined = 1 */
+  exchange_rate?: number;
 }
 
 export interface PurchaseItemRow {
@@ -769,6 +806,9 @@ export interface PurchaseItemRow {
   unit?: string | null;
   unit_price: number;
   total_price: number;
+  price_tier?: PriceTier;
+  currency?: InvoiceCurrency;
+  exchange_rate?: number;
 }
 
 export type PurchaseItemInsert = Omit<PurchaseItemRow, "id"> & {

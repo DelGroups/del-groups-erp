@@ -3,11 +3,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
+  calcCurrencyBreakdown,
   calcDiscountTotal,
   calcLineTotal,
   calcSaleTotals,
   createEmptySaleItem,
   type Customer,
+  type InvoiceCurrency,
   type PriceTier,
   type SaleInsert,
   type SaleItem,
@@ -43,7 +45,6 @@ import { fetchPartnerNetBalance } from "@/lib/partners/fetchPartners";
 import {
   isSalesDraft,
   isSalesPosted,
-  type SalesCurrency,
   type SalesDocumentStatus,
   type SalesPaymentType,
 } from "@/lib/invoices/invoiceStatus";
@@ -357,8 +358,6 @@ export default function UniversalInvoiceForm({
   const [documentStatus, setDocumentStatus] = useState<SalesDocumentStatus>("draft");
   const [paymentType, setPaymentType] = useState<SalesPaymentType>("cash");
   const [dueDate, setDueDate] = useState("");
-  const [currency, setCurrency] = useState<SalesCurrency>("AZN");
-  const [exchangeRate, setExchangeRate] = useState(1);
   const [creditLimit, setCreditLimit] = useState(0);
   const [openReceivables, setOpenReceivables] = useState(0);
   const [bottomTab, setBottomTab] = useState<InvoiceBottomTab>("delivery");
@@ -451,8 +450,6 @@ export default function UniversalInvoiceForm({
     setDocumentStatus("draft");
     setPaymentType("cash");
     setDueDate("");
-    setCurrency("AZN");
-    setExchangeRate(1);
     setCreditLimit(0);
     setOpenReceivables(0);
     setBottomTab("delivery");
@@ -587,8 +584,6 @@ export default function UniversalInvoiceForm({
         : "cash"
     );
     setDueDate(sale.due_date ? sale.due_date.slice(0, 10) : "");
-    setCurrency(sale.currency === "USD" || sale.currency === "EUR" ? sale.currency : "AZN");
-    setExchangeRate(Number(sale.exchange_rate) || 1);
     setAdditionalExpenses(parseDocumentAdditionalExpenses(sale.additional_expenses));
     if (sale.items.length > 0) {
       setItems(sale.items);
@@ -719,6 +714,7 @@ export default function UniversalInvoiceForm({
       polywood_sale_mode: patch.polywood_sale_mode ?? row.polywood_sale_mode,
       polywood_length_m: patch.polywood_length_m ?? row.polywood_length_m,
       polywood_full_sheet_length_m: fullSheetLengthM,
+      priceTier: row.price_tier,
     });
     handleItemChange(rowId, patch);
   };
@@ -739,6 +735,7 @@ export default function UniversalInvoiceForm({
       polywood_sale_mode: isLinear ? "linear_m" : null,
       polywood_length_m: meterLengthForPricing,
       polywood_full_sheet_length_m: fullSheetLengthM,
+      priceTier: row.price_tier,
     });
 
     handleItemChange(cutPieceModal.rowId, {
@@ -910,6 +907,7 @@ export default function UniversalInvoiceForm({
       polywood_full_sheet_length_m: fullSheetLengthM,
     };
 
+    const rowPriceTier = row?.price_tier || selectedCustomer?.default_price_tier || "retail";
     handleItemChange(rowId, {
       product_id: prod.id,
       product_code: productCode(prod),
@@ -918,9 +916,10 @@ export default function UniversalInvoiceForm({
       warehouse_name: warehouseName,
       quantity: nextQuantity,
       unit: polywoodRow ? "Metr" : prod.unit || "Ədəd",
+      price_tier: rowPriceTier,
       unit_price: polywoodRow
         ? resolvePolywoodRowUnitPrice(prod, polywoodDraftRow)
-        : productPrice(prod, selectedCustomer?.default_price_tier),
+        : productPrice(prod, rowPriceTier),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: resolveLineVatRate(prod),
       available_stock: stockResult.availableStock,
@@ -1012,6 +1011,7 @@ export default function UniversalInvoiceForm({
         ? "Vərəq"
         : "Metr"
       : defaultInvoiceUnitForProduct(prod);
+    const priceTier = row.price_tier || selectedCustomer?.default_price_tier || "retail";
     const updated: SaleItem = {
       ...row,
       product_id: prod.id,
@@ -1021,12 +1021,14 @@ export default function UniversalInvoiceForm({
       warehouse_name:
         isPolywoodProd && polywoodWarehouse ? polywoodWarehouse.name : row.warehouse_name,
       unit: defaultUnit,
+      price_tier: priceTier,
       unit_price: resolveInvoiceLineUnitPrice(prod, {
         unit: defaultUnit,
         quantity: nextQuantity,
         polywood_sale_mode: mode,
         polywood_length_m: mode === "linear_m" ? nextQuantity : null,
         polywood_full_sheet_length_m: fullSheetLengthM,
+        priceTier,
       }),
       discount_percent: Number(prod.discount_percent ?? prod.discount) || 0,
       vat_rate: Number(prod.vat_rate ?? prod.tax_rate) || 0,
@@ -1192,6 +1194,23 @@ export default function UniversalInvoiceForm({
   );
 
   const lineDiscountTotal = useMemo(() => calcDiscountTotal(items), [items]);
+  const currencyBreakdown = useMemo(() => calcCurrencyBreakdown(items), [items]);
+  const hasMixedCurrency = Object.keys(currencyBreakdown).length > 1;
+
+  // Official/VAT invoices must stay single-currency AZN - force it the moment
+  // the document is marked official, not just disable the selectors going
+  // forward, in case a row was already set to a foreign currency/tier before.
+  const handleIsOfficialChange = (next: boolean) => {
+    setIsOfficial(next);
+    if (!next) return;
+    setItems((prev) =>
+      prev.map((row) =>
+        (row.currency && row.currency !== "AZN") || (row.price_tier && row.price_tier !== "retail")
+          ? { ...row, currency: "AZN", exchange_rate: 1, price_tier: "retail" }
+          : row
+      )
+    );
+  };
 
   const globalDiscountAmount = useMemo(
     () =>
@@ -1445,8 +1464,7 @@ export default function UniversalInvoiceForm({
       saleId: savedSaleId,
       paymentType,
       dueDate: dueDate || null,
-      currency,
-      exchangeRate: currency === "AZN" ? 1 : exchangeRate,
+      currencyBreakdown: calcCurrencyBreakdown(saleItems),
     });
 
     if (!result.success) {
@@ -1794,35 +1812,6 @@ export default function UniversalInvoiceForm({
               className={INVOICE_INPUT}
             />
           </label>
-          <label className="min-w-0">
-            <span className={INVOICE_LABEL}>{t("invoice.currency")}</span>
-            <select
-              value={currency}
-              disabled={documentLocked}
-              onChange={(e) => {
-                const next = e.target.value as SalesCurrency;
-                setCurrency(next);
-                if (next === "AZN") setExchangeRate(1);
-              }}
-              className={INVOICE_INPUT}
-            >
-              <option value="AZN">AZN</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className={INVOICE_LABEL}>{t("invoice.exchangeRate")}</span>
-            <input
-              type="number"
-              min="0"
-              step="0.0001"
-              value={exchangeRate}
-              disabled={documentLocked || currency === "AZN"}
-              onChange={(e) => setExchangeRate(Number(e.target.value) || 1)}
-              className={`${INVOICE_INPUT} font-mono`}
-            />
-          </label>
         </InvoiceDetailCard>
 
         <div className="px-0">
@@ -1832,7 +1821,7 @@ export default function UniversalInvoiceForm({
             partyName={selectedCustomer ? customerLabel(selectedCustomer, t) : undefined}
             partyVoen={selectedCustomer?.voen}
             isOfficial={isOfficial}
-            onIsOfficialChange={setIsOfficial}
+            onIsOfficialChange={handleIsOfficialChange}
             vatMode={vatMode}
             onVatModeChange={setVatMode}
             contractId={contractId}
@@ -2147,6 +2136,7 @@ export default function UniversalInvoiceForm({
                                   row.polywood_full_sheet_length_m ||
                                   Number(rowProduct.full_sheet_length_m) ||
                                   4,
+                                priceTier: row.price_tier,
                               });
                             }
                           }
@@ -2170,6 +2160,7 @@ export default function UniversalInvoiceForm({
                                   row.polywood_full_sheet_length_m ||
                                   Number(rowProduct?.full_sheet_length_m) ||
                                   4,
+                                priceTier: row.price_tier,
                               }),
                             });
                             void handlePolywoodQuantityBlur(row.id);
@@ -2250,6 +2241,71 @@ export default function UniversalInvoiceForm({
                         }
                         className={`${INVOICE_TABLE_INPUT} font-mono`}
                       />
+                      <div className="mt-1 flex flex-col gap-1">
+                        <select
+                          value={row.price_tier || "retail"}
+                          disabled={documentLocked || isOfficial || !row.product_id}
+                          onChange={(e) => {
+                            const nextTier = e.target.value as PriceTier;
+                            const rowProduct = products.find(
+                              (product) => product.id === row.product_id
+                            );
+                            handleItemChange(row.id, {
+                              price_tier: nextTier,
+                              unit_price: resolveInvoiceLineUnitPrice(rowProduct, {
+                                unit: row.unit,
+                                quantity: row.quantity,
+                                polywood_sale_mode: row.polywood_sale_mode,
+                                polywood_length_m: row.polywood_length_m,
+                                polywood_full_sheet_length_m: row.polywood_full_sheet_length_m,
+                                priceTier: nextTier,
+                              }),
+                            });
+                          }}
+                          className={`${INVOICE_TABLE_INPUT} text-[10px]`}
+                          title={t("invoice.priceTier")}
+                        >
+                          <option value="retail">{t("invoice.priceTierRetail")}</option>
+                          <option value="wholesale">{t("invoice.priceTierWholesale")}</option>
+                          <option value="distributor">{t("invoice.priceTierDistributor")}</option>
+                        </select>
+                        <div className="flex gap-1">
+                          <select
+                            value={row.currency || "AZN"}
+                            disabled={documentLocked || isOfficial || !row.product_id}
+                            onChange={(e) => {
+                              const nextCurrency = e.target.value as InvoiceCurrency;
+                              handleItemChange(row.id, {
+                                currency: nextCurrency,
+                                exchange_rate:
+                                  nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
+                              });
+                            }}
+                            className={`${INVOICE_TABLE_INPUT} text-[10px]`}
+                            title={t("invoice.lineCurrency")}
+                          >
+                            <option value="AZN">AZN</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                          {row.currency && row.currency !== "AZN" ? (
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.0001"
+                              value={row.exchange_rate || 1}
+                              disabled={documentLocked}
+                              onChange={(e) =>
+                                handleItemChange(row.id, {
+                                  exchange_rate: Number(e.target.value) || 1,
+                                })
+                              }
+                              className={`${INVOICE_TABLE_INPUT} w-16 text-[10px] font-mono`}
+                              title={t("invoice.exchangeRate")}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
                       {(() => {
                         const rowProduct = products.find((product) => product.id === row.product_id);
                         const metricLine =
@@ -2459,6 +2515,14 @@ export default function UniversalInvoiceForm({
                       <span className={summaryValueClass}>+{additionalExpensesTotal.toFixed(2)}</span>
                     </div>
                   </div>
+                  {hasMixedCurrency ? (
+                    <div className="border-t border-[color:var(--gt-border-color)] pt-2 pb-2 text-xs">
+                      <span className="text-app-muted">{t("invoice.currencyBreakdown")}: </span>
+                      {Object.entries(currencyBreakdown)
+                        .map(([cur, amount]) => `${amount.toFixed(2)} ${cur}`)
+                        .join(" · ")}
+                    </div>
+                  ) : null}
                   <div className="border-t border-[color:var(--gt-border-color)] pt-4">
                     {isOfficial ? (
                       <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
@@ -2468,7 +2532,7 @@ export default function UniversalInvoiceForm({
                           {t("invoice.grandTotal")}
                         </span>
                         <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-[color:var(--gt-accent-green)]">
-                          {displayTotals.grand_total.toFixed(2)} {currency}
+                          {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
                         </span>
                       </div>
                     )}
@@ -2655,13 +2719,13 @@ export default function UniversalInvoiceForm({
               <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                 <span className="text-app-muted">{t("invoice.paidTotal")}</span>
                 <span className="font-mono tabular-nums text-emerald-600">
-                  {totals.paid_amount.toFixed(2)} {currency}
+                  {totals.paid_amount.toFixed(2)} {t("common.currency")}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                 <span className="text-app-muted">{t("invoice.remainingDebt")}</span>
                 <span className="font-mono tabular-nums text-rose-600">
-                  {totals.remaining_balance.toFixed(2)} {currency}
+                  {totals.remaining_balance.toFixed(2)} {t("common.currency")}
                 </span>
               </div>
             </div>
@@ -2774,6 +2838,14 @@ export default function UniversalInvoiceForm({
               </div>
 
               <div className="my-4 border-y border-white/20 py-4">
+                {hasMixedCurrency ? (
+                  <div className="mb-2 text-xs text-white/70">
+                    <span>{t("invoice.currencyBreakdown")}: </span>
+                    {Object.entries(currencyBreakdown)
+                      .map(([cur, amount]) => `${amount.toFixed(2)} ${cur}`)
+                      .join(" · ")}
+                  </div>
+                ) : null}
                 {isOfficial ? (
                   <OfficialTotalsBreakdown
                     amounts={officialAmounts}
@@ -2784,7 +2856,7 @@ export default function UniversalInvoiceForm({
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="text-base font-bold text-white">{t("invoice.grandTotal")}</span>
                     <span className="shrink-0 font-mono text-2xl font-bold tabular-nums text-emerald-300">
-                      {displayTotals.grand_total.toFixed(2)} {currency}
+                      {displayTotals.grand_total.toFixed(2)} {t("common.currency")}
                     </span>
                   </div>
                 )}

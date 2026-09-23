@@ -38,6 +38,7 @@ export interface SubmitSalePayload {
   dueDate?: string | null;
   currency?: SalesCurrency;
   exchangeRate?: number;
+  currencyBreakdown?: Record<string, number>;
 }
 
 export interface SubmitSaleResult {
@@ -64,6 +65,9 @@ type CreateSaleAtomicItemPayload = {
   polywood_sale_mode?: string | null;
   polywood_length_m?: number | null;
   skip_stock: boolean;
+  price_tier: string;
+  currency: string;
+  exchange_rate: number;
 };
 
 function mapSaleItemToRpcPayload(
@@ -84,6 +88,9 @@ function mapSaleItemToRpcPayload(
     line_total: item.total,
     extra_info: item.extra_info || null,
     skip_stock: !decrementStock || isCustomInventoryHandledItem(item),
+    price_tier: item.price_tier || "retail",
+    currency: item.currency || "AZN",
+    exchange_rate: item.exchange_rate || 1,
   };
 
   if (!item.polywood_sale_mode) {
@@ -203,6 +210,7 @@ function buildRpcPayload(payload: SubmitSalePayload, validItems: SaleItem[]) {
       due_date: payload.dueDate || null,
       currency: payload.currency || "AZN",
       exchange_rate: payload.exchangeRate ?? 1,
+      currency_breakdown: payload.currencyBreakdown || {},
       additional_expenses_total: sumDocumentAdditionalExpenses(payload.additionalExpenses || []),
       status: payload.mode === "draft" ? "draft" : "posted",
     },

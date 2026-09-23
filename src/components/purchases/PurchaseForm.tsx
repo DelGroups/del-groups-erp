@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, CreditCard, FileText, Plus, Trash2, User, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type {
+  InvoiceCurrency,
+  PriceTier,
   Product,
   PurchaseLineItem,
   PurchaseRecord,
@@ -11,6 +13,7 @@ import type {
   Warehouse,
 } from "@/types/database.types";
 import {
+  calcPurchaseCurrencyBreakdown,
   calcPurchaseGrandTotal,
   calcPurchaseLineTotal,
   calcPurchasePaymentsTotal,
@@ -19,6 +22,17 @@ import {
   generatePurchaseInvoiceNumber,
   type PurchasePaymentRow,
 } from "@/lib/purchases/helpers";
+
+/** Buy-price-tier resolution: wholesale/distributor override the flat buy_price only. */
+function resolvePurchaseUnitPrice(product: Product, tier: PriceTier | null | undefined): number {
+  if (tier === "wholesale" && product.buy_price_wholesale != null) {
+    return Number(product.buy_price_wholesale) || 0;
+  }
+  if (tier === "distributor" && product.buy_price_distributor != null) {
+    return Number(product.buy_price_distributor) || 0;
+  }
+  return Number(product.buy_price) || 0;
+}
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { submitPurchase, updatePurchase } from "@/lib/purchases/submitPurchase";
@@ -300,6 +314,23 @@ export default function PurchaseForm({
     [additionalExpenses]
   );
   const itemsSubtotal = useMemo(() => calcPurchaseGrandTotal(items), [items]);
+  const currencyBreakdown = useMemo(() => calcPurchaseCurrencyBreakdown(items), [items]);
+  const hasMixedCurrency = Object.keys(currencyBreakdown).length > 1;
+
+  // Official/VAT invoices must stay single-currency AZN - force it the moment
+  // the document is marked official, in case a row was already set to a
+  // foreign currency/tier before.
+  const handleIsOfficialChange = (next: boolean) => {
+    setIsOfficial(next);
+    if (!next) return;
+    setItems((prev) =>
+      prev.map((row) =>
+        (row.currency && row.currency !== "AZN") || (row.price_tier && row.price_tier !== "retail")
+          ? { ...row, currency: "AZN", exchange_rate: 1, price_tier: "retail" }
+          : row
+      )
+    );
+  };
   const officialAmounts = useMemo(
     () =>
       calcOfficialTransactionTotals(itemsSubtotal, {
@@ -403,14 +434,17 @@ export default function PurchaseForm({
       });
       return;
     }
-    const qty = items.find((r) => r.id === rowId)?.quantity || 1;
+    const existingRow = items.find((r) => r.id === rowId);
+    const qty = existingRow?.quantity || 1;
     const metric = isMetricProduct(product);
-    const unitPrice = metric ? 0 : Number(product.buy_price) || 0;
+    const priceTier = existingRow?.price_tier || selectedSupplier?.default_price_tier || "retail";
+    const unitPrice = metric ? 0 : resolvePurchaseUnitPrice(product, priceTier);
     updateItem(rowId, {
       product_id: product.id,
       product_code: product.code,
       product_name: product.name,
       unit: metric ? "Metr" : product.unit || "Ədəd",
+      price_tier: priceTier,
       unit_price: unitPrice,
       quantity: metric ? 0 : qty,
       total: metric ? 0 : calcPurchaseLineTotal(qty, unitPrice),
@@ -429,16 +463,21 @@ export default function PurchaseForm({
     row: PurchaseLineItem,
     product: Product,
     quantity: number
-  ): PurchaseLineItem => ({
-    ...row,
-    product_id: product.id,
-    product_code: product.code,
-    product_name: product.name,
-    unit: product.unit || "Ədəd",
-    unit_price: Number(product.buy_price) || 0,
-    quantity,
-    total: calcPurchaseLineTotal(quantity, Number(product.buy_price) || 0),
-  });
+  ): PurchaseLineItem => {
+    const priceTier = row.price_tier || selectedSupplier?.default_price_tier || "retail";
+    const unitPrice = resolvePurchaseUnitPrice(product, priceTier);
+    return {
+      ...row,
+      product_id: product.id,
+      product_code: product.code,
+      product_name: product.name,
+      unit: product.unit || "Ədəd",
+      price_tier: priceTier,
+      unit_price: unitPrice,
+      quantity,
+      total: calcPurchaseLineTotal(quantity, unitPrice),
+    };
+  };
 
   const handleBarcodeScan = async (barcode: string) => {
     let product = findProductByBarcodeInList(productList, barcode);
@@ -851,7 +890,7 @@ export default function PurchaseForm({
           partyName={selectedSupplier?.full_name || selectedSupplier?.company_name}
           partyVoen={selectedSupplier?.voen}
           isOfficial={isOfficial}
-          onIsOfficialChange={setIsOfficial}
+          onIsOfficialChange={handleIsOfficialChange}
           vatMode={vatMode}
           onVatModeChange={setVatMode}
           contractId={contractId}
@@ -971,6 +1010,66 @@ export default function PurchaseForm({
                         }
                         className={`${formTableInputClass} font-mono`}
                       />
+                      <div className="mt-1 flex flex-col gap-1">
+                        <select
+                          value={row.price_tier || "retail"}
+                          disabled={documentLocked || isOfficial || !row.product_id}
+                          onChange={(e) => {
+                            const nextTier = e.target.value as PriceTier;
+                            const product = productList.find((item) => item.id === row.product_id);
+                            const unitPrice = product
+                              ? resolvePurchaseUnitPrice(product, nextTier)
+                              : row.unit_price;
+                            updateItem(row.id, {
+                              price_tier: nextTier,
+                              unit_price: unitPrice,
+                              total: calcPurchaseLineTotal(row.quantity, unitPrice),
+                            });
+                          }}
+                          className={`${formTableInputClass} text-[10px]`}
+                          title={t("invoice.priceTier")}
+                        >
+                          <option value="retail">{t("invoice.priceTierRetail")}</option>
+                          <option value="wholesale">{t("invoice.priceTierWholesale")}</option>
+                          <option value="distributor">{t("invoice.priceTierDistributor")}</option>
+                        </select>
+                        <div className="flex gap-1">
+                          <select
+                            value={row.currency || "AZN"}
+                            disabled={documentLocked || isOfficial || !row.product_id}
+                            onChange={(e) => {
+                              const nextCurrency = e.target.value as InvoiceCurrency;
+                              updateItem(row.id, {
+                                currency: nextCurrency,
+                                exchange_rate:
+                                  nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
+                              });
+                            }}
+                            className={`${formTableInputClass} text-[10px]`}
+                            title={t("invoice.lineCurrency")}
+                          >
+                            <option value="AZN">AZN</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                          {row.currency && row.currency !== "AZN" ? (
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.0001"
+                              value={row.exchange_rate || 1}
+                              disabled={documentLocked}
+                              onChange={(e) =>
+                                updateItem(row.id, {
+                                  exchange_rate: Number(e.target.value) || 1,
+                                })
+                              }
+                              className={`${formTableInputClass} w-16 text-[10px] font-mono`}
+                              title={t("invoice.exchangeRate")}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
                       {(() => {
                         const product = productList.find((item) => item.id === row.product_id);
                         if (!product || !isMetricProduct(product) || !row.unit_price) return null;
@@ -1008,6 +1107,16 @@ export default function PurchaseForm({
             <div className="w-full max-w-md rounded-xl border border-app bg-app-card p-4 shadow-sm">
               <h4 className="mb-3 text-sm font-bold text-app">{t("common.total")}</h4>
               <div className="space-y-2 text-xs">
+                {hasMixedCurrency ? (
+                  <div className="flex justify-between text-app-muted">
+                    <span>{t("invoice.currencyBreakdown")}</span>
+                    <span>
+                      {Object.entries(currencyBreakdown)
+                        .map(([cur, amount]) => `${amount.toFixed(2)} ${cur}`)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                ) : null}
                 {isOfficial ? (
                   <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
                 ) : (
@@ -1139,6 +1248,16 @@ export default function PurchaseForm({
         {layoutMode !== "page" ? (
           <div className="app-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
             <div className="space-y-2 text-xs">
+              {hasMixedCurrency ? (
+                <div className="flex justify-between text-app-muted">
+                  <span>{t("invoice.currencyBreakdown")}</span>
+                  <span>
+                    {Object.entries(currencyBreakdown)
+                      .map(([cur, amount]) => `${amount.toFixed(2)} ${cur}`)
+                      .join(" · ")}
+                  </span>
+                </div>
+              ) : null}
               {isOfficial ? (
                 <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />
               ) : (

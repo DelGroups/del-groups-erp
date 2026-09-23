@@ -235,6 +235,13 @@ function mapSaleItemRow(row: Record<string, unknown>): SaleItem {
       typeof row.polywood_sale_mode === "string" ? row.polywood_sale_mode : null,
     polywood_length_m:
       row.polywood_length_m != null ? Number(row.polywood_length_m) || null : null,
+    price_tier:
+      row.price_tier === "wholesale" || row.price_tier === "distributor"
+        ? row.price_tier
+        : "retail",
+    currency:
+      row.currency === "USD" || row.currency === "EUR" ? row.currency : "AZN",
+    exchange_rate: row.exchange_rate != null ? Number(row.exchange_rate) || 1 : 1,
   };
 }
 
