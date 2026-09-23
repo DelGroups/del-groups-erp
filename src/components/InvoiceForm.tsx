@@ -1939,11 +1939,16 @@ export default function UniversalInvoiceForm({
             <BarcodeScanField onScan={handleBarcodeScan} disabled={saving} />
           </div>
 
-          <div className={cn("overflow-visible", isPageLayout && "border-t border-[color:var(--gt-border-color)]")}>
-            <table className="app-table w-full text-left text-sm">
+          <div
+            className={cn(
+              "overflow-x-auto overflow-y-visible",
+              isPageLayout && "border-t border-[color:var(--gt-border-color)]"
+            )}
+          >
+            <table className="app-table w-full min-w-[1200px] text-left text-sm">
               <thead>
                 <tr>
-                  <th className={cn(tableColClass, "w-9")}>
+                  <th className={cn(tableColClass, "w-[40px] min-w-[40px]")}>
                     <input
                       type="checkbox"
                       checked={items.length > 0 && selectedRowIds.size === items.length}
@@ -1959,20 +1964,20 @@ export default function UniversalInvoiceForm({
                       className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
                     />
                   </th>
-                  <th className={cn(tableColClass, "w-10")}>№</th>
-                  <th className="min-w-[220px]">{t("invoice.productName")}</th>
+                  <th className={cn(tableColClass, "w-[40px] min-w-[40px]")}>№</th>
+                  <th className="w-1/4 min-w-[250px]">{t("invoice.productName")}</th>
                   {!polywoodOnly ? (
-                    <th className={cn(tableColClass, "min-w-[9rem] w-36")}>{t("common.warehouse")}</th>
+                    <th className={cn(tableColClass, "min-w-[120px] w-[120px]")}>{t("common.warehouse")}</th>
                   ) : null}
-                  <th className={cn(tableColClass, "min-w-[7rem] w-28")}>{t("forms.quantity")}</th>
+                  <th className={cn(tableColClass, "min-w-[80px] w-[80px]")}>{t("forms.quantity")}</th>
                   {!polywoodOnly ? (
-                    <th className={cn(tableColClass, "min-w-[5.5rem] w-24")}>{t("invoice.unit")}</th>
+                    <th className={cn(tableColClass, "min-w-[100px] w-[100px]")}>{t("invoice.unit")}</th>
                   ) : null}
-                  <th className={cn(tableColClass, "min-w-[12rem] w-52")}>{t("forms.price")}</th>
-                  <th className={cn(tableColClass, "min-w-[7rem] w-28")}>{t("invoice.lineDiscount")}</th>
-                  <th className="min-w-[10rem] w-40">{t("invoice.info")}</th>
-                  <th className={cn(tableColClass, "min-w-[7rem] w-28 text-right")}>{t("forms.lineTotal")}</th>
-                  <th className={cn(tableColClass, "w-12 text-right")} aria-label={t("common.actions")} />
+                  <th className={cn(tableColClass, "min-w-[320px] w-1/4")}>{t("forms.price")}</th>
+                  <th className={cn(tableColClass, "min-w-[90px] w-[90px]")}>{t("invoice.lineDiscount")}</th>
+                  <th className="min-w-[150px] w-[150px]">{t("invoice.info")}</th>
+                  <th className={cn(tableColClass, "min-w-[100px] w-[100px] text-right")}>{t("forms.lineTotal")}</th>
+                  <th className={cn(tableColClass, "w-[50px] min-w-[50px] text-right")} aria-label={t("common.actions")} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
@@ -2326,7 +2331,7 @@ export default function UniversalInvoiceForm({
                           onChange={(e) =>
                             handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
                           }
-                          className={cn(formTableCompactControlClass, "min-w-0 flex-[1.3] font-mono")}
+                          className={cn(formTableCompactControlClass, "w-[90px] min-w-[90px] flex-1 font-mono")}
                         />
                         <select
                           value={row.price_tier || "retail"}
@@ -2348,7 +2353,7 @@ export default function UniversalInvoiceForm({
                               }),
                             });
                           }}
-                          className={cn(formTableCompactSelectClass, "flex-1")}
+                          className={cn(formTableCompactSelectClass, "w-[110px] min-w-[110px] shrink-0")}
                           title={t("invoice.priceTier")}
                         >
                           <option value="retail">{t("invoice.priceTierRetail")}</option>
@@ -2365,7 +2370,7 @@ export default function UniversalInvoiceForm({
                               exchange_rate: nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
                             });
                           }}
-                          className={cn(formTableCompactSelectClass, "flex-[0.8]")}
+                          className={cn(formTableCompactSelectClass, "w-[70px] min-w-[70px] shrink-0")}
                           title={t("invoice.lineCurrency")}
                         >
                           <option value="AZN">AZN</option>

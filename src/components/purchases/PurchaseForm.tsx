@@ -959,10 +959,10 @@ export default function PurchaseForm({
           </div>
 
           <div className="overflow-x-auto overflow-y-visible">
-            <table className="app-table w-full text-left text-sm">
+            <table className="app-table w-full min-w-[900px] text-left text-sm">
               <thead>
                 <tr>
-                  <th className="w-9">
+                  <th className="w-[40px] min-w-[40px]">
                     <input
                       type="checkbox"
                       checked={items.length > 0 && selectedRowIds.size === items.length}
@@ -978,12 +978,12 @@ export default function PurchaseForm({
                       className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
                     />
                   </th>
-                  <th className="w-10">№</th>
-                  <th className="min-w-[240px]">{t("dashboard.product")}</th>
-                  <th className="min-w-[7rem] w-28">{t("forms.quantity")}</th>
-                  <th className="min-w-[10rem] w-44">{t("forms.buyPrice")}</th>
-                  <th className="min-w-[7rem] w-28 text-right">{t("forms.lineTotal")}</th>
-                  <th className="w-12 text-center">{t("forms.remove")}</th>
+                  <th className="w-[40px] min-w-[40px]">№</th>
+                  <th className="w-1/4 min-w-[250px]">{t("dashboard.product")}</th>
+                  <th className="min-w-[80px] w-[80px]">{t("forms.quantity")}</th>
+                  <th className="min-w-[240px] w-1/4">{t("forms.buyPrice")}</th>
+                  <th className="min-w-[100px] w-[100px] text-right">{t("forms.lineTotal")}</th>
+                  <th className="w-[50px] min-w-[50px] text-center">{t("forms.remove")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1073,7 +1073,7 @@ export default function PurchaseForm({
                           onChange={(e) =>
                             updateItem(row.id, { unit_price: Number(e.target.value) || 0 })
                           }
-                          className={cn(formTableCompactControlClass, "min-w-0 flex-[1.6] font-mono")}
+                          className={cn(formTableCompactControlClass, "w-[110px] min-w-[110px] flex-1 font-mono")}
                         />
                         <select
                           value={row.currency || "AZN"}
@@ -1085,7 +1085,7 @@ export default function PurchaseForm({
                               exchange_rate: nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
                             });
                           }}
-                          className={cn(formTableCompactSelectClass, "flex-1")}
+                          className={cn(formTableCompactSelectClass, "w-[70px] min-w-[70px] shrink-0")}
                           title={t("invoice.lineCurrency")}
                         >
                           <option value="AZN">AZN</option>
