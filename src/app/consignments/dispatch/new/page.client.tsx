@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
-import { ERPPage } from "@/components/layout/ERPLayout";
+import PageHeader from "@/components/ui/page-header";
 import Panel from "@/components/ui/panel";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -26,7 +26,7 @@ import {
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { generateConsignmentDocNo, type ConsignmentDispatch } from "@/lib/consignment/types";
 import type { Product } from "@/types/database.types";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
 
 interface DispatchLine {
   id: string;
@@ -260,11 +260,26 @@ export default function ConsignmentDispatchNewPageClient() {
 
   return (
     <PageLayout>
-      <ERPPage pageTitle={t("consignments.sendModalTitle")} subtitle={t("consignments.pageDescription")}>
+      <PageHeader
+        icon={<PackageMinus className="h-6 w-6 text-app-accent" />}
+        title={t("consignments.sendModalTitle")}
+        subtitle={t("consignments.pageDescription")}
+        breadcrumbs={[
+          { href: "/consignments", label: t("consignments.pageTitle") },
+          { label: t("consignments.sendModalTitle") },
+        ]}
+        actions={
+          <Button type="button" appearance="text" color="secondary" onClick={() => router.push("/consignments")}>
+            <ArrowLeft className="h-4 w-4" />
+            {t("common.back")}
+          </Button>
+        }
+      />
+      <div className="flex-1 overflow-auto p-4 md:p-6 pb-28">
         {loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Panel title={t("consignments.dispatchHeaderPanel")}>
               <div className="grid gap-4 lg:grid-cols-3">
                 <div className="space-y-1">
@@ -383,33 +398,35 @@ export default function ConsignmentDispatchNewPageClient() {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <Button type="button" variant="secondary" onClick={() => setLines((prev) => [...prev, createEmptyLine()])}>
+                <Button type="button" appearance="outline" onClick={() => setLines((prev) => [...prev, createEmptyLine()])}>
                   {t("forms.addRow")}
                 </Button>
-                <p className="text-sm font-bold">
-                  {t("common.total")}: {totalValue.toFixed(2)} {t("common.currency")}
-                </p>
               </div>
             </Panel>
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => router.push("/consignments")}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="button" onClick={() => void handleSubmit()} loading={submitting}>
-                {t("consignments.confirmSend")}
-              </Button>
-            </div>
           </div>
         )}
+      </div>
 
-        {printData && (
-          <div className="print-area">
-            <ConsignmentDeliveryPrintTemplate data={printData} companyName={companyName} />
-          </div>
-        )}
-        <ToastMessage message={toastMessage} variant={toastVariant} />
-      </ERPPage>
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-4 py-4 md:px-6">
+        <p className="text-sm font-bold">
+          {t("common.total")}: {totalValue.toFixed(2)} {t("common.currency")}
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" appearance="outline" onClick={() => router.push("/consignments")}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" onClick={() => void handleSubmit()} loading={submitting}>
+            {t("consignments.confirmSend")}
+          </Button>
+        </div>
+      </div>
+
+      {printData && (
+        <div className="print-area">
+          <ConsignmentDeliveryPrintTemplate data={printData} companyName={companyName} />
+        </div>
+      )}
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

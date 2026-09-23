@@ -3,12 +3,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
-import { ERPPage } from "@/components/layout/ERPLayout";
+import PageHeader from "@/components/ui/page-header";
 import Panel from "@/components/ui/panel";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
+import { ArrowLeft, ReceiptText } from "lucide-react";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentReportToInvoicePrint";
 import { useToast } from "@/hooks/useToast";
@@ -164,11 +165,26 @@ export default function ConsignmentSettlementNewPageClient() {
 
   return (
     <PageLayout>
-      <ERPPage pageTitle={t("consignments.tabSettlement")} subtitle={t("consignments.pageDescription")}>
+      <PageHeader
+        icon={<ReceiptText className="h-6 w-6 text-app-accent" />}
+        title={t("consignments.tabSettlement")}
+        subtitle={t("consignments.pageDescription")}
+        breadcrumbs={[
+          { href: "/consignments", label: t("consignments.pageTitle") },
+          { label: t("consignments.tabSettlement") },
+        ]}
+        actions={
+          <Button type="button" appearance="text" color="secondary" onClick={() => router.push("/consignments")}>
+            <ArrowLeft className="h-4 w-4" />
+            {t("common.back")}
+          </Button>
+        }
+      />
+      <div className="flex-1 overflow-auto p-4 md:p-6 pb-28">
         {loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Panel title={t("consignments.settlementHeaderPanel")}>
               <div className="grid gap-4 lg:grid-cols-4">
                 <div className="space-y-1">
@@ -290,36 +306,34 @@ export default function ConsignmentSettlementNewPageClient() {
                 </div>
               )}
 
-              {rows.length > 0 && (
-                <div className="mt-3 flex justify-end">
-                  <p className="text-sm font-bold">
-                    {t("common.total")}: {totals.totalAmount.toFixed(2)} {t("common.currency")}
-                  </p>
-                </div>
-              )}
             </Panel>
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => router.push("/consignments")}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="button" onClick={() => void handleSubmit()} loading={submitting}>
-                {t("consignments.confirmSettlementAtomic")}
-              </Button>
-            </div>
           </div>
         )}
+      </div>
 
-        <InvoicePrintSystem
-          branding={invoicePrint.branding}
-          modalOpen={invoicePrint.modalOpen}
-          pendingData={invoicePrint.pendingData}
-          printPayload={invoicePrint.printPayload}
-          closeModal={invoicePrint.closeModal}
-          confirmPrint={invoicePrint.confirmPrint}
-        />
-        <ToastMessage message={toastMessage} variant={toastVariant} />
-      </ERPPage>
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-4 py-4 md:px-6">
+        <p className="text-sm font-bold">
+          {t("common.total")}: {totals.totalAmount.toFixed(2)} {t("common.currency")}
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" appearance="outline" onClick={() => router.push("/consignments")}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" onClick={() => void handleSubmit()} loading={submitting}>
+            {t("consignments.confirmSettlementAtomic")}
+          </Button>
+        </div>
+      </div>
+
+      <InvoicePrintSystem
+        branding={invoicePrint.branding}
+        modalOpen={invoicePrint.modalOpen}
+        pendingData={invoicePrint.pendingData}
+        printPayload={invoicePrint.printPayload}
+        closeModal={invoicePrint.closeModal}
+        confirmPrint={invoicePrint.confirmPrint}
+      />
+      <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
 }

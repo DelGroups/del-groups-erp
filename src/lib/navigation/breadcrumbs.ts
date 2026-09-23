@@ -80,6 +80,8 @@ const SEGMENT_I18N: Record<string, string> = {
   "initial-balance": "nav.items.initialBalances",
   "opening-balances": "nav.items.financialOpeningBalances",
   consignments: "nav.items.consignments",
+  dispatch: "consignments.opTypeDispatch",
+  settlement: "consignments.opTypeActualSale",
   contracts: "nav.items.contracts",
   commissions: "nav.items.commissions",
   comissions: "nav.items.commissions",
