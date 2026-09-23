@@ -107,10 +107,11 @@ import ProductCombobox from "@/components/products/ProductCombobox";
 import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
-import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import {
   formControlClass,
   formLabelClass,
+  formTableCompactControlClass,
+  formTableCompactSelectClass,
   formTableInputClass,
   formTextareaClass,
 } from "@/components/ui/form-field-styles";
@@ -374,6 +375,7 @@ export default function UniversalInvoiceForm({
   });
 
   const [items, setItems] = useState<SaleItem[]>(() => createEmptySaleItems(5));
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [payments, setPayments] = useState<SalePayment[]>([
     { id: "1", account_id: "", method: "Nəğd", amount: 0 },
   ]);
@@ -463,6 +465,7 @@ export default function UniversalInvoiceForm({
       voen: "",
     });
     setItems(createEmptySaleItems(5));
+    setSelectedRowIds(new Set());
     setPayments([{ id: "1", account_id: "", method: "Nəğd", amount: 0 }]);
     setProductSelectorOpen(false);
     setProductSelectorTargetRowId(null);
@@ -516,6 +519,7 @@ export default function UniversalInvoiceForm({
           (w) => (w.warehouse_type ?? "general") !== POLYWOOD_WAREHOUSE_TYPE
         ) || warehouseRows[0];
     setItems(createEmptySaleItems(5, firstWh?.id || "", firstWh?.name || ""));
+    setSelectedRowIds(new Set());
 
     const accountRows = (acc ?? []) as unknown as Account[];
     setAccounts(accountRows);
@@ -587,6 +591,7 @@ export default function UniversalInvoiceForm({
     setAdditionalExpenses(parseDocumentAdditionalExpenses(sale.additional_expenses));
     if (sale.items.length > 0) {
       setItems(sale.items);
+      setSelectedRowIds(new Set());
     }
     if (sale.payments.length > 0) {
       setPayments(sale.payments);
@@ -1147,6 +1152,36 @@ export default function UniversalInvoiceForm({
   const removeRow = (id: string) => {
     if (items.length === 1) return;
     setItems((prev) => prev.filter((row) => row.id !== id));
+    setSelectedRowIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleRowSelected = (id: string) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllRows = () => {
+    setSelectedRowIds((prev) =>
+      prev.size === items.length ? new Set() : new Set(items.map((row) => row.id))
+    );
+  };
+
+  const removeSelectedRows = () => {
+    if (selectedRowIds.size === 0) return;
+    setItems((prev) => {
+      const remaining = prev.filter((row) => !selectedRowIds.has(row.id));
+      return remaining.length > 0 ? remaining : prev;
+    });
+    setSelectedRowIds(new Set());
   };
 
   const addPaymentRow = () => {
@@ -1881,6 +1916,25 @@ export default function UniversalInvoiceForm({
             </div>
           ) : null}
 
+          {selectedRowIds.size > 0 ? (
+            <div className="flex items-center justify-between gap-3 border-b border-rose-200 bg-rose-50 px-4 py-2">
+              <span className="text-xs font-semibold text-rose-800">
+                {t("invoice.rowsSelectedCount", { count: selectedRowIds.size })}
+              </span>
+              <button
+                type="button"
+                onClick={removeSelectedRows}
+                disabled={documentLocked}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-rose-600 px-3 text-xs font-bold text-white shadow-sm hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {t("invoice.deleteSelected", { count: selectedRowIds.size })}
+                </span>
+              </button>
+            </div>
+          ) : null}
+
           <div className="relative z-0 overflow-visible border-b border-amber-200 bg-amber-50 px-4 py-3">
             <BarcodeScanField onScan={handleBarcodeScan} disabled={saving} />
           </div>
@@ -1889,6 +1943,22 @@ export default function UniversalInvoiceForm({
             <table className="app-table w-full text-left text-sm">
               <thead>
                 <tr>
+                  <th className={cn(tableColClass, "w-9")}>
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && selectedRowIds.size === items.length}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate =
+                            selectedRowIds.size > 0 && selectedRowIds.size < items.length;
+                        }
+                      }}
+                      onChange={toggleSelectAllRows}
+                      disabled={documentLocked}
+                      aria-label={t("invoice.selectAllRows")}
+                      className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
+                    />
+                  </th>
                   <th className={cn(tableColClass, "w-10")}>№</th>
                   <th className="min-w-[220px]">{t("invoice.productName")}</th>
                   {!polywoodOnly ? (
@@ -1898,7 +1968,7 @@ export default function UniversalInvoiceForm({
                   {!polywoodOnly ? (
                     <th className={cn(tableColClass, "min-w-[5.5rem] w-24")}>{t("invoice.unit")}</th>
                   ) : null}
-                  <th className={cn(tableColClass, "min-w-[8rem] w-32")}>{t("forms.price")}</th>
+                  <th className={cn(tableColClass, "min-w-[12rem] w-52")}>{t("forms.price")}</th>
                   <th className={cn(tableColClass, "min-w-[7rem] w-28")}>{t("invoice.lineDiscount")}</th>
                   <th className="min-w-[10rem] w-40">{t("invoice.info")}</th>
                   <th className={cn(tableColClass, "min-w-[7rem] w-28 text-right")}>{t("forms.lineTotal")}</th>
@@ -1907,7 +1977,23 @@ export default function UniversalInvoiceForm({
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
                 {items.map((row, idx) => (
-                  <tr key={row.id} className="overflow-visible">
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      "overflow-visible",
+                      selectedRowIds.has(row.id) && "bg-rose-50/60"
+                    )}
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIds.has(row.id)}
+                        onChange={() => toggleRowSelected(row.id)}
+                        disabled={documentLocked}
+                        aria-label={t("invoice.selectRow")}
+                        className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
+                      />
+                    </td>
                     <td className="font-mono text-app-muted">{idx + 1}</td>
                     <td className="relative overflow-visible">
                       <div className="min-w-[220px]">
@@ -2232,16 +2318,16 @@ export default function UniversalInvoiceForm({
                       </td>
                     ) : null}
                     <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={row.unit_price}
-                        onChange={(e) =>
-                          handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
-                        }
-                        className={`${INVOICE_TABLE_INPUT} font-mono`}
-                      />
-                      <div className="mt-1 flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={row.unit_price}
+                          onChange={(e) =>
+                            handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
+                          }
+                          className={cn(formTableCompactControlClass, "min-w-0 flex-[1.3] font-mono")}
+                        />
                         <select
                           value={row.price_tier || "retail"}
                           disabled={documentLocked || isOfficial || !row.product_id}
@@ -2262,50 +2348,48 @@ export default function UniversalInvoiceForm({
                               }),
                             });
                           }}
-                          className={`${INVOICE_TABLE_INPUT} text-[10px]`}
+                          className={cn(formTableCompactSelectClass, "flex-1")}
                           title={t("invoice.priceTier")}
                         >
                           <option value="retail">{t("invoice.priceTierRetail")}</option>
                           <option value="wholesale">{t("invoice.priceTierWholesale")}</option>
                           <option value="distributor">{t("invoice.priceTierDistributor")}</option>
                         </select>
-                        <div className="flex gap-1">
-                          <select
-                            value={row.currency || "AZN"}
-                            disabled={documentLocked || isOfficial || !row.product_id}
-                            onChange={(e) => {
-                              const nextCurrency = e.target.value as InvoiceCurrency;
-                              handleItemChange(row.id, {
-                                currency: nextCurrency,
-                                exchange_rate:
-                                  nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
-                              });
-                            }}
-                            className={`${INVOICE_TABLE_INPUT} text-[10px]`}
-                            title={t("invoice.lineCurrency")}
-                          >
-                            <option value="AZN">AZN</option>
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                          </select>
-                          {row.currency && row.currency !== "AZN" ? (
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.0001"
-                              value={row.exchange_rate || 1}
-                              disabled={documentLocked}
-                              onChange={(e) =>
-                                handleItemChange(row.id, {
-                                  exchange_rate: Number(e.target.value) || 1,
-                                })
-                              }
-                              className={`${INVOICE_TABLE_INPUT} w-16 text-[10px] font-mono`}
-                              title={t("invoice.exchangeRate")}
-                            />
-                          ) : null}
-                        </div>
+                        <select
+                          value={row.currency || "AZN"}
+                          disabled={documentLocked || isOfficial || !row.product_id}
+                          onChange={(e) => {
+                            const nextCurrency = e.target.value as InvoiceCurrency;
+                            handleItemChange(row.id, {
+                              currency: nextCurrency,
+                              exchange_rate: nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
+                            });
+                          }}
+                          className={cn(formTableCompactSelectClass, "flex-[0.8]")}
+                          title={t("invoice.lineCurrency")}
+                        >
+                          <option value="AZN">AZN</option>
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                        </select>
                       </div>
+                      {row.currency && row.currency !== "AZN" ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          value={row.exchange_rate || 1}
+                          disabled={documentLocked}
+                          onChange={(e) =>
+                            handleItemChange(row.id, {
+                              exchange_rate: Number(e.target.value) || 1,
+                            })
+                          }
+                          className={cn(formTableCompactControlClass, "mt-1 font-mono")}
+                          placeholder={t("invoice.exchangeRate")}
+                          title={t("invoice.exchangeRate")}
+                        />
+                      ) : null}
                       {(() => {
                         const rowProduct = products.find((product) => product.id === row.product_id);
                         const metricLine =
@@ -2354,57 +2438,49 @@ export default function UniversalInvoiceForm({
                       {row.total.toFixed(2)}
                     </td>
                     <td className="text-right">
-                      {isPageLayout ? (
-                        <TableRowActionsMenu
-                          items={[
-                            ...(() => {
-                              const rowProduct = products.find(
-                                (product) => product.id === row.product_id
-                              );
-                              if (
-                                polywoodOnly ||
-                                !rowProduct ||
-                                !isDimensionalInvoiceProduct(rowProduct) ||
-                                !row.warehouse_id
-                              ) {
-                                return [];
+                      <div className="flex items-center justify-end gap-2">
+                        {(() => {
+                          const rowProduct = products.find(
+                            (product) => product.id === row.product_id
+                          );
+                          if (
+                            polywoodOnly ||
+                            !rowProduct ||
+                            !isDimensionalInvoiceProduct(rowProduct) ||
+                            !row.warehouse_id
+                          ) {
+                            return null;
+                          }
+                          return (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCutPieceModal({
+                                  rowId: row.id,
+                                  productId: row.product_id,
+                                  warehouseId: row.warehouse_id,
+                                  productName: row.product_name,
+                                  defaultWidthM: Number(rowProduct.base_width) || 0,
+                                })
                               }
-                              return [
-                                {
-                                  key: "cut",
-                                  label: t("invoice.selectCut"),
-                                  icon: <Scissors className="h-4 w-4" />,
-                                  onClick: () =>
-                                    setCutPieceModal({
-                                      rowId: row.id,
-                                      productId: row.product_id,
-                                      warehouseId: row.warehouse_id,
-                                      productName: row.product_name,
-                                      defaultWidthM: Number(rowProduct.base_width) || 0,
-                                    }),
-                                  disabled: documentLocked,
-                                },
-                              ];
-                            })(),
-                            {
-                              key: "remove",
-                              label: t("forms.remove"),
-                              icon: <Trash2 className="h-4 w-4" />,
-                              onClick: () => removeRow(row.id),
-                              variant: "destructive",
-                              disabled: documentLocked,
-                            },
-                          ]}
-                        />
-                      ) : (
+                              disabled={documentLocked}
+                              title={t("invoice.selectCut")}
+                              className="text-app-muted hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Scissors className="h-4 w-4" />
+                            </button>
+                          );
+                        })()}
                         <button
                           type="button"
                           onClick={() => removeRow(row.id)}
-                          className="text-app-muted hover:text-rose-600"
+                          disabled={documentLocked}
+                          title={t("forms.remove")}
+                          className="text-app-muted hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}

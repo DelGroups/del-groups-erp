@@ -37,3 +37,14 @@ export const formHintClass =
 /** Compact but tappable controls inside editable data-table rows. */
 export const formTableInputClass =
   "app-table-input [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+/**
+ * Extra-compact controls for inline groups within a single table cell
+ * (e.g. price + tier + currency on one row). Deliberately bypasses
+ * `.app-table-input`'s 2.5rem min-height so several controls can sit
+ * side by side without inflating row height.
+ */
+export const formTableCompactControlClass =
+  "h-8 min-h-0 w-full min-w-0 rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-input)] px-2 text-[11px] leading-none text-[color:var(--erp-text-main)] shadow-none transition-[border-color,box-shadow] duration-[var(--erp-duration-normal)] focus:border-[color:var(--erp-color-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--erp-border-focus)] disabled:cursor-not-allowed disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+export const formTableCompactSelectClass = `${formTableCompactControlClass} cursor-pointer appearance-auto pr-5`;

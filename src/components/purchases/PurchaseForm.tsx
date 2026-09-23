@@ -2,10 +2,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, CreditCard, FileText, Plus, Trash2, User, X } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { supabase } from "@/lib/supabase";
 import type {
   InvoiceCurrency,
-  PriceTier,
   Product,
   PurchaseLineItem,
   PurchaseRecord,
@@ -22,17 +22,6 @@ import {
   generatePurchaseInvoiceNumber,
   type PurchasePaymentRow,
 } from "@/lib/purchases/helpers";
-
-/** Buy-price-tier resolution: wholesale/distributor override the flat buy_price only. */
-function resolvePurchaseUnitPrice(product: Product, tier: PriceTier | null | undefined): number {
-  if (tier === "wholesale" && product.buy_price_wholesale != null) {
-    return Number(product.buy_price_wholesale) || 0;
-  }
-  if (tier === "distributor" && product.buy_price_distributor != null) {
-    return Number(product.buy_price_distributor) || 0;
-  }
-  return Number(product.buy_price) || 0;
-}
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { submitPurchase, updatePurchase } from "@/lib/purchases/submitPurchase";
@@ -46,7 +35,11 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
-import { formTableInputClass } from "@/components/ui/form-field-styles";
+import {
+  formTableCompactControlClass,
+  formTableCompactSelectClass,
+  formTableInputClass,
+} from "@/components/ui/form-field-styles";
 import {
   collectPurchaseSubmitPreflightIssues,
   preflightMessage,
@@ -186,6 +179,7 @@ export default function PurchaseForm({
       ? initialPurchase.items
       : createEmptyPurchaseLineItems(DEFAULT_INVOICE_ROW_COUNT)
   );
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [payments, setPayments] = useState<PurchasePaymentRow[]>([
     createEmptyPurchasePayment(),
   ]);
@@ -255,6 +249,7 @@ export default function PurchaseForm({
     setNotes(initialPurchase.notes || "");
     if (initialPurchase.items?.length) {
       setItems(initialPurchase.items);
+      setSelectedRowIds(new Set());
     }
     const rawExpenses = (initialPurchase as PurchaseRecord & { additional_expenses?: unknown })
       .additional_expenses;
@@ -319,15 +314,13 @@ export default function PurchaseForm({
 
   // Official/VAT invoices must stay single-currency AZN - force it the moment
   // the document is marked official, in case a row was already set to a
-  // foreign currency/tier before.
+  // foreign currency before.
   const handleIsOfficialChange = (next: boolean) => {
     setIsOfficial(next);
     if (!next) return;
     setItems((prev) =>
       prev.map((row) =>
-        (row.currency && row.currency !== "AZN") || (row.price_tier && row.price_tier !== "retail")
-          ? { ...row, currency: "AZN", exchange_rate: 1, price_tier: "retail" }
-          : row
+        row.currency && row.currency !== "AZN" ? { ...row, currency: "AZN", exchange_rate: 1 } : row
       )
     );
   };
@@ -437,14 +430,12 @@ export default function PurchaseForm({
     const existingRow = items.find((r) => r.id === rowId);
     const qty = existingRow?.quantity || 1;
     const metric = isMetricProduct(product);
-    const priceTier = existingRow?.price_tier || selectedSupplier?.default_price_tier || "retail";
-    const unitPrice = metric ? 0 : resolvePurchaseUnitPrice(product, priceTier);
+    const unitPrice = metric ? 0 : Number(product.buy_price) || 0;
     updateItem(rowId, {
       product_id: product.id,
       product_code: product.code,
       product_name: product.name,
       unit: metric ? "Metr" : product.unit || "Ədəd",
-      price_tier: priceTier,
       unit_price: unitPrice,
       quantity: metric ? 0 : qty,
       total: metric ? 0 : calcPurchaseLineTotal(qty, unitPrice),
@@ -464,15 +455,13 @@ export default function PurchaseForm({
     product: Product,
     quantity: number
   ): PurchaseLineItem => {
-    const priceTier = row.price_tier || selectedSupplier?.default_price_tier || "retail";
-    const unitPrice = resolvePurchaseUnitPrice(product, priceTier);
+    const unitPrice = Number(product.buy_price) || 0;
     return {
       ...row,
       product_id: product.id,
       product_code: product.code,
       product_name: product.name,
       unit: product.unit || "Ədəd",
-      price_tier: priceTier,
       unit_price: unitPrice,
       quantity,
       total: calcPurchaseLineTotal(quantity, unitPrice),
@@ -527,6 +516,36 @@ export default function PurchaseForm({
   const removeRow = (id: string) => {
     if (items.length === 1) return;
     setItems((prev) => prev.filter((row) => row.id !== id));
+    setSelectedRowIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleRowSelected = (id: string) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllRows = () => {
+    setSelectedRowIds((prev) =>
+      prev.size === items.length ? new Set() : new Set(items.map((row) => row.id))
+    );
+  };
+
+  const removeSelectedRows = () => {
+    if (selectedRowIds.size === 0) return;
+    setItems((prev) => {
+      const remaining = prev.filter((row) => !selectedRowIds.has(row.id));
+      return remaining.length > 0 ? remaining : prev;
+    });
+    setSelectedRowIds(new Set());
   };
 
   const addPaymentRow = () => {
@@ -912,6 +931,25 @@ export default function PurchaseForm({
             </button>
           </div>
 
+          {selectedRowIds.size > 0 ? (
+            <div className="flex items-center justify-between gap-3 border-b border-rose-200 bg-rose-50 px-4 py-2">
+              <span className="text-xs font-semibold text-rose-800">
+                {t("invoice.rowsSelectedCount", { count: selectedRowIds.size })}
+              </span>
+              <button
+                type="button"
+                onClick={removeSelectedRows}
+                disabled={documentLocked}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-rose-600 px-3 text-xs font-bold text-white shadow-sm hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {t("invoice.deleteSelected", { count: selectedRowIds.size })}
+                </span>
+              </button>
+            </div>
+          ) : null}
+
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-3">
             <BarcodeScanField
               onScan={handleBarcodeScan}
@@ -924,17 +962,43 @@ export default function PurchaseForm({
             <table className="app-table w-full text-left text-sm">
               <thead>
                 <tr>
+                  <th className="w-9">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && selectedRowIds.size === items.length}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate =
+                            selectedRowIds.size > 0 && selectedRowIds.size < items.length;
+                        }
+                      }}
+                      onChange={toggleSelectAllRows}
+                      disabled={documentLocked}
+                      aria-label={t("invoice.selectAllRows")}
+                      className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
+                    />
+                  </th>
                   <th className="w-10">№</th>
                   <th className="min-w-[240px]">{t("dashboard.product")}</th>
                   <th className="min-w-[7rem] w-28">{t("forms.quantity")}</th>
-                  <th className="min-w-[8rem] w-32">{t("forms.buyPrice")}</th>
+                  <th className="min-w-[10rem] w-44">{t("forms.buyPrice")}</th>
                   <th className="min-w-[7rem] w-28 text-right">{t("forms.lineTotal")}</th>
                   <th className="w-12 text-center">{t("forms.remove")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((row, idx) => (
-                  <tr key={row.id}>
+                  <tr key={row.id} className={cn(selectedRowIds.has(row.id) && "bg-rose-50/60")}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIds.has(row.id)}
+                        onChange={() => toggleRowSelected(row.id)}
+                        disabled={documentLocked}
+                        aria-label={t("invoice.selectRow")}
+                        className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
+                      />
+                    </td>
                     <td className="font-mono text-app-muted">{idx + 1}</td>
                     <td className="relative overflow-visible">
                       <div className="flex min-w-[240px] gap-1">
@@ -1000,76 +1064,52 @@ export default function PurchaseForm({
                       ) : null}
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={row.unit_price}
-                        onChange={(e) =>
-                          updateItem(row.id, { unit_price: Number(e.target.value) || 0 })
-                        }
-                        className={`${formTableInputClass} font-mono`}
-                      />
-                      <div className="mt-1 flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.unit_price}
+                          onChange={(e) =>
+                            updateItem(row.id, { unit_price: Number(e.target.value) || 0 })
+                          }
+                          className={cn(formTableCompactControlClass, "min-w-0 flex-[1.6] font-mono")}
+                        />
                         <select
-                          value={row.price_tier || "retail"}
+                          value={row.currency || "AZN"}
                           disabled={documentLocked || isOfficial || !row.product_id}
                           onChange={(e) => {
-                            const nextTier = e.target.value as PriceTier;
-                            const product = productList.find((item) => item.id === row.product_id);
-                            const unitPrice = product
-                              ? resolvePurchaseUnitPrice(product, nextTier)
-                              : row.unit_price;
+                            const nextCurrency = e.target.value as InvoiceCurrency;
                             updateItem(row.id, {
-                              price_tier: nextTier,
-                              unit_price: unitPrice,
-                              total: calcPurchaseLineTotal(row.quantity, unitPrice),
+                              currency: nextCurrency,
+                              exchange_rate: nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
                             });
                           }}
-                          className={`${formTableInputClass} text-[10px]`}
-                          title={t("invoice.priceTier")}
+                          className={cn(formTableCompactSelectClass, "flex-1")}
+                          title={t("invoice.lineCurrency")}
                         >
-                          <option value="retail">{t("invoice.priceTierRetail")}</option>
-                          <option value="wholesale">{t("invoice.priceTierWholesale")}</option>
-                          <option value="distributor">{t("invoice.priceTierDistributor")}</option>
+                          <option value="AZN">AZN</option>
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
                         </select>
-                        <div className="flex gap-1">
-                          <select
-                            value={row.currency || "AZN"}
-                            disabled={documentLocked || isOfficial || !row.product_id}
-                            onChange={(e) => {
-                              const nextCurrency = e.target.value as InvoiceCurrency;
-                              updateItem(row.id, {
-                                currency: nextCurrency,
-                                exchange_rate:
-                                  nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
-                              });
-                            }}
-                            className={`${formTableInputClass} text-[10px]`}
-                            title={t("invoice.lineCurrency")}
-                          >
-                            <option value="AZN">AZN</option>
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                          </select>
-                          {row.currency && row.currency !== "AZN" ? (
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.0001"
-                              value={row.exchange_rate || 1}
-                              disabled={documentLocked}
-                              onChange={(e) =>
-                                updateItem(row.id, {
-                                  exchange_rate: Number(e.target.value) || 1,
-                                })
-                              }
-                              className={`${formTableInputClass} w-16 text-[10px] font-mono`}
-                              title={t("invoice.exchangeRate")}
-                            />
-                          ) : null}
-                        </div>
                       </div>
+                      {row.currency && row.currency !== "AZN" ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          value={row.exchange_rate || 1}
+                          disabled={documentLocked}
+                          onChange={(e) =>
+                            updateItem(row.id, {
+                              exchange_rate: Number(e.target.value) || 1,
+                            })
+                          }
+                          className={cn(formTableCompactControlClass, "mt-1 font-mono")}
+                          placeholder={t("invoice.exchangeRate")}
+                          title={t("invoice.exchangeRate")}
+                        />
+                      ) : null}
                       {(() => {
                         const product = productList.find((item) => item.id === row.product_id);
                         if (!product || !isMetricProduct(product) || !row.unit_price) return null;
@@ -1090,7 +1130,9 @@ export default function PurchaseForm({
                       <button
                         type="button"
                         onClick={() => removeRow(row.id)}
-                        className="text-app-muted hover:text-rose-600"
+                        disabled={documentLocked}
+                        title={t("forms.remove")}
+                        className="text-app-muted hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
