@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { PriceTier, Supplier } from "@/types/database.types";
+import type { Supplier } from "@/types/database.types";
 import type { EntityType } from "@/lib/customers/entityType";
 
 export interface SupplierUpsertInput {
@@ -12,7 +12,6 @@ export interface SupplierUpsertInput {
   voen: string | null;
   entity_type: EntityType;
   balance: number;
-  default_price_tier?: PriceTier;
 }
 
 export async function fetchSuppliers(): Promise<Supplier[]> {
@@ -61,7 +60,6 @@ export async function upsertSupplier(input: SupplierUpsertInput): Promise<Suppli
     voen: input.voen,
     entity_type: input.entity_type,
     balance: input.balance,
-    default_price_tier: input.default_price_tier || "retail",
   };
 
   if (input.id) {

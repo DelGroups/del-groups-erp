@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useSuppliers, useUpsertSupplier } from "@/hooks/useSuppliers";
-import type { PriceTier, Supplier } from "@/types/database.types";
+import type { Supplier } from "@/types/database.types";
 import type { EntityType } from "@/lib/customers/entityType";
 import { useProcurementConfig } from "@/hooks/useProcurementConfig";
 import { formatSupplierScore, weightedSupplierScore } from "@/lib/purchases/supplierScore";
@@ -36,7 +36,6 @@ const EMPTY_FORM = {
   voen: "",
   entity_type: "physical" as EntityType,
   balance: "0.00",
-  default_price_tier: "retail" as PriceTier,
 };
 
 export default function SuppliersPage() {
@@ -79,7 +78,6 @@ export default function SuppliersPage() {
         voen: formData.entity_type === "legal" ? formData.voen.trim() : formData.voen.trim() || null,
         entity_type: formData.entity_type,
         balance: parseFloat(formData.balance) || 0,
-        default_price_tier: formData.default_price_tier,
       });
       setIsDrawerOpen(false);
       setEditingSupplierId(null);
@@ -134,7 +132,6 @@ export default function SuppliersPage() {
       voen: supplier.voen || "",
       entity_type: supplier.entity_type === "legal" ? "legal" : "physical",
       balance: String(supplier.balance ?? 0),
-      default_price_tier: supplier.default_price_tier || "retail",
     });
     setIsDrawerOpen(true);
   };
@@ -293,9 +290,6 @@ export default function SuppliersPage() {
         onInputChange={handleInputChange}
         onEntityTypeChange={(entityType) =>
           setFormData((current) => ({ ...current, entity_type: entityType }))
-        }
-        onDefaultPriceTierChange={(tier) =>
-          setFormData((current) => ({ ...current, default_price_tier: tier }))
         }
         onSubmit={handleSubmit}
       />

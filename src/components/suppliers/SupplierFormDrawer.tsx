@@ -5,9 +5,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { Drawer } from "@/components/ui/drawer";
 import Button from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { formInputClass, formSelectClass } from "@/components/ui/form-field-styles";
+import { formInputClass } from "@/components/ui/form-field-styles";
 import type { EntityType } from "@/lib/customers/entityType";
-import type { PriceTier } from "@/types/database.types";
 
 export const SUPPLIER_FORM_ID = "supplier-form";
 
@@ -20,7 +19,6 @@ export interface SupplierFormValues {
   voen: string;
   entity_type: EntityType;
   balance: string;
-  default_price_tier: PriceTier;
 }
 
 interface SupplierFormDrawerProps {
@@ -31,7 +29,6 @@ interface SupplierFormDrawerProps {
   onClose: () => void;
   onInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onEntityTypeChange: (entityType: EntityType) => void;
-  onDefaultPriceTierChange: (tier: PriceTier) => void;
   onSubmit: (event: React.FormEvent) => void;
 }
 
@@ -43,7 +40,6 @@ export default function SupplierFormDrawer({
   onClose,
   onInputChange,
   onEntityTypeChange,
-  onDefaultPriceTierChange,
   onSubmit,
 }: SupplierFormDrawerProps) {
   const { t } = useI18n();
@@ -168,18 +164,6 @@ export default function SupplierFormDrawer({
             onChange={onInputChange}
             className={formInputClass}
           />
-        </FormField>
-
-        <FormField label={t("customers.defaultPriceTier")}>
-          <select
-            value={formData.default_price_tier}
-            onChange={(e) => onDefaultPriceTierChange(e.target.value as PriceTier)}
-            className={formSelectClass}
-          >
-            <option value="retail">{t("customers.priceTierRetail")}</option>
-            <option value="wholesale">{t("customers.priceTierWholesale")}</option>
-            <option value="distributor">{t("customers.priceTierDistributor")}</option>
-          </select>
         </FormField>
 
         <FormField label={t("suppliers.initialDebt")}>

@@ -76,7 +76,6 @@ export function purchaseLineItemsToRows(
     unit: item.unit || "Ədəd",
     unit_price: item.unit_price,
     total_price: item.total,
-    price_tier: item.price_tier,
     currency: item.currency,
     exchange_rate: item.exchange_rate,
   }));

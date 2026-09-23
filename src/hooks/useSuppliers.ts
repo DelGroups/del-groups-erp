@@ -31,7 +31,6 @@ export function useUpsertSupplier() {
         voen: input.voen,
         entity_type: input.entity_type,
         balance: input.balance,
-        default_price_tier: input.default_price_tier || "retail",
         created_at: new Date().toISOString(),
         quality_score: null,
         delivery_speed_score: null,

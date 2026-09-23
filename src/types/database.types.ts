@@ -267,9 +267,6 @@ export interface Product {
   /** Optional price-tier overrides; null means "fall back to sell_price" (the retail tier) */
   price_wholesale?: number | null;
   price_distributor?: number | null;
-  /** Optional buy-price-tier overrides; null means "fall back to buy_price" */
-  buy_price_wholesale?: number | null;
-  buy_price_distributor?: number | null;
   stock: number | null;
   min_stock?: number | null;
   min_stock_level?: number | null;
@@ -771,7 +768,6 @@ export interface Supplier {
   quality_score?: number | null;
   delivery_speed_score?: number | null;
   rating_count?: number | null;
-  default_price_tier?: PriceTier | null;
   created_at?: string | null;
 }
 
@@ -788,8 +784,6 @@ export interface PurchaseLineItem {
   metric_receive_mode?: "full_bars" | "custom_pieces" | null;
   metric_full_bar_count?: number;
   metric_custom_lengths?: string;
-  /** Which product buy-price column unit_price was resolved from; undefined = retail */
-  price_tier?: PriceTier;
   /** Line's own currency; undefined = AZN */
   currency?: InvoiceCurrency;
   /** Rate to convert this line into AZN for the invoice's blended total; undefined = 1 */
@@ -806,7 +800,6 @@ export interface PurchaseItemRow {
   unit?: string | null;
   unit_price: number;
   total_price: number;
-  price_tier?: PriceTier;
   currency?: InvoiceCurrency;
   exchange_rate?: number;
 }
