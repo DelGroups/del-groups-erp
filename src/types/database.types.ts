@@ -941,6 +941,7 @@ export const PERMISSION_MODULES = [
       { key: "can_manage_products", label: "Məhsulları idarə etmək" },
       { key: "can_manage_warehouses", label: "Anbarları idarə etmək" },
       { key: "can_writeoff_inventory", label: "Zədələnmə çıxışı etmək" },
+      { key: "can_unpost_inventory", label: "Təsdiqlənmiş anbar sənədini qaralamaya qaytarmaq" },
       { key: "can_view_warehouse_slips", label: "Anbar qaimələrini görmək" },
       { key: "can_approve_warehouse_slips", label: "Anbar qaimələrini təsdiqləmək" },
       { key: "can_send_to_warehouse", label: "Fakturanı anbara göndərmək" },

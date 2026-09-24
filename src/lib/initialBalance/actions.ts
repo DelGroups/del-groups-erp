@@ -10,7 +10,7 @@ import type {
   InitialBalanceDocument,
   InitialBalanceEntryType,
 } from "@/lib/initialBalance/types";
-import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
+import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { Product } from "@/types/database.types";
 
@@ -254,7 +254,8 @@ async function insertMetricPieces(
   productId: string,
   warehouseId: string,
   pieceLengths: number[],
-  fullSheetLengthM: number
+  fullSheetLengthM: number,
+  sourceDocumentId: string
 ): Promise<number> {
   const now = new Date().toISOString();
   const rows = pieceLengths.map((length) => {
@@ -267,6 +268,7 @@ async function insertMetricPieces(
       status: "available",
       notes: null,
       sale_item_id: null,
+      source_document_id: sourceDocumentId,
       barcode,
       qr_code: barcode,
       updated_at: now,
@@ -352,7 +354,8 @@ export async function postInitialBalanceDocumentAction(
           productId,
           warehouseId,
           pieceLengths,
-          barLengthM
+          barLengthM,
+          documentId
         );
         const newStock = await syncPolywoodProductStockFromPieces(admin, productId, warehouseId);
         const newBuy = calcWeightedBuyPrice(oldStock, oldBuy, addedQty, unitCost, newStock);
@@ -486,6 +489,71 @@ export async function cancelInitialBalanceDocumentAction(
 
     if (error) return { success: false, error: error.message };
     return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Deletes a draft. Drafts never touched stock or the ledger, so removal is
+ * safe; posted documents must be unposted first.
+ */
+export async function deleteInitialBalanceDraftAction(
+  documentId: string
+): Promise<InitialBalanceActionResult> {
+  try {
+    await requirePermissionAction("can_manage_products");
+    const admin = createSupabaseAdminClient();
+    const { data: header, error: headerError } = await admin
+      .from("inventory_initial_balances")
+      .select("status")
+      .eq("id", documentId)
+      .maybeSingle();
+
+    if (headerError) return { success: false, error: headerError.message };
+    if (!header) return { success: false, error: "Document not found" };
+    if (header.status !== "draft") {
+      return { success: false, error: "Only draft documents can be deleted" };
+    }
+
+    const { error } = await admin
+      .from("inventory_initial_balances")
+      .delete()
+      .eq("id", documentId)
+      .eq("status", "draft");
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Returns a posted document to draft. The `unpost_inventory_initial_balance`
+ * RPC reverses stock, FIFO batches, polywood pieces and any journal entries
+ * atomically, and refuses when stock from the document was already consumed.
+ */
+export async function unpostInitialBalanceDocumentAction(
+  documentId: string,
+  reason?: string
+): Promise<InitialBalanceActionResult<{ document_number: string }>> {
+  try {
+    const { user } = await requirePermissionAction("can_unpost_inventory");
+    if (!documentId) return { success: false, error: "Document ID is required" };
+
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin.rpc("unpost_inventory_initial_balance", {
+      p_document_id: documentId,
+      p_reason: reason?.trim() || null,
+      p_actor: user.id,
+    });
+
+    if (error) return { success: false, error: mapRpcError(error.message) };
+    const result = (data || {}) as { document_number?: string };
+    return { success: true, data: { document_number: result.document_number || "" } };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };
