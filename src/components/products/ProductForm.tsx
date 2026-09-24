@@ -195,6 +195,9 @@ export default function ProductForm({
 
   const metricMeasureUnit = isMetricMeasureUnit(form.unit);
   const showDimensionFields = !isServiceCategorySelected && !isComposite;
+  /** Length/width inputs only exist for dimensional products (progressive disclosure). */
+  // A metric unit implies a dimensional product (see handleUnitChange and the payload), so it also shows them.
+  const showDimensionInputs = showDimensionFields && (form.is_dimensional || metricMeasureUnit);
   const showPriceRows = showDimensionFields;
 
   const handleUnitChange = (unit: string) => {
@@ -204,6 +207,9 @@ export default function ProductForm({
       is_dimensional: form.is_dimensional || metric,
     });
   };
+
+  /** Dimension fields are hidden for non-dimensional products; clear them so stale values never submit. */
+  const clearedDimensions = { base_length: "", base_width: "" };
 
   const handleDimensionalToggle = (checked: boolean) => {
     const nextUnit = checked
@@ -216,6 +222,7 @@ export default function ProductForm({
     set({
       is_dimensional: checked,
       unit: nextUnit,
+      ...(checked ? {} : clearedDimensions),
     });
   };
 
@@ -228,6 +235,7 @@ export default function ProductForm({
       unit: serviceCategory ? "Xidmət" : form.unit,
       stock: serviceCategory ? "" : form.stock,
       min_stock: serviceCategory ? "" : form.min_stock,
+      ...(serviceCategory ? clearedDimensions : {}),
     });
   };
 
@@ -240,6 +248,7 @@ export default function ProductForm({
       unit: serviceCategory ? "Xidmət" : form.unit,
       stock: serviceCategory ? "" : form.stock,
       min_stock: serviceCategory ? "" : form.min_stock,
+      ...(serviceCategory ? clearedDimensions : {}),
     });
     if (serviceCategory) {
       setIsComposite(false);
@@ -253,6 +262,7 @@ export default function ProductForm({
       is_composite: checked,
       stock: checked ? "" : form.stock,
       is_dimensional: checked ? false : form.is_dimensional,
+      ...(checked ? clearedDimensions : {}),
     });
     if (!checked) {
       setBomRows([]);
@@ -358,14 +368,9 @@ export default function ProductForm({
           : form.is_dimensional || metricMeasureUnit,
       is_composite: isServiceCategorySelected ? false : isComposite,
       is_service: isServiceCategorySelected,
-      base_length:
-        !isServiceCategorySelected && (form.is_dimensional || metricMeasureUnit)
-          ? parseFieldOptionalNumber(form.base_length)
-          : null,
-      base_width:
-        !isServiceCategorySelected && (form.is_dimensional || form.unit === "Kvadrat Metr")
-          ? parseFieldOptionalNumber(form.base_width)
-          : null,
+      // Dimensions are only submitted when their fields are on screen.
+      base_length: showDimensionInputs ? parseFieldOptionalNumber(form.base_length) : null,
+      base_width: showDimensionInputs ? parseFieldOptionalNumber(form.base_width) : null,
       brand: form.brand.trim() || null,
       country_of_origin: form.country_of_origin.trim() || null,
       mfg_date: form.mfg_date || null,
@@ -724,28 +729,32 @@ export default function ProductForm({
                         ))}
                       </select>
                     </FormField>
-                    <FormField label={t("forms.standardBarLength")}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={form.base_length}
-                        onChange={(event) => set({ base_length: event.target.value })}
-                        placeholder={t("forms.lengthPlaceholder")}
-                        className={formInputClass}
-                      />
-                    </FormField>
-                    <FormField label={`${t("forms.baseWidth")} (m)`}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={form.base_width}
-                        onChange={(e) => set({ base_width: e.target.value })}
-                        placeholder={t("forms.widthPlaceholder")}
-                        className={formInputClass}
-                      />
-                    </FormField>
+                    {showDimensionInputs ? (
+                      <>
+                        <FormField label={t("forms.standardBarLength")}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={form.base_length}
+                            onChange={(event) => set({ base_length: event.target.value })}
+                            placeholder={t("forms.lengthPlaceholder")}
+                            className={formInputClass}
+                          />
+                        </FormField>
+                        <FormField label={`${t("forms.baseWidth")} (m)`}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={form.base_width}
+                            onChange={(e) => set({ base_width: e.target.value })}
+                            placeholder={t("forms.widthPlaceholder")}
+                            className={formInputClass}
+                          />
+                        </FormField>
+                      </>
+                    ) : null}
                   </div>
                 ) : null}
 
