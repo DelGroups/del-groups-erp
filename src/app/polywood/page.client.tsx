@@ -145,7 +145,7 @@ export default function PolywoodPageClient() {
             {t("polywood.import.pageTitle")}
           </Link>
           <Link
-            href="/inventory-audit"
+            href="/inventory/counts"
             className="rounded-lg border border-app bg-app-card-hover px-3 py-2 text-xs font-semibold text-app hover:bg-app-card-hover"
           >
             {t("nav.items.inventoryAudit")}

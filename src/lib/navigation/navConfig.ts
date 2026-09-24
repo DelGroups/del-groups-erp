@@ -84,7 +84,7 @@ export const NAV_SECTIONS: NavSection[] = [
         path: "/inventory/transfers/new",
         icon: ArrowRightLeft,
       },
-      { titleKey: "nav.items.inventoryAudit", path: "/inventory-audit", icon: ClipboardCheck },
+      { titleKey: "nav.items.inventoryAudit", path: "/inventory/counts", icon: ClipboardCheck },
       { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },
       { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
       { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },
@@ -180,8 +180,8 @@ export function isItemActive(pathname: string, path: string): boolean {
   if (path === "/inventory") {
     return pathname === "/inventory";
   }
-  if (path === "/inventory-audit") {
-    return pathname === "/inventory-audit" || pathname.startsWith("/inventory-audit/");
+  if (path === "/inventory/counts") {
+    return pathname === "/inventory/counts" || pathname.startsWith("/inventory/counts/");
   }
   if (path === "/products") {
     return (

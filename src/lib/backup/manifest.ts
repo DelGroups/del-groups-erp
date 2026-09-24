@@ -26,6 +26,8 @@ export const BACKUP_TABLES = [
   "sales_commissions",
   "warehouse_slips",
   "inventory_writeoffs",
+  "inventory_counts",
+  "inventory_count_items",
   "consignment_orders",
   "consignment_partners",
   "consignment_dispatches",

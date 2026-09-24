@@ -1,7 +1,6 @@
-import PageClient from "./page.client";
+import { permanentRedirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+/** The flat audit form was replaced by document-based counts. */
 export default function InventoryAuditPage() {
-  return <PageClient />;
+  permanentRedirect("/inventory/counts");
 }

@@ -17,7 +17,7 @@ const PATH_I18N: Record<string, string> = {
   "/polywood": "nav.items.polywood",
   "/contracts": "nav.items.contracts",
   "/consignments": "nav.items.consignments",
-  "/inventory-audit": "nav.items.inventoryAudit",
+  "/inventory/counts": "nav.items.inventoryAudit",
   "/warehouse/initial-balance": "nav.items.initialBalances",
   "/warehouse/initial-balance/new": "breadcrumb.initialBalanceNew",
   "/warehouses": "nav.items.warehouses",

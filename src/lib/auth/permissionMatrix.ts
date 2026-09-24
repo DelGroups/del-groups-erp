@@ -84,6 +84,7 @@ export const GRANULAR_PERMISSION_MODULES: GranularPermissionModule[] = [
       { key: "manage_transfers", label: "Anbar köçürmələrini idarə etmək", legacyKey: "can_manage_warehouses" },
       { key: "writeoff", label: "Zədələnmə çıxışı", legacyKey: "can_writeoff_inventory" },
       { key: "unpost", label: "Təsdiqlənmiş sənədi qaralamaya qaytarmaq", legacyKey: "can_unpost_inventory" },
+      { key: "post_count", label: "İnventarizasiyanı təsdiqləyib tətbiq etmək", legacyKey: "can_post_inventory_count" },
       { key: "view_slips", label: "Anbar qaimələrini görmək", legacyKey: "can_view_warehouse_slips" },
       { key: "approve_slips", label: "Anbar qaimələrini təsdiqləmək", legacyKey: "can_approve_warehouse_slips" },
       { key: "send_to_warehouse", label: "Fakturanı anbara göndərmək", legacyKey: "can_send_to_warehouse" },
