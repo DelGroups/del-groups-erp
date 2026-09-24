@@ -109,7 +109,7 @@ import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { ResizableTh } from "@/components/ui/table";
-import { useTableResize } from "@/hooks/useTableResize";
+import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import {
   formControlClass,
   formLabelClass,
@@ -296,20 +296,26 @@ const INVOICE_INPUT = formControlClass;
 const INVOICE_TABLE_INPUT = formTableInputClass;
 const INVOICE_TEXTAREA = formTextareaClass;
 
-/** Default column widths for the Sales invoice line-item grid — user-resizable via `useTableResize`. */
-const SALES_GRID_COLUMN_WIDTHS = {
-  select: 40,
-  idx: 40,
-  product: 350,
-  warehouse: 120,
-  quantity: 80,
-  unit: 100,
-  price: 320,
-  discount: 130,
-  info: 150,
-  total: 100,
-  actions: 50,
+/**
+ * Column layout for the Sales invoice line-item grid — user-resizable via
+ * `useTableResize`. Product name and notes are fluid (`grow`) and soak up all
+ * spare width; every other column is sized to fit its inline controls
+ * (content + 32px cell padding) and never stretches.
+ */
+const SALES_GRID_COLUMNS: TableColumnSpecs = {
+  select: { width: 40, minWidth: 36, maxWidth: 60 },
+  idx: { width: 44, minWidth: 36, maxWidth: 70 },
+  product: { width: 280, minWidth: 260, maxWidth: 1200, grow: 2 },
+  warehouse: { width: 130, minWidth: 100, maxWidth: 280 },
+  quantity: { width: 90, minWidth: 70, maxWidth: 180 },
+  unit: { width: 110, minWidth: 80, maxWidth: 220 },
+  price: { width: 320, minWidth: 316, maxWidth: 520 },
+  discount: { width: 150, minWidth: 140, maxWidth: 280 },
+  info: { width: 160, minWidth: 100, maxWidth: 900, grow: 1 },
+  total: { width: 110, minWidth: 80, maxWidth: 240 },
+  actions: { width: 56, minWidth: 50, maxWidth: 100 },
 };
+const SALES_GRID_POLYWOOD_HIDDEN = ["warehouse", "unit"] as const;
 
 function ItemsSectionWrap({
   isPageLayout,
@@ -320,12 +326,12 @@ function ItemsSectionWrap({
 }) {
   if (isPageLayout) {
     return (
-      <Card padding={false} className="overflow-visible border border-[color:var(--gt-border-color)]">
+      <Card padding={false} className="w-full overflow-visible border border-[color:var(--gt-border-color)]">
         {children}
       </Card>
     );
   }
-  return <div className="app-table-wrap overflow-visible">{children}</div>;
+  return <div className="app-table-wrap w-full overflow-visible">{children}</div>;
 }
 
 function BottomTabsWrap({
@@ -394,10 +400,6 @@ export default function UniversalInvoiceForm({
 
   const [items, setItems] = useState<SaleItem[]>(() => createEmptySaleItems(5));
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
-  const { widths: colWidths, startResize: startColResize } = useTableResize(
-    SALES_GRID_COLUMN_WIDTHS,
-    "sales-invoice-grid-columns"
-  );
   const [payments, setPayments] = useState<SalePayment[]>([
     { id: "1", account_id: "", method: "Nəğd", amount: 0 },
   ]);
@@ -428,6 +430,14 @@ export default function UniversalInvoiceForm({
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const canSaveInvoice = can("can_create_invoice");
   const polywoodOnly = invoiceMode === "polywood";
+  const {
+    containerRef: gridContainerRef,
+    tableProps: gridTableProps,
+    columnProps: gridColumnProps,
+  } = useTableResize(SALES_GRID_COLUMNS, {
+    storageKey: "sales-invoice-grid-columns-v2",
+    hiddenKeys: polywoodOnly ? SALES_GRID_POLYWOOD_HIDDEN : undefined,
+  });
 
   const customerOptions = useMemo(
     () => (isOfficial ? filterLegalCustomers(customers) : customers),
@@ -1968,23 +1978,17 @@ export default function UniversalInvoiceForm({
           </div>
 
           <div
+            ref={gridContainerRef}
             className={cn(
-              "overflow-x-auto overflow-y-visible",
+              "w-full overflow-x-auto overflow-y-visible",
               isPageLayout && "border-t border-[color:var(--gt-border-color)]"
             )}
           >
-            <table
-              className="app-table table-fixed text-left text-sm"
-              style={{ width: "max-content" }}
-            >
+            <table {...gridTableProps} className="app-table w-full text-left text-sm">
               <thead>
                 <tr>
                   <ResizableTh
-                    columnKey="select"
-                    width={colWidths.select}
-                    minWidth={36}
-                    maxWidth={60}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("select")}
                     className={tableColClass}
                   >
                     <input
@@ -2003,103 +2007,63 @@ export default function UniversalInvoiceForm({
                     />
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="idx"
-                    width={colWidths.idx}
-                    minWidth={32}
-                    maxWidth={60}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("idx")}
                     className={tableColClass}
                   >
                     №
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="product"
-                    width={colWidths.product}
-                    minWidth={200}
-                    maxWidth={900}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("product")}
                   >
                     {t("invoice.productName")}
                   </ResizableTh>
                   {!polywoodOnly ? (
                     <ResizableTh
-                      columnKey="warehouse"
-                      width={colWidths.warehouse}
-                      minWidth={90}
-                      maxWidth={260}
-                      onResizeStart={startColResize}
+                      {...gridColumnProps("warehouse")}
                       className={tableColClass}
                     >
                       {t("common.warehouse")}
                     </ResizableTh>
                   ) : null}
                   <ResizableTh
-                    columnKey="quantity"
-                    width={colWidths.quantity}
-                    minWidth={60}
-                    maxWidth={160}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("quantity")}
                     className={tableColClass}
                   >
                     {t("forms.quantity")}
                   </ResizableTh>
                   {!polywoodOnly ? (
                     <ResizableTh
-                      columnKey="unit"
-                      width={colWidths.unit}
-                      minWidth={70}
-                      maxWidth={200}
-                      onResizeStart={startColResize}
+                      {...gridColumnProps("unit")}
                       className={tableColClass}
                     >
                       {t("invoice.unit")}
                     </ResizableTh>
                   ) : null}
                   <ResizableTh
-                    columnKey="price"
-                    width={colWidths.price}
-                    minWidth={220}
-                    maxWidth={500}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("price")}
                     className={tableColClass}
                   >
                     {t("forms.price")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="discount"
-                    width={colWidths.discount}
-                    minWidth={100}
-                    maxWidth={260}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("discount")}
                     className={tableColClass}
                   >
                     {t("invoice.lineDiscount")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="info"
-                    width={colWidths.info}
-                    minWidth={90}
-                    maxWidth={320}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("info")}
                   >
                     {t("invoice.info")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="total"
-                    width={colWidths.total}
-                    minWidth={80}
-                    maxWidth={220}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("total")}
                     className={cn(tableColClass, "text-right")}
                   >
                     {t("forms.lineTotal")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="actions"
-                    width={colWidths.actions}
-                    minWidth={50}
-                    maxWidth={90}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("actions")}
                     className={cn(tableColClass, "text-right")}
                     aria-label={t("common.actions")}
                   />
@@ -2126,7 +2090,7 @@ export default function UniversalInvoiceForm({
                     </td>
                     <td className="font-mono text-app-muted">{idx + 1}</td>
                     <td className="relative overflow-visible">
-                      <div className="min-w-[220px]">
+                      <div className="w-full min-w-[220px]">
                         <ProductCombobox
                           instanceId={row.id}
                           products={

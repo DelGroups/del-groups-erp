@@ -36,7 +36,7 @@ import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { ResizableTh } from "@/components/ui/table";
-import { useTableResize } from "@/hooks/useTableResize";
+import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import {
   formTableCompactControlClass,
   formTableCompactSelectClass,
@@ -109,15 +109,19 @@ interface EmployeeOption {
   full_name: string | null;
 }
 
-/** Default column widths for the Purchase line-item grid — user-resizable via `useTableResize`. */
-const PURCHASE_GRID_COLUMN_WIDTHS = {
-  select: 40,
-  idx: 40,
-  product: 350,
-  quantity: 80,
-  price: 210,
-  total: 100,
-  actions: 50,
+/**
+ * Column layout for the Purchase line-item grid — user-resizable via
+ * `useTableResize`. Product name is the fluid column and absorbs all spare
+ * width; the rest are sized to fit their inline controls.
+ */
+const PURCHASE_GRID_COLUMNS: TableColumnSpecs = {
+  select: { width: 40, minWidth: 36, maxWidth: 60 },
+  idx: { width: 44, minWidth: 36, maxWidth: 70 },
+  product: { width: 320, minWidth: 272, maxWidth: 1400, grow: 1 },
+  quantity: { width: 90, minWidth: 70, maxWidth: 180 },
+  price: { width: 220, minWidth: 204, maxWidth: 420 },
+  total: { width: 110, minWidth: 80, maxWidth: 240 },
+  actions: { width: 90, minWidth: 60, maxWidth: 120 },
 };
 
 interface PurchaseFormProps {
@@ -193,10 +197,11 @@ export default function PurchaseForm({
       : createEmptyPurchaseLineItems(DEFAULT_INVOICE_ROW_COUNT)
   );
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
-  const { widths: colWidths, startResize: startColResize } = useTableResize(
-    PURCHASE_GRID_COLUMN_WIDTHS,
-    "purchase-invoice-grid-columns"
-  );
+  const {
+    containerRef: gridContainerRef,
+    tableProps: gridTableProps,
+    columnProps: gridColumnProps,
+  } = useTableResize(PURCHASE_GRID_COLUMNS, { storageKey: "purchase-invoice-grid-columns-v2" });
   const [payments, setPayments] = useState<PurchasePaymentRow[]>([
     createEmptyPurchasePayment(),
   ]);
@@ -975,19 +980,12 @@ export default function PurchaseForm({
             />
           </div>
 
-          <div className="overflow-x-auto overflow-y-visible">
-            <table
-              className="app-table table-fixed text-left text-sm"
-              style={{ width: "max-content" }}
-            >
+          <div ref={gridContainerRef} className="w-full overflow-x-auto overflow-y-visible">
+            <table {...gridTableProps} className="app-table w-full text-left text-sm">
               <thead>
                 <tr>
                   <ResizableTh
-                    columnKey="select"
-                    width={colWidths.select}
-                    minWidth={36}
-                    maxWidth={60}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("select")}
                   >
                     <input
                       type="checkbox"
@@ -1005,57 +1003,33 @@ export default function PurchaseForm({
                     />
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="idx"
-                    width={colWidths.idx}
-                    minWidth={32}
-                    maxWidth={60}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("idx")}
                   >
                     №
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="product"
-                    width={colWidths.product}
-                    minWidth={200}
-                    maxWidth={900}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("product")}
                   >
                     {t("dashboard.product")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="quantity"
-                    width={colWidths.quantity}
-                    minWidth={60}
-                    maxWidth={160}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("quantity")}
                   >
                     {t("forms.quantity")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="price"
-                    width={colWidths.price}
-                    minWidth={180}
-                    maxWidth={400}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("price")}
                   >
                     {t("forms.buyPrice")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="total"
-                    width={colWidths.total}
-                    minWidth={80}
-                    maxWidth={220}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("total")}
                     className="text-right"
                   >
                     {t("forms.lineTotal")}
                   </ResizableTh>
                   <ResizableTh
-                    columnKey="actions"
-                    width={colWidths.actions}
-                    minWidth={50}
-                    maxWidth={90}
-                    onResizeStart={startColResize}
+                    {...gridColumnProps("actions")}
                     className="text-center"
                   >
                     {t("forms.remove")}
@@ -1077,7 +1051,7 @@ export default function PurchaseForm({
                     </td>
                     <td className="font-mono text-app-muted">{idx + 1}</td>
                     <td className="relative overflow-visible">
-                      <div className="flex min-w-[240px] gap-1">
+                      <div className="flex w-full min-w-[240px] gap-1">
                         <div className="min-w-0 flex-1">
                           <ProductCombobox
                             instanceId={row.id}

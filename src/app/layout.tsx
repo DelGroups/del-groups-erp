@@ -6,6 +6,7 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import SonnerProvider from "@/components/providers/SonnerProvider";
 import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
+import { TableColumnResizer } from "@/components/ui/TableColumnResizer";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
 
 const inter = Inter({
@@ -73,6 +74,7 @@ export default function RootLayout({
               <I18nProvider>
                 {children}
                 <SonnerProvider />
+                <TableColumnResizer />
               </I18nProvider>
             </QueryProvider>
           </AuthProvider>
