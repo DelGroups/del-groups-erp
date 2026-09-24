@@ -68,8 +68,9 @@ CREATE TABLE IF NOT EXISTS public.inventory_counts (
   count_date            DATE NOT NULL DEFAULT CURRENT_DATE,
   warehouse_id          UUID NOT NULL REFERENCES public.warehouses(id),
   warehouse_name        TEXT,
-  category_id           UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+  -- Cycle-count scope, matched case-insensitively against product_category_paths.
   category_name         TEXT,
+  subcategory_name      TEXT CHECK (subcategory_name IS NULL OR category_name IS NOT NULL),
   status                TEXT NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'in_progress', 'review', 'posted')),
   responsible_name      TEXT,
@@ -422,6 +423,90 @@ BEGIN
 END;
 $$;
 
+-- ─── 4b. Category scope ─────────────────────────────────────────────────────
+
+-- Effective category → subcategory of every product. Most products carry the
+-- legacy text columns only; a linked categories row wins when present, and a
+-- linked child category supplies both levels (parent → itself).
+CREATE OR REPLACE VIEW public.product_category_paths
+WITH (security_invoker = true) AS
+SELECT
+  p.id AS product_id,
+  NULLIF(btrim(COALESCE(
+    CASE WHEN lc.parent_id IS NOT NULL THEN pc.name ELSE lc.name END,
+    p.category
+  )), '') AS category_name,
+  NULLIF(btrim(COALESCE(
+    CASE WHEN lc.parent_id IS NOT NULL THEN lc.name END,
+    sc.name,
+    p.subcategory
+  )), '') AS subcategory_name
+FROM public.products p
+LEFT JOIN public.categories lc ON lc.id = p.category_id
+LEFT JOIN public.categories pc ON pc.id = lc.parent_id
+LEFT JOIN public.categories sc ON sc.id = p.sub_category_id;
+
+GRANT SELECT ON public.product_category_paths TO authenticated, service_role;
+
+-- Stock-tracked products physically present in a warehouse: non-zero stock
+-- row (legacy warehouse-less rows count for the default warehouse), or
+-- available pieces for polywood. Set-based so it scales with the catalogue.
+CREATE OR REPLACE FUNCTION public.inventory_warehouse_product_ids(p_warehouse_id UUID)
+RETURNS TABLE (product_id UUID)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH wh AS (
+    SELECT id, COALESCE(is_default, FALSE) AS is_default
+    FROM public.warehouses
+    WHERE id = p_warehouse_id
+  )
+  SELECT p.id
+  FROM public.products p, wh
+  WHERE NOT COALESCE(p.is_service, FALSE)
+    AND NOT COALESCE(p.is_composite, FALSE)
+    AND CASE
+      WHEN p.inventory_mode = 'polywood' THEN EXISTS (
+        SELECT 1 FROM public.polywood_pieces pp
+        WHERE pp.product_id = p.id AND pp.warehouse_id = wh.id AND pp.status = 'available'
+      )
+      ELSE EXISTS (
+        SELECT 1 FROM public.warehouse_stocks ws
+        WHERE ws.product_id = p.id
+          AND COALESCE(ws.current_stock, 0) <> 0
+          AND (ws.warehouse_id = wh.id OR (ws.warehouse_id IS NULL AND wh.is_default))
+      )
+    END;
+$$;
+
+-- Dropdown source for the count modal: one row per category/subcategory
+-- that has stock in the warehouse. Case-insensitive grouping; products
+-- without a category are covered by the whole-warehouse option.
+CREATE OR REPLACE FUNCTION public.get_warehouse_active_categories(p_warehouse_id UUID)
+RETURNS TABLE (category_name TEXT, subcategory_name TEXT, product_count INTEGER)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM public._inventory_count_authorize('can_writeoff_inventory');
+
+  RETURN QUERY
+  SELECT
+    MIN(cp.category_name),
+    MIN(cp.subcategory_name),
+    COUNT(*)::int
+  FROM public.inventory_warehouse_product_ids(p_warehouse_id) w
+  JOIN public.product_category_paths cp ON cp.product_id = w.product_id
+  WHERE cp.category_name IS NOT NULL
+  GROUP BY lower(cp.category_name), lower(cp.subcategory_name)
+  ORDER BY 1, 2 NULLS FIRST;
+END;
+$$;
+
 -- ─── 5. Workflow RPCs ───────────────────────────────────────────────────────
 
 -- draft → in_progress: generate lines and freeze the book quantities.
@@ -444,31 +529,32 @@ BEGIN
     WHERE o.id <> v_doc.id
       AND o.warehouse_id = v_doc.warehouse_id
       AND o.status IN ('in_progress', 'review')
-      AND (o.category_id IS NULL OR v_doc.category_id IS NULL OR o.category_id = v_doc.category_id)
+      AND (
+        o.category_name IS NULL OR v_doc.category_name IS NULL
+        OR (
+          lower(o.category_name) = lower(v_doc.category_name)
+          AND (o.subcategory_name IS NULL OR v_doc.subcategory_name IS NULL
+               OR lower(o.subcategory_name) = lower(v_doc.subcategory_name))
+        )
+      )
   ) THEN
     RAISE EXCEPTION '%',
       'Bu anbar (və ya kateqoriya) üzrə artıq açıq inventarizasiya var. Əvvəlcə onu tamamlayın.'
       USING ERRCODE = '22023';
   END IF;
 
-  WITH RECURSIVE scope_categories AS (
-    SELECT id FROM public.categories WHERE id = v_doc.category_id
-    UNION
-    SELECT c.id FROM public.categories c JOIN scope_categories s ON c.parent_id = s.id
-  ),
-  candidates AS (
+  -- Products present in the warehouse, narrowed to the chosen category path.
+  -- Stock found outside this list is added by scanning it.
+  WITH candidates AS (
     SELECT
       p.*,
       p.inventory_mode = 'polywood' AS metric,
       public.inventory_count_book_qty(p.id, v_doc.warehouse_id) AS book_qty
-    FROM public.products p
-    WHERE NOT COALESCE(p.is_service, FALSE)
-      AND NOT COALESCE(p.is_composite, FALSE)
-      AND (
-        v_doc.category_id IS NULL
-        OR p.category_id IN (SELECT id FROM scope_categories)
-        OR p.sub_category_id IN (SELECT id FROM scope_categories)
-      )
+    FROM public.inventory_warehouse_product_ids(v_doc.warehouse_id) w
+    JOIN public.products p ON p.id = w.product_id
+    LEFT JOIN public.product_category_paths cp ON cp.product_id = p.id
+    WHERE (v_doc.category_name IS NULL OR lower(cp.category_name) = lower(v_doc.category_name))
+      AND (v_doc.subcategory_name IS NULL OR lower(cp.subcategory_name) = lower(v_doc.subcategory_name))
   )
   INSERT INTO public.inventory_count_items (
     count_id, line_no, product_id, product_code, product_name, unit, barcode,
@@ -495,10 +581,7 @@ BEGIN
         AND pp.status = 'available' AND pp.piece_type = 'cut'
     ) END,
     public.inventory_count_unit_cost(c.id)
-  FROM candidates c
-  -- A whole-warehouse count lists what the books say is there; a category
-  -- (cycle) count lists the full category so unexpected stock can be found.
-  WHERE v_doc.category_id IS NOT NULL OR c.book_qty <> 0;
+  FROM candidates c;
 
   GET DIAGNOSTICS v_lines = ROW_COUNT;
 
@@ -916,6 +999,9 @@ REVOKE ALL ON FUNCTION public._fifo_consume_for_document(UUID, NUMERIC, TEXT, UU
 REVOKE ALL ON FUNCTION public._inventory_count_lock(UUID, TEXT[]) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.inventory_count_refresh_totals(UUID) FROM PUBLIC, anon;
 
+REVOKE ALL ON FUNCTION public.get_warehouse_active_categories(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_warehouse_active_categories(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.inventory_warehouse_product_ids(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.next_inventory_count_doc_no() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.inventory_count_book_qty(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.inventory_count_unit_cost(UUID) TO authenticated, service_role;

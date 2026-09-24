@@ -503,7 +503,9 @@ export default function InventoryCountDocumentPageClient() {
         title={`${t("inventoryCount.listTitle")} — ${doc.document_number}`}
         subtitle={[
           doc.warehouse_name,
-          doc.category_name || t("inventoryCount.allCategories"),
+          doc.category_name
+            ? [doc.category_name, doc.subcategory_name].filter(Boolean).join(" › ")
+            : t("inventoryCount.allCategories"),
           doc.count_date,
           doc.responsible_name,
         ]

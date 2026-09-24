@@ -9,6 +9,7 @@ import type {
   InventoryCountLine,
   InventoryCountOption,
   InventoryCountStatus,
+  WarehouseCategoryPath,
 } from "@/lib/inventoryCount/types";
 
 export type InventoryCountActionResult<T = void> =
@@ -49,8 +50,8 @@ function mapDocument(row: Record<string, unknown>): InventoryCountDocument {
     count_date: row.count_date as string,
     warehouse_id: row.warehouse_id as string,
     warehouse_name: (row.warehouse_name as string) || null,
-    category_id: (row.category_id as string) || null,
     category_name: (row.category_name as string) || null,
+    subcategory_name: (row.subcategory_name as string) || null,
     status: row.status as InventoryCountStatus,
     responsible_name: (row.responsible_name as string) || null,
     notes: (row.notes as string) || null,
@@ -165,24 +166,39 @@ export async function fetchInventoryCountAction(
   }
 }
 
-export async function fetchInventoryCountOptionsAction(): Promise<
-  InventoryCountActionResult<{ warehouses: InventoryCountOption[]; categories: InventoryCountOption[] }>
+export async function fetchInventoryCountWarehousesAction(): Promise<
+  InventoryCountActionResult<InventoryCountOption[]>
 > {
   try {
     await requirePermissionAction("can_writeoff_inventory");
-    const client = db();
-    const [{ data: warehouses, error: whError }, { data: categories, error: catError }] = await Promise.all([
-      client.from("warehouses").select("id, name").order("name"),
-      client.from("categories").select("id, name").order("name"),
-    ]);
-    if (whError) return { success: false, error: whError.message };
-    if (catError) return { success: false, error: catError.message };
+    const { data, error } = await db().from("warehouses").select("id, name").order("name");
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as InventoryCountOption[] };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Category/subcategory paths that have stock in the warehouse, aggregated in
+ * the database (get_warehouse_active_categories) — products never reach the client.
+ */
+export async function fetchWarehouseCategoriesAction(
+  warehouseId: string
+): Promise<InventoryCountActionResult<WarehouseCategoryPath[]>> {
+  try {
+    await requirePermissionAction("can_writeoff_inventory");
+    if (!warehouseId) return { success: true, data: [] };
+    const rows = await callRpc<Record<string, unknown>[]>("get_warehouse_active_categories", {
+      p_warehouse_id: warehouseId,
+    });
     return {
       success: true,
-      data: {
-        warehouses: (warehouses || []) as InventoryCountOption[],
-        categories: (categories || []) as InventoryCountOption[],
-      },
+      data: (rows || []).map((row) => ({
+        category_name: row.category_name as string,
+        subcategory_name: (row.subcategory_name as string) || null,
+        product_count: num(row.product_count),
+      })),
     };
   } catch (err) {
     return fail(err);
@@ -199,12 +215,14 @@ export async function createInventoryCountAction(
     if (!input.warehouse_id) return { success: false, error: "Anbar seçilməyib" };
     const client = db();
 
-    const [{ data: warehouse }, { data: category }] = await Promise.all([
-      client.from("warehouses").select("name").eq("id", input.warehouse_id).maybeSingle(),
-      input.category_id
-        ? client.from("categories").select("name").eq("id", input.category_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+    const categoryName = input.category_name?.trim() || null;
+    const subcategoryName = categoryName ? input.subcategory_name?.trim() || null : null;
+
+    const { data: warehouse } = await client
+      .from("warehouses")
+      .select("name")
+      .eq("id", input.warehouse_id)
+      .maybeSingle();
     if (!warehouse) return { success: false, error: "Anbar tapılmadı" };
 
     const documentNumber = await callRpc<string>("next_inventory_count_doc_no", {});
@@ -216,8 +234,8 @@ export async function createInventoryCountAction(
           count_date: input.count_date,
           warehouse_id: input.warehouse_id,
           warehouse_name: warehouse.name,
-          category_id: input.category_id || null,
-          category_name: category?.name || null,
+          category_name: categoryName,
+          subcategory_name: subcategoryName,
           responsible_name: input.responsible_name?.trim() || null,
           notes: input.notes?.trim() || null,
           status: "draft",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClipboardCheck, Eye, Plus, Trash2 } from "lucide-react";
@@ -21,19 +21,25 @@ import { cn } from "@/lib/cn";
 import {
   createInventoryCountAction,
   deleteInventoryCountAction,
-  fetchInventoryCountOptionsAction,
   fetchInventoryCountsAction,
+  fetchInventoryCountWarehousesAction,
+  fetchWarehouseCategoriesAction,
 } from "@/lib/inventoryCount/actions";
 import {
   INVENTORY_COUNT_STATUSES,
   type InventoryCountDocument,
   type InventoryCountOption,
   type InventoryCountStatus,
+  type WarehouseCategoryPath,
 } from "@/lib/inventoryCount/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Mounted only while open, so every opening starts from a clean form. */
+/**
+ * Mounted only while open, so every opening starts from a clean form.
+ * Scope cascades Anbar → Kateqoriya → Alt kateqoriya; each list is built from
+ * get_warehouse_active_categories, i.e. only what has stock in that warehouse.
+ */
 function CreateCountModal({
   onClose,
   onCreated,
@@ -43,26 +49,72 @@ function CreateCountModal({
 }) {
   const { t } = useI18n();
   const [warehouses, setWarehouses] = useState<InventoryCountOption[]>([]);
-  const [categories, setCategories] = useState<InventoryCountOption[]>([]);
   const [warehouseId, setWarehouseId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [paths, setPaths] = useState<WarehouseCategoryPath[]>([]);
+  const [pathsLoading, setPathsLoading] = useState(false);
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [countDate, setCountDate] = useState(today);
   const [responsible, setResponsible] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ignores a slow response for a warehouse the user already switched away from.
+  const pathsRequest = useRef(0);
+
+  const loadPaths = useCallback(async (id: string) => {
+    const request = ++pathsRequest.current;
+    setPaths([]);
+    if (!id) return;
+    setPathsLoading(true);
+    const result = await fetchWarehouseCategoriesAction(id);
+    if (request !== pathsRequest.current) return;
+    setPathsLoading(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setPaths(result.data || []);
+  }, []);
 
   useEffect(() => {
-    void fetchInventoryCountOptionsAction().then((result) => {
-      if (!result.success || !result.data) {
-        setError(result.success ? null : result.error);
+    void fetchInventoryCountWarehousesAction().then((result) => {
+      if (!result.success) {
+        setError(result.error);
         return;
       }
-      setWarehouses(result.data.warehouses);
-      setCategories(result.data.categories);
-      setWarehouseId((current) => current || result.data?.warehouses[0]?.id || "");
+      const list = result.data || [];
+      setWarehouses(list);
+      if (list[0]) {
+        setWarehouseId(list[0].id);
+        void loadPaths(list[0].id);
+      }
     });
-  }, []);
+  }, [loadPaths]);
+
+  const handleWarehouseChange = (id: string) => {
+    setWarehouseId(id);
+    setCategory("");
+    setSubcategory("");
+    setError(null);
+    void loadPaths(id);
+  };
+
+  const categories = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const path of paths) {
+      totals.set(path.category_name, (totals.get(path.category_name) || 0) + path.product_count);
+    }
+    return Array.from(totals, ([name, count]) => ({ name, count }));
+  }, [paths]);
+
+  const subcategories = useMemo(
+    () =>
+      paths
+        .filter((path) => path.category_name === category && path.subcategory_name)
+        .map((path) => ({ name: path.subcategory_name as string, count: path.product_count })),
+    [paths, category]
+  );
 
   const handleCreate = async () => {
     setSaving(true);
@@ -70,7 +122,8 @@ function CreateCountModal({
     const result = await createInventoryCountAction({
       count_date: countDate,
       warehouse_id: warehouseId,
-      category_id: categoryId || null,
+      category_name: category || null,
+      subcategory_name: category ? subcategory || null : null,
       responsible_name: responsible,
       notes,
     });
@@ -94,7 +147,7 @@ function CreateCountModal({
           <Button appearance="outline" color="secondary" onClick={onClose} disabled={saving}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={() => void handleCreate()} loading={saving} disabled={!warehouseId}>
+          <Button onClick={() => void handleCreate()} loading={saving} disabled={!warehouseId || pathsLoading}>
             {t("inventoryCount.create")}
           </Button>
         </>
@@ -103,7 +156,7 @@ function CreateCountModal({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="erp-label">{t("inventoryCount.warehouse")}</label>
-          <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+          <Select value={warehouseId} onChange={(e) => handleWarehouseChange(e.target.value)}>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -111,17 +164,44 @@ function CreateCountModal({
             ))}
           </Select>
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className="erp-label">{t("inventoryCount.category")}</label>
-          <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            <option value="">{t("inventoryCount.allCategories")}</option>
+          <Select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setSubcategory("");
+            }}
+            disabled={pathsLoading || categories.length === 0}
+          >
+            <option value="">
+              {pathsLoading ? t("inventoryCount.loadingCategories") : t("inventoryCount.allCategories")}
+            </option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+              <option key={c.name} value={c.name}>
+                {c.name} ({c.count})
               </option>
             ))}
           </Select>
         </div>
+        <div>
+          <label className="erp-label">{t("inventoryCount.subcategory")}</label>
+          <Select
+            value={subcategory}
+            onChange={(e) => setSubcategory(e.target.value)}
+            disabled={!category || subcategories.length === 0}
+          >
+            <option value="">{t("inventoryCount.allSubcategories")}</option>
+            {subcategories.map((sc) => (
+              <option key={sc.name} value={sc.name}>
+                {sc.name} ({sc.count})
+              </option>
+            ))}
+          </Select>
+        </div>
+        {!pathsLoading && warehouseId && categories.length === 0 ? (
+          <p className="text-xs text-app-muted sm:col-span-2">{t("inventoryCount.noCategoriesInWarehouse")}</p>
+        ) : null}
         <div>
           <label className="erp-label">{t("inventoryCount.countDate")}</label>
           <Input type="date" value={countDate} onChange={(e) => setCountDate(e.target.value)} />
@@ -265,7 +345,11 @@ export default function InventoryCountsPageClient() {
                   </Td>
                   <Td>{row.count_date}</Td>
                   <Td>{row.warehouse_name || "—"}</Td>
-                  <Td>{row.category_name || t("inventoryCount.allCategories")}</Td>
+                  <Td>
+                    {row.category_name
+                      ? [row.category_name, row.subcategory_name].filter(Boolean).join(" › ")
+                      : t("inventoryCount.allCategories")}
+                  </Td>
                   <Td>
                     <InventoryCountStatusBadge status={row.status} />
                   </Td>

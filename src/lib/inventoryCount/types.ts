@@ -8,8 +8,8 @@ export interface InventoryCountDocument {
   count_date: string;
   warehouse_id: string;
   warehouse_name: string | null;
-  category_id: string | null;
   category_name: string | null;
+  subcategory_name: string | null;
   status: InventoryCountStatus;
   responsible_name: string | null;
   notes: string | null;
@@ -59,7 +59,10 @@ export interface InventoryCountDetail extends InventoryCountDocument {
 export interface CreateInventoryCountInput {
   count_date: string;
   warehouse_id: string;
-  category_id?: string | null;
+  /** Empty = whole warehouse. */
+  category_name?: string | null;
+  /** Only valid together with category_name. */
+  subcategory_name?: string | null;
   responsible_name?: string;
   notes?: string;
 }
@@ -67,4 +70,11 @@ export interface CreateInventoryCountInput {
 export interface InventoryCountOption {
   id: string;
   name: string;
+}
+
+/** One category/subcategory with stock in a warehouse (subcategory null = no subcategory). */
+export interface WarehouseCategoryPath {
+  category_name: string;
+  subcategory_name: string | null;
+  product_count: number;
 }
