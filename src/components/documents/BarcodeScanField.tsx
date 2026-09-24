@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { Camera, ScanBarcode } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface BarcodeScanFieldProps {
   onScan: (barcode: string) => void | Promise<void>;
@@ -11,6 +12,11 @@ interface BarcodeScanFieldProps {
   placeholder?: string;
   onOpenCamera?: () => void;
   cameraLabel?: string;
+  className?: string;
+  /** Overrides the input sizing, e.g. a compact `h-10` toolbar field. */
+  inputClassName?: string;
+  /** Rendered at the end of the label row (e.g. last-scan feedback) without changing the field height. */
+  labelAddon?: React.ReactNode;
 }
 
 export default function BarcodeScanField({
@@ -21,6 +27,9 @@ export default function BarcodeScanField({
   placeholder = "Barkodu skan edin və ya daxil edin, Enter basın...",
   onOpenCamera,
   cameraLabel,
+  className,
+  inputClassName,
+  labelAddon,
 }: BarcodeScanFieldProps) {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
@@ -51,11 +60,14 @@ export default function BarcodeScanField({
   };
 
   return (
-    <div className="block">
-      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-800">
-        <ScanBarcode className="h-4 w-4" />
-        {label}
-      </span>
+    <div className={cn("block", className)}>
+      <div className="mb-1.5 flex min-w-0 items-center justify-between gap-3">
+        <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-800">
+          <ScanBarcode className="h-4 w-4" />
+          {label}
+        </span>
+        {labelAddon}
+      </div>
       <div className="flex gap-2">
         <input
           ref={barcodeInputRef}
@@ -65,7 +77,10 @@ export default function BarcodeScanField({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="app-input w-full border-2 border-amber-500/40 px-4 py-3 font-mono text-sm shadow-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 disabled:opacity-60"
+          className={cn(
+            "app-input w-full border-2 border-amber-500/40 px-4 py-3 font-mono text-sm shadow-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 disabled:opacity-60",
+            inputClassName
+          )}
           autoComplete="off"
           autoFocus={autoFocus}
         />

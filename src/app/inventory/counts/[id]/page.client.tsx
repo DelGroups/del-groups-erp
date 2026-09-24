@@ -593,26 +593,29 @@ export default function InventoryCountDocumentPageClient() {
             </div>
           ) : null}
 
-          {/* Scanner + filters */}
-          <div className="mb-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          {/* Toolbar: scanner (left) · search + segmented filter (right), bottom-aligned */}
+          <div className="mb-4 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             {editable ? (
-              <div>
-                <BarcodeScanField
-                  onScan={handleScan}
-                  autoFocus
-                  label={t("inventoryCount.scanLabel")}
-                  placeholder={t("inventoryCount.scanPlaceholder")}
-                />
-                {lastScan ? (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    <Check className="h-3.5 w-3.5" />
-                    {lastScan.text}
-                  </p>
-                ) : null}
-              </div>
+              <BarcodeScanField
+                onScan={handleScan}
+                autoFocus
+                label={t("inventoryCount.scanLabel")}
+                placeholder={t("inventoryCount.scanPlaceholder")}
+                className="w-full md:max-w-[400px]"
+                inputClassName="h-10 py-0"
+                labelAddon={
+                  lastScan ? (
+                    <span className="flex min-w-0 items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      <Check className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{lastScan.text}</span>
+                    </span>
+                  ) : null
+                }
+              />
             ) : null}
-            <div className={cn("flex flex-col justify-end gap-2", !editable && "lg:col-span-2")}>
-              <div className="relative">
+
+            <div className="flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center md:ml-auto md:w-auto">
+              <div className="relative w-full sm:w-64">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
                 <Input
                   value={query}
@@ -621,10 +624,15 @@ export default function InventoryCountDocumentPageClient() {
                     setPage(0);
                   }}
                   placeholder={t("inventoryCount.searchPlaceholder")}
-                  className="pl-9"
+                  className="h-10 py-0 pl-9"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5">
+
+              <div
+                role="radiogroup"
+                aria-label={t("inventoryCount.filterAll")}
+                className="flex h-10 shrink-0 items-center gap-0.5 overflow-x-auto rounded-lg bg-slate-100 p-1 dark:bg-white/5"
+              >
                 {(
                   [
                     ["all", t("inventoryCount.filterAll"), lines.length],
@@ -632,25 +640,39 @@ export default function InventoryCountDocumentPageClient() {
                     ["variance", t("inventoryCount.filterVariance"), lines.filter(hasVariance).length],
                     ...(summary.drift > 0 ? [["drift", t("inventoryCount.filterDrift"), summary.drift]] : []),
                   ] as [LineFilter, string, number][]
-                ).map(([key, label, count]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      setFilter(key);
-                      setPage(0);
-                    }}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-                      filter === key
-                        ? "border-[color:var(--erp-color-primary)] bg-[color:var(--erp-color-primary)] text-white"
-                        : "border-app bg-app-card text-app-muted hover:bg-app-card-hover"
-                    )}
-                  >
-                    {label}
-                    <span className="ms-1.5 opacity-70">{count}</span>
-                  </button>
-                ))}
+                ).map(([key, label, count]) => {
+                  const active = filter === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => {
+                        setFilter(key);
+                        setPage(0);
+                      }}
+                      className={cn(
+                        "inline-flex h-full items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-semibold transition-all",
+                        active
+                          ? "bg-white text-slate-900 shadow-sm dark:bg-white/15 dark:text-white"
+                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                      )}
+                    >
+                      {label}
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-px text-[10px] font-bold tabular-nums",
+                          active
+                            ? "bg-[color:var(--erp-color-primary)]/10 text-[color:var(--erp-color-primary)]"
+                            : "bg-slate-200/70 text-slate-500 dark:bg-white/10 dark:text-slate-400"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
