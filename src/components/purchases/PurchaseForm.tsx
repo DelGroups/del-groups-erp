@@ -51,6 +51,11 @@ import {
 } from "@/lib/forms/documentPreflight";
 import DocumentAdditionalExpensesSection from "@/components/documents/DocumentAdditionalExpensesSection";
 import {
+  DocumentFooter,
+  DocumentFooterMain,
+  DocumentFooterTotals,
+} from "@/components/documents/DocumentFooter";
+import {
   sumDocumentAdditionalExpenses,
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
@@ -1194,9 +1199,10 @@ export default function PurchaseForm({
           </div>
         </div>
 
+        <DocumentFooter>
         {layoutMode === "page" ? (
-          <div className="flex w-full justify-end">
-            <div className="w-full max-w-md rounded-xl border border-app bg-app-card p-4 shadow-sm">
+          <DocumentFooterTotals>
+            <div className="w-full rounded-xl border border-app bg-app-card p-4 shadow-sm">
               <h4 className="mb-3 text-sm font-bold text-app">{t("common.total")}</h4>
               <div className="space-y-2 text-xs">
                 {hasMixedCurrency ? (
@@ -1231,9 +1237,10 @@ export default function PurchaseForm({
                 </div>
               </div>
             </div>
-          </div>
+          </DocumentFooterTotals>
         ) : null}
 
+        <DocumentFooterMain>
         <DocumentAdditionalExpensesSection
           expenses={additionalExpenses}
           onChange={setAdditionalExpenses}
@@ -1383,6 +1390,8 @@ export default function PurchaseForm({
             className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-normal"
           />
         </label>
+        </DocumentFooterMain>
+        </DocumentFooter>
 
       </div>
 

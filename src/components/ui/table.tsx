@@ -108,7 +108,7 @@ export function ResizableTh({
         aria-orientation="vertical"
         onMouseDown={onResizeStart(columnKey)}
         onDoubleClick={onResetWidth}
-        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none hover:bg-[color:var(--app-accent)]/40 active:bg-[color:var(--app-accent)]/70"
+        className="absolute right-0 top-1.5 bottom-1.5 z-10 w-2 cursor-col-resize touch-none select-none border-r-2 border-dashed border-[color:var(--erp-border-strong)] transition-colors hover:border-solid hover:border-primary hover:bg-primary/10 active:border-solid active:border-primary active:bg-primary/20"
       />
     </th>
   );

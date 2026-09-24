@@ -1762,17 +1762,21 @@ textarea:focus {
 table:not([data-col-resize="off"]):not([data-col-resize="manual"]) > thead:not(:has(> tr + tr)) > tr > th:not([colspan]:not([colspan="1"]))::after {
   content: "";
   position: absolute;
-  top: 0;
+  top: 6px;
+  bottom: 6px;
   right: 0;
   z-index: 1;
   width: 8px;
-  height: 100%;
+  /* Always-visible affordance: dashed divider on each header's right edge. */
+  border-right: 2px dashed var(--erp-border-strong);
   cursor: col-resize;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease;
 }
 
 table:not([data-col-resize="off"]):not([data-col-resize="manual"]) > thead:not(:has(> tr + tr)) > tr > th:not([colspan]:not([colspan="1"])):hover::after {
-  background-color: color-mix(in srgb, var(--app-accent) 30%, transparent);
+  border-right-style: solid;
+  border-right-color: var(--erp-color-primary);
+  background-color: color-mix(in srgb, var(--erp-color-primary) 10%, transparent);
 }
 
 @media print {

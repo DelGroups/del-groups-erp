@@ -20,6 +20,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { useI18n } from "@/i18n/I18nProvider";
+import { DocumentFooter, DocumentFooterMain, DocumentFooterTotals } from "@/components/documents/DocumentFooter";
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -354,8 +355,8 @@ export default function UniversalInvoiceForm({
         </div>
 
         {/* Footer Actions & Totals */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div className="bg-app-card p-4 rounded-xl shadow-sm border border-app text-xs space-y-2">
+        <DocumentFooter className="pt-2">
+          <DocumentFooterMain className="bg-app-card p-4 rounded-xl shadow-sm border border-app text-xs gap-2">
             <h4 className="font-bold text-app flex items-center gap-1.5 border-b pb-2"><CreditCard className="w-4 h-4 text-app-accent" /> ÖDƏNİŞ (ÇOXLU ÖDƏNİŞ)</h4>
             {payments.map((p) => (
               <div key={p.id} className="flex gap-2">
@@ -365,9 +366,9 @@ export default function UniversalInvoiceForm({
                 <input type="number" placeholder="Məbləğ" value={p.amount} onChange={(e) => setPayments(payments.map(x => x.id === p.id ? { ...x, amount: parseFloat(e.target.value) || 0 } : x))} className="w-1/2 p-1 border rounded text-right font-bold" />
               </div>
             ))}
-          </div>
+          </DocumentFooterMain>
 
-          <div className="app-toolbar p-4 rounded-xl shadow-sm text-xs space-y-3 flex flex-col justify-between">
+          <DocumentFooterTotals className="app-toolbar p-4 rounded-xl shadow-sm text-xs space-y-3 flex flex-col justify-between">
             <div className="flex justify-between items-center text-sm font-bold border-b border-white/20 pb-2">
               <span>YEKUN MƏBLƏĞ:</span>
               <span className="text-lg text-emerald-400 font-mono">{grandTotal.toFixed(2)} AZN</span>
@@ -378,8 +379,8 @@ export default function UniversalInvoiceForm({
                 <Save className="w-4 h-4" /> {saving ? "Yadda saxlanılır..." : "Təsdiqlə və Yadda Saxla"}
               </button>
             </div>
-          </div>
-        </div>
+          </DocumentFooterTotals>
+        </DocumentFooter>
 
       </div>
     </div>

@@ -33,6 +33,11 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { cn } from "@/lib/cn";
 import DocumentAdditionalExpensesSection from "@/components/documents/DocumentAdditionalExpensesSection";
 import {
+  DocumentFooter,
+  DocumentFooterMain,
+  DocumentFooterTotals,
+} from "@/components/documents/DocumentFooter";
+import {
   parseDocumentAdditionalExpenses,
   sumDocumentAdditionalExpenses,
   validateDocumentAdditionalExpenses,
@@ -2602,9 +2607,9 @@ export default function UniversalInvoiceForm({
           </div>
         </ItemsSectionWrap>
 
+        <DocumentFooter>
         {isPageLayout ? (
-          <div className="flex w-full justify-end">
-            <div className="w-full max-w-md">
+          <DocumentFooterTotals>
               <Card className="text-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">{t("common.total")}</CardTitle>
@@ -2728,10 +2733,10 @@ export default function UniversalInvoiceForm({
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+          </DocumentFooterTotals>
         ) : null}
 
+        <DocumentFooterMain>
         <BottomTabsWrap isPageLayout={isPageLayout}>
             <div
               className={cn(
@@ -2921,6 +2926,8 @@ export default function UniversalInvoiceForm({
           </div>
             ) : null}
         </BottomTabsWrap>
+        </DocumentFooterMain>
+        </DocumentFooter>
           </div>
 
           {!isPageLayout ? (
