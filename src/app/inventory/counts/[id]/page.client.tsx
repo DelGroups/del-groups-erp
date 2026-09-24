@@ -10,10 +10,12 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Eraser,
+  Flag,
+  Loader2,
   Play,
   RefreshCw,
+  Save,
   Search,
-  Send,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -41,8 +43,8 @@ import {
   resyncInventoryCountBookAction,
   scanInventoryCountAction,
   startInventoryCountAction,
+  saveInventoryCountProgressAction,
   submitInventoryCountAction,
-  updateInventoryCountLineAction,
   type InventoryCountLineInput,
 } from "@/lib/inventoryCount/actions";
 import {
@@ -53,6 +55,8 @@ import {
 
 const PAGE_SIZE = 100;
 const EPS = 0.0005;
+/** Quiet period after the last keystroke before unsaved counts are sent. */
+const AUTOSAVE_MS = 1200;
 
 /** Product name is the fluid column; the numeric columns are content-fit. */
 const COUNT_GRID_COLUMNS: TableColumnSpecs = {
@@ -91,29 +95,45 @@ function hasVariance(line: InventoryCountLine): boolean {
 
 // ─── Editable cells ─────────────────────────────────────────────────────────
 
-/** Counted quantity input. Enter commits and jumps to the next row, like a count sheet. */
+/** "" → uncounted (null); a non-negative number → that; anything else → invalid (undefined). */
+function parseQty(text: string): number | null | undefined {
+  const trimmed = text.trim().replace(",", ".");
+  if (trimmed === "") return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function qtyText(value: number | null): string {
+  return value === null ? "" : String(value);
+}
+
+function focusNextRow(index: number, current: HTMLInputElement) {
+  const next = document.querySelector<HTMLInputElement>(`[data-count-input="${index + 1}"]`);
+  if (next) next.focus();
+  else current.blur();
+}
+
+/**
+ * Counted quantity input. Every valid keystroke is reported as a draft and
+ * auto-saved by the page; Enter jumps to the next row, like a count sheet.
+ */
 function QtyInput({
   line,
   index,
-  onCommit,
+  onDraft,
 }: {
   line: InventoryCountLine;
   index: number;
-  onCommit: (line: InventoryCountLine, input: InventoryCountLineInput) => void;
+  onDraft: (line: InventoryCountLine, input: InventoryCountLineInput) => void;
 }) {
-  // Parent keys this input by the saved value, so a server update remounts it.
-  const [draft, setDraft] = useState(line.actual_qty === null ? "" : String(line.actual_qty));
-
-  const commit = () => {
-    const trimmed = draft.trim().replace(",", ".");
-    const next = trimmed === "" ? null : Number(trimmed);
-    if (next !== null && (!Number.isFinite(next) || next < 0)) {
-      setDraft(line.actual_qty === null ? "" : String(line.actual_qty));
-      return;
-    }
-    if (next === line.actual_qty) return;
-    onCommit(line, { kind: "qty", actual_qty: next });
-  };
+  const [draft, setDraft] = useState(qtyText(line.actual_qty));
+  const [shown, setShown] = useState(line.actual_qty);
+  // A scan or server refresh changed the value: show it unless the text already means it ("12." vs 12).
+  if (line.actual_qty !== shown) {
+    setShown(line.actual_qty);
+    if (parseQty(draft) !== line.actual_qty) setDraft(qtyText(line.actual_qty));
+  }
+  const invalid = parseQty(draft) === undefined;
 
   return (
     <input
@@ -121,20 +141,23 @@ function QtyInput({
       inputMode="decimal"
       value={draft}
       placeholder="—"
-      onChange={(e) => setDraft(e.target.value)}
+      aria-invalid={invalid}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        const next = parseQty(e.target.value);
+        if (next !== undefined && next !== line.actual_qty) onDraft(line, { kind: "qty", actual_qty: next });
+      }}
       onFocus={(e) => e.target.select()}
-      onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          const next = document.querySelector<HTMLInputElement>(`[data-count-input="${index + 1}"]`);
-          if (next) next.focus();
-          else e.currentTarget.blur();
-        } else if (e.key === "Escape") {
-          setDraft(line.actual_qty === null ? "" : String(line.actual_qty));
+          focusNextRow(index, e.currentTarget);
         }
       }}
-      className="app-input h-8 w-full py-0 text-right font-mono text-sm tabular-nums"
+      className={cn(
+        "app-input h-8 w-full py-0 text-right font-mono text-sm tabular-nums",
+        invalid && "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+      )}
     />
   );
 }
@@ -143,63 +166,142 @@ function QtyInput({
 function PieceInput({
   line,
   index,
-  onCommit,
+  onDraft,
 }: {
   line: InventoryCountLine;
   index: number;
-  onCommit: (line: InventoryCountLine, input: InventoryCountLineInput) => void;
+  onDraft: (line: InventoryCountLine, input: InventoryCountLineInput) => void;
 }) {
   const { t } = useI18n();
-  const fullOf = (l: InventoryCountLine) => (l.actual_full_sheets === null ? "" : String(l.actual_full_sheets));
-  const cutsOf = (l: InventoryCountLine) => (l.actual_cut_pieces || []).join(", ");
-  const [full, setFull] = useState(fullOf(line));
-  const [cuts, setCuts] = useState(cutsOf(line));
+  const signature = `${line.actual_full_sheets}|${(line.actual_cut_pieces || []).join(",")}`;
+  const [full, setFull] = useState(line.actual_full_sheets === null ? "" : String(line.actual_full_sheets));
+  const [cuts, setCuts] = useState((line.actual_cut_pieces || []).join(", "));
+  const [shown, setShown] = useState(signature);
+  if (signature !== shown) {
+    setShown(signature);
+    setFull(line.actual_full_sheets === null ? "" : String(line.actual_full_sheets));
+    setCuts((line.actual_cut_pieces || []).join(", "));
+  }
 
-  const commit = () => {
-    const fullTrim = full.trim();
-    const fullNum = fullTrim === "" ? null : Number(fullTrim);
-    if (fullNum !== null && (!Number.isInteger(fullNum) || fullNum < 0)) {
-      setFull(fullOf(line));
-      return;
-    }
-    const cutList = parseLengths(cuts);
-    if (fullNum === line.actual_full_sheets && cutList.join(",") === (line.actual_cut_pieces || []).join(",")) return;
-    onCommit(line, { kind: "pieces", full_sheets: fullNum, cut_pieces: cutList });
+  const fullNum = full.trim() === "" ? null : Number(full.trim());
+  const fullInvalid = fullNum !== null && (!Number.isInteger(fullNum) || fullNum < 0);
+
+  const report = (nextFull: string, nextCuts: string) => {
+    const f = nextFull.trim() === "" ? null : Number(nextFull.trim());
+    if (f !== null && (!Number.isInteger(f) || f < 0)) return;
+    const cutList = parseLengths(nextCuts);
+    if (`${f}|${cutList.join(",")}` === signature) return;
+    onDraft(line, { kind: "pieces", full_sheets: f, cut_pieces: cutList });
   };
 
   return (
-    <div
-      className="flex items-center gap-1"
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) commit();
-      }}
-    >
+    <div className="flex items-center gap-1">
       <input
         data-count-input={index}
         inputMode="numeric"
         value={full}
         placeholder={t("inventoryCount.fullSheets")}
         title={t("inventoryCount.fullSheets")}
-        onChange={(e) => setFull(e.target.value)}
+        aria-invalid={fullInvalid}
+        onChange={(e) => {
+          setFull(e.target.value);
+          report(e.target.value, cuts);
+        }}
         onFocus={(e) => e.target.select()}
-        className="app-input h-8 w-16 py-0 text-right font-mono text-sm"
+        className={cn(
+          "app-input h-8 w-16 py-0 text-right font-mono text-sm",
+          fullInvalid && "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+        )}
       />
       <input
         value={cuts}
         placeholder={t("inventoryCount.cutPieces")}
         title={t("inventoryCount.cutPieces")}
-        onChange={(e) => setCuts(e.target.value)}
+        onChange={(e) => {
+          setCuts(e.target.value);
+          report(full, e.target.value);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            const next = document.querySelector<HTMLInputElement>(`[data-count-input="${index + 1}"]`);
-            if (next) next.focus();
-            else e.currentTarget.blur();
+            focusNextRow(index, e.currentTarget);
           }
         }}
         className="app-input h-8 min-w-0 flex-1 py-0 font-mono text-xs"
       />
     </div>
+  );
+}
+
+/** Mirrors the generated columns so the grid updates before the save returns. */
+function applyDraft(line: InventoryCountLine, input: InventoryCountLineInput): InventoryCountLine {
+  let next: InventoryCountLine;
+  if (input.kind === "qty") {
+    next = { ...line, actual_qty: input.actual_qty };
+  } else {
+    const cuts = input.cut_pieces || [];
+    const cleared = input.full_sheets === null && cuts.length === 0;
+    const metres = (input.full_sheets || 0) * (line.full_sheet_length_m || 0) + cuts.reduce((a, b) => a + b, 0);
+    next = {
+      ...line,
+      actual_full_sheets: cleared ? null : input.full_sheets ?? 0,
+      actual_cut_pieces: cleared ? null : cuts,
+      actual_qty: cleared ? null : Math.round(metres * 1000) / 1000,
+    };
+  }
+  const difference = next.actual_qty === null ? null : next.actual_qty - next.expected_qty;
+  return {
+    ...next,
+    difference,
+    variance_value: difference === null ? null : Math.round(difference * next.unit_cost * 100) / 100,
+  };
+}
+
+type SaveState =
+  | { kind: "idle" }
+  | { kind: "dirty" }
+  | { kind: "saving" }
+  | { kind: "saved"; at: Date }
+  | { kind: "error"; message: string };
+
+function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+  const { t } = useI18n();
+  if (state.kind === "idle") return null;
+  const base = "inline-flex items-center gap-1.5 text-xs font-semibold";
+  if (state.kind === "dirty") {
+    return (
+      <span className={cn(base, "text-amber-600")}>
+        <span className="h-2 w-2 rounded-full bg-amber-500" />
+        {t("inventoryCount.saveDirty")}
+      </span>
+    );
+  }
+  if (state.kind === "saving") {
+    return (
+      <span className={cn(base, "text-app-muted")}>
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        {t("inventoryCount.saveSaving")}
+      </span>
+    );
+  }
+  if (state.kind === "saved") {
+    return (
+      <span className={cn(base, "text-emerald-600")}>
+        <Check className="h-3.5 w-3.5" />
+        {t("inventoryCount.saveSaved", {
+          time: state.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        })}
+      </span>
+    );
+  }
+  return (
+    <span className={cn(base, "text-rose-600")} title={state.message}>
+      <AlertTriangle className="h-3.5 w-3.5" />
+      {t("inventoryCount.saveFailed")}
+      <button type="button" onClick={onRetry} className="underline underline-offset-2 hover:text-rose-700">
+        {t("inventoryCount.saveRetry")}
+      </button>
+    </span>
   );
 }
 
@@ -227,6 +329,13 @@ export default function InventoryCountDocumentPageClient() {
   const [lastScan, setLastScan] = useState<{ lineId: string; text: string } | null>(null);
   const flashTimer = useRef<number | null>(null);
 
+  // Unsaved counts, latest value per line. Flushed by auto-save, "Yadda saxla",
+  // and before any step that needs the server to see every count.
+  const pendingRef = useRef(new Map<string, InventoryCountLineInput>());
+  const inflightRef = useRef<Promise<boolean> | null>(null);
+  const [dirtyTick, setDirtyTick] = useState(0);
+  const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
+
   const { containerRef, tableProps, columnProps } = useTableResize(COUNT_GRID_COLUMNS, {
     storageKey: "inventory-count-grid-columns-v1",
   });
@@ -252,6 +361,99 @@ export default function InventoryCountDocumentPageClient() {
       };
     });
   }, []);
+
+  /** Sends one batch of pending counts; lines edited again meanwhile keep their newer draft. */
+  const flushOnce = useCallback(async (): Promise<boolean> => {
+    const pending = pendingRef.current;
+    if (pending.size === 0) return true;
+    const batch = new Map(pending);
+    pending.clear();
+    setSaveState({ kind: "saving" });
+
+    const result = await saveInventoryCountProgressAction(
+      countId,
+      Array.from(batch, ([line_id, input]) => ({ line_id, ...input }))
+    );
+
+    if (!result.success) {
+      for (const [id, input] of batch) if (!pending.has(id)) pending.set(id, input);
+      setSaveState({ kind: "error", message: result.error });
+      showError(`${t("inventoryCount.saveFailed")}: ${result.error}`);
+      return false;
+    }
+
+    const saved = new Map((result.data || []).map((line) => [line.id, line]));
+    setDoc((prev) =>
+      prev
+        ? {
+            ...prev,
+            lines: prev.lines.map((line) =>
+              saved.has(line.id) && !pending.has(line.id) ? (saved.get(line.id) as InventoryCountLine) : line
+            ),
+          }
+        : prev
+    );
+    setSaveState(pending.size > 0 ? { kind: "dirty" } : { kind: "saved", at: new Date() });
+    return true;
+  }, [countId, showError, t]);
+
+  /** Saves everything pending, waiting for any save already in flight. */
+  const flushAll = useCallback(async (): Promise<boolean> => {
+    while (inflightRef.current || pendingRef.current.size > 0) {
+      if (inflightRef.current) {
+        await inflightRef.current;
+        continue;
+      }
+      const save = flushOnce();
+      inflightRef.current = save;
+      const ok = await save;
+      inflightRef.current = null;
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushOnce]);
+
+  const handleDraft = useCallback(
+    (line: InventoryCountLine, input: InventoryCountLineInput) => {
+      pendingRef.current.set(line.id, input);
+      patchLine(applyDraft(line, input));
+      setSaveState({ kind: "dirty" });
+      setDirtyTick((tick) => tick + 1);
+    },
+    [patchLine]
+  );
+
+  // Debounced auto-save: fires once typing pauses.
+  useEffect(() => {
+    if (dirtyTick === 0) return;
+    const timer = window.setTimeout(() => void flushAll(), AUTOSAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [dirtyTick, flushAll]);
+
+  // Closing or reloading the tab with unsaved counts asks for confirmation.
+  useEffect(() => {
+    const pending = pendingRef.current;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pending.size > 0 || inflightRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // In-app navigation away (back link, sidebar) still delivers the last counts.
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => {
+      if (pending.size === 0) return;
+      void saveInventoryCountProgressAction(
+        countId,
+        Array.from(pending, ([line_id, input]) => ({ line_id, ...input }))
+      );
+    };
+  }, [countId]);
 
   const lines = useMemo(() => doc?.lines ?? [], [doc]);
   const status = doc?.status ?? "draft";
@@ -318,8 +520,20 @@ export default function InventoryCountDocumentPageClient() {
     await load();
   };
 
+  const handleSaveProgress = async () => {
+    if (await flushAll()) {
+      setSaveState({ kind: "saved", at: new Date() });
+      showSuccess(t("inventoryCount.progressSaved"));
+    }
+  };
+
+  /** "Sayımı Bitir": saves every count, then closes counting (→ review). */
   const handleSubmit = async () => {
     setBusy(true);
+    if (!(await flushAll())) {
+      setBusy(false);
+      return;
+    }
     const result = await submitInventoryCountAction(countId);
     setBusy(false);
     if (!result.success) {
@@ -355,6 +569,7 @@ export default function InventoryCountDocumentPageClient() {
       await load();
       return;
     }
+    if (!(await flushAll())) return;
     const ok = await run(
       () => (action === "resync" ? resyncInventoryCountBookAction(countId) : markUncountedAsZeroAction(countId)),
       () => {
@@ -375,19 +590,9 @@ export default function InventoryCountDocumentPageClient() {
     router.push("/inventory/counts");
   };
 
-  const handleCommit = useCallback(
-    async (line: InventoryCountLine, input: InventoryCountLineInput) => {
-      const result = await updateInventoryCountLineAction(countId, line.id, input);
-      if (!result.success || !result.data) {
-        showError(result.success ? t("common.error") : result.error);
-        return;
-      }
-      patchLine(result.data);
-    },
-    [countId, patchLine, showError, t]
-  );
-
   const handleScan = async (code: string) => {
+    // Typed counts go first so the scan increments the value the user sees.
+    if (!(await flushAll())) return;
     const result = await scanInventoryCountAction(countId, code);
     if (!result.success || !result.data) {
       showError(result.success ? t("common.error") : result.error);
@@ -395,6 +600,7 @@ export default function InventoryCountDocumentPageClient() {
     }
     const { line, piece_length } = result.data;
     patchLine(line);
+    setSaveState({ kind: "saved", at: new Date() });
     setLastScan({
       lineId: line.id,
       text:
@@ -458,8 +664,20 @@ export default function InventoryCountDocumentPageClient() {
             <Eraser className="h-4 w-4" />
             {t("inventoryCount.markUncountedZero")}
           </Button>
+          <span className="mx-1 hidden h-6 w-px bg-[color:var(--erp-border-default)] sm:block" />
+          <SaveIndicator state={saveState} onRetry={() => void flushAll()} />
+          <Button
+            appearance="outline"
+            color="primary"
+            onClick={() => void handleSaveProgress()}
+            loading={saveState.kind === "saving"}
+            disabled={busy}
+          >
+            <Save className="h-4 w-4" />
+            {t("inventoryCount.saveProgress")}
+          </Button>
           <Button onClick={() => void handleSubmit()} loading={busy} disabled={summary.counted === 0}>
-            <Send className="h-4 w-4" />
+            <Flag className="h-4 w-4" />
             {t("inventoryCount.submitForReview")}
           </Button>
         </>
@@ -758,19 +976,9 @@ export default function InventoryCountDocumentPageClient() {
                         <td className="px-3 py-1.5 text-right">
                           {editable ? (
                             line.is_metric ? (
-                              <PieceInput
-                                key={`${line.id}:${line.actual_full_sheets}:${(line.actual_cut_pieces || []).join(",")}`}
-                                line={line}
-                                index={index}
-                                onCommit={handleCommit}
-                              />
+                              <PieceInput line={line} index={index} onDraft={handleDraft} />
                             ) : (
-                              <QtyInput
-                                key={`${line.id}:${line.actual_qty}`}
-                                line={line}
-                                index={index}
-                                onCommit={handleCommit}
-                              />
+                              <QtyInput line={line} index={index} onDraft={handleDraft} />
                             )
                           ) : line.actual_qty === null ? (
                             <span className="text-xs italic text-app-muted">{t("inventoryCount.notCounted")}</span>

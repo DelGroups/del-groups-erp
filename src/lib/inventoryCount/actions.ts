@@ -310,45 +310,26 @@ export type InventoryCountLineInput =
   | { kind: "qty"; actual_qty: number | null }
   | { kind: "pieces"; full_sheets: number | null; cut_pieces: number[] | null };
 
-export async function updateInventoryCountLineAction(
+export type InventoryCountLineSave = InventoryCountLineInput & { line_id: string };
+
+/**
+ * "Yadda saxla" / auto-save: persists a batch of counted quantities while the
+ * count stays in_progress. save_count_progress only updates count lines — no
+ * stock, movement or ledger changes happen before posting.
+ */
+export async function saveInventoryCountProgressAction(
   countId: string,
-  lineId: string,
-  input: InventoryCountLineInput
-): Promise<InventoryCountActionResult<InventoryCountLine>> {
+  lines: InventoryCountLineSave[]
+): Promise<InventoryCountActionResult<InventoryCountLine[]>> {
   try {
     const { user } = await requirePermissionAction("can_writeoff_inventory");
-    await requireStatus(countId, ["in_progress"]);
-
-    const patch: Record<string, unknown> = { counted_at: new Date().toISOString(), counted_by: user.id };
-    if (input.kind === "qty") {
-      if (input.actual_qty !== null && (!Number.isFinite(input.actual_qty) || input.actual_qty < 0)) {
-        return { success: false, error: "Miqdar mənfi ola bilməz" };
-      }
-      patch.actual_qty = input.actual_qty;
-    } else {
-      const full = input.full_sheets;
-      if (full !== null && (!Number.isInteger(full) || full < 0)) {
-        return { success: false, error: "Tam vərəq sayı düzgün deyil" };
-      }
-      const cuts = (input.cut_pieces || []).filter((n) => Number.isFinite(n) && n > 0);
-      const cleared = full === null && cuts.length === 0;
-      patch.actual_full_sheets = cleared ? null : full ?? 0;
-      patch.actual_cut_pieces = cleared ? null : cuts.map((n) => Math.round(n * 1000) / 1000);
-      if (cleared) patch.scanned_piece_ids = [];
-    }
-
-    const client = db();
-    const { data, error } = await client
-      .from("inventory_count_items")
-      .update(patch)
-      .eq("id", lineId)
-      .eq("count_id", countId)
-      .select("*")
-      .single();
-    if (error || !data) return { success: false, error: error?.message || "Sətir tapılmadı" };
-
-    await client.rpc("inventory_count_refresh_totals", { p_count_id: countId });
-    return { success: true, data: mapLine(data as Record<string, unknown>) };
+    if (lines.length === 0) return { success: true, data: [] };
+    const rows = await callRpc<Record<string, unknown>[]>("save_count_progress", {
+      p_count_id: countId,
+      p_lines: lines,
+      p_actor: user.id,
+    });
+    return { success: true, data: (rows || []).map(mapLine) };
   } catch (err) {
     return fail(err);
   }
