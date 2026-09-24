@@ -73,6 +73,46 @@ export function Td({
   return <td className={cn(COMPACT_CELL, numeric && NUMERIC_CLASS, className)} {...props} />;
 }
 
+/**
+ * A `<th>` with a mouse-draggable resize handle on its right edge. Pair with
+ * `useTableResize` for the drag state/logic — this component is purely the
+ * visual handle + width application, so it drops into any plain HTML table
+ * (`<table className="app-table">`, this file's `Table`, or a bespoke grid)
+ * without depending on the rest of this file's components.
+ */
+export function ResizableTh({
+  width,
+  minWidth = 40,
+  maxWidth = 900,
+  columnKey,
+  onResizeStart,
+  className,
+  children,
+  ...props
+}: React.ThHTMLAttributes<HTMLTableCellElement> & {
+  width: number;
+  minWidth?: number;
+  maxWidth?: number;
+  columnKey: string;
+  onResizeStart: (columnKey: string, minWidth?: number, maxWidth?: number) => (e: React.MouseEvent) => void;
+}) {
+  return (
+    <th
+      {...props}
+      style={{ width, minWidth, maxWidth }}
+      className={cn("relative overflow-hidden text-ellipsis whitespace-nowrap", className)}
+    >
+      {children}
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={onResizeStart(columnKey, minWidth, maxWidth)}
+        className="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize touch-none select-none hover:bg-[color:var(--app-accent)]/40 active:bg-[color:var(--app-accent)]/70"
+      />
+    </th>
+  );
+}
+
 /** Narrow actions column for kebab menus. */
 export function ActionsTh({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (

@@ -35,6 +35,8 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
+import { ResizableTh } from "@/components/ui/table";
+import { useTableResize } from "@/hooks/useTableResize";
 import {
   formTableCompactControlClass,
   formTableCompactSelectClass,
@@ -106,6 +108,17 @@ interface EmployeeOption {
   id: string;
   full_name: string | null;
 }
+
+/** Default column widths for the Purchase line-item grid — user-resizable via `useTableResize`. */
+const PURCHASE_GRID_COLUMN_WIDTHS = {
+  select: 40,
+  idx: 40,
+  product: 350,
+  quantity: 80,
+  price: 210,
+  total: 100,
+  actions: 50,
+};
 
 interface PurchaseFormProps {
   suppliers: Supplier[];
@@ -180,6 +193,10 @@ export default function PurchaseForm({
       : createEmptyPurchaseLineItems(DEFAULT_INVOICE_ROW_COUNT)
   );
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const { widths: colWidths, startResize: startColResize } = useTableResize(
+    PURCHASE_GRID_COLUMN_WIDTHS,
+    "purchase-invoice-grid-columns"
+  );
   const [payments, setPayments] = useState<PurchasePaymentRow[]>([
     createEmptyPurchasePayment(),
   ]);
@@ -959,10 +976,19 @@ export default function PurchaseForm({
           </div>
 
           <div className="overflow-x-auto overflow-y-visible">
-            <table className="app-table w-full min-w-[900px] text-left text-sm">
+            <table
+              className="app-table table-fixed text-left text-sm"
+              style={{ width: "max-content" }}
+            >
               <thead>
                 <tr>
-                  <th className="w-[40px] min-w-[40px]">
+                  <ResizableTh
+                    columnKey="select"
+                    width={colWidths.select}
+                    minWidth={36}
+                    maxWidth={60}
+                    onResizeStart={startColResize}
+                  >
                     <input
                       type="checkbox"
                       checked={items.length > 0 && selectedRowIds.size === items.length}
@@ -977,13 +1003,63 @@ export default function PurchaseForm({
                       aria-label={t("invoice.selectAllRows")}
                       className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
                     />
-                  </th>
-                  <th className="w-[40px] min-w-[40px]">№</th>
-                  <th className="w-1/4 min-w-[250px]">{t("dashboard.product")}</th>
-                  <th className="min-w-[80px] w-[80px]">{t("forms.quantity")}</th>
-                  <th className="min-w-[240px] w-1/4">{t("forms.buyPrice")}</th>
-                  <th className="min-w-[100px] w-[100px] text-right">{t("forms.lineTotal")}</th>
-                  <th className="w-[50px] min-w-[50px] text-center">{t("forms.remove")}</th>
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="idx"
+                    width={colWidths.idx}
+                    minWidth={32}
+                    maxWidth={60}
+                    onResizeStart={startColResize}
+                  >
+                    №
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="product"
+                    width={colWidths.product}
+                    minWidth={200}
+                    maxWidth={900}
+                    onResizeStart={startColResize}
+                  >
+                    {t("dashboard.product")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="quantity"
+                    width={colWidths.quantity}
+                    minWidth={60}
+                    maxWidth={160}
+                    onResizeStart={startColResize}
+                  >
+                    {t("forms.quantity")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="price"
+                    width={colWidths.price}
+                    minWidth={180}
+                    maxWidth={400}
+                    onResizeStart={startColResize}
+                  >
+                    {t("forms.buyPrice")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="total"
+                    width={colWidths.total}
+                    minWidth={80}
+                    maxWidth={220}
+                    onResizeStart={startColResize}
+                    className="text-right"
+                  >
+                    {t("forms.lineTotal")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="actions"
+                    width={colWidths.actions}
+                    minWidth={50}
+                    maxWidth={90}
+                    onResizeStart={startColResize}
+                    className="text-center"
+                  >
+                    {t("forms.remove")}
+                  </ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1073,7 +1149,7 @@ export default function PurchaseForm({
                           onChange={(e) =>
                             updateItem(row.id, { unit_price: Number(e.target.value) || 0 })
                           }
-                          className={cn(formTableCompactControlClass, "w-[110px] min-w-[110px] flex-1 font-mono")}
+                          className={cn(formTableCompactControlClass, "w-24 min-w-[96px] shrink-0 font-mono")}
                         />
                         <select
                           value={row.currency || "AZN"}

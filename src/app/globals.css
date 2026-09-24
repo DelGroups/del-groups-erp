@@ -76,6 +76,8 @@ html[data-theme="graphite"] {
   --erp-border-default: var(--app-border);
   --erp-border-strong: var(--app-border-hover);
   --erp-border-sidebar: var(--app-sidebar-border);
+  --erp-color-link: var(--app-accent);
+  --erp-color-link-hover: var(--app-accent-hover);
   --erp-color-primary: var(--app-primary);
   --erp-color-primary-hover: var(--app-primary-hover);
   --erp-color-primary-foreground: var(--app-primary-foreground);
@@ -144,6 +146,8 @@ html[data-theme="daylight"] {
   --erp-border-default: var(--app-border);
   --erp-border-strong: var(--app-border-hover);
   --erp-border-sidebar: var(--app-sidebar-border);
+  --erp-color-link: var(--app-accent);
+  --erp-color-link-hover: var(--app-accent-hover);
   --erp-color-primary: var(--app-primary);
   --erp-color-primary-hover: var(--app-primary-hover);
   --erp-color-primary-foreground: var(--app-primary-foreground);
@@ -214,6 +218,8 @@ html[data-theme="midnight"] {
   --erp-border-default: var(--app-border);
   --erp-border-strong: var(--app-border-hover);
   --erp-border-sidebar: var(--app-sidebar-border);
+  --erp-color-link: var(--app-accent);
+  --erp-color-link-hover: var(--app-accent-hover);
   --erp-color-primary: var(--app-primary);
   --erp-color-primary-hover: var(--app-primary-hover);
   --erp-color-primary-foreground: var(--app-primary-foreground);
@@ -917,7 +923,7 @@ textarea:focus {
 .sidebar-footer .theme-seg button[data-active="true"] {
   background-color: var(--gt-accent-green);
   background-image: none;
-  color: #ffffff;
+  color: var(--app-primary-foreground);
 }
 
 .sidebar-footer .bg-app-card-hover {
@@ -947,14 +953,14 @@ textarea:focus {
 .theme-seg button[data-active="true"] {
   background-color: var(--gt-accent-green);
   background-image: none;
-  color: #ffffff;
+  color: var(--app-primary-foreground);
   box-shadow: 0 4px 10px -6px rgb(26 187 156 / 0.55);
 }
 
 .nav-link-active {
   background-color: var(--gt-accent-green);
   background-image: none;
-  color: #ffffff;
+  color: var(--app-primary-foreground);
   box-shadow: 0 4px 12px -8px rgb(26 187 156 / 0.5);
 }
 

@@ -18,6 +18,9 @@ type DbRow<T> = {
 /** Form line item (UI) — persisted in sale_items table */
 export type InvoiceCurrency = "AZN" | "USD" | "EUR";
 
+/** Whether a line's discount value is a percentage of the line, or a flat currency amount. */
+export type DiscountType = "percentage" | "fixed";
+
 export interface SaleItem {
   id: string;
   product_id: string;
@@ -28,7 +31,10 @@ export interface SaleItem {
   quantity: number;
   unit: string;
   unit_price: number;
+  /** Discount value: a percent (0-100) when discount_type is "percentage", or a flat AZN-line amount when "fixed". */
   discount_percent: number;
+  /** How discount_percent is interpreted; undefined = "percentage" (legacy default). */
+  discount_type?: DiscountType;
   vat_rate: number;
   available_stock?: number;
   total: number;
@@ -80,12 +86,31 @@ export interface SaleTotals {
 export function calcLineTotal(
   quantity: number,
   unitPrice: number,
-  discountPercent: number
+  discountValue: number,
+  discountType: DiscountType = "percentage"
 ): number {
   const qty = Number(quantity) || 0;
   const price = Number(unitPrice) || 0;
-  const disc = Number(discountPercent) || 0;
-  return qty * price - (qty * price * disc) / 100;
+  const disc = Number(discountValue) || 0;
+  const gross = qty * price;
+  if (discountType === "fixed") {
+    return Math.max(0, gross - disc);
+  }
+  return gross - (gross * disc) / 100;
+}
+
+/** The line's discount amount in its own currency (not yet AZN-converted). */
+export function calcLineDiscountAmount(
+  item: Pick<SaleItem, "quantity" | "unit_price" | "discount_percent" | "discount_type">
+): number {
+  const qty = Number(item.quantity) || 0;
+  const price = Number(item.unit_price) || 0;
+  const disc = Number(item.discount_percent) || 0;
+  const gross = qty * price;
+  if (item.discount_type === "fixed") {
+    return Math.min(disc, gross);
+  }
+  return (gross * disc) / 100;
 }
 
 /** AZN-equivalent multiplier for a line: 1 for AZN (or unset), else its exchange_rate. */
@@ -104,19 +129,19 @@ export function calcSubtotal(items: SaleItem[]): number {
 
 export function calcDiscountTotal(items: SaleItem[]): number {
   return items.reduce(
-    (sum, item) =>
-      sum +
-      (Number(item.quantity) || 0) *
-        (Number(item.unit_price) || 0) *
-        ((Number(item.discount_percent) || 0) / 100) *
-        lineAznMultiplier(item),
+    (sum, item) => sum + calcLineDiscountAmount(item) * lineAznMultiplier(item),
     0
   );
 }
 
 export function calcVatTotal(items: SaleItem[]): number {
   return items.reduce((sum, item) => {
-    const lineNet = calcLineTotal(item.quantity, item.unit_price, item.discount_percent);
+    const lineNet = calcLineTotal(
+      item.quantity,
+      item.unit_price,
+      item.discount_percent,
+      item.discount_type
+    );
     return sum + lineNet * ((Number(item.vat_rate) || 0) / 100) * lineAznMultiplier(item);
   }, 0);
 }
@@ -126,7 +151,12 @@ export function calcCurrencyBreakdown(items: SaleItem[]): Record<string, number>
   const breakdown: Record<string, number> = {};
   for (const item of items) {
     const currency = item.currency || "AZN";
-    const lineNet = calcLineTotal(item.quantity, item.unit_price, item.discount_percent);
+    const lineNet = calcLineTotal(
+      item.quantity,
+      item.unit_price,
+      item.discount_percent,
+      item.discount_type
+    );
     breakdown[currency] = (breakdown[currency] || 0) + lineNet;
   }
   return breakdown;
@@ -197,6 +227,7 @@ export function createEmptySaleItem(
     unit: "Ədəd",
     unit_price: 0,
     discount_percent: 0,
+    discount_type: "percentage",
     vat_rate: 0,
     available_stock: 0,
     total: 0,

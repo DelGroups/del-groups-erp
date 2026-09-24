@@ -496,6 +496,15 @@ export async function createExpenseAction(
       };
     }
 
+    // Surface what actually went wrong. The old fallback below called
+    // create_expense_atomic, which no longer exists in the database, so its
+    // "Could not find the function" error replaced every real message — a
+    // refused expense (for example "Kassa/bank balansı kifayət etmir") reached
+    // the user as nothing at all.
+    if (manual.error) {
+      return { success: false, error: mapRpcError(manual.error.message) };
+    }
+
     const code = `EXP-${Math.floor(1000 + Math.random() * 9000)}`;
     const legacy = await client.rpc("create_expense_atomic", {
       p_code: code,

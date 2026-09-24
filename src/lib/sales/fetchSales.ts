@@ -220,6 +220,7 @@ function mapSaleItemRow(row: Record<string, unknown>): SaleItem {
     unit: typeof row.unit === "string" ? row.unit : "Ədəd",
     unit_price: Number(row.unit_price) || 0,
     discount_percent: Number(row.discount_percent) || 0,
+    discount_type: row.discount_type === "fixed" ? "fixed" : "percentage",
     vat_rate: Number(row.vat_rate) || 0,
     total: Number(row.line_total) || 0,
     extra_info: typeof row.extra_info === "string" ? row.extra_info : "",

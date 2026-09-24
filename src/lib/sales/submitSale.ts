@@ -59,6 +59,7 @@ type CreateSaleAtomicItemPayload = {
   unit: string;
   unit_price: number;
   discount_percent: number;
+  discount_type: string;
   vat_rate: number;
   line_total: number;
   extra_info: string | null;
@@ -84,6 +85,7 @@ function mapSaleItemToRpcPayload(
     unit: item.unit || "Ədəd",
     unit_price: item.unit_price,
     discount_percent: item.discount_percent,
+    discount_type: item.discount_type || "percentage",
     vat_rate: item.vat_rate,
     line_total: item.total,
     extra_info: item.extra_info || null,

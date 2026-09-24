@@ -9,6 +9,7 @@ import {
   calcSaleTotals,
   createEmptySaleItem,
   type Customer,
+  type DiscountType,
   type InvoiceCurrency,
   type PriceTier,
   type SaleInsert,
@@ -107,6 +108,8 @@ import ProductCombobox from "@/components/products/ProductCombobox";
 import Button from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
+import { ResizableTh } from "@/components/ui/table";
+import { useTableResize } from "@/hooks/useTableResize";
 import {
   formControlClass,
   formLabelClass,
@@ -293,6 +296,21 @@ const INVOICE_INPUT = formControlClass;
 const INVOICE_TABLE_INPUT = formTableInputClass;
 const INVOICE_TEXTAREA = formTextareaClass;
 
+/** Default column widths for the Sales invoice line-item grid — user-resizable via `useTableResize`. */
+const SALES_GRID_COLUMN_WIDTHS = {
+  select: 40,
+  idx: 40,
+  product: 350,
+  warehouse: 120,
+  quantity: 80,
+  unit: 100,
+  price: 320,
+  discount: 130,
+  info: 150,
+  total: 100,
+  actions: 50,
+};
+
 function ItemsSectionWrap({
   isPageLayout,
   children,
@@ -376,6 +394,10 @@ export default function UniversalInvoiceForm({
 
   const [items, setItems] = useState<SaleItem[]>(() => createEmptySaleItems(5));
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const { widths: colWidths, startResize: startColResize } = useTableResize(
+    SALES_GRID_COLUMN_WIDTHS,
+    "sales-invoice-grid-columns"
+  );
   const [payments, setPayments] = useState<SalePayment[]>([
     { id: "1", account_id: "", method: "Nəğd", amount: 0 },
   ]);
@@ -686,7 +708,8 @@ export default function UniversalInvoiceForm({
         updated.total = calcLineTotal(
           updated.quantity,
           updated.unit_price,
-          updated.discount_percent
+          updated.discount_percent,
+          updated.discount_type
         );
         return updated;
       })
@@ -1044,7 +1067,12 @@ export default function UniversalInvoiceForm({
       polywood_full_sheet_length_m: polywoodRow ? fullSheetLengthM : null,
       polywood_cut_confirmed: false,
     };
-    updated.total = calcLineTotal(updated.quantity, updated.unit_price, updated.discount_percent);
+    updated.total = calcLineTotal(
+      updated.quantity,
+      updated.unit_price,
+      updated.discount_percent,
+      updated.discount_type
+    );
     return updated;
   };
 
@@ -1945,10 +1973,20 @@ export default function UniversalInvoiceForm({
               isPageLayout && "border-t border-[color:var(--gt-border-color)]"
             )}
           >
-            <table className="app-table w-full min-w-[1200px] text-left text-sm">
+            <table
+              className="app-table table-fixed text-left text-sm"
+              style={{ width: "max-content" }}
+            >
               <thead>
                 <tr>
-                  <th className={cn(tableColClass, "w-[40px] min-w-[40px]")}>
+                  <ResizableTh
+                    columnKey="select"
+                    width={colWidths.select}
+                    minWidth={36}
+                    maxWidth={60}
+                    onResizeStart={startColResize}
+                    className={tableColClass}
+                  >
                     <input
                       type="checkbox"
                       checked={items.length > 0 && selectedRowIds.size === items.length}
@@ -1963,21 +2001,108 @@ export default function UniversalInvoiceForm({
                       aria-label={t("invoice.selectAllRows")}
                       className="h-4 w-4 cursor-pointer accent-rose-600 disabled:cursor-not-allowed"
                     />
-                  </th>
-                  <th className={cn(tableColClass, "w-[40px] min-w-[40px]")}>№</th>
-                  <th className="w-1/4 min-w-[250px]">{t("invoice.productName")}</th>
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="idx"
+                    width={colWidths.idx}
+                    minWidth={32}
+                    maxWidth={60}
+                    onResizeStart={startColResize}
+                    className={tableColClass}
+                  >
+                    №
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="product"
+                    width={colWidths.product}
+                    minWidth={200}
+                    maxWidth={900}
+                    onResizeStart={startColResize}
+                  >
+                    {t("invoice.productName")}
+                  </ResizableTh>
                   {!polywoodOnly ? (
-                    <th className={cn(tableColClass, "min-w-[120px] w-[120px]")}>{t("common.warehouse")}</th>
+                    <ResizableTh
+                      columnKey="warehouse"
+                      width={colWidths.warehouse}
+                      minWidth={90}
+                      maxWidth={260}
+                      onResizeStart={startColResize}
+                      className={tableColClass}
+                    >
+                      {t("common.warehouse")}
+                    </ResizableTh>
                   ) : null}
-                  <th className={cn(tableColClass, "min-w-[80px] w-[80px]")}>{t("forms.quantity")}</th>
+                  <ResizableTh
+                    columnKey="quantity"
+                    width={colWidths.quantity}
+                    minWidth={60}
+                    maxWidth={160}
+                    onResizeStart={startColResize}
+                    className={tableColClass}
+                  >
+                    {t("forms.quantity")}
+                  </ResizableTh>
                   {!polywoodOnly ? (
-                    <th className={cn(tableColClass, "min-w-[100px] w-[100px]")}>{t("invoice.unit")}</th>
+                    <ResizableTh
+                      columnKey="unit"
+                      width={colWidths.unit}
+                      minWidth={70}
+                      maxWidth={200}
+                      onResizeStart={startColResize}
+                      className={tableColClass}
+                    >
+                      {t("invoice.unit")}
+                    </ResizableTh>
                   ) : null}
-                  <th className={cn(tableColClass, "min-w-[320px] w-1/4")}>{t("forms.price")}</th>
-                  <th className={cn(tableColClass, "min-w-[90px] w-[90px]")}>{t("invoice.lineDiscount")}</th>
-                  <th className="min-w-[150px] w-[150px]">{t("invoice.info")}</th>
-                  <th className={cn(tableColClass, "min-w-[100px] w-[100px] text-right")}>{t("forms.lineTotal")}</th>
-                  <th className={cn(tableColClass, "w-[50px] min-w-[50px] text-right")} aria-label={t("common.actions")} />
+                  <ResizableTh
+                    columnKey="price"
+                    width={colWidths.price}
+                    minWidth={220}
+                    maxWidth={500}
+                    onResizeStart={startColResize}
+                    className={tableColClass}
+                  >
+                    {t("forms.price")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="discount"
+                    width={colWidths.discount}
+                    minWidth={100}
+                    maxWidth={260}
+                    onResizeStart={startColResize}
+                    className={tableColClass}
+                  >
+                    {t("invoice.lineDiscount")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="info"
+                    width={colWidths.info}
+                    minWidth={90}
+                    maxWidth={320}
+                    onResizeStart={startColResize}
+                  >
+                    {t("invoice.info")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="total"
+                    width={colWidths.total}
+                    minWidth={80}
+                    maxWidth={220}
+                    onResizeStart={startColResize}
+                    className={cn(tableColClass, "text-right")}
+                  >
+                    {t("forms.lineTotal")}
+                  </ResizableTh>
+                  <ResizableTh
+                    columnKey="actions"
+                    width={colWidths.actions}
+                    minWidth={50}
+                    maxWidth={90}
+                    onResizeStart={startColResize}
+                    className={cn(tableColClass, "text-right")}
+                    aria-label={t("common.actions")}
+                  />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 overflow-visible">
@@ -2331,7 +2456,7 @@ export default function UniversalInvoiceForm({
                           onChange={(e) =>
                             handleItemChange(row.id, { unit_price: Number(e.target.value) || 0 })
                           }
-                          className={cn(formTableCompactControlClass, "w-[90px] min-w-[90px] flex-1 font-mono")}
+                          className={cn(formTableCompactControlClass, "w-24 min-w-[96px] shrink-0 font-mono")}
                         />
                         <select
                           value={row.price_tier || "retail"}
@@ -2418,17 +2543,36 @@ export default function UniversalInvoiceForm({
                       })()}
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={row.discount_percent}
-                        onChange={(e) =>
-                          handleItemChange(row.id, {
-                            discount_percent: Number(e.target.value) || 0,
-                          })
-                        }
-                        className={`${INVOICE_TABLE_INPUT} text-center font-mono text-amber-700`}
-                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step={row.discount_type === "fixed" ? "0.01" : "0.1"}
+                          min="0"
+                          value={row.discount_percent}
+                          onChange={(e) =>
+                            handleItemChange(row.id, {
+                              discount_percent: Number(e.target.value) || 0,
+                            })
+                          }
+                          className={cn(
+                            formTableCompactControlClass,
+                            "min-w-0 flex-1 text-center font-mono text-amber-700"
+                          )}
+                        />
+                        <select
+                          value={row.discount_type || "percentage"}
+                          onChange={(e) =>
+                            handleItemChange(row.id, {
+                              discount_type: e.target.value as DiscountType,
+                            })
+                          }
+                          className={cn(formTableCompactSelectClass, "w-[64px] min-w-[64px] shrink-0")}
+                          title={t("invoice.discountType")}
+                        >
+                          <option value="percentage">{t("invoice.discountPercentOption")}</option>
+                          <option value="fixed">{t("invoice.discountFixedOption")}</option>
+                        </select>
+                      </div>
                     </td>
                     <td>
                       <input
