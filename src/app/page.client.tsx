@@ -32,6 +32,11 @@ import {
   Wallet,
 } from "lucide-react";
 
+/** Tables whose changes move a KPI, the trend chart or the activity list. */
+const LIVE_TABLES = ["sales", "purchases", "transactions", "customers", "products"] as const;
+/** Fallback refresh for when Realtime events are unavailable. */
+const LIVE_POLL_MS = 30_000;
+
 const emptyDashboard: DashboardData = {
   kpis: {
     monthlyRevenue: 0,
@@ -57,8 +62,8 @@ export default function ManagementDashboardPage() {
   const [data, setData] = useState<DashboardData>(emptyDashboard);
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
+  const loadDashboard = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [{ data: settings }, dashboard] = await Promise.all([
       supabase.from("settings").select("company_name, logo_url").limit(1).single(),
       fetchDashboardData(),
@@ -72,6 +77,37 @@ export default function ManagementDashboardPage() {
 
   useEffect(() => {
     void loadDashboard();
+  }, [loadDashboard]);
+
+  // Keep the KPIs live: refresh silently on any change to the underlying
+  // tables (Supabase Realtime), when the tab regains focus, and on a timer.
+  useEffect(() => {
+    let debounce: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        if (document.visibilityState === "visible") void loadDashboard(true);
+      }, 800);
+    };
+
+    const channel = supabase.channel("dashboard-live");
+    for (const table of LIVE_TABLES) {
+      channel.on("postgres_changes", { event: "*", schema: "public", table }, refresh);
+    }
+    channel.subscribe();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const poll = setInterval(refresh, LIVE_POLL_MS);
+
+    return () => {
+      clearTimeout(debounce);
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      void supabase.removeChannel(channel);
+    };
   }, [loadDashboard]);
 
   const handleReconcileAr = async () => {

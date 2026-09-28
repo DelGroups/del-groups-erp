@@ -10,6 +10,7 @@ import {
   type ProductQuantityLine,
   type SaleItemStockRow,
 } from "@/lib/inventory/stockAdjustment";
+import { normalizeSalesDocumentStatus } from "@/lib/invoices/invoiceStatus";
 
 export type VoidInvoiceResult = { success: boolean; error?: string };
 
@@ -169,17 +170,16 @@ async function refreshCustomerArBalance(
 ): Promise<void> {
   const { data: rows, error } = await client
     .from("sales")
-    .select("remaining_balance")
+    .select("remaining_balance, status")
     .eq("customer_id", customerId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const openAr = (rows || []).reduce(
-    (sum, row) => sum + Math.max(0, Number(row.remaining_balance) || 0),
-    0
-  );
+  const openAr = (rows || [])
+    .filter((row) => normalizeSalesDocumentStatus(row.status) === "posted")
+    .reduce((sum, row) => sum + Math.max(0, Number(row.remaining_balance) || 0), 0);
 
   const { error: updateError } = await client
     .from("customers")
@@ -280,7 +280,9 @@ export async function voidSaleInvoiceDirect(saleId: string): Promise<VoidInvoice
 
     const { error: cancelSaleError } = await client
       .from("sales")
-      .update({ status: "cancelled" })
+      // Nothing is owed on a cancelled invoice; clearing the open amount keeps
+      // every AR calculation (including the SQL refresh) from counting it.
+      .update({ status: "cancelled", remaining_balance: 0 })
       .eq("id", saleId);
 
     if (cancelSaleError) {

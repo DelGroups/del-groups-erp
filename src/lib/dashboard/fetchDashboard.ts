@@ -3,6 +3,10 @@ import { FINANCIAL_REPORT_SELECT_ATTEMPTS } from "@/lib/finance/transactionQueri
 import { isRetryableSelectError } from "@/lib/supabase/schemaFallback";
 import { checkCustomerArDiscrepancies } from "@/lib/finance/customerAr";
 import {
+  normalizePurchaseDocumentStatus,
+  normalizeSalesDocumentStatus,
+} from "@/lib/invoices/invoiceStatus";
+import {
   getDateRangeBounds,
   getRecordDate,
   getTransactionDate,
@@ -54,10 +58,12 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     await Promise.all([
     supabase
       .from("sales")
-      .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance"),
+      .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance, status")
+      .order("created_at", { ascending: false }),
     supabase
       .from("purchases")
-      .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount"),
+      .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount, status")
+      .order("created_at", { ascending: false }),
     fetchRecentTransactionsForDashboard(),
     supabase
       .from("transactions")
@@ -71,8 +77,14 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     supabase.from("system_settings").select("value").eq("key", PROCUREMENT_CONFIG_KEY).maybeSingle(),
   ]);
 
-  const sales = salesRes.data || [];
-  const purchases = purchasesRes.data || [];
+  // Cancelled (voided) and draft documents keep their rows for the audit trail
+  // but must not count as revenue, receivables or payables.
+  const sales = (salesRes.data || []).filter(
+    (sale) => normalizeSalesDocumentStatus(sale.status) === "posted"
+  );
+  const purchases = (purchasesRes.data || []).filter(
+    (purchase) => normalizePurchaseDocumentStatus(purchase.status) === "posted"
+  );
   const trendTransactions = trendTxRes.data || [];
   const products = productsRes.data || [];
   const customers = customersRes.data || [];
