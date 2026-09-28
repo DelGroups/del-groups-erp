@@ -65,7 +65,17 @@ Create the first admin user via Supabase Auth, then assign the Admin role in `pr
 
 ### 5. Deploy with Docker (VPS)
 
-Build (pass public env at build time — required for Next.js):
+**Current production:** `erp.del-groups.com` runs on the Hetzner VPS next to
+Del Social AI. That stack's Caddy (`/opt/del-social-ai/infra/Caddyfile`)
+terminates TLS and proxies to this app's container as `erp:3000`
+(`docker-compose.prod.yml`, env in `/opt/del-groups-erp/.env.production`).
+To ship the committed `HEAD`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/deploy-hetzner.ps1
+```
+
+Manual build (pass public env at build time — required for Next.js):
 
 ```bash
 docker build \

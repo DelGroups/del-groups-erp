@@ -1,0 +1,33 @@
+# Production stack on the Hetzner VPS, next to Del Social AI.
+# Caddy (owned by /opt/del-social-ai) terminates TLS for erp.del-groups.com and
+# proxies to this container as `erp:3000` over the shared frontend network.
+#
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+services:
+  erp:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?required}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?required}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://erp.del-groups.com}
+    image: del-groups-erp:latest
+    env_file: .env.production
+    restart: unless-stopped
+    # Loopback only — for testing through an SSH tunnel before DNS cutover.
+    ports:
+      - "127.0.0.1:3001:3000"
+    mem_limit: 1g
+    networks:
+      edge:
+        aliases: [erp]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edge:
+    external: true
+    name: del-social-ai_frontend
