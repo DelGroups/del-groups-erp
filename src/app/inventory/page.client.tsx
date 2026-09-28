@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import { ERPPage } from "@/components/layout/ERPLayout";
@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import Select from "@/components/ui/select";
 import KpiCard from "@/components/dashboard/KpiCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
+import { ResizableTh, Td, TablePagination } from "@/components/ui/table";
+import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
+import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import { useWarehouseStockDashboard } from "@/hooks/useWarehouseStockDashboard";
 import {
   computeWarehouseStockKpis,
@@ -29,6 +31,18 @@ import {
 } from "lucide-react";
 
 type StatusFilter = "all" | "low" | "out";
+
+const INVENTORY_GRID_COLUMNS: TableColumnSpecs = {
+  code: { width: 150, minWidth: 120, maxWidth: 260 },
+  name: { width: 280, minWidth: 220, maxWidth: 1200, grow: 2 },
+  warehouse: { width: 150, minWidth: 110, maxWidth: 260 },
+  category: { width: 150, minWidth: 110, maxWidth: 260, grow: 1 },
+  quantity: { width: 130, minWidth: 100, maxWidth: 220 },
+  unit: { width: 90, minWidth: 70, maxWidth: 160 },
+  value: { width: 140, minWidth: 110, maxWidth: 240 },
+  status: { width: 130, minWidth: 100, maxWidth: 220 },
+  actions: { width: 200, minWidth: 160, maxWidth: 320 },
+};
 
 function StockStatusBadge({
   status,
@@ -53,21 +67,51 @@ function formatQty(value: number, unit: string | null): string {
 
 export default function InventoryPageClient() {
   const { t } = useI18n();
-  const { data, isLoading } = useWarehouseStockDashboard();
+  const { data, isLoading, isFetching, error, refetch } = useWarehouseStockDashboard();
 
+  const [searchTerm, setSearchTerm] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const {
+    containerRef: gridContainerRef,
+    tableProps: gridTableProps,
+    columnProps: gridColumnProps,
+  } = useTableResize(INVENTORY_GRID_COLUMNS, {
+    storageKey: "inventory-stock-grid-columns-v1",
+  });
 
   const filteredRows = useMemo(() => {
     const rows = data?.rows ?? [];
+    const q = searchTerm.trim().toLowerCase();
     return rows.filter((row) => {
       if (warehouseFilter !== "all" && row.warehouseId !== warehouseFilter) return false;
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
       if (categoryFilter !== "all" && row.category !== categoryFilter) return false;
+      if (q) {
+        const haystack = `${row.name} ${row.sku} ${row.barcode ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [data?.rows, warehouseFilter, statusFilter, categoryFilter]);
+  }, [data?.rows, searchTerm, warehouseFilter, statusFilter, categoryFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, warehouseFilter, statusFilter, categoryFilter, pageSize]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize) || 1);
+    if (page > totalPages) setPage(totalPages);
+  }, [filteredRows.length, page, pageSize]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
 
   const kpis = useMemo(() => computeWarehouseStockKpis(filteredRows), [filteredRows]);
 
@@ -75,6 +119,13 @@ export default function InventoryPageClient() {
     if (status === "out") return t("inventory.statusOutOfStock");
     if (status === "low") return t("inventory.statusLowStock");
     return t("inventory.statusInStock");
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    setSearchTerm(e.currentTarget.value.trim());
+    e.currentTarget.select();
   };
 
   return (
@@ -123,7 +174,33 @@ export default function InventoryPageClient() {
             title={t("inventory.stockPanelTitle")}
             subtitle={t("inventory.stockPanelSubtitle")}
           >
-            <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            {error ? (
+              <div className="alert-warning mb-4 text-xs">
+                <p className="font-semibold">{t("common.error")}</p>
+                <p className="mt-1 text-app-muted">
+                  {error instanceof Error ? error.message : String(error)}
+                </p>
+              </div>
+            ) : null}
+
+            {!error && data?.warnings?.length ? (
+              <div className="alert-warning mb-4 text-xs">
+                <p className="font-semibold">{t("inventory.loadWarningTitle")}</p>
+                <p className="mt-1 text-app-muted">{data.warnings.join(" · ")}</p>
+              </div>
+            ) : null}
+
+            <div className="mb-4 flex flex-wrap items-end gap-3">
+              <DocumentListSearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={t("inventory.searchPlaceholder")}
+                onRefresh={() => void refetch()}
+                loading={isFetching}
+                className="flex min-w-[260px] flex-1 items-center gap-3"
+              />
+
               <label className="block text-xs font-semibold text-[color:var(--erp-text-muted)]">
                 {t("inventory.filters.warehouse")}
                 <Select
@@ -137,19 +214,6 @@ export default function InventoryPageClient() {
                       {warehouse.name}
                     </option>
                   ))}
-                </Select>
-              </label>
-
-              <label className="block text-xs font-semibold text-[color:var(--erp-text-muted)]">
-                {t("inventory.filters.status")}
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  className="mt-1.5"
-                >
-                  <option value="all">{t("inventory.filters.statusAll")}</option>
-                  <option value="low">{t("inventory.filters.statusLow")}</option>
-                  <option value="out">{t("inventory.filters.statusOut")}</option>
                 </Select>
               </label>
 
@@ -168,6 +232,19 @@ export default function InventoryPageClient() {
                   ))}
                 </Select>
               </label>
+
+              <label className="block text-xs font-semibold text-[color:var(--erp-text-muted)]">
+                {t("inventory.filters.status")}
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                  className="mt-1.5"
+                >
+                  <option value="all">{t("inventory.filters.statusAll")}</option>
+                  <option value="low">{t("inventory.filters.statusLow")}</option>
+                  <option value="out">{t("inventory.filters.statusOut")}</option>
+                </Select>
+              </label>
             </div>
 
             {isLoading ? (
@@ -177,93 +254,119 @@ export default function InventoryPageClient() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : (
-              <TableWrap className="rounded-[var(--erp-radius-md)]">
-                <Table className="min-w-[1100px]">
-                  <THead>
-                    <tr>
-                      <Th>{t("inventory.columns.productSku")}</Th>
-                      <Th>{t("inventory.columns.warehouse")}</Th>
-                      <Th numeric>{t("inventory.columns.totalPhysical")}</Th>
-                      <Th numeric>{t("inventory.columns.reserved")}</Th>
-                      <Th numeric>{t("inventory.columns.available")}</Th>
-                      <Th numeric>{t("inventory.columns.minLimit")}</Th>
-                      <Th>{t("inventory.columns.statusAlert")}</Th>
-                      <Th className="text-right">{t("inventory.columns.actions")}</Th>
-                    </tr>
-                  </THead>
-                  <tbody>
-                    {filteredRows.length === 0 ? (
+              <>
+                <div
+                  ref={gridContainerRef}
+                  className="w-full overflow-x-auto overflow-y-visible rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)]"
+                >
+                  <table {...gridTableProps} className="app-table w-full text-left text-sm">
+                    <thead className="border-b-2 border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-table-header)]">
                       <tr>
-                        <Td colSpan={8} className="py-10 text-center text-[color:var(--erp-text-muted)]">
-                          {t("inventory.emptyStock")}
-                        </Td>
+                        <ResizableTh {...gridColumnProps("code")}>
+                          {t("inventory.columns.barcodeOrCode")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("name")}>
+                          {t("inventory.columns.name")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("warehouse")}>
+                          {t("inventory.columns.warehouse")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("category")}>
+                          {t("inventory.columns.category")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("quantity")} className="text-right">
+                          {t("inventory.columns.qtyOnHand")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("unit")}>
+                          {t("inventory.columns.unit")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("value")} className="text-right">
+                          {t("inventory.columns.totalValue")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("status")}>
+                          {t("inventory.columns.statusAlert")}
+                        </ResizableTh>
+                        <ResizableTh {...gridColumnProps("actions")} className="text-right">
+                          {t("inventory.columns.actions")}
+                        </ResizableTh>
                       </tr>
-                    ) : (
-                      filteredRows.map((row: WarehouseStockRow) => (
-                        <tr
-                          key={row.id}
-                          className="border-b border-[color:var(--erp-border-default)] transition-colors hover:bg-[color:var(--erp-bg-table-row-alt)]"
-                        >
-                          <Td>
-                            <div className="min-w-[200px]">
+                    </thead>
+                    <tbody>
+                      {paginatedRows.length === 0 ? (
+                        <tr>
+                          <Td colSpan={9} className="py-10 text-center text-[color:var(--erp-text-muted)]">
+                            {t("inventory.emptyStock")}
+                          </Td>
+                        </tr>
+                      ) : (
+                        paginatedRows.map((row: WarehouseStockRow) => (
+                          <tr
+                            key={row.id}
+                            className="border-b border-[color:var(--erp-border-default)] transition-colors hover:bg-[color:var(--erp-bg-table-row-alt)]"
+                          >
+                            <Td className="font-mono text-xs text-[color:var(--erp-text-muted)]">
+                              {row.barcode || row.sku}
+                            </Td>
+                            <Td>
                               <p className="font-medium text-[color:var(--erp-text-main)]">
                                 {row.name}
                               </p>
-                              <p className="mt-0.5 font-mono text-xs text-[color:var(--erp-text-muted)]">
-                                {row.sku}
-                              </p>
-                            </div>
-                          </Td>
-                          <Td>
-                            <div className="flex min-w-[140px] items-center gap-2">
-                              <Boxes className="h-4 w-4 shrink-0 text-[color:var(--erp-text-muted)]" />
-                              <span>{row.warehouseName}</span>
-                            </div>
-                          </Td>
-                          <Td numeric className="font-mono tabular-nums">
-                            {formatQty(row.totalPhysical, row.unit)}
-                          </Td>
-                          <Td numeric className="font-mono tabular-nums text-amber-700">
-                            {formatQty(row.reserved, row.unit)}
-                          </Td>
-                          <Td numeric className="font-mono font-semibold tabular-nums text-[color:var(--erp-color-success)]">
-                            {formatQty(row.available, row.unit)}
-                          </Td>
-                          <Td numeric className="font-mono tabular-nums">
-                            {formatQty(row.minLimit, row.unit)}
-                          </Td>
-                          <Td>
-                            <StockStatusBadge
-                              status={row.status}
-                              label={statusLabel(row.status)}
-                            />
-                          </Td>
-                          <Td className="text-right">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                href={`/inventory/transfers/new?from=${row.warehouseId}&productId=${row.productId}`}
-                              >
-                                <ArrowRightLeft className="h-3.5 w-3.5" />
-                                {t("inventory.actions.transfer")}
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                href={`/dashboard/reports/inventory-turnover?productId=${row.productId}`}
-                              >
-                                <History className="h-3.5 w-3.5" />
-                                {t("inventory.actions.kardex")}
-                              </Button>
-                            </div>
-                          </Td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </TableWrap>
+                            </Td>
+                            <Td>
+                              <div className="flex items-center gap-2">
+                                <Boxes className="h-4 w-4 shrink-0 text-[color:var(--erp-text-muted)]" />
+                                <span>{row.warehouseName}</span>
+                              </div>
+                            </Td>
+                            <Td>{row.category || "—"}</Td>
+                            <Td numeric className="font-mono font-semibold tabular-nums">
+                              {formatQty(row.totalPhysical, null)}
+                            </Td>
+                            <Td>{row.unit || "—"}</Td>
+                            <Td numeric className="font-mono tabular-nums">
+                              {row.valuation.toFixed(2)} AZN
+                            </Td>
+                            <Td>
+                              <StockStatusBadge
+                                status={row.status}
+                                label={statusLabel(row.status)}
+                              />
+                            </Td>
+                            <Td className="text-right">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  href={`/inventory/transfers/new?from=${row.warehouseId}&productId=${row.productId}`}
+                                >
+                                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                                  {t("inventory.actions.transfer")}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  href={`/dashboard/reports/inventory-turnover?productId=${row.productId}`}
+                                >
+                                  <History className="h-3.5 w-3.5" />
+                                  {t("inventory.actions.kardex")}
+                                </Button>
+                              </div>
+                            </Td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <TablePagination
+                  page={page}
+                  limit={pageSize}
+                  total={filteredRows.length}
+                  onPageChange={setPage}
+                  onLimitChange={setPageSize}
+                  className="rounded-b-[var(--erp-radius-md)] border border-t-0 border-[color:var(--erp-border-default)]"
+                />
+              </>
             )}
           </Panel>
 
