@@ -1,0 +1,51 @@
+name: deploy
+
+# Every push to main ships to erp.del-groups.com (Hetzner VPS).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # manual re-deploy from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # never interrupt a running deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The key is restricted server-side to scripts/server/erp-deploy.sh,
+      # which reads the source archive from stdin; no command is sent.
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          git archive --format=tar.gz HEAD | ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              -o ServerAliveInterval=30 \
+              root@"$DEPLOY_HOST"
+
+      - name: Public health check
+        run: curl -fsS --retry 5 --retry-delay 3 -o /dev/null https://erp.del-groups.com/login
+
+      - name: Remove key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
