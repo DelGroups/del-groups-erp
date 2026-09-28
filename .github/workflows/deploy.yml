@@ -18,17 +18,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
+      # Host keys are public, so they live here rather than in a secret.
       - name: Install deploy key
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
+          host=$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]')
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_SSH_KEY is not a valid private key"; exit 1; }
+          cat > ~/.ssh/known_hosts <<EOF
+          $host ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHBl5MwZ60qSV/FUUcLFXL2wKhV1QSDIJQ4BKBKxz2bi
+          $host ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPUR/2CeIUxjJzcOJf/RiB0slsXM5pSHmvLI9lN/MfnYP2ZO1BPcuZgXDYKTz7rQVYMJ6Kc+Mf3sombZ3c7pdbo=
+          EOF
 
       # The key is restricted server-side to scripts/server/erp-deploy.sh,
       # which reads the source archive from stdin; no command is sent.
@@ -41,7 +47,7 @@ jobs:
               -o BatchMode=yes \
               -o ConnectTimeout=15 \
               -o ServerAliveInterval=30 \
-              root@"$DEPLOY_HOST"
+              root@"$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]')"
 
       - name: Public health check
         run: curl -fsS --retry 5 --retry-delay 3 -o /dev/null https://erp.del-groups.com/login
