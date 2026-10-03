@@ -312,6 +312,21 @@ export async function postInitialBalanceDocumentAction(
     if (itemsError) return { success: false, error: itemsError.message };
     if (!items?.length) return { success: false, error: "Document has no line items" };
 
+    // The journal entry (written after posting) is dated doc_date; refuse up front
+    // when that period is closed, before any stock is touched.
+    const docDate = String(header.doc_date || "").slice(0, 10);
+    if (docDate) {
+      const { data: period } = await admin
+        .from("accounting_periods")
+        .select("status")
+        .eq("period_year", Number(docDate.slice(0, 4)))
+        .eq("period_month", Number(docDate.slice(5, 7)))
+        .maybeSingle();
+      if (period?.status === "closed") {
+        return { success: false, error: `Hesabat dövrü bağlıdır: ${docDate.slice(0, 7)}` };
+      }
+    }
+
     const warehouseId = header.warehouse_id as string;
     const entryType = (header.entry_type as InitialBalanceEntryType) || "opening_balance";
     const referenceType = REFERENCE_TYPE[entryType];
@@ -389,13 +404,17 @@ export async function postInitialBalanceDocumentAction(
           createdBy: user.id,
         });
 
-        await admin.rpc("create_inventory_batch", {
+        const { error: batchError } = await admin.rpc("create_inventory_batch", {
           p_product_id: productId,
           p_document_id: documentId,
           p_document_type: referenceType,
           p_unit_cost: unitCost,
           p_quantity: addedQty,
         });
+        // The FIFO batch is what the journal entry is valued from; never skip it silently.
+        if (batchError) {
+          return { success: false, error: `${item.product_name}: FIFO partiyası yaradılmadı (${batchError.message})` };
+        }
       } else {
         const qty = Number(item.quantity) || 0;
         if (qty <= 0) {
@@ -433,13 +452,17 @@ export async function postInitialBalanceDocumentAction(
           createdBy: user.id,
         });
 
-        await admin.rpc("create_inventory_batch", {
+        const { error: batchError } = await admin.rpc("create_inventory_batch", {
           p_product_id: productId,
           p_document_id: documentId,
           p_document_type: referenceType,
           p_unit_cost: unitCost,
           p_quantity: qty,
         });
+        // The FIFO batch is what the journal entry is valued from; never skip it silently.
+        if (batchError) {
+          return { success: false, error: `${item.product_name}: FIFO partiyası yaradılmadı (${batchError.message})` };
+        }
       }
     }
 
@@ -454,6 +477,20 @@ export async function postInitialBalanceDocumentAction(
       .eq("id", documentId);
 
     if (postError) return { success: false, error: postError.message };
+
+    // Dr 1300 / Cr 3900 (opening) or 2150 (receipt), valued from the FIFO batches.
+    // Written after the status change so a failure can never leave a draft whose
+    // stock was already raised (re-posting it would double the stock); the RPC
+    // is idempotent and can be re-run for this document.
+    const { error: journalError } = await admin.rpc("post_initial_balance_journal", {
+      p_document_id: documentId,
+    });
+    if (journalError) {
+      return {
+        success: false,
+        error: `${header.document_number} keçirildi, lakin mühasibat yazılışı alınmadı: ${mapRpcError(journalError.message)}`,
+      };
+    }
 
     return {
       success: true,
