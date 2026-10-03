@@ -7,6 +7,7 @@
     "build": "npm run pwa:icons && next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "build:zip": "node scripts/create-source-zip.mjs",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs"
   },

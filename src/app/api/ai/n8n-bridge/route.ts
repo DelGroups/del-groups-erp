@@ -15,6 +15,12 @@ import {
 import {
   parseN8nWebhookResponse,
 } from "@/lib/ai/n8nClient";
+import {
+  AI_UNAVAILABLE_MESSAGE,
+  interpretUpstreamError,
+  interpretUpstreamResponse,
+  type BridgeUpstreamResult,
+} from "@/lib/ai/n8nBridgeResponse";
 import { erpAgentSessionId, resolveTargetAgent, type ErpAiAgentId } from "@/lib/ai/agents";
 
 export const dynamic = "force-dynamic";
@@ -96,17 +102,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  console.log("--- [AI BRIDGE DEBUG START] ---");
-  console.log("Outbound Webhook URL:", runtime.url);
-  console.log("Payload Body:", JSON.stringify(payload));
-  console.log("User ID:", auth.user.id);
-
+  // Never log the payload: it carries user messages and base64 file/voice data.
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
 
+  let outcome: BridgeUpstreamResult;
   try {
     const n8nResponse = await fetch(runtime.url, {
       method: "POST",
+      // A redirect means the URL is wrong (ai.del-groups.com now redirects to
+      // DEL SOCIAL AI); following it would post to an unrelated app.
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
         ...(runtime.secret
@@ -119,53 +126,37 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
-
-    console.log("n8n Response Status:", n8nResponse.status);
-
-    const rawText = await n8nResponse.text();
-    console.log("Raw n8n Response Text:", rawText || "(empty)");
-
-    if (!n8nResponse.ok) {
-      const errorReply = `n8n xətası (${n8nResponse.status}): ${rawText || "Cavab alınmadı"}`;
-      console.warn("[n8n-bridge] non-ok response:", errorReply);
-      console.log("--- [AI BRIDGE DEBUG END] ---");
-      return NextResponse.json({ reply: errorReply, provider: "n8n" });
-    }
-
-    let parsed: unknown = rawText;
-    if (rawText) {
-      try {
-        parsed = JSON.parse(rawText) as unknown;
-      } catch {
-        parsed = rawText;
-      }
-    }
-
-    const result = parseN8nWebhookResponse(parsed);
-    const finalReply = extractBridgeReply(parsed, result.reply);
-
-    console.log("Final Extracted Reply:", finalReply || "(empty)");
-    console.log("--- [AI BRIDGE DEBUG END] ---");
-
-    return NextResponse.json({
-      reply: finalReply || "Empty reply returned",
-      buttons: result.buttons,
-      table: result.table,
-      links: result.links,
-      provider: "n8n",
+    outcome = interpretUpstreamResponse({
+      status: n8nResponse.status,
+      contentType: n8nResponse.headers.get("content-type"),
+      body: await n8nResponse.text(),
     });
   } catch (err) {
+    outcome = interpretUpstreamError(err);
+  } finally {
     clearTimeout(timeoutId);
-    const message = err instanceof Error ? err.message : "Serverə qoşulmaq mümkün olmadı";
-    console.error("[AI Bridge Critical Error]:", err);
-    console.log("--- [AI BRIDGE DEBUG END] ---");
-    return NextResponse.json({
-      reply: `Şəbəkə xətası: ${message}`,
-      provider: "n8n",
-    });
   }
+
+  if (!outcome.ok) {
+    console.warn(
+      `[n8n-bridge] upstream unavailable reason=${outcome.reason} status=${outcome.upstreamStatus ?? "-"} ms=${Date.now() - startedAt}`
+    );
+    return NextResponse.json(
+      { error: AI_UNAVAILABLE_MESSAGE, code: "ai_unavailable" },
+      { status: outcome.status }
+    );
+  }
+
+  const result = parseN8nWebhookResponse(outcome.parsed);
+  const finalReply = extractBridgeReply(outcome.parsed, result.reply);
+
+  return NextResponse.json({
+    reply: finalReply || "Empty reply returned",
+    buttons: result.buttons,
+    table: result.table,
+    links: result.links,
+    provider: "n8n",
+  });
 }
 
 function extractBridgeReply(parsed: unknown, parsedFallback: string): string {

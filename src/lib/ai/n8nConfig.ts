@@ -21,25 +21,26 @@ function cleanEnv(value: string | undefined): string {
   return (value || "").trim().replace(/^["']|["']$/g, "");
 }
 
-const LEGACY_SHARED_N8N_WEBHOOK_URL =
-  "https://ai.del-groups.com/webhook/e6576363-eebf-461a-b93f-1240b0159593";
-
-export const DEFAULT_N8N_PRODUCTION_WEBHOOK_URL =
-  "https://ai.del-groups.com/webhook/del-erp-webhook";
+/**
+ * Webhooks that used to live on ai.del-groups.com. That host now belongs to
+ * DEL SOCIAL AI and redirects to its panel, so these URLs can only produce a
+ * 404 page. A stored or env value equal to one of them counts as "not
+ * configured" — there is deliberately no default webhook.
+ */
+const RETIRED_WEBHOOK_URLS = new Set([
+  "https://ai.del-groups.com/webhook/e6576363-eebf-461a-b93f-1240b0159593",
+  "https://ai.del-groups.com/webhook/del-erp-webhook",
+]);
 
 export function normalizeN8nWebhookUrl(url: string): string {
   const cleaned = clampString(url, 500).replace(/\/$/, "");
-  if (!cleaned || cleaned === LEGACY_SHARED_N8N_WEBHOOK_URL.replace(/\/$/, "")) {
-    return DEFAULT_N8N_PRODUCTION_WEBHOOK_URL;
-  }
+  if (!cleaned || RETIRED_WEBHOOK_URLS.has(cleaned)) return "";
   return cleaned;
 }
 
 export function envN8nWebhookUrl(): string {
   return normalizeN8nWebhookUrl(
-    cleanEnv(process.env.NEXT_PUBLIC_N8N_AI_WEBHOOK_URL) ||
-      cleanEnv(process.env.N8N_AI_WEBHOOK_URL) ||
-      DEFAULT_N8N_PRODUCTION_WEBHOOK_URL
+    cleanEnv(process.env.N8N_AI_WEBHOOK_URL) || cleanEnv(process.env.NEXT_PUBLIC_N8N_AI_WEBHOOK_URL)
   );
 }
 
