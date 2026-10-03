@@ -12,6 +12,7 @@ APP_DIR=/opt/del-groups-erp
 PROJECT=del-groups-erp
 CONTAINER=del-groups-erp-erp-1
 COMPOSE=(docker compose -p "$PROJECT" --env-file .env.production -f docker-compose.prod.yml)
+SCHEMA_CHECK_BLOCKING=0
 
 main() {
     exec 9>/run/lock/del-groups-erp-deploy.lock
@@ -33,6 +34,21 @@ main() {
 
     echo "==> building image"
     (cd "$staging" && "${COMPOSE[@]}" build --quiet </dev/null)
+
+    # Every table/RPC the code uses must exist in the live database (P0-2).
+    # Report-only until the known gaps are fixed: set SCHEMA_CHECK_BLOCKING=1
+    # to make missing objects (exit 1) stop the deploy. If the check cannot run
+    # at all (exit 2, e.g. Supabase unreachable) it only warns.
+    echo "==> checking database schema"
+    local check=0
+    docker run --rm -v "$staging":/app:ro -w /app node:22-alpine \
+        node scripts/check-schema.mjs --env-file .env.production </dev/null || check=$?
+    if [ "$check" -eq 1 ] && [ "$SCHEMA_CHECK_BLOCKING" = 1 ]; then
+        echo "!! code references database objects that do not exist - deploy stopped, live site unchanged"
+        exit 1
+    elif [ "$check" -ne 0 ]; then
+        echo "!! schema check reported problems (exit $check) - report-only, continuing"
+    fi
 
     echo "==> switching source"
     find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name .env.production -exec rm -rf {} +
