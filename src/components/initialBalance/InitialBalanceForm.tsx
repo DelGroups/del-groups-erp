@@ -7,6 +7,7 @@ import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import CategoryBulkSelectModal from "@/components/initialBalance/CategoryBulkSelectModal";
 import { findProductByBarcodeInList } from "@/lib/products/barcode";
 import { resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
+import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
 import {
   applyProductToInitialBalanceLine,
   calcInitialBalanceLineTotal,
@@ -508,7 +509,15 @@ export default function InitialBalanceForm({
                       className="w-full rounded border px-2 py-1 font-mono"
                     />
                     {row.is_metric ? (
-                      <p className="mt-0.5 text-[10px] text-app-muted">{t("forms.pricePerMeterShort")}</p>
+                      row.unit_cost > 0 ? (
+                        <MetricLinePriceHint
+                          unitPrice={row.unit_cost}
+                          barLengthM={resolveStandardBarLengthM(productsById.get(row.product_id) ?? null)}
+                          mode="linear_m"
+                        />
+                      ) : (
+                        <p className="mt-0.5 text-[10px] text-app-muted">{t("forms.pricePerMeterShort")}</p>
+                      )
                     ) : null}
                   </td>
                   <td className="px-3 py-2 text-right font-mono font-semibold">

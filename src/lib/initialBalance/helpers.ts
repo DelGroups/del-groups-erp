@@ -1,5 +1,5 @@
 import type { InitialBalanceLineItem } from "@/lib/initialBalance/types";
-import { isMetricProduct } from "@/lib/polywood/metricReceive";
+import { isMetricProduct, resolveMetricBuyCostPerMeter } from "@/lib/polywood/metricReceive";
 import type { Product } from "@/types/database.types";
 
 export function parsePieceLengthsInput(input: string): number[] {
@@ -41,7 +41,8 @@ export function applyProductToInitialBalanceLine(
   product: Product
 ): InitialBalanceLineItem {
   const metric = isMetricProduct(product);
-  const unitCost = Number(product.buy_price) || 0;
+  // Metric lines are valued per metre (quantity is metres).
+  const unitCost = metric ? resolveMetricBuyCostPerMeter(product) : Number(product.buy_price) || 0;
   const next: InitialBalanceLineItem = {
     ...row,
     product_id: product.id,
