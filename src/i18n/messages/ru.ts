@@ -1426,6 +1426,8 @@ export const ruMessages: Messages = {
     allCategories: "Все категории",
     searchProduct: "Поиск товара",
     searchPlaceholder: "Код или название...",
+    productFilter: "Выбранный товар",
+    showAllProducts: "Все товары",
   },
   crm: {
     pageTitle: "CRM воронка",

@@ -7,11 +7,15 @@ import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
 import InventoryTurnoverTable from "@/components/reports/InventoryTurnoverTable";
 import { fetchInventoryTurnoverAction } from "@/lib/actions/accountingReports";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
-import type { InventoryTurnoverReport } from "@/lib/reports/inventoryTurnover";
+import type {
+  InventoryTurnoverReport,
+  InventoryTurnoverRow,
+  InventoryTurnoverTotals,
+} from "@/lib/reports/inventoryTurnover";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
 import type { Category, EmployeeOption, ReportFilters, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { ArrowLeft, Package, RefreshCw } from "lucide-react";
+import { ArrowLeft, Package, RefreshCw, X } from "lucide-react";
 
 const emptyReport: InventoryTurnoverReport = {
   startDate: "",
@@ -30,7 +34,28 @@ const emptyReport: InventoryTurnoverReport = {
   },
 };
 
-export default function InventoryTurnoverPageClient() {
+function sumTotals(rows: InventoryTurnoverRow[]): InventoryTurnoverTotals {
+  return rows.reduce(
+    (acc, row) => ({
+      initialQty: acc.initialQty + row.initialQty,
+      initialValue: acc.initialValue + row.initialValue,
+      inboundQty: acc.inboundQty + row.inboundQty,
+      inboundValue: acc.inboundValue + row.inboundValue,
+      outboundQty: acc.outboundQty + row.outboundQty,
+      outboundValue: acc.outboundValue + row.outboundValue,
+      closingQty: acc.closingQty + row.closingQty,
+      closingValue: acc.closingValue + row.closingValue,
+    }),
+    { ...emptyReport.totals }
+  );
+}
+
+export default function InventoryTurnoverPageClient({
+  productId = null,
+}: {
+  /** `?productId=` from the Kardex link on /inventory: show only that product. */
+  productId?: string | null;
+}) {
   const { t } = useI18n();
   const [filters, setFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -72,16 +97,29 @@ export default function InventoryTurnoverPageClient() {
   }, [loadReport]);
 
   const filteredRows = useMemo(() => {
+    const rows = productId ? data.rows.filter((row) => row.productId === productId) : data.rows;
     const q = search.trim().toLowerCase();
-    if (!q) return data.rows;
-    return data.rows.filter(
+    if (!q) return rows;
+    return rows.filter(
       (row) =>
         row.productCode.toLowerCase().includes(q) ||
         row.productName.toLowerCase().includes(q)
     );
-  }, [data.rows, search]);
+  }, [data.rows, search, productId]);
 
-  const displayData = useMemo(() => ({ ...data, rows: filteredRows }), [data, filteredRows]);
+  // Totals follow the rows on screen, so a filtered view does not show grand totals.
+  const displayData = useMemo(
+    () => ({
+      ...data,
+      rows: filteredRows,
+      totals: filteredRows === data.rows ? data.totals : sumTotals(filteredRows),
+    }),
+    [data, filteredRows]
+  );
+
+  const selectedProduct = productId
+    ? data.rows.find((row) => row.productId === productId) ?? null
+    : null;
 
   return (
     <PageLayout>
@@ -144,6 +182,26 @@ export default function InventoryTurnoverPageClient() {
             />
           </label>
         </div>
+
+        {productId ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm text-app">
+            <span className="inline-flex items-center gap-2 rounded-full border border-app px-3 py-1">
+              <span className="text-app-muted">{t("inventoryTurnover.productFilter")}:</span>
+              <span className="font-semibold">
+                {selectedProduct
+                  ? `${selectedProduct.productCode} — ${selectedProduct.productName}`
+                  : productId}
+              </span>
+            </span>
+            <Link
+              href="/dashboard/reports/inventory-turnover"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-app-accent hover:underline"
+            >
+              <X className="h-3.5 w-3.5" />
+              {t("inventoryTurnover.showAllProducts")}
+            </Link>
+          </div>
+        ) : null}
 
         {error ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

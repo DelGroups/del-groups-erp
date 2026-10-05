@@ -1426,6 +1426,8 @@ export const enMessages: Messages = {
     allCategories: "All categories",
     searchProduct: "Search product",
     searchPlaceholder: "Code or name...",
+    productFilter: "Selected product",
+    showAllProducts: "All products",
   },
   crm: {
     pageTitle: "CRM pipeline",
