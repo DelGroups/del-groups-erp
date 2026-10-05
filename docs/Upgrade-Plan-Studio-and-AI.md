@@ -65,3 +65,21 @@ Override any tier with `AI_MODEL_FAST`, `AI_MODEL_STANDARD`, `AI_MODEL_DEEP`.
 
 Cost per question is in `ai_usage_log.cost_usd`, e.g.
 `select tier, count(*), sum(cost_usd) from ai_usage_log where created_at > now() - interval '30 days' group by tier;`
+
+## Phase 2 details: custom fields
+
+| Piece | File |
+|---|---|
+| Field types, name generation, validation (unit-tested) | `src/lib/studio/fields.ts` |
+| Definitions table + `custom_fields JSONB` on customers, suppliers, products, sales, purchases, production_orders | `supabase/migrations/20261005120000_studio_custom_fields.sql` |
+| Admin page: Settings → Studio (`/settings/studio`, `can_manage_settings`) | `src/app/settings/studio`, `src/components/studio/StudioFieldsEditor.tsx`, `src/lib/actions/studio.ts` |
+| Form rendering | `src/components/studio/CustomFieldsSection.tsx`, `useStudioFields.ts` |
+| Wired so far | customer form + list columns, product form (create and edit) |
+| AI | `search_products` and `search_customers` return custom field values by label |
+
+Field types: text, long text, whole number, decimal, amount (AZN), date, yes/no, selection list, link.
+Technical names are `x_` slugs generated from the label and never change, nor does the type, so stored values stay valid.
+Fields are archived, never deleted; archived values stay on the records.
+Until the migration runs, the Studio page says the table is missing and every form behaves exactly as before.
+
+Next forms to wire (same three lines each): suppliers, sales invoice, purchase invoice, production order.

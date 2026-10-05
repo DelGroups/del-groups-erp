@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Building2, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { Blocks, Building2, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -93,6 +93,13 @@ const SETTINGS_TABS: SettingsTab[] = [
     titleKey: "settings.aiTab",
     path: "/settings/ai",
     icon: Sparkles,
+    permission: "can_manage_settings",
+  },
+  {
+    id: "studio",
+    titleKey: "nav.items.studio",
+    path: "/settings/studio",
+    icon: Blocks,
     permission: "can_manage_settings",
   },
   {

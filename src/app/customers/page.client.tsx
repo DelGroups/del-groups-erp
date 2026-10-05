@@ -23,11 +23,17 @@ import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { deleteCustomerAction } from "@/lib/actions/entityDelete";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import CustomFieldsSection, { draftFromValues, type CustomFieldDraft } from "@/components/studio/CustomFieldsSection";
+import { useStudioFields } from "@/components/studio/useStudioFields";
+import { buildCustomFieldValues, formatFieldValue } from "@/lib/studio/fields";
 
 export default function CustomersPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageCustomers = can("can_manage_customers");
+  const { fields: studioFields } = useStudioFields("customers");
+  const listStudioFields = studioFields.filter((field) => field.show_in_list);
+  const [customDraft, setCustomDraft] = useState<CustomFieldDraft>({});
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,10 +125,22 @@ export default function CustomersPage() {
       }
     }
 
-    setSaving(true);
-    const newCustomer = buildCustomerPayload();
-
     const isEdit = Boolean(editingCustomerId);
+    const newCustomer: ReturnType<typeof buildCustomerPayload> & { custom_fields?: Record<string, unknown> } =
+      buildCustomerPayload();
+    if (studioFields.length > 0) {
+      const previous = isEdit ? customers.find((item) => item.id === editingCustomerId)?.custom_fields : {};
+      const custom = buildCustomFieldValues(studioFields, customDraft, previous);
+      if (!custom.ok) {
+        const first = custom.errors[0];
+        showError(`${first.label}: ${t(first.error)}`);
+        return;
+      }
+      newCustomer.custom_fields = custom.value;
+    }
+
+    setSaving(true);
+
     const { data, error } = isEdit
       ? await supabase
           .from("customers")
@@ -178,6 +196,7 @@ export default function CustomersPage() {
     if (!canManageCustomers) return;
     setEditingCustomerId(null);
     setViewBalance(0);
+    setCustomDraft(draftFromValues(studioFields, {}));
     setFormData({
       code: "",
       full_name: "",
@@ -195,6 +214,7 @@ export default function CustomersPage() {
     if (!canManageCustomers) return;
     setEditingCustomerId(customer.id);
     setViewBalance(customer.balance ?? 0);
+    setCustomDraft(draftFromValues(studioFields, customer.custom_fields));
     setFormData({
       code: customer.code || "",
       full_name: customer.full_name || "",
@@ -273,6 +293,9 @@ export default function CustomersPage() {
                       <Th>{t("common.phone")}</Th>
                       <Th>{t("customers.entityType")}</Th>
                       <Th>{t("customers.balanceDebt")}</Th>
+                      {listStudioFields.map((field) => (
+                        <Th key={field.name}>{field.label}</Th>
+                      ))}
                       {canManageCustomers ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
                     </tr>
                   </THead>
@@ -313,6 +336,14 @@ export default function CustomersPage() {
                               <span className="text-emerald-600">{(c.balance ?? 0).toFixed(2)} AZN</span>
                             )}
                           </Td>
+                          {listStudioFields.map((field) => (
+                            <Td key={field.name} className="text-app-muted">
+                              {formatFieldValue(field, c.custom_fields?.[field.name], {
+                                yes: t("studio.yes"),
+                                no: t("studio.no"),
+                              }) || "-"}
+                            </Td>
+                          ))}
                           {canManageCustomers ? (
                             <ActionsTd>
                               <TableRowActionsMenu
@@ -503,6 +534,8 @@ export default function CustomersPage() {
                 </div>
                 <p className="mt-1 text-[11px] text-app-muted">{t("customers.balanceReadOnlyHint")}</p>
               </div>
+
+              <CustomFieldsSection fields={studioFields} value={customDraft} onChange={setCustomDraft} />
 
               <div className="pt-3 flex justify-end space-x-2">
                 <button

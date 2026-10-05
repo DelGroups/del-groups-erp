@@ -53,6 +53,7 @@ const PATH_I18N: Record<string, string> = {
   "/settings/tax-payroll": "nav.items.taxPayroll",
   "/settings/procurement": "nav.items.procurement",
   "/settings/ai": "nav.items.aiIntegration",
+  "/settings/studio": "nav.items.studio",
   "/settings/audit": "nav.items.audit",
   "/users": "nav.items.users",
   "/dashboard/inventory/polywood/import": "breadcrumb.polywoodImport",

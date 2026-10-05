@@ -45,6 +45,9 @@ import {
 import { fetchProductBomAction, saveProductBomAction } from "@/lib/actions/productBom";
 import { fetchProductsCatalog } from "@/lib/products/api";
 import { useInvalidateProductsCatalog } from "@/hooks/useProductsCatalog";
+import CustomFieldsSection, { draftFromValues, type CustomFieldDraft } from "@/components/studio/CustomFieldsSection";
+import { useStudioFields } from "@/components/studio/useStudioFields";
+import { buildCustomFieldValues } from "@/lib/studio/fields";
 
 interface ProductFormProps {
   categories: Category[];
@@ -147,6 +150,12 @@ export default function ProductForm({
     : initialCategory;
 
   const [saving, setSaving] = useState(false);
+  const { fields: studioFields } = useStudioFields("products");
+  const initialCustomValues = (initialProduct as { custom_fields?: Record<string, unknown> | null } | null)
+    ?.custom_fields;
+  // Only what the user typed; stored values fill the rest once the field list loads.
+  const [customEdits, setCustomEdits] = useState<CustomFieldDraft>({});
+  const customDraft: CustomFieldDraft = { ...draftFromValues(studioFields, initialCustomValues), ...customEdits };
   const submitInFlightRef = useRef(false);
   const nameFieldRef = useRef<HTMLInputElement>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(allProducts);
@@ -331,6 +340,17 @@ export default function ProductForm({
       }
     }
 
+    let customFields: Record<string, unknown> | undefined;
+    if (studioFields.length > 0) {
+      const custom = buildCustomFieldValues(studioFields, customDraft, isEditMode ? initialCustomValues : {});
+      if (!custom.ok) {
+        const first = custom.errors[0];
+        showError(`${first.label}: ${t(first.error)}`);
+        return;
+      }
+      customFields = custom.value;
+    }
+
     submitInFlightRef.current = true;
     setSaving(true);
     const selectedCategoryEntity =
@@ -377,6 +397,7 @@ export default function ProductForm({
       exp_date: form.exp_date || null,
       price_wholesale: isServiceCategorySelected ? null : parseFieldOptionalNumber(form.price_wholesale),
       price_distributor: isServiceCategorySelected ? null : parseFieldOptionalNumber(form.price_distributor),
+      ...(customFields ? { custom_fields: customFields } : {}),
     };
 
     try {
@@ -843,6 +864,16 @@ export default function ProductForm({
                 </FormField>
               </div>
             </ProductFormSection>
+
+            {studioFields.length > 0 ? (
+              <ProductFormSection title={t("studio.sectionTitle")} compact embedded={isDrawerLayout}>
+                <CustomFieldsSection
+                  fields={studioFields}
+                  value={customDraft}
+                  onChange={(next) => setCustomEdits(next)}
+                />
+              </ProductFormSection>
+            ) : null}
 
             {isComposite && !isServiceCategorySelected ? (
               <ProductFormSection title={t("products.bom.isComposite")} embedded={isDrawerLayout}>

@@ -5,6 +5,7 @@ import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
 import { normalizeUnifiedTransactionType } from "@/lib/finance/unifiedLedger";
 import { isValidUuid } from "@/lib/auth/validate";
 import type { PermissionKey, UserProfile } from "@/types/database.types";
+import { formatFieldValue, parseStudioField, type StudioField, type StudioModelKey } from "@/lib/studio/fields";
 
 /**
  * Read-only tool registry for the native assistant.
@@ -75,6 +76,47 @@ function check<T>(result: { data: T | null; error: { message: string } | null },
 
 type Row = Record<string, unknown>;
 
+type QueryResult = { data: Row[] | null; error: { message: string } | null };
+
+/**
+ * Runs a select with the Studio `custom_fields` column, and again without it
+ * when the column does not exist yet (Studio migration not applied).
+ */
+async function selectWithCustomFields(
+  build: (columns: string) => PromiseLike<QueryResult>,
+  columns: string
+): Promise<QueryResult> {
+  const first = await build(`${columns}, custom_fields`);
+  if (first.error && first.error.message.includes("custom_fields")) return build(columns);
+  return first;
+}
+
+/** Maps stored Studio values to {label: display text} using the model's active field definitions. */
+async function customFieldLabeler(
+  client: SupabaseClient,
+  model: StudioModelKey
+): Promise<(values: unknown) => Record<string, string> | undefined> {
+  const { data, error } = await client
+    .from("studio_fields")
+    .select("id, model_key, name, label, field_type, options, required, show_in_list, help, sequence, active")
+    .eq("model_key", model)
+    .eq("active", true);
+  const fields = error
+    ? []
+    : (data || [])
+        .map((row) => parseStudioField(row as Row))
+        .filter((field): field is StudioField => Boolean(field));
+  return (values) => {
+    if (!fields.length || !values || typeof values !== "object") return undefined;
+    const out: Record<string, string> = {};
+    for (const field of fields) {
+      const text = formatFieldValue(field, (values as Row)[field.name], { yes: "yes", no: "no" });
+      if (text) out[field.label] = text;
+    }
+    return Object.keys(out).length ? out : undefined;
+  };
+}
+
 const TOOLS: ToolDef[] = [
   {
     name: "search_products",
@@ -93,15 +135,20 @@ const TOOLS: ToolDef[] = [
     async run(input, { client }) {
       const term = ilikeTerm(input.query);
       if (term.length < 1) throw new ToolError("query is empty");
-      const rows = check<Row[]>(
-        await client
-          .from("products")
-          .select("id, code, name, unit, stock, min_stock, sell_price, buy_price, category")
-          .or(`name.ilike.%${term}%,code.ilike.%${term}%,barcode.ilike.%${term}%`)
-          .order("name")
-          .limit(limitOf(input.limit)),
-        "products"
-      );
+      const [result, label] = await Promise.all([
+        selectWithCustomFields(
+          (columns) =>
+            client
+              .from("products")
+              .select(columns)
+              .or(`name.ilike.%${term}%,code.ilike.%${term}%,barcode.ilike.%${term}%`)
+              .order("name")
+              .limit(limitOf(input.limit)) as unknown as PromiseLike<QueryResult>,
+          "id, code, name, unit, stock, min_stock, sell_price, buy_price, category"
+        ),
+        customFieldLabeler(client, "products"),
+      ]);
+      const rows = check<Row[]>(result, "products");
       return {
         data: rows.map((row) => ({
           code: row.code,
@@ -112,6 +159,7 @@ const TOOLS: ToolDef[] = [
           sell_price: num(row.sell_price),
           buy_price: num(row.buy_price),
           category: row.category,
+          custom_fields: label(row.custom_fields),
         })),
         links: rows.slice(0, 5).map((row) => ({ label: `${row.code || ""} ${row.name || ""}`.trim(), href: "/products" })),
       };
@@ -174,16 +222,21 @@ const TOOLS: ToolDef[] = [
     async run(input, { client }) {
       const term = ilikeTerm(input.query);
       if (!term) throw new ToolError("query is empty");
-      const rows = check<Row[]>(
-        await client
-          .from("customers")
-          .select("id, code, full_name, name, company_name, phone, voen, balance")
-          .or(
-            `full_name.ilike.%${term}%,name.ilike.%${term}%,company_name.ilike.%${term}%,phone.ilike.%${term}%,code.ilike.%${term}%,voen.ilike.%${term}%`
-          )
-          .limit(limitOf(input.limit)),
-        "customers"
-      );
+      const [result, label] = await Promise.all([
+        selectWithCustomFields(
+          (columns) =>
+            client
+              .from("customers")
+              .select(columns)
+              .or(
+                `full_name.ilike.%${term}%,name.ilike.%${term}%,company_name.ilike.%${term}%,phone.ilike.%${term}%,code.ilike.%${term}%,voen.ilike.%${term}%`
+              )
+              .limit(limitOf(input.limit)) as unknown as PromiseLike<QueryResult>,
+          "id, code, full_name, name, company_name, phone, voen, balance"
+        ),
+        customFieldLabeler(client, "customers"),
+      ]);
+      const rows = check<Row[]>(result, "customers");
       return {
         data: rows.map((row) => ({
           id: row.id,
@@ -193,6 +246,7 @@ const TOOLS: ToolDef[] = [
           phone: row.phone,
           voen: row.voen,
           balance: num(row.balance),
+          custom_fields: label(row.custom_fields),
         })),
         links: [{ label: "Müştərilər", href: "/customers" }],
       };

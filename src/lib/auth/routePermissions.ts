@@ -18,6 +18,7 @@ const ROUTE_RULES: { prefix: string; permission: PermissionKey; exact?: boolean 
   { prefix: "/settings/tax-payroll", permission: "can_manage_settings" },
   { prefix: "/settings/procurement", permission: "can_manage_settings" },
   { prefix: "/settings/ai", permission: "can_manage_settings" },
+  { prefix: "/settings/studio", permission: "can_manage_settings" },
   { prefix: "/settings/backup", permission: "can_manage_settings" },
   { prefix: "/settings/initial-setup", permission: "can_manage_settings" },
   { prefix: "/settings/roles", permission: "can_manage_roles" },
@@ -114,6 +115,7 @@ export const NAV_PATH_PERMISSIONS: Record<string, PermissionKey> = {
   "/settings/tax-payroll": "can_manage_settings",
   "/settings/procurement": "can_manage_settings",
   "/settings/ai": "can_manage_settings",
+  "/settings/studio": "can_manage_settings",
   "/settings/audit": "can_manage_settings",
 };
 
