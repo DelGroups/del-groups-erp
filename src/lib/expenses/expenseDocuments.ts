@@ -37,7 +37,7 @@ export interface ExpenseDocument {
   amount: number;
   cancel_reason: string | null;
   created_at: string | null;
-  /** Written by a production order; cancelled from there, not here. */
+  /** Posted by another module (production); cancelled from there, not here. */
   is_production: boolean;
 }
 

@@ -145,7 +145,7 @@ export async function fetchExpensesAction(
       .select(
         "id,code,expense_date,status,category_id,category,account_id,supplier_id,payee,reference_no," +
           "description,notes,department_id,production_order_id,net_amount,vat_rate,vat_amount,amount," +
-          "cancel_reason,created_at"
+          "cancel_reason,created_at,transaction_id"
       )
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -183,9 +183,8 @@ export async function fetchExpensesAction(
     const accountIds = ids("account_id");
     const supplierIds = ids("supplier_id");
     const departmentIds = ids("department_id");
-    const expenseIds = rows.map((r) => String(r.id));
 
-    const [accountsRes, suppliersRes, departmentsRes, productionRes] = await Promise.all([
+    const [accountsRes, suppliersRes, departmentsRes] = await Promise.all([
       accountIds.length
         ? admin.from("accounts").select("id,name").in("id", accountIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
@@ -195,12 +194,6 @@ export async function fetchExpensesAction(
       departmentIds.length
         ? admin.from("employee_departments" as never).select("id,name").in("id", departmentIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
-      expenseIds.length
-        ? admin
-            .from("production_expenses" as never)
-            .select("finance_expense_id")
-            .in("finance_expense_id", expenseIds)
-        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     ]);
 
     const nameMap = (list: unknown, label: (row: Record<string, unknown>) => string) =>
@@ -208,11 +201,6 @@ export async function fetchExpensesAction(
     const accountNames = nameMap(accountsRes.data, (row) => String(row.name || ""));
     const supplierNames = nameMap(suppliersRes.data, supplierLabel);
     const departmentNames = nameMap(departmentsRes.data, (row) => String(row.name || ""));
-    const productionIds = new Set(
-      ((productionRes.data || []) as Array<Record<string, unknown>>).map((row) =>
-        String(row.finance_expense_id)
-      )
-    );
 
     let mapped: ExpenseDocument[] = rows.map((row) => {
       const amount = toNumber(row.amount);
@@ -243,7 +231,9 @@ export async function fetchExpensesAction(
         amount,
         cancel_reason: (row.cancel_reason as string) || null,
         created_at: (row.created_at as string) || null,
-        is_production: productionIds.has(String(row.id)),
+        // Posted by this module means it has its own cash row; anything else
+        // (production expenses) is cancelled where it was written.
+        is_production: String(row.status || "posted") === "posted" && !row.transaction_id,
       };
     });
 

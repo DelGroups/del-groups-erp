@@ -51,16 +51,7 @@ ALTER TABLE public.expenses
   ADD COLUMN IF NOT EXISTS updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Rows written before this migration (production expenses) are posted cash
--- payments; take their date and links from production_expenses when present.
-UPDATE public.expenses e
-SET
-  expense_date   = COALESCE(e.expense_date, pe.expense_date, (e.created_at AT TIME ZONE 'Asia/Baku')::date),
-  transaction_id = COALESCE(e.transaction_id, pe.finance_transaction_id),
-  description    = COALESCE(e.description, pe.description)
-FROM public.production_expenses pe
-WHERE pe.finance_expense_id = e.id
-  AND (e.expense_date IS NULL OR e.transaction_id IS NULL OR e.description IS NULL);
-
+-- payments; date them by when they were created.
 UPDATE public.expenses
 SET expense_date = COALESCE((created_at AT TIME ZONE 'Asia/Baku')::date, CURRENT_DATE)
 WHERE expense_date IS NULL;
@@ -93,37 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_expenses_status       ON public.expenses (status)
 ALTER TABLE public.financial_categories
   ADD COLUMN IF NOT EXISTS coa_id UUID REFERENCES public.chart_of_accounts(id) ON DELETE SET NULL;
 
--- ─── 2. Production expenses keep their own date and links ───────────────────
--- create_production_expense_atomic() inserts the expenses row before the
--- production_expenses row; copy the production date and links across.
-CREATE OR REPLACE FUNCTION public.sync_production_expense_document()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.finance_expense_id IS NOT NULL THEN
-    UPDATE public.expenses
-    SET
-      expense_date   = COALESCE(NEW.expense_date, expense_date),
-      transaction_id = COALESCE(NEW.finance_transaction_id, transaction_id),
-      description    = COALESCE(NULLIF(trim(NEW.description), ''), description),
-      category_id    = COALESCE(category_id, public.resolve_financial_category_id('İstehsalat xərci', 'EXPENSE')),
-      posted_at      = COALESCE(posted_at, NOW()),
-      updated_at     = NOW()
-    WHERE id = NEW.finance_expense_id;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_production_expense_document ON public.production_expenses;
-CREATE TRIGGER trg_production_expense_document
-  AFTER INSERT ON public.production_expenses
-  FOR EACH ROW EXECUTE FUNCTION public.sync_production_expense_document();
-
--- ─── 3. Document number ─────────────────────────────────────────────────────
+-- ─── 2. Document number ─────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.next_expense_doc_no(p_date DATE DEFAULT CURRENT_DATE)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -144,7 +105,7 @@ BEGIN
 END;
 $$;
 
--- ─── 4. Post (internal) ─────────────────────────────────────────────────────
+-- ─── 3. Post (internal) ─────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.post_expense_internal(p_expense_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -275,7 +236,7 @@ BEGIN
 END;
 $$;
 
--- ─── 5. Create / edit draft (and optionally post) ───────────────────────────
+-- ─── 4. Create / edit draft (and optionally post) ───────────────────────────
 -- payload: id?, expense_date, category_id, account_id, supplier_id?, payee?,
 -- reference_no?, description?, notes?, net_amount, vat_rate?, vat_amount?,
 -- department_id?, production_order_id?, post (bool)
@@ -388,7 +349,7 @@ BEGIN
 END;
 $$;
 
--- ─── 6. Post a saved draft ──────────────────────────────────────────────────
+-- ─── 5. Post a saved draft ──────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.post_expense_atomic(p_expense_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -403,7 +364,7 @@ BEGIN
 END;
 $$;
 
--- ─── 7. Cancel ──────────────────────────────────────────────────────────────
+-- ─── 6. Cancel ──────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.cancel_expense_atomic(p_expense_id UUID, p_reason TEXT DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -426,9 +387,13 @@ BEGIN
   IF v_exp.status = 'cancelled' THEN
     RETURN jsonb_build_object('id', v_exp.id, 'status', 'cancelled', 'reversed', 0);
   END IF;
-  IF EXISTS (SELECT 1 FROM public.production_expenses WHERE finance_expense_id = v_exp.id) THEN
+  -- Posted rows not posted by this module (production expenses) have no
+  -- 'expense' cash row; they are cancelled where they were written.
+  IF v_exp.status = 'posted' AND NOT EXISTS (
+    SELECT 1 FROM public.transactions WHERE source_type = 'expense' AND source_id = v_exp.id
+  ) THEN
     RAISE EXCEPTION USING ERRCODE = '22023',
-      MESSAGE = 'İstehsalat xərci istehsal sifarişinin özündən ləğv edilməlidir';
+      MESSAGE = 'Bu xərc başqa bölmədən (məs. istehsalat) yazılıb və orada ləğv edilməlidir';
   END IF;
 
   v_reason := COALESCE(NULLIF(trim(p_reason), ''), 'Xərc ləğv edildi');
@@ -453,10 +418,9 @@ BEGIN
 END;
 $$;
 
--- ─── 8. Grants ──────────────────────────────────────────────────────────────
+-- ─── 7. Grants ──────────────────────────────────────────────────────────────
 REVOKE ALL ON FUNCTION public.next_expense_doc_no(DATE)            FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.post_expense_internal(UUID)          FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.sync_production_expense_document()   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.record_expense_atomic(JSONB)         FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.post_expense_atomic(UUID)            FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.cancel_expense_atomic(UUID, TEXT)    FROM PUBLIC, anon;
