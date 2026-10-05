@@ -2812,6 +2812,14 @@ export type Database = {
       peek_next_sales_doc_no: { Args: { p_prefix?: string }; Returns: string }
       next_sales_doc_no: { Args: { p_prefix?: string }; Returns: string }
       post_sales_invoice_draft: { Args: { p_sale_id: string }; Returns: Json }
+      cancel_sales_invoice_atomic: {
+        Args: { p_sale_id: string; p_reason?: string }
+        Returns: Json
+      }
+      cancel_purchase_invoice_atomic: {
+        Args: { p_purchase_id: string; p_reason?: string }
+        Returns: Json
+      }
       save_sales_invoice_draft: { Args: { p_payload: Json }; Returns: Json }
       process_sales_invoice_event: { Args: { p_payload: Json }; Returns: Json }
       production_material_line_cost: {
