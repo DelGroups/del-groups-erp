@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {
   computeVat,
   firstDayOfMonthIsoDate,
+  isOwedToEmployee,
   splitGross,
   summarizeExpenses,
   todayIsoDate,
@@ -30,6 +31,7 @@ const row = (overrides) => ({
   code: "XR-2026-00001",
   expense_date: "2026-10-01",
   status: "posted",
+  payment_mode: "company",
   category: "İcarə",
   net_amount: 100,
   vat_amount: 18,
@@ -37,26 +39,37 @@ const row = (overrides) => ({
   ...overrides,
 });
 
-test("totals count posted documents, keep drafts apart and skip cancelled ones", () => {
+test("totals book paid and approved employee expenses, keep pending apart and skip cancelled", () => {
   const summary = summarizeExpenses([
     row({}),
     row({ category: "Elektrik", net_amount: 40, vat_amount: 0, amount: 40 }),
     row({ status: "draft", amount: 10, net_amount: 10, vat_amount: 0 }),
+    row({ status: "submitted", amount: 7, net_amount: 7, vat_amount: 0 }),
+    row({ status: "approved", payment_mode: "employee", category: "Yanacaq", amount: 25, net_amount: 25, vat_amount: 0 }),
     row({ status: "cancelled", amount: 999 }),
   ]);
-  assert.equal(summary.count, 2);
-  assert.equal(summary.total, 158);
-  assert.equal(summary.net, 140);
+  assert.equal(summary.count, 3);
+  assert.equal(summary.total, 183);
+  assert.equal(summary.net, 165);
   assert.equal(summary.vat, 18);
-  assert.equal(summary.draftCount, 1);
-  assert.equal(summary.draftTotal, 10);
+  assert.equal(summary.pendingCount, 2);
+  assert.equal(summary.pendingTotal, 17);
+  assert.equal(summary.owedCount, 1);
+  assert.equal(summary.owedTotal, 25);
   assert.deepEqual(
     summary.byCategory.map((c) => [c.category, c.amount]),
     [
       ["İcarə", 118],
       ["Elektrik", 40],
+      ["Yanacaq", 25],
     ]
   );
+});
+
+test("only approved employee-paid expenses are owed", () => {
+  assert.equal(isOwedToEmployee({ status: "approved", payment_mode: "employee" }), true);
+  assert.equal(isOwedToEmployee({ status: "posted", payment_mode: "employee" }), false);
+  assert.equal(isOwedToEmployee({ status: "approved", payment_mode: "company" }), false);
 });
 
 test("dates are taken in Baku time", () => {

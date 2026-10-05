@@ -13,11 +13,18 @@ export const EXPENSE_STATUSES: ExpenseStatus[] = [
   "cancelled",
 ];
 
+export type ExpensePaymentMode = "company" | "employee";
+
 export interface ExpenseDocument {
   id: string;
   code: string;
   expense_date: string;
   status: ExpenseStatus;
+  /** company: paid from a kassa/bank; employee: paid by an employee, reimbursed later. */
+  payment_mode: ExpensePaymentMode;
+  employee_id: string | null;
+  employee_name: string | null;
+  rejected_reason: string | null;
   category_id: string | null;
   category: string;
   account_id: string | null;
@@ -63,11 +70,15 @@ export interface ExpenseSaveInput {
   description?: string;
   notes?: string;
   departmentId?: string;
+  paymentMode: ExpensePaymentMode;
+  employeeId?: string;
   netAmount: number;
   vatRate?: number;
   vatAmount?: number;
-  /** true: post to kassa/bank and the ledger now; false: keep as draft. */
+  /** true: pay from kassa/bank and post to the ledger now (company-paid only). */
   post: boolean;
+  /** true: send for approval after saving. */
+  submit?: boolean;
 }
 
 export interface ExpenseCategoryTotal {
@@ -77,12 +88,17 @@ export interface ExpenseCategoryTotal {
 }
 
 export interface ExpenseSummary {
+  /** Booked expenses: paid, plus employee-paid ones approved but not yet reimbursed. */
   count: number;
   net: number;
   vat: number;
   total: number;
-  draftCount: number;
-  draftTotal: number;
+  /** Drafts and documents waiting for approval. */
+  pendingCount: number;
+  pendingTotal: number;
+  /** Approved employee-paid expenses the company still owes. */
+  owedCount: number;
+  owedTotal: number;
   byCategory: ExpenseCategoryTotal[];
 }
 
@@ -105,22 +121,33 @@ export function splitGross(gross: number, ratePercent: number): { net: number; v
   return { net, vat: roundMoney(gross - net) };
 }
 
-/** Totals for posted and draft documents; cancelled ones are left out. */
+/** True when an employee-paid expense is approved but not reimbursed yet. */
+export function isOwedToEmployee(row: Pick<ExpenseDocument, "status" | "payment_mode">): boolean {
+  return row.payment_mode === "employee" && row.status === "approved";
+}
+
+/** Totals by state; cancelled documents are left out. */
 export function summarizeExpenses(rows: ExpenseDocument[]): ExpenseSummary {
   const byCategory = new Map<string, ExpenseCategoryTotal>();
   let count = 0;
   let net = 0;
   let vat = 0;
   let total = 0;
-  let draftCount = 0;
-  let draftTotal = 0;
+  let pendingCount = 0;
+  let pendingTotal = 0;
+  let owedCount = 0;
+  let owedTotal = 0;
 
   for (const row of rows) {
     if (row.status === "cancelled") continue;
-    if (row.status !== "posted") {
-      draftCount += 1;
-      draftTotal += row.amount;
+    if (row.status === "draft" || row.status === "submitted") {
+      pendingCount += 1;
+      pendingTotal += row.amount;
       continue;
+    }
+    if (isOwedToEmployee(row)) {
+      owedCount += 1;
+      owedTotal += row.amount;
     }
     count += 1;
     net += row.net_amount;
@@ -138,8 +165,10 @@ export function summarizeExpenses(rows: ExpenseDocument[]): ExpenseSummary {
     net: roundMoney(net),
     vat: roundMoney(vat),
     total: roundMoney(total),
-    draftCount,
-    draftTotal: roundMoney(draftTotal),
+    pendingCount,
+    pendingTotal: roundMoney(pendingTotal),
+    owedCount,
+    owedTotal: roundMoney(owedTotal),
     byCategory: Array.from(byCategory.values())
       .map((item) => ({ ...item, amount: roundMoney(item.amount) }))
       .sort((a, b) => b.amount - a.amount),

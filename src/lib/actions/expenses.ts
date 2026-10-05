@@ -43,6 +43,7 @@ export interface ExpenseFormOptions {
   categories: ExpenseCategoryOption[];
   suppliers: ExpenseNamedOption[];
   departments: ExpenseNamedOption[];
+  employees: ExpenseNamedOption[];
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -87,7 +88,7 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
     );
     const admin = createSupabaseAdminClient();
 
-    const [accountsRes, categoriesRes, suppliersRes, departmentsRes] = await Promise.all([
+    const [accountsRes, categoriesRes, suppliersRes, departmentsRes, employeesRes] = await Promise.all([
       admin.from("accounts").select("id,name,balance").order("name"),
       fetchFinancialCategoryRows(admin, { includeInactive: false }),
       admin.from("suppliers").select("id,code,full_name,company_name").order("full_name").limit(1000),
@@ -95,6 +96,7 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
         .from("employee_departments" as never)
         .select("id,name,is_active,sort_order")
         .order("sort_order"),
+      admin.from("employees").select("id,full_name,status").order("full_name").limit(1000),
     ]);
 
     if (accountsRes.error) return { success: false, error: accountsRes.error.message };
@@ -119,6 +121,11 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
       .filter((row) => row.is_active !== false)
       .map((row) => ({ id: String(row.id), name: String(row.name || "") }));
 
+    const employees = ((employeesRes.data || []) as Array<Record<string, unknown>>)
+      .filter((row) => String(row.status || "active") !== "terminated")
+      .map((row) => ({ id: String(row.id), name: String(row.full_name || "").trim() }))
+      .filter((row) => row.name);
+
     return {
       success: true,
       data: {
@@ -126,6 +133,7 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
         categories: flattenExpenseCategoryOptions(categoriesRes.rows),
         suppliers,
         departments,
+        employees,
       },
     };
   } catch (err) {
@@ -145,7 +153,7 @@ export async function fetchExpensesAction(
       .select(
         "id,code,expense_date,status,category_id,category,account_id,supplier_id,payee,reference_no," +
           "description,notes,department_id,production_order_id,net_amount,vat_rate,vat_amount,amount," +
-          "cancel_reason,created_at,transaction_id"
+          "cancel_reason,created_at,transaction_id,payment_mode,employee_id,rejected_reason"
       )
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -183,8 +191,9 @@ export async function fetchExpensesAction(
     const accountIds = ids("account_id");
     const supplierIds = ids("supplier_id");
     const departmentIds = ids("department_id");
+    const employeeIds = ids("employee_id");
 
-    const [accountsRes, suppliersRes, departmentsRes] = await Promise.all([
+    const [accountsRes, suppliersRes, departmentsRes, employeesRes] = await Promise.all([
       accountIds.length
         ? admin.from("accounts").select("id,name").in("id", accountIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
@@ -194,6 +203,9 @@ export async function fetchExpensesAction(
       departmentIds.length
         ? admin.from("employee_departments" as never).select("id,name").in("id", departmentIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+      employeeIds.length
+        ? admin.from("employees").select("id,full_name").in("id", employeeIds)
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     ]);
 
     const nameMap = (list: unknown, label: (row: Record<string, unknown>) => string) =>
@@ -201,6 +213,7 @@ export async function fetchExpensesAction(
     const accountNames = nameMap(accountsRes.data, (row) => String(row.name || ""));
     const supplierNames = nameMap(suppliersRes.data, supplierLabel);
     const departmentNames = nameMap(departmentsRes.data, (row) => String(row.name || ""));
+    const employeeNames = nameMap(employeesRes.data, (row) => String(row.full_name || ""));
 
     let mapped: ExpenseDocument[] = rows.map((row) => {
       const amount = toNumber(row.amount);
@@ -210,6 +223,10 @@ export async function fetchExpensesAction(
         code: String(row.code || ""),
         expense_date: String(row.expense_date || "").slice(0, 10),
         status: (String(row.status || "posted") as ExpenseStatus),
+        payment_mode: row.payment_mode === "employee" ? "employee" : "company",
+        employee_id: (row.employee_id as string) || null,
+        employee_name: row.employee_id ? employeeNames.get(String(row.employee_id)) || null : null,
+        rejected_reason: (row.rejected_reason as string) || null,
         category_id: (row.category_id as string) || null,
         category: String(row.category || ""),
         account_id: (row.account_id as string) || null,
@@ -255,6 +272,7 @@ export async function fetchExpensesAction(
           row.description,
           row.notes,
           row.account_name,
+          row.employee_name,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLocaleLowerCase("az").includes(search))
@@ -276,6 +294,10 @@ export async function saveExpenseAction(
     const expenseDate = String(input.expenseDate || "").trim();
     if (!ISO_DATE.test(expenseDate)) return { success: false, error: "Xərc tarixi düzgün deyil" };
     if (!isValidUuid(input.categoryId)) return { success: false, error: "Xərc kateqoriyası seçilməlidir" };
+    const paymentMode = input.paymentMode === "employee" ? "employee" : "company";
+    if (paymentMode === "employee" && !isValidUuid(input.employeeId ?? "")) {
+      return { success: false, error: "Xərci ödəyən işçini seçin" };
+    }
     if (input.post && !isValidUuid(input.accountId)) {
       return { success: false, error: "Kassa/bank hesabı seçilməlidir" };
     }
@@ -307,10 +329,13 @@ export async function saveExpenseAction(
         description: clampString(input.description ?? "", 500) || null,
         notes: clampString(input.notes ?? "", 1000) || null,
         department_id: optionalUuid(input.departmentId),
+        payment_mode: paymentMode,
+        employee_id: paymentMode === "employee" ? optionalUuid(input.employeeId) : null,
         net_amount: net,
         vat_rate: vatRate,
         vat_amount: vatAmount,
-        post: Boolean(input.post),
+        post: paymentMode === "company" && Boolean(input.post),
+        submit: Boolean(input.submit),
       },
     });
 
@@ -356,4 +381,73 @@ export async function cancelExpenseAction(expenseId: string, reason?: string): P
   } catch (err) {
     return actionError(err, "Xərc ləğv edilmədi");
   }
+}
+
+async function runExpenseRpc(
+  permission: PermissionKey,
+  call: (client: Awaited<ReturnType<typeof createSupabaseServerClient>>) => PromiseLike<{
+    error: { message: string } | null;
+  }>,
+  fallback: string
+): Promise<ActionResult> {
+  try {
+    await requireAnyExpensePermission(permission);
+    const client = await createSupabaseServerClient();
+    const { error } = await call(client);
+    if (error) return { success: false, error: mapRpcError(error.message) };
+    return { success: true };
+  } catch (err) {
+    return actionError(err, fallback);
+  }
+}
+
+export async function submitExpenseAction(expenseId: string): Promise<ActionResult> {
+  if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+  return runExpenseRpc(
+    "can_manage_expenses",
+    (client) => client.rpc("submit_expense_atomic", { p_expense_id: expenseId }),
+    "Xərc təsdiqə göndərilmədi"
+  );
+}
+
+export async function approveExpenseAction(expenseId: string): Promise<ActionResult> {
+  if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+  return runExpenseRpc(
+    "can_manage_finance",
+    (client) => client.rpc("approve_expense_atomic", { p_expense_id: expenseId }),
+    "Xərc təsdiqlənmədi"
+  );
+}
+
+export async function rejectExpenseAction(expenseId: string, reason?: string): Promise<ActionResult> {
+  if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+  return runExpenseRpc(
+    "can_manage_finance",
+    (client) =>
+      client.rpc("reject_expense_atomic", {
+        p_expense_id: expenseId,
+        p_reason: clampString(reason ?? "", 300) || undefined,
+      }),
+    "Xərc geri qaytarılmadı"
+  );
+}
+
+export async function reimburseExpenseAction(
+  expenseId: string,
+  accountId: string,
+  payDate: string
+): Promise<ActionResult> {
+  if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+  if (!isValidUuid(accountId)) return { success: false, error: "Kassa/bank hesabı seçilməlidir" };
+  if (!ISO_DATE.test(payDate)) return { success: false, error: "Ödəniş tarixi düzgün deyil" };
+  return runExpenseRpc(
+    "can_manage_finance",
+    (client) =>
+      client.rpc("reimburse_expense_atomic", {
+        p_expense_id: expenseId,
+        p_account_id: accountId,
+        p_pay_date: payDate,
+      }),
+    "Kompensasiya ödənilmədi"
+  );
 }

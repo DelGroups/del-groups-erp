@@ -606,6 +606,18 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           cancel_reason: string | null
+          payment_mode: string
+          employee_id: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          approved_at: string | null
+          approved_by: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
+          reimbursed_at: string | null
+          reimbursed_by: string | null
+          reimbursement_journal_id: string | null
           updated_at: string
         }
         Insert: {
@@ -636,6 +648,18 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancel_reason?: string | null
+          payment_mode?: string
+          employee_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          reimbursed_at?: string | null
+          reimbursed_by?: string | null
+          reimbursement_journal_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -666,6 +690,18 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancel_reason?: string | null
+          payment_mode?: string
+          employee_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          reimbursed_at?: string | null
+          reimbursed_by?: string | null
+          reimbursement_journal_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2878,6 +2914,13 @@ export type Database = {
       }
       record_expense_atomic: { Args: { p_payload: Json }; Returns: Json }
       post_expense_atomic: { Args: { p_expense_id: string }; Returns: string }
+      submit_expense_atomic: { Args: { p_expense_id: string }; Returns: undefined }
+      reject_expense_atomic: { Args: { p_expense_id: string; p_reason?: string }; Returns: undefined }
+      approve_expense_atomic: { Args: { p_expense_id: string }; Returns: Json }
+      reimburse_expense_atomic: {
+        Args: { p_expense_id: string; p_account_id: string; p_pay_date?: string }
+        Returns: string
+      }
       cancel_expense_atomic: {
         Args: { p_expense_id: string; p_reason?: string }
         Returns: Json
