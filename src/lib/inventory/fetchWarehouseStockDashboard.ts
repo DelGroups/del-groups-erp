@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { Product, Warehouse } from "@/types/database.types";
+import { isMetricProduct, resolveMetricBuyCostPerMeter } from "@/lib/polywood/metricReceive";
 
 export type WarehouseStockStatus = "in_stock" | "low" | "out";
 
@@ -127,7 +128,8 @@ export async function fetchWarehouseStockDashboard(): Promise<WarehouseStockDash
       "—";
     const reserved = reservedByKey.get(reservationKey(product.id, warehouseId)) ?? 0;
     const available = Math.max(0, totalPhysical - reserved);
-    const buyPrice = num(product.buy_price);
+    // Metric stock is counted in metres, so value it per metre.
+    const buyPrice = isMetricProduct(product) ? resolveMetricBuyCostPerMeter(product) : num(product.buy_price);
 
     rows.push({
       id: `${product.id}::${warehouseId ?? "none"}`,

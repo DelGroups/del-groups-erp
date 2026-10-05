@@ -2,6 +2,7 @@ import { DEFAULT_FULL_SHEET_LENGTH_M, POLYWOOD_INVENTORY_MODE } from "@/lib/poly
 import { addPolywoodStockFromLengths } from "@/lib/polywood/inventory";
 import type { Product, PurchaseLineItem } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
+import { parsePriceMetaFromExtraInfo } from "@/lib/products/productPriceRows";
 
 export type MetricReceiveMode = "full_bars" | "custom_pieces";
 
@@ -23,6 +24,22 @@ export function resolveStandardBarLengthM(
 ): number {
   const fromProduct = Number(product?.full_sheet_length_m ?? product?.base_length);
   return fromProduct > 0 ? fromProduct : DEFAULT_FULL_SHEET_LENGTH_M;
+}
+
+/**
+ * Buy cost of one metre of a metric product. The product card may hold the buy
+ * price per piece (one full bar or sheet, e.g. 115 AZN per 4 m sheet) or per
+ * metre; FIFO batches and stock value are always per metre.
+ */
+export function resolveMetricBuyCostPerMeter(
+  product: Pick<Product, "buy_price" | "extra_info" | "full_sheet_length_m" | "base_length"> | null | undefined
+): number {
+  if (!product) return 0;
+  const firstBuyRow = parsePriceMetaFromExtraInfo(product.extra_info)?.buy[0];
+  if (firstBuyRow?.unit === "piece") {
+    return Math.round((firstBuyRow.price / resolveStandardBarLengthM(product)) * 10000) / 10000;
+  }
+  return Number(product.buy_price) || 0;
 }
 
 export function parseCustomPieceLengths(input: string): number[] {
