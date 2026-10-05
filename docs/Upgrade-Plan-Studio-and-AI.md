@@ -71,7 +71,7 @@ Cost per question is in `ai_usage_log.cost_usd`, e.g.
 | Piece | File |
 |---|---|
 | Field types, name generation, validation (unit-tested) | `src/lib/studio/fields.ts` |
-| Definitions table + `custom_fields JSONB` on customers, suppliers, products, sales, purchases, production_orders | `supabase/migrations/20261005170000_studio_custom_fields.sql` |
+| Definitions table + `custom_fields JSONB` on customers, suppliers, products, sales, purchases, production_orders | `supabase/migrations/20261005180000_studio_custom_fields.sql` |
 | Admin page: Settings → Studio (`/settings/studio`, `can_manage_settings`) | `src/app/settings/studio`, `src/components/studio/StudioFieldsEditor.tsx`, `src/lib/actions/studio.ts` |
 | Form rendering | `src/components/studio/CustomFieldsSection.tsx`, `useStudioFields.ts` |
 | Wired so far | customer form + list columns, product form (create and edit) |
