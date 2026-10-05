@@ -5,6 +5,8 @@ export const LOCKED_LEDGER_REFERENCE_TYPES = new Set([
   "purchase",
   "production",
   "production_expense",
+  // Expense documents are changed or cancelled from /expenses, never here.
+  "expense",
   "payroll",
   "employee_advance",
 ]);
