@@ -647,6 +647,7 @@ const LINKED_TRANSACTION_SOURCES = new Set([
   "purchase",
   "production",
   "production_expense",
+  "expense",
   "payroll",
   "employee_advance",
 ]);

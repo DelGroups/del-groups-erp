@@ -158,6 +158,8 @@ const REFERENCE_LABELS_AZ: Record<string, string> = {
   production_expense: "İstehsalat xərci",
   production: "İstehsalat",
   manual_expense: "Əl ilə xərc",
+  expense: "Xərc sənədi",
+  storno: "Storno",
   purchase_invoice: "Satın alma fakturası",
   purchase: "Satın alma",
   customer_advance: "Müştəri avansı",

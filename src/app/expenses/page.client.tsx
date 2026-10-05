@@ -1,155 +1,239 @@
-﻿"use client";
+"use client";
 
 import PageLayout from "@/components/layout/PageLayout";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
-  createExpenseAction,
-  fetchAccountLedgerBalancesAction,
-  fetchFinancialCategoriesAction,
-  fetchUnifiedLedgerAction,
-} from "@/lib/actions/finance";
-import { formatReferenceTypeLabel } from "@/lib/finance/unifiedLedger";
-import type { ExpenseCategoryOption } from "@/lib/finance/financialCategories";
+  cancelExpenseAction,
+  fetchExpenseFormOptionsAction,
+  fetchExpensesAction,
+  postExpenseAction,
+  saveExpenseAction,
+  type ExpenseFormOptions,
+} from "@/lib/actions/expenses";
+import {
+  EXPENSE_STATUSES,
+  firstDayOfMonthIsoDate,
+  todayIsoDate,
+  type ExpenseDocument,
+  type ExpenseFilters,
+  type ExpenseSaveInput,
+  type ExpenseStatus,
+  type ExpenseSummary,
+} from "@/lib/expenses/expenseDocuments";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { downloadTextFile, rowsToCsv } from "@/lib/csv/csvUtils";
 import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
-import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
+import ExpenseFormModal from "@/components/expenses/ExpenseFormModal";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
-import { FolderTree, Plus, RefreshCw, X } from "lucide-react";
-import type { UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
+import { Ban, CheckCircle2, Download, FolderTree, Pencil, Plus, RefreshCw, X } from "lucide-react";
 
 type ExpensesTab = "records" | "categories";
 
-interface AccountOption {
-  id: string;
-  name: string;
-  ledger_balance: number;
+const EMPTY_OPTIONS: ExpenseFormOptions = {
+  accounts: [],
+  categories: [],
+  suppliers: [],
+  departments: [],
+};
+
+const EMPTY_SUMMARY: ExpenseSummary = {
+  count: 0,
+  net: 0,
+  vat: 0,
+  total: 0,
+  draftCount: 0,
+  draftTotal: 0,
+  byCategory: [],
+};
+
+const STATUS_TONE: Record<ExpenseStatus, StatusTone> = {
+  draft: "draft",
+  submitted: "warning",
+  approved: "success",
+  posted: "posted",
+  cancelled: "cancelled",
+};
+
+function shiftMonth(iso: string, delta: number): { from: string; to: string } {
+  const [y, m] = iso.split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1 + delta, 1));
+  const end = new Date(Date.UTC(y, m + delta, 0));
+  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
 }
 
 export default function ExpensesPage() {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<ExpensesTab>("records");
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [totalExpense, setTotalExpense] = useState(0);
-  const [expenseRows, setExpenseRows] = useState<UnifiedLedgerTransaction[]>([]);
-  const [accounts, setAccounts] = useState<AccountOption[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
-
-  const [formData, setFormData] = useState({
-    category_id: "",
-    amount: "0.00",
-    account_id: "",
-    notes: "",
-  });
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
-  const canManageFinance = can("can_manage_finance");
-  const canManage = canManageExpenses || canManageFinance;
+  const canManage = canManageExpenses || can("can_manage_finance");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
-  const fetchExpensesAndAccounts = useCallback(async () => {
-    setLoading(true);
-    const [ledgerRes, accountsRes, categoriesRes] = await Promise.all([
-      fetchUnifiedLedgerAction({ type: "EXPENSE" }),
-      fetchAccountLedgerBalancesAction(),
-      fetchFinancialCategoriesAction(),
-    ]);
+  const [activeTab, setActiveTab] = useState<ExpensesTab>("records");
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<ExpenseDocument[]>([]);
+  const [summary, setSummary] = useState<ExpenseSummary>(EMPTY_SUMMARY);
+  const [truncated, setTruncated] = useState(false);
+  const [options, setOptions] = useState<ExpenseFormOptions>(EMPTY_OPTIONS);
+  const [filters, setFilters] = useState<ExpenseFilters>(() => ({
+    from: firstDayOfMonthIsoDate(),
+    to: todayIsoDate(),
+    categoryId: "",
+    accountId: "",
+    supplierId: "",
+    departmentId: "",
+    status: "",
+    search: "",
+  }));
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<ExpenseDocument | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<ExpenseDocument | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-    if (ledgerRes.success && ledgerRes.data) {
-      setTotalExpense(ledgerRes.data.summary.totalExpense);
-      setExpenseRows(ledgerRes.data.transactions);
-    } else {
-      showError(ledgerRes.error || t("common.error"));
-      setExpenseRows([]);
-      setTotalExpense(0);
-    }
-
-    if (accountsRes.success && accountsRes.data) {
-      setAccounts(
-        accountsRes.data.accounts.map((a) => ({
-          id: a.account_id,
-          name: a.name,
-          ledger_balance: a.ledger_balance,
-        }))
-      );
-    }
-
-    if (categoriesRes.success && categoriesRes.data?.length) {
-      const expenseCats = categoriesRes.data.map((c) => ({
-        id: c.id,
-        name: c.name,
-        parent_id: c.parent_id,
-        parent_name: c.parent_name,
-      }));
-      setCategories(expenseCats);
-      setFormData((prev) => ({
-        ...prev,
-        category_id: prev.category_id || expenseCats[0]?.id || "",
-      }));
-    }
-
-    setLoading(false);
+  const loadOptions = useCallback(async () => {
+    const res = await fetchExpenseFormOptionsAction();
+    if (res.success && res.data) setOptions(res.data);
+    else if (!res.success) showError(res.error || t("common.error"));
   }, [showError, t]);
 
+  const loadRows = useCallback(async () => {
+    setLoading(true);
+    const res = await fetchExpensesAction(filters);
+    if (res.success && res.data) {
+      setRows(res.data.rows);
+      setSummary(res.data.summary);
+      setTruncated(res.data.truncated);
+    } else {
+      showError(res.success ? t("common.error") : res.error || t("common.error"));
+      setRows([]);
+      setSummary(EMPTY_SUMMARY);
+    }
+    setLoading(false);
+  }, [filters, showError, t]);
+
   useEffect(() => {
-    void fetchExpensesAndAccounts();
-  }, [fetchExpensesAndAccounts]);
+    const timer = setTimeout(() => void loadOptions(), 0);
+    return () => clearTimeout(timer);
+  }, [loadOptions]);
 
-  const selectedCategory = categories.find((c) => c.id === formData.category_id);
+  useEffect(() => {
+    const timer = setTimeout(() => void loadRows(), filters.search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [loadRows, filters.search]);
 
-  const handleSubmitExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canManageExpenses) {
-      showError(t("expenses.noPermission"));
-      return;
-    }
-    if (!formData.account_id) {
-      showError(t("expenses.selectAccountAlert"));
-      return;
-    }
-    if (!formData.category_id) {
-      showError(t("expenses.selectCategoryAlert"));
-      return;
-    }
+  const setFilter = <K extends keyof ExpenseFilters>(key: K, value: ExpenseFilters[K]) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
 
-    const numericAmount = parseFloat(formData.amount) || 0;
-    if (numericAmount <= 0) {
-      showError(t("expenses.invalidAmount"));
-      return;
-    }
+  const quickRanges = useMemo(() => {
+    const today = todayIsoDate();
+    return [
+      { key: "thisMonth", label: t("expenses.doc.rangeThisMonth"), from: firstDayOfMonthIsoDate(), to: today },
+      { key: "lastMonth", label: t("expenses.doc.rangeLastMonth"), ...shiftMonth(today, -1) },
+      { key: "thisYear", label: t("expenses.doc.rangeThisYear"), from: `${today.slice(0, 4)}-01-01`, to: today },
+      { key: "all", label: t("common.all"), from: "", to: "" },
+    ];
+  }, [t]);
 
-    const categoryLabel = selectedCategory?.parent_name
-      ? `${selectedCategory.parent_name} / ${selectedCategory.name}`
-      : selectedCategory?.name || "";
-
-    const result = await createExpenseAction({
-      category: categoryLabel || selectedCategory?.name || "",
-      amount: numericAmount,
-      accountId: formData.account_id,
-      notes: formData.notes,
-      description: formData.notes || categoryLabel,
-    });
-
-    if (!result.success) {
-      showError(t("common.error") + ": " + formatRpcError(result.error, t));
-      return;
-    }
-
-    showSuccess(t("expenses.successRecorded"));
-    setIsModalOpen(false);
-    setFormData({
-      category_id: categories[0]?.id || "",
-      amount: "0.00",
-      account_id: "",
-      notes: "",
-    });
-    void fetchExpensesAndAccounts();
+  const refreshAll = () => {
+    void loadRows();
+    void loadOptions();
   };
+
+  const handleSave = async (input: ExpenseSaveInput) => {
+    setSaving(true);
+    const res = await saveExpenseAction(input);
+    setSaving(false);
+    if (!res.success || !res.data) {
+      showError(t("common.error") + ": " + formatRpcError(res.success ? undefined : res.error, t));
+      return;
+    }
+    showSuccess(
+      res.data.status === "posted"
+        ? t("expenses.doc.postedToast", { code: res.data.code })
+        : t("expenses.doc.draftToast", { code: res.data.code })
+    );
+    setFormOpen(false);
+    setEditing(null);
+    refreshAll();
+  };
+
+  const handlePost = async (row: ExpenseDocument) => {
+    setBusyId(row.id);
+    const res = await postExpenseAction(row.id);
+    setBusyId(null);
+    if (!res.success) {
+      showError(t("common.error") + ": " + formatRpcError(res.error, t));
+      return;
+    }
+    showSuccess(t("expenses.doc.postedToast", { code: row.code }));
+    refreshAll();
+  };
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setBusyId(cancelTarget.id);
+    const res = await cancelExpenseAction(cancelTarget.id, cancelReason);
+    setBusyId(null);
+    if (!res.success) {
+      showError(t("common.error") + ": " + formatRpcError(res.error, t));
+      return;
+    }
+    showSuccess(t("expenses.doc.cancelledToast", { code: cancelTarget.code }));
+    setCancelTarget(null);
+    setCancelReason("");
+    refreshAll();
+  };
+
+  const statusLabel = (status: ExpenseStatus) => t(`expenses.doc.status_${status}`);
+
+  const exportCsv = () => {
+    const headers = [
+      t("common.date"),
+      t("expenses.doc.code"),
+      t("common.category"),
+      t("expenses.doc.supplier"),
+      t("expenses.doc.referenceNo"),
+      t("expenses.doc.description"),
+      t("expenses.paidAccount"),
+      t("expenses.doc.department"),
+      t("expenses.doc.net"),
+      t("expenses.doc.vat"),
+      t("expenses.doc.total"),
+      t("common.status"),
+    ];
+    const data = rows.map((r) => [
+      r.expense_date,
+      r.code,
+      r.category,
+      r.supplier_name || r.payee || "",
+      r.reference_no || "",
+      r.description || r.notes || "",
+      r.account_name || "",
+      r.department_name || "",
+      r.net_amount.toFixed(2),
+      r.vat_amount.toFixed(2),
+      r.amount.toFixed(2),
+      statusLabel(r.status),
+    ]);
+    const name = `xercler_${filters.from || "all"}_${filters.to || todayIsoDate()}.csv`;
+    downloadTextFile(name, rowsToCsv(headers, data));
+  };
+
+  const maxCategory = summary.byCategory[0]?.amount || 0;
 
   return (
     <PageLayout>
@@ -158,18 +242,31 @@ export default function ExpensesPage() {
           <h2 className="text-xl font-bold text-app">{t("expenses.pageTitle")}</h2>
           <p className="text-sm text-app-muted">{t("expenses.pageDescription")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {activeTab === "records" ? (
+        {activeTab === "records" ? (
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setIsModalOpen(true)}
+              type="button"
+              onClick={exportCsv}
+              disabled={rows.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {t("expenses.doc.exportCsv")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
               disabled={!canManageExpenses}
-              className="flex items-center space-x-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
-              <span>{t("expenses.createButton")}</span>
+              {t("expenses.createButton")}
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </header>
 
       <div className="border-b border-app px-6">
@@ -178,9 +275,7 @@ export default function ExpensesPage() {
             type="button"
             onClick={() => setActiveTab("records")}
             className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              activeTab === "records"
-                ? "bg-rose-600 text-white"
-                : "bg-app-card-hover text-app-muted hover:text-app"
+              activeTab === "records" ? "bg-rose-600 text-white" : "bg-app-card-hover text-app-muted hover:text-app"
             }`}
           >
             {t("expenses.tabRecords")}
@@ -203,180 +298,336 @@ export default function ExpensesPage() {
       <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
         {activeTab === "records" ? (
           <>
-            <div className="app-card app-card-elevated flex items-center justify-between p-5">
-              <div>
-                <span className="text-xs font-semibold uppercase text-app-muted">
-                  {t("expenses.totalRecorded")}
-                </span>
-                <div className="mt-1 text-2xl font-bold text-rose-600">{totalExpense.toFixed(2)} AZN</div>
+            <section className="app-card space-y-3 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {quickRanges.map((range) => {
+                  const active = filters.from === range.from && filters.to === range.to;
+                  return (
+                    <button
+                      key={range.key}
+                      type="button"
+                      onClick={() => setFilters((prev) => ({ ...prev, from: range.from, to: range.to }))}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        active ? "bg-rose-600 text-white" : "bg-app-card-hover text-app-muted hover:text-app"
+                      }`}
+                    >
+                      {range.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={refreshAll}
+                  className="ml-auto rounded-lg border p-2 hover:bg-app-card-hover"
+                  aria-label={t("common.refresh")}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                </button>
               </div>
-              <button
-                onClick={() => void fetchExpensesAndAccounts()}
-                className="rounded-lg border p-2 hover:bg-app-card-hover"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </button>
-            </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+                <input
+                  type="date"
+                  value={filters.from || ""}
+                  onChange={(e) => setFilter("from", e.target.value)}
+                  className="app-input text-sm"
+                  aria-label={t("expenses.doc.dateFrom")}
+                  title={t("expenses.doc.dateFrom")}
+                />
+                <input
+                  type="date"
+                  value={filters.to || ""}
+                  onChange={(e) => setFilter("to", e.target.value)}
+                  className="app-input text-sm"
+                  aria-label={t("expenses.doc.dateTo")}
+                  title={t("expenses.doc.dateTo")}
+                />
+                <ExpenseCategorySelect
+                  categories={options.categories}
+                  value={filters.categoryId || ""}
+                  onChange={(id) => setFilter("categoryId", id)}
+                  placeholder={t("expenses.doc.allCategories")}
+                />
+                <select
+                  value={filters.accountId || ""}
+                  onChange={(e) => setFilter("accountId", e.target.value)}
+                  className="app-input text-sm"
+                >
+                  <option value="">{t("expenses.doc.allAccounts")}</option>
+                  {options.accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filters.supplierId || ""}
+                  onChange={(e) => setFilter("supplierId", e.target.value)}
+                  className="app-input text-sm"
+                >
+                  <option value="">{t("expenses.doc.allSuppliers")}</option>
+                  {options.suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filters.departmentId || ""}
+                  onChange={(e) => setFilter("departmentId", e.target.value)}
+                  className="app-input text-sm"
+                >
+                  <option value="">{t("expenses.doc.allDepartments")}</option>
+                  {options.departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filters.status || ""}
+                  onChange={(e) => setFilter("status", e.target.value as ExpenseStatus | "")}
+                  className="app-input text-sm"
+                >
+                  <option value="">{t("expenses.doc.allStatuses")}</option>
+                  {EXPENSE_STATUSES.filter((s) => s !== "submitted" && s !== "approved").map((s) => (
+                    <option key={s} value={s}>
+                      {statusLabel(s)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="search"
+                  value={filters.search || ""}
+                  onChange={(e) => setFilter("search", e.target.value)}
+                  placeholder={t("common.search")}
+                  className="app-input text-sm"
+                />
+              </div>
+            </section>
+
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="app-card app-card-elevated p-4">
+                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.totalRecorded")}</div>
+                <div className="mt-1 text-2xl font-bold text-rose-600">{summary.total.toFixed(2)} AZN</div>
+                <div className="text-xs text-app-muted">{t("expenses.doc.documentsCount", { count: summary.count })}</div>
+              </div>
+              <div className="app-card p-4">
+                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.net")}</div>
+                <div className="mt-1 text-xl font-bold text-app">{summary.net.toFixed(2)} AZN</div>
+              </div>
+              <div className="app-card p-4">
+                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.vat")}</div>
+                <div className="mt-1 text-xl font-bold text-app">{summary.vat.toFixed(2)} AZN</div>
+              </div>
+              <div className="app-card p-4">
+                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.drafts")}</div>
+                <div className="mt-1 text-xl font-bold text-amber-600">{summary.draftTotal.toFixed(2)} AZN</div>
+                <div className="text-xs text-app-muted">{t("expenses.doc.documentsCount", { count: summary.draftCount })}</div>
+              </div>
+            </section>
+
+            {summary.byCategory.length > 0 ? (
+              <section className="app-card p-4">
+                <h3 className="mb-3 text-sm font-bold text-app">{t("expenses.doc.byCategory")}</h3>
+                <div className="space-y-2">
+                  {summary.byCategory.slice(0, 10).map((item) => (
+                    <div key={item.category} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                      <div className="min-w-0">
+                        <div className="flex justify-between gap-2">
+                          <span className="truncate text-app">{item.category}</span>
+                          <span className="text-xs text-app-muted">{item.count}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 rounded-full bg-app-card-hover">
+                          <div
+                            className="h-1.5 rounded-full bg-rose-500"
+                            style={{ width: `${maxCategory ? Math.max(2, (item.amount / maxCategory) * 100) : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="w-28 text-right font-semibold tabular-nums text-app">
+                        {item.amount.toFixed(2)} AZN
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <div className="app-table-wrap">
-              {loading ? (
+              {loading && rows.length === 0 ? (
                 <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
-              ) : expenseRows.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
               ) : (
                 <TableWrap className="rounded-none border-0 shadow-none">
                   <Table>
                     <THead>
                       <tr>
+                        <Th>{t("common.date")}</Th>
+                        <Th>{t("expenses.doc.code")}</Th>
                         <Th>{t("common.category")}</Th>
+                        <Th>{t("expenses.doc.supplier")}</Th>
+                        <Th>{t("expenses.doc.description")}</Th>
                         <Th>{t("expenses.paidAccount")}</Th>
-                        <Th>{t("expenses.noteDescription")}</Th>
-                        <Th>{t("finance.columnSource")}</Th>
-                        <Th className="text-right">{t("common.amount")}</Th>
-                        <Th className="text-right">{t("common.date")}</Th>
+                        <Th className="text-right">{t("expenses.doc.vat")}</Th>
+                        <Th className="text-right">{t("expenses.doc.total")}</Th>
+                        <Th>{t("common.status")}</Th>
                         <ActionsTh>{t("common.actions")}</ActionsTh>
                       </tr>
                     </THead>
                     <tbody>
-                    {expenseRows.map((e) => (
-                      <Tr key={e.id}>
-                        <Td className="font-semibold text-app">{e.category}</Td>
-                        <Td className="text-app-muted">{e.account_name || "—"}</Td>
-                        <Td className="text-app-muted">{e.description || e.notes || "—"}</Td>
-                        <Td>
-                          <span className="inline-flex rounded-full bg-app-card-hover px-2 py-0.5 text-[10px] font-semibold text-app-muted">
-                            {formatReferenceTypeLabel(e.reference_type)}
-                          </span>
-                        </Td>
-                        <Td numeric className="font-bold text-rose-600">
-                          -{e.amount.toFixed(2)} AZN
-                        </Td>
-                        <Td numeric className="text-xs text-app-muted">
-                          {new Date(e.transaction_date || e.created_at).toLocaleDateString("az-AZ")}
-                        </Td>
-                        <ActionsTd>
-                          <UnifiedLedgerRowActions
-                            transaction={e}
-                            canManage={canManage}
-                            onChanged={() => void fetchExpensesAndAccounts()}
-                            onError={showError}
-                            onSuccess={showSuccess}
-                          />
-                        </ActionsTd>
-                      </Tr>
-                    ))}
-                  </tbody>
+                      {rows.map((r) => {
+                        const isOpen = r.status !== "posted" && r.status !== "cancelled";
+                        const cancelled = r.status === "cancelled";
+                        return (
+                          <Tr key={r.id} className={cancelled ? "opacity-60" : undefined}>
+                            <Td className="whitespace-nowrap text-xs text-app-muted">{formatDate(r.expense_date)}</Td>
+                            <Td className="whitespace-nowrap font-mono text-xs">{r.code}</Td>
+                            <Td className="font-semibold text-app">
+                              {r.category}
+                              {r.department_name ? (
+                                <div className="text-[11px] font-normal text-app-muted">{r.department_name}</div>
+                              ) : null}
+                            </Td>
+                            <Td className="text-app-muted">
+                              {r.supplier_name || r.payee || "—"}
+                              {r.reference_no ? (
+                                <div className="text-[11px]">№ {r.reference_no}</div>
+                              ) : null}
+                            </Td>
+                            <Td className="max-w-xs truncate text-app-muted" title={r.cancel_reason || r.notes || undefined}>
+                              {r.description || r.notes || "—"}
+                            </Td>
+                            <Td className="text-app-muted">{r.account_name || "—"}</Td>
+                            <Td numeric className="text-xs text-app-muted">
+                              {r.vat_amount > 0 ? r.vat_amount.toFixed(2) : "—"}
+                            </Td>
+                            <Td numeric className={`font-bold ${cancelled ? "line-through text-app-muted" : "text-rose-600"}`}>
+                              {r.amount.toFixed(2)} AZN
+                            </Td>
+                            <Td>
+                              <StatusBadge tone={STATUS_TONE[r.status]}>{statusLabel(r.status)}</StatusBadge>
+                            </Td>
+                            <ActionsTd>
+                              <TableRowActionsMenu
+                                items={[
+                                  {
+                                    key: "edit",
+                                    label: t("common.edit"),
+                                    icon: <Pencil className="h-4 w-4" />,
+                                    hidden: !isOpen,
+                                    disabled: !canManageExpenses,
+                                    onClick: () => {
+                                      setEditing(r);
+                                      setFormOpen(true);
+                                    },
+                                  },
+                                  {
+                                    key: "post",
+                                    label: t("expenses.doc.post"),
+                                    icon: <CheckCircle2 className="h-4 w-4" />,
+                                    hidden: !isOpen,
+                                    disabled: !canManageExpenses || busyId === r.id,
+                                    onClick: () => void handlePost(r),
+                                  },
+                                  {
+                                    key: "cancel",
+                                    label: t("expenses.doc.cancelExpense"),
+                                    icon: <Ban className="h-4 w-4" />,
+                                    hidden: cancelled || r.is_production,
+                                    disabled: !canManageExpenses || busyId === r.id,
+                                    variant: "destructive",
+                                    onClick: () => {
+                                      setCancelReason("");
+                                      setCancelTarget(r);
+                                    },
+                                  },
+                                ]}
+                              />
+                            </ActionsTd>
+                          </Tr>
+                        );
+                      })}
+                    </tbody>
                   </Table>
                 </TableWrap>
               )}
+              {truncated ? (
+                <div className="border-t border-app p-3 text-center text-xs text-app-muted">
+                  {t("expenses.doc.truncated")}
+                </div>
+              ) : null}
             </div>
           </>
         ) : (
           <ExpenseCategoriesManager
             canManage={canManage}
-            onChanged={() => void fetchExpensesAndAccounts()}
+            onChanged={() => void loadOptions()}
             onError={showError}
             onSuccess={showSuccess}
           />
         )}
       </main>
 
-      {isModalOpen && (
+      {formOpen ? (
+        <ExpenseFormModal
+          options={options}
+          initial={editing}
+          saving={saving}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+          onSubmit={(input) => void handleSave(input)}
+        />
+      ) : null}
+
+      {cancelTarget ? (
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex items-center justify-between bg-app-card-hover">
-              <h3 className="font-bold text-app">{t("expenses.addModalTitle")}</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-app-muted hover:text-app-muted"
-              >
+              <h3 className="font-bold text-app">
+                {t("expenses.doc.cancelTitle", { code: cancelTarget.code })}
+              </h3>
+              <button type="button" onClick={() => setCancelTarget(null)} className="text-app-muted hover:text-app">
                 <X className="h-5 w-5" />
               </button>
             </div>
-
-            <form onSubmit={handleSubmitExpense} className="space-y-4 p-6">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-app">
-                  {t("expenses.categoryRequired")}
-                </label>
-                <ExpenseCategorySelect
-                  categories={categories}
-                  value={formData.category_id}
-                  onChange={(categoryId) => setFormData({ ...formData, category_id: categoryId })}
-                  className="app-input text-sm focus:ring-rose-500/40"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-app">
-                  {t("expenses.paymentAccountRequired")}
-                </label>
-                <select
-                  required
-                  value={formData.account_id}
-                  onChange={(e) => setFormData({ ...formData, account_id: e.target.value })}
-                  className="app-input text-sm focus:ring-rose-500/40"
-                >
-                  <option value="">{t("expenses.selectAccount")}</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {t("expenses.accountBalance", {
-                        name: a.name,
-                        balance: a.ledger_balance.toFixed(2),
-                      })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-app">
-                  {t("expenses.amountRequired")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full rounded-lg border px-3 py-2 text-sm font-bold text-rose-600 focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-app">
-                  {t("expenses.noteDescription")}
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder={t("expenses.notesPlaceholder")}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-2">
+            <div className="space-y-3 p-6">
+              <p className="text-sm text-app-muted">
+                {cancelTarget.status === "posted"
+                  ? t("expenses.doc.cancelPostedHint", { amount: cancelTarget.amount.toFixed(2) })
+                  : t("expenses.doc.cancelDraftHint")}
+              </p>
+              <input
+                type="text"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder={t("expenses.doc.cancelReason")}
+                className="app-input text-sm"
+              />
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setCancelTarget(null)}
                   className="rounded-lg border px-4 py-2 text-xs font-semibold text-app"
                 >
                   {t("common.cancel")}
                 </button>
                 <button
-                  type="submit"
-                  disabled={!canManageExpenses}
+                  type="button"
+                  disabled={busyId === cancelTarget.id}
+                  onClick={() => void handleCancel()}
                   className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
-                  {t("expenses.confirmExpense")}
+                  {t("expenses.doc.cancelConfirm")}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
+
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

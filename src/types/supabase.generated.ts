@@ -587,6 +587,26 @@ export type Database = {
           id: string
           notes: string | null
           production_order_id: string | null
+          expense_date: string
+          category_id: string | null
+          supplier_id: string | null
+          payee: string | null
+          reference_no: string | null
+          description: string | null
+          net_amount: number | null
+          vat_rate: number
+          vat_amount: number
+          department_id: string | null
+          status: string
+          transaction_id: string | null
+          journal_entry_id: string | null
+          created_by: string | null
+          posted_at: string | null
+          posted_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+          updated_at: string
         }
         Insert: {
           account_id?: string | null
@@ -597,6 +617,26 @@ export type Database = {
           id?: string
           notes?: string | null
           production_order_id?: string | null
+          expense_date?: string
+          category_id?: string | null
+          supplier_id?: string | null
+          payee?: string | null
+          reference_no?: string | null
+          description?: string | null
+          net_amount?: number | null
+          vat_rate?: number
+          vat_amount?: number
+          department_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          journal_entry_id?: string | null
+          created_by?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancel_reason?: string | null
+          updated_at?: string
         }
         Update: {
           account_id?: string | null
@@ -607,6 +647,26 @@ export type Database = {
           id?: string
           notes?: string | null
           production_order_id?: string | null
+          expense_date?: string
+          category_id?: string | null
+          supplier_id?: string | null
+          payee?: string | null
+          reference_no?: string | null
+          description?: string | null
+          net_amount?: number | null
+          vat_rate?: number
+          vat_amount?: number
+          department_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          journal_entry_id?: string | null
+          created_by?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancel_reason?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2814,6 +2874,12 @@ export type Database = {
       post_sales_invoice_draft: { Args: { p_sale_id: string }; Returns: Json }
       cancel_sales_invoice_atomic: {
         Args: { p_sale_id: string; p_reason?: string }
+        Returns: Json
+      }
+      record_expense_atomic: { Args: { p_payload: Json }; Returns: Json }
+      post_expense_atomic: { Args: { p_expense_id: string }; Returns: string }
+      cancel_expense_atomic: {
+        Args: { p_expense_id: string; p_reason?: string }
         Returns: Json
       }
       cancel_purchase_invoice_atomic: {
