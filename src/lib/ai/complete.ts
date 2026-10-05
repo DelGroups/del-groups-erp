@@ -13,7 +13,7 @@ export function getAiProviderConfig(): {
   const openaiKey = cleanEnv(process.env.OPENAI_API_KEY);
   const anthropicKey = cleanEnv(process.env.ANTHROPIC_API_KEY);
   const openaiModel = cleanEnv(process.env.OPENAI_MODEL) || "gpt-4o-mini";
-  const anthropicModel = cleanEnv(process.env.ANTHROPIC_MODEL) || "claude-3-5-haiku-latest";
+  const anthropicModel = cleanEnv(process.env.ANTHROPIC_MODEL) || "claude-haiku-4-5";
 
   if (forced === "anthropic" && anthropicKey) {
     return { provider: "anthropic", apiKey: anthropicKey, model: anthropicModel };

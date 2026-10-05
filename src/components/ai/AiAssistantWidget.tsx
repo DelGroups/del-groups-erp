@@ -29,7 +29,10 @@ type ChatMessage = {
   buttons?: DynamicButton[];
   table?: DataTable;
   attachment?: string;
+  steps?: AgentStep[];
 };
+
+type AgentStep = { tool: string; ok: boolean; summary: string };
 
 type BridgeResponse = {
   reply?: string;
@@ -38,6 +41,8 @@ type BridgeResponse = {
   table?: DataTable;
   error?: string;
   configured?: boolean;
+  steps?: AgentStep[];
+  conversationId?: string | null;
 };
 
 const AGENT_KEY = "del-erp-ai-agent";
@@ -66,6 +71,9 @@ export default function AiAssistantWidget() {
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState<boolean | null>(null);
+  /** Native Claude assistant (/api/ai/agent); null until checked. Text goes there when enabled. */
+  const [nativeEnabled, setNativeEnabled] = useState<boolean | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [agent, setAgent] = useState<ErpAiAgentId>(DEFAULT_ERP_AGENT);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -139,6 +147,22 @@ export default function AiAssistantWidget() {
   useEffect(() => () => stopMedia(), [stopMedia]);
 
   useEffect(() => {
+    if (!open || nativeEnabled !== null || !user) return;
+    let cancelled = false;
+    fetch("/api/ai/agent", { credentials: "same-origin" })
+      .then(async (response) => {
+        const payload = response.ok ? ((await response.json()) as { enabled?: boolean }) : {};
+        if (!cancelled) setNativeEnabled(Boolean(payload.enabled));
+      })
+      .catch(() => {
+        if (!cancelled) setNativeEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, nativeEnabled, user]);
+
+  useEffect(() => {
     if (!open || configured !== null || !user) return;
     let cancelled = false;
     fetch("/api/ai/n8n-bridge", { credentials: "same-origin" })
@@ -166,9 +190,43 @@ export default function AiAssistantWidget() {
         links,
         buttons,
         table: payload.table,
+        steps: payload.steps,
       },
     ]);
   }, []);
+
+  const postNative = useCallback(
+    async (message: string) => {
+      setError("");
+      const history = messages.slice(-10).map((item) => ({ role: item.role, content: item.content }));
+      setMessages((prev) => [...prev, { role: "user", content: message }]);
+      setSending(true);
+      try {
+        const response = await fetch("/api/ai/agent", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, locale, conversationId, history }),
+        });
+        const payload = (await response.json()) as BridgeResponse;
+        if (payload.conversationId) setConversationId(payload.conversationId);
+        if (response.status === 404) {
+          // Flag was switched off on the server: fall back to the bridge next time.
+          setNativeEnabled(false);
+        }
+        if (!response.ok || !payload.reply) {
+          setError(payload.error || t("aiAssistant.error"));
+          return;
+        }
+        appendAssistant(payload);
+      } catch {
+        setError(t("aiAssistant.error"));
+      } finally {
+        setSending(false);
+      }
+    },
+    [appendAssistant, conversationId, locale, messages, t]
+  );
 
   const fallbackText = useCallback(
     async (message: string) => {
@@ -232,6 +290,10 @@ export default function AiAssistantWidget() {
       const message = raw.trim();
       if (!message || sending || recording) return;
       setInput("");
+      if (nativeEnabled) {
+        await postNative(message);
+        return;
+      }
       await postBridge(
         {
           method: "POST",
@@ -245,7 +307,7 @@ export default function AiAssistantWidget() {
         message
       );
     },
-    [agent, postBridge, recording, sending]
+    [agent, nativeEnabled, postBridge, postNative, recording, sending]
   );
 
   const sendVoice = useCallback(
@@ -406,7 +468,7 @@ export default function AiAssistantWidget() {
               </div>
             </header>
 
-            {configured === false && (
+            {configured === false && !nativeEnabled && (
               <p className="border-b border-amber-200/80 bg-amber-50 px-4 py-2 text-[11px] text-amber-800">
                 {t("aiAssistant.notConfigured")}
               </p>
@@ -445,6 +507,11 @@ export default function AiAssistantWidget() {
                         <p className="whitespace-pre-wrap">{item.content}</p>
                       )}
                     </div>
+                    {item.role === "assistant" && item.steps && item.steps.length > 0 && (
+                      <p className="mt-1.5 px-1 text-[11px] text-slate-500">
+                        {item.steps.map((step) => `${step.ok ? "✓" : "✗"} ${step.tool}`).join(" · ")}
+                      </p>
+                    )}
                     {item.role === "assistant" && item.links && item.links.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {item.links.slice(0, 8).map((link) => (
