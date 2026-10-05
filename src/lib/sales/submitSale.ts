@@ -162,7 +162,9 @@ function resolveMixedDimensionalCall(item: SaleItem): MixedDimensionalCallPlan |
     };
   }
   if (item.sale_item_type === "accessory") {
-    return { itemType: "accessory", amount: item.quantity, pieceCount: 1 };
+    // An accessory has no polywood_sale_mode, so posting (trg_sales_posted_inventory)
+    // already took it out of stock with FIFO cost. Deducting again here halved it.
+    return null;
   }
   if (item.sale_item_type === "dimensional") {
     if (item.polywood_sale_mode === "full_sheet") {
@@ -247,7 +249,15 @@ async function applyDimensionalAndAccessoryDeductions(
     const item = validItems[index];
     const inserted = byIndex.get(index);
     const plan = resolveMixedDimensionalCall(item);
-    if (!plan) continue;
+    if (!plan) {
+      if (item.sale_item_type === "accessory" && inserted?.id) {
+        await supabase
+          .from("sale_items")
+          .update({ sale_item_type: "accessory" })
+          .eq("id", inserted.id);
+      }
+      continue;
+    }
 
     if (plan.itemType === "service") {
       const productId = resolveSaleItemProductId(item);

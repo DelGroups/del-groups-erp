@@ -1424,6 +1424,8 @@ export const azMessages = {
     allCategories: "Bütün kateqoriyalar",
     searchProduct: "Məhsul axtarışı",
     searchPlaceholder: "Kod və ya ad...",
+    productFilter: "Seçilmiş məhsul",
+    showAllProducts: "Bütün məhsullar",
   },
   crm: {
     pageTitle: "CRM boru xətti",
