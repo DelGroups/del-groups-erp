@@ -29,6 +29,9 @@ export interface ExpenseDocument {
   category: string;
   account_id: string | null;
   account_name: string | null;
+  /** ƏDV deposit account the VAT part was (or will be) paid from; null = from account_id. */
+  vat_account_id: string | null;
+  vat_account_name: string | null;
   supplier_id: string | null;
   supplier_name: string | null;
   payee: string | null;
@@ -46,6 +49,8 @@ export interface ExpenseDocument {
   created_at: string | null;
   /** Posted by another module (production); cancelled from there, not here. */
   is_production: boolean;
+  /** Receipts / invoices attached to the document. */
+  attachment_count: number;
 }
 
 export interface ExpenseFilters {
@@ -64,6 +69,8 @@ export interface ExpenseSaveInput {
   expenseDate: string;
   categoryId: string;
   accountId: string;
+  /** Pay the VAT part from this (ƏDV deposit) account; company-paid with VAT only. */
+  vatAccountId?: string;
   supplierId?: string;
   payee?: string;
   referenceNo?: string;
@@ -187,4 +194,151 @@ export function todayIsoDate(now: Date = new Date()): string {
 
 export function firstDayOfMonthIsoDate(now: Date = new Date()): string {
   return `${todayIsoDate(now).slice(0, 7)}-01`;
+}
+
+/** The account VAT is normally paid from: flagged is_vat_account, else named "ƏDV"/"EDV". */
+export function guessVatAccountId(
+  accounts: Array<{ id: string; name: string; is_vat_account?: boolean }>
+): string {
+  const flagged = accounts.find((a) => a.is_vat_account);
+  if (flagged) return flagged.id;
+  const named = accounts.find((a) => /^\s*(ə|e)dv(\s|$)/i.test(a.name));
+  return named?.id || "";
+}
+
+/* ------------------------------------------------------------------ */
+/* Attachments (receipts, invoices)                                    */
+/* ------------------------------------------------------------------ */
+
+export const EXPENSE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+
+/** Allowed MIME types and the extension used for the stored object. */
+export const EXPENSE_ATTACHMENT_TYPES: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/heic": "heic",
+  "image/heif": "heif",
+};
+
+export interface ExpenseAttachment {
+  id: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number;
+  created_at: string;
+  /** Short-lived signed link for viewing/downloading. */
+  url: string | null;
+}
+
+/** Normalises a browser-reported MIME type (some report image/jpg). */
+export function normalizeAttachmentMime(mime: string): string {
+  const value = String(mime || "").trim().toLowerCase();
+  return value === "image/jpg" ? "image/jpeg" : value;
+}
+
+/** Checks type and size before an upload; returns an error message or null. */
+export function validateExpenseAttachment(file: { type: string; size: number }): string | null {
+  if (!EXPENSE_ATTACHMENT_TYPES[normalizeAttachmentMime(file.type)]) {
+    return "Yalnız PDF, JPG, PNG, WEBP və ya HEIC fayl əlavə etmək olar";
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) return "Fayl boşdur";
+  if (file.size > EXPENSE_ATTACHMENT_MAX_BYTES) return "Fayl 10 MB-dan böyük ola bilməz";
+  return null;
+}
+
+/** True when a storage path is one this module hands out for the given expense. */
+export function isExpenseAttachmentPath(expenseId: string, path: string): boolean {
+  const extensions = Array.from(new Set(Object.values(EXPENSE_ATTACHMENT_TYPES))).join("|");
+  const pattern = new RegExp(`^${expenseId}/[0-9a-f-]{36}\\.(${extensions})$`);
+  return pattern.test(path);
+}
+
+/* ------------------------------------------------------------------ */
+/* Monthly report                                                      */
+/* ------------------------------------------------------------------ */
+
+export type ExpenseReportGroup = "category" | "department";
+
+export interface ExpenseReportLine {
+  label: string;
+  byMonth: Record<string, number>;
+  total: number;
+}
+
+export interface ExpenseMonthlyReport {
+  /** YYYY-MM, oldest first, every month between the first and last expense. */
+  months: string[];
+  lines: ExpenseReportLine[];
+  monthTotals: Record<string, number>;
+  total: number;
+}
+
+/** Every YYYY-MM from `from` to `to`, inclusive. */
+export function monthRange(from: string, to: string): string[] {
+  if (!from || !to || from > to) return from ? [from] : [];
+  const months: string[] = [];
+  let [y, m] = from.split("-").map(Number);
+  const [ty, tm] = to.split("-").map(Number);
+  while (y < ty || (y === ty && m <= tm)) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return months;
+}
+
+/**
+ * Booked expenses (paid, or employee-paid and approved) by month and by
+ * category or department. Drafts, pending and cancelled documents are left out,
+ * matching the "total" card.
+ */
+export function buildMonthlyReport(
+  rows: ExpenseDocument[],
+  group: ExpenseReportGroup,
+  emptyLabel = "—"
+): ExpenseMonthlyReport {
+  const booked = rows.filter((row) => row.status === "posted" || row.status === "approved");
+  const lines = new Map<string, ExpenseReportLine>();
+  const monthTotals: Record<string, number> = {};
+  let total = 0;
+  let first = "";
+  let last = "";
+
+  for (const row of booked) {
+    const month = String(row.expense_date || "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) continue;
+    if (!first || month < first) first = month;
+    if (!last || month > last) last = month;
+    const raw = group === "category" ? row.category : row.department_name;
+    const label = String(raw || "").trim() || emptyLabel;
+    const line = lines.get(label) || { label, byMonth: {}, total: 0 };
+    line.byMonth[month] = (line.byMonth[month] || 0) + row.amount;
+    line.total += row.amount;
+    lines.set(label, line);
+    monthTotals[month] = (monthTotals[month] || 0) + row.amount;
+    total += row.amount;
+  }
+
+  const months = monthRange(first, last);
+  for (const month of months) monthTotals[month] = roundMoney(monthTotals[month] || 0);
+
+  return {
+    months,
+    lines: Array.from(lines.values())
+      .map((line) => ({
+        label: line.label,
+        total: roundMoney(line.total),
+        byMonth: Object.fromEntries(
+          Object.entries(line.byMonth).map(([month, amount]) => [month, roundMoney(amount)])
+        ),
+      }))
+      .sort((a, b) => b.total - a.total),
+    monthTotals,
+    total: roundMoney(total),
+  };
 }

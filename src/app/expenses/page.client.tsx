@@ -32,6 +32,8 @@ import { downloadTextFile, rowsToCsv } from "@/lib/csv/csvUtils";
 import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import ExpenseFormModal from "@/components/expenses/ExpenseFormModal";
+import ExpenseAttachmentsModal from "@/components/expenses/ExpenseAttachmentsModal";
+import ExpenseMonthlyReport from "@/components/expenses/ExpenseMonthlyReport";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
@@ -43,16 +45,18 @@ import {
   Download,
   FolderTree,
   HandCoins,
+  Paperclip,
   Pencil,
   Plus,
   RefreshCw,
   Send,
   ThumbsDown,
   ThumbsUp,
+  TrendingUp,
   X,
 } from "lucide-react";
 
-type ExpensesTab = "records" | "categories";
+type ExpensesTab = "records" | "report" | "categories";
 
 const EMPTY_OPTIONS: ExpenseFormOptions = {
   accounts: [],
@@ -130,6 +134,7 @@ export default function ExpensesPage() {
   const [reimburseTarget, setReimburseTarget] = useState<ExpenseDocument | null>(null);
   const [reimburseAccountId, setReimburseAccountId] = useState("");
   const [reimburseDate, setReimburseDate] = useState(todayIsoDate());
+  const [attachTarget, setAttachTarget] = useState<ExpenseDocument | null>(null);
 
   const loadOptions = useCallback(async () => {
     const res = await fetchExpenseFormOptionsAction();
@@ -352,6 +357,16 @@ export default function ExpensesPage() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("report")}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
+              activeTab === "report" ? "bg-rose-600 text-white" : "bg-app-card-hover text-app-muted hover:text-app"
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" />
+            {t("expenses.doc.reportTab")}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab("categories")}
             className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
               activeTab === "categories"
@@ -366,7 +381,7 @@ export default function ExpensesPage() {
       </div>
 
       <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
-        {activeTab === "records" ? (
+        {activeTab !== "categories" ? (
           <>
             <section className="app-card space-y-3 p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -475,6 +490,14 @@ export default function ExpensesPage() {
               </div>
             </section>
 
+            {activeTab === "report" ? (
+              <ExpenseMonthlyReport
+                rows={rows}
+                loading={loading}
+                rangeLabel={`${filters.from || "all"}_${filters.to || todayIsoDate()}`}
+              />
+            ) : (
+            <>
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="app-card app-card-elevated p-4">
                 <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.totalRecorded")}</div>
@@ -560,7 +583,20 @@ export default function ExpensesPage() {
                         return (
                           <Tr key={r.id} className={cancelled ? "opacity-60" : undefined}>
                             <Td className="whitespace-nowrap text-xs text-app-muted">{formatDate(r.expense_date)}</Td>
-                            <Td className="whitespace-nowrap font-mono text-xs">{r.code}</Td>
+                            <Td className="whitespace-nowrap font-mono text-xs">
+                              {r.code}
+                              {r.attachment_count > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setAttachTarget(r)}
+                                  className="ml-1 inline-flex items-center gap-0.5 rounded px-1 text-[11px] text-sky-600 hover:bg-sky-50"
+                                  title={t("expenses.doc.attachments")}
+                                >
+                                  <Paperclip className="h-3 w-3" />
+                                  {r.attachment_count}
+                                </button>
+                              ) : null}
+                            </Td>
                             <Td className="font-semibold text-app">
                               {r.category}
                               {r.department_name ? (
@@ -581,7 +617,14 @@ export default function ExpensesPage() {
                             <Td className="max-w-xs truncate text-app-muted" title={r.cancel_reason || r.notes || undefined}>
                               {r.description || r.notes || "—"}
                             </Td>
-                            <Td className="text-app-muted">{r.account_name || "—"}</Td>
+                            <Td className="text-app-muted">
+                              {r.account_name || "—"}
+                              {r.vat_account_name ? (
+                                <div className="text-[11px]">
+                                  {t("expenses.doc.vatPaidFrom", { name: r.vat_account_name })}
+                                </div>
+                              ) : null}
+                            </Td>
                             <Td numeric className="text-xs text-app-muted">
                               {r.vat_amount > 0 ? r.vat_amount.toFixed(2) : "—"}
                             </Td>
@@ -611,6 +654,12 @@ export default function ExpensesPage() {
                                       setEditing(r);
                                       setFormOpen(true);
                                     },
+                                  },
+                                  {
+                                    key: "attachments",
+                                    label: t("expenses.doc.attachmentsAction", { count: r.attachment_count }),
+                                    icon: <Paperclip className="h-4 w-4" />,
+                                    onClick: () => setAttachTarget(r),
                                   },
                                   {
                                     key: "submit",
@@ -693,6 +742,8 @@ export default function ExpensesPage() {
                 </div>
               ) : null}
             </div>
+            </>
+            )}
           </>
         ) : (
           <ExpenseCategoriesManager
@@ -714,6 +765,18 @@ export default function ExpensesPage() {
             setEditing(null);
           }}
           onSubmit={(input) => void handleSave(input)}
+        />
+      ) : null}
+
+      {attachTarget ? (
+        <ExpenseAttachmentsModal
+          expense={attachTarget}
+          canUpload={canManageExpenses}
+          canDeleteBooked={canManageFinance}
+          onClose={() => setAttachTarget(null)}
+          onChanged={(count) =>
+            setRows((prev) => prev.map((row) => (row.id === attachTarget.id ? { ...row, attachment_count: count } : row)))
+          }
         />
       ) : null}
 

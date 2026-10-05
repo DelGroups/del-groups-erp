@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import type { ExpenseFormOptions } from "@/lib/actions/expenses";
 import {
+  guessVatAccountId,
   roundMoney,
   splitGross,
   todayIsoDate,
@@ -33,6 +34,7 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
     expenseDate: initial?.expense_date || todayIsoDate(),
     categoryId: initial?.category_id || "",
     accountId: initial?.account_id || "",
+    vatAccountId: initial ? initial.vat_account_id || "" : guessVatAccountId(options.accounts),
     supplierId: initial?.supplier_id || "",
     payee: initial?.payee || "",
     referenceNo: initial?.reference_no || "",
@@ -57,8 +59,13 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
 
   const selectedAccount = options.accounts.find((a) => a.id === form.accountId);
   const byEmployee = form.paymentMode === "employee";
+  // VAT paid from the ƏDV deposit account, the rest from the main account.
+  const splitVat = !byEmployee && totals.vat > 0 && Boolean(form.vatAccountId);
+  const vatAccount = splitVat ? options.accounts.find((a) => a.id === form.vatAccountId) : undefined;
+  const mainOut = splitVat ? roundMoney(totals.gross - totals.vat) : totals.gross;
   const overdraft =
-    !byEmployee && selectedAccount ? totals.gross > selectedAccount.balance + 0.0001 : false;
+    !byEmployee && selectedAccount ? mainOut > selectedAccount.balance + 0.0001 : false;
+  const vatOverdraft = vatAccount ? totals.vat > vatAccount.balance + 0.0001 : false;
 
   const submit = (action: "draft" | "submit" | "pay") => {
     const post = action === "pay";
@@ -71,12 +78,14 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
       return setError(t("expenses.selectAccountAlert"));
     }
     if (totals.gross <= 0 || totals.net <= 0) return setError(t("expenses.invalidAmount"));
+    if (splitVat && form.vatAccountId === form.accountId) return setError(t("expenses.doc.errVatAccount"));
 
     onSubmit({
       id: initial?.id,
       expenseDate: form.expenseDate,
       categoryId: form.categoryId,
       accountId: byEmployee ? "" : form.accountId,
+      vatAccountId: splitVat ? form.vatAccountId : undefined,
       paymentMode: form.paymentMode,
       employeeId: byEmployee ? form.employeeId : undefined,
       supplierId: form.supplierId || undefined,
@@ -312,6 +321,34 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
               </select>
               {overdraft ? (
                 <p className="mt-1 text-xs font-semibold text-rose-600">{t("expenses.doc.overdraft")}</p>
+              ) : null}
+              {totals.vat > 0 ? (
+                <div className="mt-3">
+                  <label className={label}>{t("expenses.doc.vatAccount")}</label>
+                  <select
+                    value={form.vatAccountId}
+                    onChange={(e) => set("vatAccountId", e.target.value)}
+                    className={input}
+                  >
+                    <option value="">{t("expenses.doc.vatFromMain")}</option>
+                    {options.accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {t("expenses.accountBalance", { name: a.name, balance: a.balance.toFixed(2) })}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-app-muted">
+                    {splitVat
+                      ? t("expenses.doc.vatSplitHint", {
+                          main: mainOut.toFixed(2),
+                          vat: totals.vat.toFixed(2),
+                        })
+                      : t("expenses.doc.vatFromMainHint")}
+                  </p>
+                  {vatOverdraft ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-600">{t("expenses.doc.vatOverdraft")}</p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           )}
