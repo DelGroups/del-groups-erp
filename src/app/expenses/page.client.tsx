@@ -8,13 +8,18 @@ import {
   cancelExpenseAction,
   fetchExpenseFormOptionsAction,
   fetchExpensesAction,
+  approveExpenseAction,
   postExpenseAction,
+  reimburseExpenseAction,
+  rejectExpenseAction,
+  submitExpenseAction,
   saveExpenseAction,
   type ExpenseFormOptions,
 } from "@/lib/actions/expenses";
 import {
   EXPENSE_STATUSES,
   firstDayOfMonthIsoDate,
+  isOwedToEmployee,
   todayIsoDate,
   type ExpenseDocument,
   type ExpenseFilters,
@@ -32,7 +37,20 @@ import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
-import { Ban, CheckCircle2, Download, FolderTree, Pencil, Plus, RefreshCw, X } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  Download,
+  FolderTree,
+  HandCoins,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Send,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 
 type ExpensesTab = "records" | "categories";
 
@@ -41,6 +59,7 @@ const EMPTY_OPTIONS: ExpenseFormOptions = {
   categories: [],
   suppliers: [],
   departments: [],
+  employees: [],
 };
 
 const EMPTY_SUMMARY: ExpenseSummary = {
@@ -48,8 +67,10 @@ const EMPTY_SUMMARY: ExpenseSummary = {
   net: 0,
   vat: 0,
   total: 0,
-  draftCount: 0,
-  draftTotal: 0,
+  pendingCount: 0,
+  pendingTotal: 0,
+  owedCount: 0,
+  owedTotal: 0,
   byCategory: [],
 };
 
@@ -78,7 +99,8 @@ export default function ExpensesPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
-  const canManage = canManageExpenses || can("can_manage_finance");
+  const canManageFinance = can("can_manage_finance");
+  const canManage = canManageExpenses || canManageFinance;
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
   const [activeTab, setActiveTab] = useState<ExpensesTab>("records");
@@ -103,6 +125,11 @@ export default function ExpensesPage() {
   const [cancelTarget, setCancelTarget] = useState<ExpenseDocument | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<ExpenseDocument | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [reimburseTarget, setReimburseTarget] = useState<ExpenseDocument | null>(null);
+  const [reimburseAccountId, setReimburseAccountId] = useState("");
+  const [reimburseDate, setReimburseDate] = useState(todayIsoDate());
 
   const loadOptions = useCallback(async () => {
     const res = await fetchExpenseFormOptionsAction();
@@ -171,6 +198,47 @@ export default function ExpensesPage() {
     refreshAll();
   };
 
+  const runRowAction = async (
+    row: ExpenseDocument,
+    action: () => Promise<{ success: boolean; error?: string }>,
+    successKey: string
+  ): Promise<boolean> => {
+    setBusyId(row.id);
+    const res = await action();
+    setBusyId(null);
+    if (!res.success) {
+      showError(t("common.error") + ": " + formatRpcError(res.error, t));
+      return false;
+    }
+    showSuccess(t(successKey, { code: row.code }));
+    refreshAll();
+    return true;
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    const ok = await runRowAction(
+      rejectTarget,
+      () => rejectExpenseAction(rejectTarget.id, rejectReason),
+      "expenses.doc.rejectedToast"
+    );
+    if (ok) setRejectTarget(null);
+  };
+
+  const handleReimburse = async () => {
+    if (!reimburseTarget) return;
+    if (!reimburseAccountId) {
+      showError(t("expenses.selectAccountAlert"));
+      return;
+    }
+    const ok = await runRowAction(
+      reimburseTarget,
+      () => reimburseExpenseAction(reimburseTarget.id, reimburseAccountId, reimburseDate),
+      "expenses.doc.reimbursedToast"
+    );
+    if (ok) setReimburseTarget(null);
+  };
+
   const handlePost = async (row: ExpenseDocument) => {
     setBusyId(row.id);
     const res = await postExpenseAction(row.id);
@@ -199,6 +267,8 @@ export default function ExpensesPage() {
   };
 
   const statusLabel = (status: ExpenseStatus) => t(`expenses.doc.status_${status}`);
+  const rowStatusLabel = (row: ExpenseDocument) =>
+    isOwedToEmployee(row) ? t("expenses.doc.status_owed") : statusLabel(row.status);
 
   const exportCsv = () => {
     const headers = [
@@ -227,7 +297,7 @@ export default function ExpensesPage() {
       r.net_amount.toFixed(2),
       r.vat_amount.toFixed(2),
       r.amount.toFixed(2),
-      statusLabel(r.status),
+      rowStatusLabel(r),
     ]);
     const name = `xercler_${filters.from || "all"}_${filters.to || todayIsoDate()}.csv`;
     downloadTextFile(name, rowsToCsv(headers, data));
@@ -389,7 +459,7 @@ export default function ExpensesPage() {
                   className="app-input text-sm"
                 >
                   <option value="">{t("expenses.doc.allStatuses")}</option>
-                  {EXPENSE_STATUSES.filter((s) => s !== "submitted" && s !== "approved").map((s) => (
+                  {EXPENSE_STATUSES.map((s) => (
                     <option key={s} value={s}>
                       {statusLabel(s)}
                     </option>
@@ -405,7 +475,7 @@ export default function ExpensesPage() {
               </div>
             </section>
 
-            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="app-card app-card-elevated p-4">
                 <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.totalRecorded")}</div>
                 <div className="mt-1 text-2xl font-bold text-rose-600">{summary.total.toFixed(2)} AZN</div>
@@ -420,10 +490,17 @@ export default function ExpensesPage() {
                 <div className="mt-1 text-xl font-bold text-app">{summary.vat.toFixed(2)} AZN</div>
               </div>
               <div className="app-card p-4">
-                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.drafts")}</div>
-                <div className="mt-1 text-xl font-bold text-amber-600">{summary.draftTotal.toFixed(2)} AZN</div>
-                <div className="text-xs text-app-muted">{t("expenses.doc.documentsCount", { count: summary.draftCount })}</div>
+                <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.pending")}</div>
+                <div className="mt-1 text-xl font-bold text-amber-600">{summary.pendingTotal.toFixed(2)} AZN</div>
+                <div className="text-xs text-app-muted">{t("expenses.doc.documentsCount", { count: summary.pendingCount })}</div>
               </div>
+              {summary.owedCount > 0 ? (
+                <div className="app-card p-4">
+                  <div className="text-xs font-semibold uppercase text-app-muted">{t("expenses.doc.owedToEmployees")}</div>
+                  <div className="mt-1 text-xl font-bold text-orange-600">{summary.owedTotal.toFixed(2)} AZN</div>
+                  <div className="text-xs text-app-muted">{t("expenses.doc.documentsCount", { count: summary.owedCount })}</div>
+                </div>
+              ) : null}
             </section>
 
             {summary.byCategory.length > 0 ? (
@@ -477,7 +554,8 @@ export default function ExpensesPage() {
                     </THead>
                     <tbody>
                       {rows.map((r) => {
-                        const isOpen = r.status !== "posted" && r.status !== "cancelled";
+                        const isOpen = r.status === "draft" || r.status === "submitted";
+                        const byEmployee = r.payment_mode === "employee";
                         const cancelled = r.status === "cancelled";
                         return (
                           <Tr key={r.id} className={cancelled ? "opacity-60" : undefined}>
@@ -490,7 +568,12 @@ export default function ExpensesPage() {
                               ) : null}
                             </Td>
                             <Td className="text-app-muted">
-                              {r.supplier_name || r.payee || "—"}
+                              {r.supplier_name || r.payee || (r.payment_mode === "employee" ? "" : "—")}
+                              {r.payment_mode === "employee" ? (
+                                <div className="text-[11px] font-semibold text-orange-600">
+                                  {t("expenses.doc.paidByEmployee", { name: r.employee_name || "—" })}
+                                </div>
+                              ) : null}
                               {r.reference_no ? (
                                 <div className="text-[11px]">№ {r.reference_no}</div>
                               ) : null}
@@ -506,7 +589,14 @@ export default function ExpensesPage() {
                               {r.amount.toFixed(2)} AZN
                             </Td>
                             <Td>
-                              <StatusBadge tone={STATUS_TONE[r.status]}>{statusLabel(r.status)}</StatusBadge>
+                              <StatusBadge tone={isOwedToEmployee(r) ? "warning" : STATUS_TONE[r.status]}>
+                                {rowStatusLabel(r)}
+                              </StatusBadge>
+                              {r.status === "draft" && r.rejected_reason ? (
+                                <div className="mt-1 max-w-[10rem] truncate text-[11px] text-amber-700" title={r.rejected_reason}>
+                                  {r.rejected_reason}
+                                </div>
+                              ) : null}
                             </Td>
                             <ActionsTd>
                               <TableRowActionsMenu
@@ -523,19 +613,64 @@ export default function ExpensesPage() {
                                     },
                                   },
                                   {
+                                    key: "submit",
+                                    label: t("expenses.doc.sendForApproval"),
+                                    icon: <Send className="h-4 w-4" />,
+                                    hidden: r.status !== "draft",
+                                    disabled: !canManageExpenses || busyId === r.id,
+                                    onClick: () =>
+                                      void runRowAction(r, () => submitExpenseAction(r.id), "expenses.doc.submittedToast"),
+                                  },
+                                  {
                                     key: "post",
                                     label: t("expenses.doc.post"),
                                     icon: <CheckCircle2 className="h-4 w-4" />,
-                                    hidden: !isOpen,
+                                    hidden: r.status !== "draft" || byEmployee,
                                     disabled: !canManageExpenses || busyId === r.id,
                                     onClick: () => void handlePost(r),
+                                  },
+                                  {
+                                    key: "approve",
+                                    label: byEmployee ? t("expenses.doc.approve") : t("expenses.doc.approveAndPay"),
+                                    icon: <ThumbsUp className="h-4 w-4" />,
+                                    hidden: r.status !== "submitted",
+                                    disabled: !canManageFinance || busyId === r.id,
+                                    onClick: () =>
+                                      void runRowAction(r, () => approveExpenseAction(r.id), "expenses.doc.approvedToast"),
+                                  },
+                                  {
+                                    key: "reject",
+                                    label: t("expenses.doc.reject"),
+                                    icon: <ThumbsDown className="h-4 w-4" />,
+                                    hidden: r.status !== "submitted",
+                                    disabled: !canManageFinance || busyId === r.id,
+                                    onClick: () => {
+                                      setRejectReason("");
+                                      setRejectTarget(r);
+                                    },
+                                  },
+                                  {
+                                    key: "reimburse",
+                                    label: t("expenses.doc.reimburse"),
+                                    icon: <HandCoins className="h-4 w-4" />,
+                                    hidden: !isOwedToEmployee(r),
+                                    disabled: !canManageFinance || busyId === r.id,
+                                    onClick: () => {
+                                      setReimburseAccountId("");
+                                      setReimburseDate(todayIsoDate());
+                                      setReimburseTarget(r);
+                                    },
                                   },
                                   {
                                     key: "cancel",
                                     label: t("expenses.doc.cancelExpense"),
                                     icon: <Ban className="h-4 w-4" />,
                                     hidden: cancelled || r.is_production,
-                                    disabled: !canManageExpenses || busyId === r.id,
+                                    disabled:
+                                      !canManageExpenses ||
+                                      busyId === r.id ||
+                                      ((r.status === "approved" || (r.status === "posted" && byEmployee)) &&
+                                        !canManageFinance),
                                     variant: "destructive",
                                     onClick: () => {
                                       setCancelReason("");
@@ -597,7 +732,9 @@ export default function ExpensesPage() {
               <p className="text-sm text-app-muted">
                 {cancelTarget.status === "posted"
                   ? t("expenses.doc.cancelPostedHint", { amount: cancelTarget.amount.toFixed(2) })
-                  : t("expenses.doc.cancelDraftHint")}
+                  : cancelTarget.status === "approved"
+                    ? t("expenses.doc.cancelOwedHint")
+                    : t("expenses.doc.cancelDraftHint")}
               </p>
               <input
                 type="text"
@@ -621,6 +758,114 @@ export default function ExpensesPage() {
                   className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
                   {t("expenses.doc.cancelConfirm")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rejectTarget ? (
+        <div className="app-modal-overlay">
+          <div className="app-modal w-full max-w-md">
+            <div className="app-modal-header flex items-center justify-between bg-app-card-hover">
+              <h3 className="font-bold text-app">{t("expenses.doc.rejectTitle", { code: rejectTarget.code })}</h3>
+              <button type="button" onClick={() => setRejectTarget(null)} className="text-app-muted hover:text-app">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 p-6">
+              <p className="text-sm text-app-muted">{t("expenses.doc.rejectHint")}</p>
+              <input
+                type="text"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={t("expenses.doc.rejectReason")}
+                className="app-input text-sm"
+              />
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectTarget(null)}
+                  className="rounded-lg border px-4 py-2 text-xs font-semibold text-app"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === rejectTarget.id}
+                  onClick={() => void handleReject()}
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {t("expenses.doc.reject")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reimburseTarget ? (
+        <div className="app-modal-overlay">
+          <div className="app-modal w-full max-w-md">
+            <div className="app-modal-header flex items-center justify-between bg-app-card-hover">
+              <h3 className="font-bold text-app">
+                {t("expenses.doc.reimburseTitle", { code: reimburseTarget.code })}
+              </h3>
+              <button type="button" onClick={() => setReimburseTarget(null)} className="text-app-muted hover:text-app">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 p-6">
+              <p className="text-sm text-app-muted">
+                {t("expenses.doc.reimburseHint", {
+                  amount: reimburseTarget.amount.toFixed(2),
+                  name: reimburseTarget.employee_name || "—",
+                })}
+              </p>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-app">
+                  {t("expenses.paymentAccountRequired")}
+                </label>
+                <select
+                  value={reimburseAccountId}
+                  onChange={(e) => setReimburseAccountId(e.target.value)}
+                  className="app-input text-sm"
+                >
+                  <option value="">{t("expenses.selectAccount")}</option>
+                  {options.accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {t("expenses.accountBalance", { name: a.name, balance: a.balance.toFixed(2) })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-app">{t("expenses.doc.payDate")}</label>
+                <input
+                  type="date"
+                  value={reimburseDate}
+                  min={reimburseTarget.expense_date}
+                  max={todayIsoDate()}
+                  onChange={(e) => setReimburseDate(e.target.value)}
+                  className="app-input text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReimburseTarget(null)}
+                  className="rounded-lg border px-4 py-2 text-xs font-semibold text-app"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === reimburseTarget.id}
+                  onClick={() => void handleReimburse()}
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                >
+                  {t("expenses.doc.reimburse")}
                 </button>
               </div>
             </div>

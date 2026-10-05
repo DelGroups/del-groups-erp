@@ -10,6 +10,7 @@ import {
   splitGross,
   todayIsoDate,
   type ExpenseDocument,
+  type ExpensePaymentMode,
   type ExpenseSaveInput,
 } from "@/lib/expenses/expenseDocuments";
 
@@ -27,6 +28,8 @@ interface Props {
 export default function ExpenseFormModal({ options, initial, saving, onClose, onSubmit }: Props) {
   const { t } = useI18n();
   const [form, setForm] = useState(() => ({
+    paymentMode: (initial?.payment_mode || "company") as ExpensePaymentMode,
+    employeeId: initial?.employee_id || "",
     expenseDate: initial?.expense_date || todayIsoDate(),
     categoryId: initial?.category_id || "",
     accountId: initial?.account_id || "",
@@ -53,21 +56,29 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
   }, [form.amount, form.vatRate]);
 
   const selectedAccount = options.accounts.find((a) => a.id === form.accountId);
-  const overdraft = selectedAccount ? totals.gross > selectedAccount.balance + 0.0001 : false;
+  const byEmployee = form.paymentMode === "employee";
+  const overdraft =
+    !byEmployee && selectedAccount ? totals.gross > selectedAccount.balance + 0.0001 : false;
 
-  const submit = (post: boolean) => {
+  const submit = (action: "draft" | "submit" | "pay") => {
+    const post = action === "pay";
     setError(null);
     if (!form.expenseDate) return setError(t("expenses.doc.errDate"));
     if (post && form.expenseDate > todayIsoDate()) return setError(t("expenses.doc.errFutureDate"));
     if (!form.categoryId) return setError(t("expenses.selectCategoryAlert"));
-    if (post && !form.accountId) return setError(t("expenses.selectAccountAlert"));
+    if (byEmployee && !form.employeeId) return setError(t("expenses.doc.errEmployee"));
+    if (!byEmployee && action !== "draft" && !form.accountId) {
+      return setError(t("expenses.selectAccountAlert"));
+    }
     if (totals.gross <= 0 || totals.net <= 0) return setError(t("expenses.invalidAmount"));
 
     onSubmit({
       id: initial?.id,
       expenseDate: form.expenseDate,
       categoryId: form.categoryId,
-      accountId: form.accountId,
+      accountId: byEmployee ? "" : form.accountId,
+      paymentMode: form.paymentMode,
+      employeeId: byEmployee ? form.employeeId : undefined,
       supplierId: form.supplierId || undefined,
       payee: form.supplierId ? undefined : form.payee,
       referenceNo: form.referenceNo,
@@ -78,6 +89,7 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
       vatRate: totals.rate,
       vatAmount: totals.vat,
       post,
+      submit: action === "submit",
     });
   };
 
@@ -99,10 +111,50 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            submit(true);
+            submit(byEmployee ? "submit" : "pay");
           }}
           className="max-h-[75vh] space-y-4 overflow-y-auto p-6"
         >
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-app-card-hover p-1">
+            {(["company", "employee"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => set("paymentMode", mode)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                  form.paymentMode === mode ? "bg-rose-600 text-white" : "text-app-muted hover:text-app"
+                }`}
+              >
+                {t(mode === "company" ? "expenses.doc.modeCompany" : "expenses.doc.modeEmployee")}
+              </button>
+            ))}
+          </div>
+
+          {byEmployee ? (
+            <div>
+              <label className={label}>{t("expenses.doc.employeeRequired")}</label>
+              <select
+                value={form.employeeId}
+                onChange={(e) => set("employeeId", e.target.value)}
+                className={input}
+              >
+                <option value="">{t("expenses.doc.selectEmployee")}</option>
+                {options.employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-app-muted">{t("expenses.doc.employeeHint")}</p>
+            </div>
+          ) : null}
+
+          {initial?.rejected_reason ? (
+            <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {t("expenses.doc.rejectedNote", { reason: initial.rejected_reason })}
+            </div>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={label}>{t("expenses.doc.dateRequired")}</label>
@@ -243,24 +295,26 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
             ) : null}
           </div>
 
-          <div>
-            <label className={label}>{t("expenses.paymentAccountRequired")}</label>
-            <select
-              value={form.accountId}
-              onChange={(e) => set("accountId", e.target.value)}
-              className={input}
-            >
-              <option value="">{t("expenses.selectAccount")}</option>
-              {options.accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {t("expenses.accountBalance", { name: a.name, balance: a.balance.toFixed(2) })}
-                </option>
-              ))}
-            </select>
-            {overdraft ? (
-              <p className="mt-1 text-xs font-semibold text-rose-600">{t("expenses.doc.overdraft")}</p>
-            ) : null}
-          </div>
+          {byEmployee ? null : (
+            <div>
+              <label className={label}>{t("expenses.paymentAccountRequired")}</label>
+              <select
+                value={form.accountId}
+                onChange={(e) => set("accountId", e.target.value)}
+                className={input}
+              >
+                <option value="">{t("expenses.selectAccount")}</option>
+                {options.accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {t("expenses.accountBalance", { name: a.name, balance: a.balance.toFixed(2) })}
+                  </option>
+                ))}
+              </select>
+              {overdraft ? (
+                <p className="mt-1 text-xs font-semibold text-rose-600">{t("expenses.doc.overdraft")}</p>
+              ) : null}
+            </div>
+          )}
 
           <div>
             <label className={label}>{t("expenses.doc.internalNotes")}</label>
@@ -287,17 +341,27 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
             <button
               type="button"
               disabled={saving}
-              onClick={() => submit(false)}
+              onClick={() => submit("draft")}
               className="rounded-lg border border-rose-300 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
             >
               {t("expenses.doc.saveDraft")}
             </button>
+            {byEmployee ? null : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => submit("submit")}
+                className="rounded-lg border border-rose-300 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+              >
+                {t("expenses.doc.sendForApproval")}
+              </button>
+            )}
             <button
               type="submit"
               disabled={saving}
               className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
             >
-              {t("expenses.doc.saveAndPost")}
+              {byEmployee ? t("expenses.doc.sendForApproval") : t("expenses.doc.saveAndPost")}
             </button>
           </div>
         </form>
