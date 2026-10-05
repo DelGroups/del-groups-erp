@@ -577,6 +577,8 @@ export interface Customer {
   balance?: number | null;
   default_price_tier?: PriceTier | null;
   created_at?: string | null;
+  /** Studio custom field values, keyed by x_ field name. */
+  custom_fields?: Record<string, unknown> | null;
 }
 
 export interface CompanySettings {

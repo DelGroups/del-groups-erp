@@ -4,7 +4,7 @@ import type { AgentResult } from "@/lib/ai/native/agent";
 
 /**
  * Conversation history and usage log for the native assistant
- * (tables from supabase/migrations/20261005100000_ai_native_assistant.sql).
+ * (tables from supabase/migrations/20261005140000_ai_native_assistant.sql).
  *
  * Writes go through the user's own client, so RLS keeps every user to their
  * own rows. If the migration has not been applied yet, every call here logs a

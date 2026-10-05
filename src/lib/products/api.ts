@@ -122,7 +122,16 @@ export function buildProductInsert(
     parent_id: input.parent_id?.trim() || null,
     base_length: isDimensional && input.base_length ? Number(input.base_length) || null : null,
     base_width: isDimensional && input.base_width ? Number(input.base_width) || null : null,
-  };
+    // Studio custom fields: only sent when the form has any, so older databases are unaffected.
+    ...customFieldsOf(input),
+  } as ProductInsert;
+}
+
+function customFieldsOf(input: unknown): { custom_fields?: Record<string, unknown> } {
+  const value = (input as { custom_fields?: unknown }).custom_fields;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? { custom_fields: value as Record<string, unknown> }
+    : {};
 }
 
 export async function findOrCreateServiceProduct(
