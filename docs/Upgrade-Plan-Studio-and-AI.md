@@ -49,13 +49,13 @@ Each phase ships off by default (feature flag or admin-only page) so merging to 
 | Read-only tools (products, stock alerts, customers, debtors, sales, one sale, finance, production) | `src/lib/ai/native/tools.ts` |
 | Tool-use loop (max 6 steps, prompt caching, refusal fallback) | `src/lib/ai/native/agent.ts` |
 | Flag | `src/lib/ai/native/config.ts` |
-| History + usage log (degrades gracefully before the migration) | `src/lib/ai/native/store.ts`, `supabase/migrations/20261005100000_ai_native_assistant.sql` |
+| History + usage log (degrades gracefully before the migration) | `src/lib/ai/native/store.ts`, `supabase/migrations/20261005140000_ai_native_assistant.sql` |
 | API | `POST/GET /api/ai/agent` |
 | Widget | text messages go to `/api/ai/agent` when it is enabled for the user; voice/file still use the n8n bridge |
 
 ### Turning it on
 
-1. Run `supabase/migrations/20261005100000_ai_native_assistant.sql` in Supabase (optional but needed for history and the cost log).
+1. Run `supabase/migrations/20261005140000_ai_native_assistant.sql` in Supabase (optional but needed for history and the cost log).
 2. On the server, add to `.env.production`: `ANTHROPIC_API_KEY=…` and `AI_NATIVE_ENABLED=1`. Restart the container.
 3. Admins now get the native assistant in the widget. When it looks right, set `AI_NATIVE_AUDIENCE=all`.
 
@@ -71,7 +71,7 @@ Cost per question is in `ai_usage_log.cost_usd`, e.g.
 | Piece | File |
 |---|---|
 | Field types, name generation, validation (unit-tested) | `src/lib/studio/fields.ts` |
-| Definitions table + `custom_fields JSONB` on customers, suppliers, products, sales, purchases, production_orders | `supabase/migrations/20261005120000_studio_custom_fields.sql` |
+| Definitions table + `custom_fields JSONB` on customers, suppliers, products, sales, purchases, production_orders | `supabase/migrations/20261005150000_studio_custom_fields.sql` |
 | Admin page: Settings → Studio (`/settings/studio`, `can_manage_settings`) | `src/app/settings/studio`, `src/components/studio/StudioFieldsEditor.tsx`, `src/lib/actions/studio.ts` |
 | Form rendering | `src/components/studio/CustomFieldsSection.tsx`, `useStudioFields.ts` |
 | Wired so far | customer form + list columns, product form (create and edit) |
