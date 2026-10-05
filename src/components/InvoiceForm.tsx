@@ -1644,6 +1644,12 @@ export default function UniversalInvoiceForm({
         <Printer className="h-4 w-4" />
         {t("common.print")}
       </Button>
+      {/* Say why posting is blocked; a tooltip on a disabled button is easy to miss. */}
+      {salePreflightHint && !documentLocked ? (
+        <p role="status" className="basis-full text-right text-xs font-medium text-amber-500">
+          {salePreflightHint}
+        </p>
+      ) : null}
     </div>
   );
 
