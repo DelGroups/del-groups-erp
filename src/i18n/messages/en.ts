@@ -2215,6 +2215,8 @@ export const enMessages: Messages = {
     addProductAlert: "Please add at least one product!",
     emptyLineItem: "Every invoice line must have a product selected",
     insufficientStock: "{product}: insufficient stock (available: {available}, requested: {requested})",
+    lineOutOfStock: "Out of stock (available: {available} {unit})",
+    lineStockShort: "Not enough stock (available: {available} {unit})",
     saveSuccess: "Sales document saved successfully!",
     productNotFound: "Product not found",
     productSearchPlaceholder: "Name, code or barcode...",

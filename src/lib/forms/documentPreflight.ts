@@ -66,6 +66,26 @@ export function validateSaleInvoiceLines(
   return null;
 }
 
+/**
+ * Per-line stock note shown in the sales invoice table while the user edits.
+ * Warning only: drafts can still be saved; posting is blocked by
+ * validateSaleInvoiceLines.
+ */
+export function getSaleLineStockWarning(
+  item: SaleItem,
+  available: number
+): PreflightIssue | null {
+  if (!item.product_id) return null;
+  const params = { available: formatQty(available), unit: item.unit || "" };
+  if (available <= 1e-9) {
+    return { key: "invoice.lineOutOfStock", params };
+  }
+  if (Number(item.quantity) > available + 1e-9) {
+    return { key: "invoice.lineStockShort", params };
+  }
+  return null;
+}
+
 export function validatePurchaseInvoiceLines(
   items: PurchaseLineItem[]
 ): PreflightIssue | null {

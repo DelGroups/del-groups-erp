@@ -2213,6 +2213,8 @@ export const azMessages = {
     addProductAlert: "Zəhmət olmasa ən azı bir məhsul əlavə edin!",
     emptyLineItem: "Hər faktura sətri üçün məhsul seçilməlidir",
     insufficientStock: "{product}: stok kifayət etmir (mövcud: {available}, tələb: {requested})",
+    lineOutOfStock: "Stokda yoxdur (mövcud: {available} {unit})",
+    lineStockShort: "Stok kifayət etmir (mövcud: {available} {unit})",
     saveSuccess: "Satış sənədi uğurla qeydə alındı!",
     productNotFound: "Məhsul tapılmadı",
     productSearchPlaceholder: "Ad, kod və ya barkod...",

@@ -2216,6 +2216,8 @@ export const ruMessages: Messages = {
     addProductAlert: "Пожалуйста, добавьте хотя бы один товар!",
     emptyLineItem: "В каждой строке счёта должен быть выбран товар",
     insufficientStock: "{product}: недостаточно остатка (доступно: {available}, запрошено: {requested})",
+    lineOutOfStock: "Нет в наличии (доступно: {available} {unit})",
+    lineStockShort: "Недостаточно остатка (доступно: {available} {unit})",
     saveSuccess: "Документ продажи успешно сохранён!",
     productNotFound: "Товар не найден",
     productSearchPlaceholder: "Название, код или штрихкод...",
