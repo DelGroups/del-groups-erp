@@ -3,9 +3,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildMonthlyReport,
   computeVat,
   firstDayOfMonthIsoDate,
+  guessVatAccountId,
+  isExpenseAttachmentPath,
   isOwedToEmployee,
+  monthRange,
+  validateExpenseAttachment,
   splitGross,
   summarizeExpenses,
   todayIsoDate,
@@ -77,4 +82,80 @@ test("dates are taken in Baku time", () => {
   const late = new Date("2026-10-31T22:30:00Z");
   assert.equal(todayIsoDate(late), "2026-11-01");
   assert.equal(firstDayOfMonthIsoDate(late), "2026-11-01");
+});
+
+test("monthly report books paid and approved expenses and fills empty months", () => {
+  const report = buildMonthlyReport(
+    [
+      row({ expense_date: "2026-07-03", category: "İcarə", amount: 500 }),
+      row({ expense_date: "2026-09-10", category: "İcarə", amount: 500 }),
+      row({ expense_date: "2026-09-12", category: "Yanacaq", amount: 40.5 }),
+      row({ expense_date: "2026-09-13", status: "approved", payment_mode: "employee", category: "Yanacaq", amount: 9.5 }),
+      row({ expense_date: "2026-08-01", status: "draft", amount: 70 }),
+      row({ expense_date: "2026-08-02", status: "cancelled", amount: 70 }),
+    ],
+    "category"
+  );
+  assert.deepEqual(report.months, ["2026-07", "2026-08", "2026-09"]);
+  assert.equal(report.total, 1050);
+  assert.deepEqual(report.monthTotals, { "2026-07": 500, "2026-08": 0, "2026-09": 550 });
+  assert.deepEqual(
+    report.lines.map((l) => [l.label, l.total]),
+    [
+      ["İcarə", 1000],
+      ["Yanacaq", 50],
+    ]
+  );
+});
+
+test("department report puts rows without a department under one label", () => {
+  const report = buildMonthlyReport(
+    [row({ department_name: "Satış" }), row({ department_name: null }), row({ department_name: "  " })],
+    "department",
+    "Şöbəsiz"
+  );
+  assert.deepEqual(
+    report.lines.map((l) => [l.label, l.total]),
+    [
+      ["Şöbəsiz", 236],
+      ["Satış", 118],
+    ]
+  );
+});
+
+test("month ranges cross the year end", () => {
+  assert.deepEqual(monthRange("2025-11", "2026-02"), ["2025-11", "2025-12", "2026-01", "2026-02"]);
+  assert.deepEqual(monthRange("", ""), []);
+});
+
+test("attachments accept receipts up to 10 MB and only module-issued paths", () => {
+  assert.equal(validateExpenseAttachment({ type: "image/jpg", size: 2000 }), null);
+  assert.equal(validateExpenseAttachment({ type: "application/pdf", size: 10 * 1024 * 1024 }), null);
+  assert.notEqual(validateExpenseAttachment({ type: "application/pdf", size: 10 * 1024 * 1024 + 1 }), null);
+  assert.notEqual(validateExpenseAttachment({ type: "text/html", size: 10 }), null);
+  assert.notEqual(validateExpenseAttachment({ type: "image/png", size: 0 }), null);
+
+  const id = "4f0c1c2e-1111-4222-8333-944455556666";
+  assert.equal(isExpenseAttachmentPath(id, `${id}/0b7f3c1a-2222-4333-8444-955566667777.pdf`), true);
+  assert.equal(isExpenseAttachmentPath(id, `other/0b7f3c1a-2222-4333-8444-955566667777.pdf`), false);
+  assert.equal(isExpenseAttachmentPath(id, `${id}/../x.pdf`), false);
+  assert.equal(isExpenseAttachmentPath(id, `${id}/0b7f3c1a-2222-4333-8444-955566667777.exe`), false);
+});
+
+test("the VAT account defaults to the flagged one, else one named EDV", () => {
+  assert.equal(
+    guessVatAccountId([
+      { id: "a", name: "ABB bank" },
+      { id: "b", name: "EDV" },
+    ]),
+    "b"
+  );
+  assert.equal(
+    guessVatAccountId([
+      { id: "a", name: "ƏDV depozit" },
+      { id: "c", name: "Depozit", is_vat_account: true },
+    ]),
+    "c"
+  );
+  assert.equal(guessVatAccountId([{ id: "a", name: "Nəğd kassa" }, { id: "d", name: "EDVX" }]), "");
 });

@@ -618,6 +618,8 @@ export type Database = {
           reimbursed_at: string | null
           reimbursed_by: string | null
           reimbursement_journal_id: string | null
+          vat_account_id: string | null
+          vat_transaction_id: string | null
           updated_at: string
         }
         Insert: {
@@ -660,6 +662,8 @@ export type Database = {
           reimbursed_at?: string | null
           reimbursed_by?: string | null
           reimbursement_journal_id?: string | null
+          vat_account_id?: string | null
+          vat_transaction_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -702,6 +706,8 @@ export type Database = {
           reimbursed_at?: string | null
           reimbursed_by?: string | null
           reimbursement_journal_id?: string | null
+          vat_account_id?: string | null
+          vat_transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [

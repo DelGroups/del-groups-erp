@@ -16,8 +16,13 @@ import {
   type ExpenseCategoryOption,
 } from "@/lib/finance/financialCategories";
 import {
+  EXPENSE_ATTACHMENT_TYPES,
   EXPENSE_STATUSES,
+  isExpenseAttachmentPath,
+  normalizeAttachmentMime,
   summarizeExpenses,
+  validateExpenseAttachment,
+  type ExpenseAttachment,
   type ExpenseDocument,
   type ExpenseFilters,
   type ExpenseSaveInput,
@@ -31,6 +36,7 @@ export interface ExpenseAccountOption {
   id: string;
   name: string;
   balance: number;
+  is_vat_account: boolean;
 }
 
 export interface ExpenseNamedOption {
@@ -48,6 +54,7 @@ export interface ExpenseFormOptions {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_ROWS = 2000;
+const ATTACHMENT_BUCKET = "expense-attachments";
 
 async function requireAnyExpensePermission(
   ...permissions: PermissionKey[]
@@ -74,6 +81,26 @@ function supplierLabel(row: Record<string, unknown>): string {
   return company || person || String(row.code || "");
 }
 
+/** Attachments per expense; empty when the attachments table is not there yet. */
+async function countExpenseAttachments(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  expenseIds: string[]
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (let i = 0; i < expenseIds.length; i += 200) {
+    const chunk = expenseIds.slice(i, i + 200);
+    const { data, error } = await admin
+      .from("expense_attachments" as never)
+      .select("expense_id")
+      .in("expense_id", chunk);
+    if (error) return counts;
+    for (const row of (data || []) as Array<{ expense_id: string }>) {
+      counts.set(row.expense_id, (counts.get(row.expense_id) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
 function actionError(err: unknown, fallback: string): { success: false; error: string } {
   if (err instanceof ActionAuthError) return { success: false, error: err.message };
   return { success: false, error: err instanceof Error ? err.message : fallback };
@@ -89,7 +116,7 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
     const admin = createSupabaseAdminClient();
 
     const [accountsRes, categoriesRes, suppliersRes, departmentsRes, employeesRes] = await Promise.all([
-      admin.from("accounts").select("id,name,balance").order("name"),
+      admin.from("accounts").select("id,name,balance,is_vat_account").order("name"),
       fetchFinancialCategoryRows(admin, { includeInactive: false }),
       admin.from("suppliers").select("id,code,full_name,company_name").order("full_name").limit(1000),
       admin
@@ -104,10 +131,11 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
 
     const access = resolveEffectiveAccess(profile);
     const accounts = filterAccountsByScope(
-      ((accountsRes.data || []) as Array<Record<string, unknown>>).map((row) => ({
+      ((accountsRes.data || []) as unknown as Array<Record<string, unknown>>).map((row) => ({
         id: String(row.id),
         name: String(row.name || ""),
         balance: toNumber(row.balance),
+        is_vat_account: row.is_vat_account === true,
       })),
       access.scopes
     );
@@ -153,7 +181,7 @@ export async function fetchExpensesAction(
       .select(
         "id,code,expense_date,status,category_id,category,account_id,supplier_id,payee,reference_no," +
           "description,notes,department_id,production_order_id,net_amount,vat_rate,vat_amount,amount," +
-          "cancel_reason,created_at,transaction_id,payment_mode,employee_id,rejected_reason"
+          "cancel_reason,created_at,transaction_id,payment_mode,employee_id,rejected_reason,vat_account_id"
       )
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -188,7 +216,7 @@ export async function fetchExpensesAction(
       Array.from(new Set(rows.map((r) => r[key]).filter((v): v is string => typeof v === "string")));
 
     const admin = createSupabaseAdminClient();
-    const accountIds = ids("account_id");
+    const accountIds = Array.from(new Set([...ids("account_id"), ...ids("vat_account_id")]));
     const supplierIds = ids("supplier_id");
     const departmentIds = ids("department_id");
     const employeeIds = ids("employee_id");
@@ -207,6 +235,11 @@ export async function fetchExpensesAction(
         ? admin.from("employees").select("id,full_name").in("id", employeeIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     ]);
+
+    const attachmentCounts = await countExpenseAttachments(
+      admin,
+      rows.map((row) => String(row.id))
+    );
 
     const nameMap = (list: unknown, label: (row: Record<string, unknown>) => string) =>
       new Map(((list || []) as Array<Record<string, unknown>>).map((row) => [String(row.id), label(row)]));
@@ -231,6 +264,10 @@ export async function fetchExpensesAction(
         category: String(row.category || ""),
         account_id: (row.account_id as string) || null,
         account_name: row.account_id ? accountNames.get(String(row.account_id)) || null : null,
+        vat_account_id: (row.vat_account_id as string) || null,
+        vat_account_name: row.vat_account_id
+          ? accountNames.get(String(row.vat_account_id)) || null
+          : null,
         supplier_id: (row.supplier_id as string) || null,
         supplier_name: row.supplier_id ? supplierNames.get(String(row.supplier_id)) || null : null,
         payee: (row.payee as string) || null,
@@ -251,6 +288,7 @@ export async function fetchExpensesAction(
         // Posted by this module means it has its own cash row; anything else
         // (production expenses) is cancelled where it was written.
         is_production: String(row.status || "posted") === "posted" && !row.transaction_id,
+        attachment_count: attachmentCounts.get(String(row.id)) || 0,
       };
     });
 
@@ -323,6 +361,10 @@ export async function saveExpenseAction(
         expense_date: expenseDate,
         category_id: input.categoryId,
         account_id: optionalUuid(input.accountId),
+        vat_account_id:
+          paymentMode === "company" && Number(input.vatAmount ?? 0) > 0
+            ? optionalUuid(input.vatAccountId)
+            : null,
         supplier_id: optionalUuid(input.supplierId),
         payee: clampString(input.payee ?? "", 200) || null,
         reference_no: clampString(input.referenceNo ?? "", 100) || null,
@@ -450,4 +492,162 @@ export async function reimburseExpenseAction(
       }),
     "Kompensasiya ödənilmədi"
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Attachments: receipts and invoices in the private expense bucket.    */
+/* Files go browser -> storage through a one-time signed upload URL, so */
+/* they never pass through the server action body size limit.           */
+/* ------------------------------------------------------------------ */
+
+async function loadExpenseStatus(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  expenseId: string
+): Promise<ExpenseStatus | null> {
+  const { data } = await admin.from("expenses").select("status").eq("id", expenseId).maybeSingle();
+  return data ? (String((data as Record<string, unknown>).status || "posted") as ExpenseStatus) : null;
+}
+
+export async function listExpenseAttachmentsAction(
+  expenseId: string
+): Promise<ActionResult<ExpenseAttachment[]>> {
+  try {
+    await requireAnyExpensePermission("can_view_expenses", "can_manage_expenses");
+    if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("expense_attachments" as never)
+      .select("id,storage_path,file_name,mime_type,size_bytes,created_at")
+      .eq("expense_id", expenseId)
+      .order("created_at");
+    if (error) return { success: false, error: error.message };
+
+    const rows = (data || []) as Array<Record<string, unknown>>;
+    const paths = rows.map((row) => String(row.storage_path));
+    const urls = new Map<string, string>();
+    if (paths.length) {
+      const signed = await admin.storage.from(ATTACHMENT_BUCKET).createSignedUrls(paths, 3600);
+      for (const item of signed.data || []) {
+        if (item.path && item.signedUrl) urls.set(item.path, item.signedUrl);
+      }
+    }
+
+    return {
+      success: true,
+      data: rows.map((row) => ({
+        id: String(row.id),
+        file_name: String(row.file_name || ""),
+        mime_type: (row.mime_type as string) || null,
+        size_bytes: toNumber(row.size_bytes),
+        created_at: String(row.created_at || ""),
+        url: urls.get(String(row.storage_path)) || null,
+      })),
+    };
+  } catch (err) {
+    return actionError(err, "Sənədlər yüklənmədi");
+  }
+}
+
+export async function createExpenseAttachmentUploadAction(
+  expenseId: string,
+  file: { name: string; type: string; size: number }
+): Promise<ActionResult<{ path: string; token: string }>> {
+  try {
+    await requireAnyExpensePermission("can_manage_expenses");
+    if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
+    const invalid = validateExpenseAttachment(file);
+    if (invalid) return { success: false, error: invalid };
+
+    const admin = createSupabaseAdminClient();
+    const status = await loadExpenseStatus(admin, expenseId);
+    if (!status) return { success: false, error: "Xərc sənədi tapılmadı" };
+    if (status === "cancelled") return { success: false, error: "Ləğv edilmiş xərcə fayl əlavə etmək olmaz" };
+
+    const ext = EXPENSE_ATTACHMENT_TYPES[normalizeAttachmentMime(file.type)];
+    const path = `${expenseId}/${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await admin.storage.from(ATTACHMENT_BUCKET).createSignedUploadUrl(path);
+    if (error || !data) return { success: false, error: error?.message || "Yükləmə hazırlanmadı" };
+    return { success: true, data: { path: data.path, token: data.token } };
+  } catch (err) {
+    return actionError(err, "Yükləmə hazırlanmadı");
+  }
+}
+
+export async function confirmExpenseAttachmentAction(
+  expenseId: string,
+  path: string,
+  fileName: string
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const { user } = await requireAnyExpensePermission("can_manage_expenses");
+    if (!isValidUuid(expenseId) || !isExpenseAttachmentPath(expenseId, path)) {
+      return { success: false, error: "Fayl tapılmadı" };
+    }
+    const admin = createSupabaseAdminClient();
+    const bucket = admin.storage.from(ATTACHMENT_BUCKET);
+    const info = await bucket.info(path);
+    if (info.error || !info.data) return { success: false, error: "Fayl yüklənməyib" };
+
+    const size = Number(info.data.size ?? 0);
+    const mime = normalizeAttachmentMime(String(info.data.contentType || ""));
+    const invalid = validateExpenseAttachment({ type: mime, size });
+    if (invalid) {
+      await bucket.remove([path]);
+      return { success: false, error: invalid };
+    }
+
+    const { data, error } = await admin
+      .from("expense_attachments" as never)
+      .insert({
+        expense_id: expenseId,
+        storage_path: path,
+        file_name: clampString(fileName || path.split("/").pop() || "fayl", 200),
+        mime_type: mime,
+        size_bytes: size,
+        created_by: user.id,
+      } as never)
+      .select("id")
+      .single();
+    if (error || !data) {
+      await bucket.remove([path]);
+      return { success: false, error: error?.message || "Fayl yadda saxlanmadı" };
+    }
+    return { success: true, data: { id: String((data as Record<string, unknown>).id) } };
+  } catch (err) {
+    return actionError(err, "Fayl yadda saxlanmadı");
+  }
+}
+
+export async function deleteExpenseAttachmentAction(attachmentId: string): Promise<ActionResult> {
+  try {
+    const { profile } = await requireAnyExpensePermission("can_manage_expenses");
+    if (!isValidUuid(attachmentId)) return { success: false, error: "Fayl tapılmadı" };
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("expense_attachments" as never)
+      .select("id,expense_id,storage_path")
+      .eq("id", attachmentId)
+      .maybeSingle();
+    if (error) return { success: false, error: error.message };
+    if (!data) return { success: false, error: "Fayl tapılmadı" };
+    const row = data as Record<string, unknown>;
+
+    // Receipts of a booked document are audit evidence: only finance removes them.
+    const status = await loadExpenseStatus(admin, String(row.expense_id));
+    const open = status === "draft" || status === "submitted";
+    if (!open && !userHasPermission(profile, "can_manage_finance")) {
+      return { success: false, error: "Təsdiqlənmiş xərcin sənədini yalnız maliyyə silə bilər" };
+    }
+
+    const removed = await admin.storage.from(ATTACHMENT_BUCKET).remove([String(row.storage_path)]);
+    if (removed.error) return { success: false, error: removed.error.message };
+    const { error: deleteError } = await admin
+      .from("expense_attachments" as never)
+      .delete()
+      .eq("id", attachmentId);
+    if (deleteError) return { success: false, error: deleteError.message };
+    return { success: true };
+  } catch (err) {
+    return actionError(err, "Fayl silinmədi");
+  }
 }
