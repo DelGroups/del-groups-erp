@@ -24,6 +24,7 @@ import {
 } from "@/lib/sales/saleItemProductId";
 import {
   collectSaleSubmitPreflightIssues,
+  getSaleLineStockWarning,
   preflightMessage,
   validatePaymentRowsRequireAccount,
   validatePaymentsNotExceedTotal,
@@ -128,6 +129,7 @@ import {
   CheckCircle2,
   ClipboardList,
   CreditCard,
+  AlertTriangle,
   FileText,
   Plus,
   Printer,
@@ -1339,6 +1341,17 @@ export default function UniversalInvoiceForm({
     additionalExpensesTotal,
   ]);
 
+  const resolveItemAvailableStock = useCallback(
+    (item: SaleItem) => {
+      if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
+        return Number(item.available_stock);
+      }
+      const product = (products ?? []).find((p) => p.id === item.product_id);
+      return Number(product?.stock) || 0;
+    },
+    [products]
+  );
+
   const salePreflightIssue = useMemo(() => {
     if (!isOpen) return null;
 
@@ -1349,20 +1362,14 @@ export default function UniversalInvoiceForm({
       payments,
       paidAmount: totals.paid_amount,
       grandTotal: displayTotals.grand_total,
-      resolveAvailableStock: (item) => {
-        if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
-          return Number(item.available_stock);
-        }
-        const product = (products ?? []).find((p) => p.id === item.product_id);
-        return Number(product?.stock) || 0;
-      },
+      resolveAvailableStock: resolveItemAvailableStock,
     });
   }, [
     isOpen,
     canSaveInvoice,
     items,
     payments,
-    products,
+    resolveItemAvailableStock,
     selectedCustomerId,
     totals.grand_total,
     totals.paid_amount,
@@ -1422,13 +1429,7 @@ export default function UniversalInvoiceForm({
       return;
     }
 
-    const lineIssue = validateSaleInvoiceLines(saleItems, (item) => {
-      if (item.available_stock != null && Number.isFinite(Number(item.available_stock))) {
-        return Number(item.available_stock);
-      }
-      const product = (products ?? []).find((p) => p.id === item.product_id);
-      return Number(product?.stock) || 0;
-    });
+    const lineIssue = validateSaleInvoiceLines(saleItems, resolveItemAvailableStock);
     if (mode === "post" && lineIssue) {
       showToastError(preflightMessage(t, lineIssue));
       return;
@@ -2370,6 +2371,22 @@ export default function UniversalInvoiceForm({
                             : t("polywood.invoice.qtyMeters")}
                         </p>
                       ) : null}
+                      {(() => {
+                        const stockWarning = getSaleLineStockWarning(
+                          row,
+                          resolveItemAvailableStock(row)
+                        );
+                        if (!stockWarning) return null;
+                        return (
+                          <p
+                            role="alert"
+                            className="mt-1 flex items-start gap-1 rounded bg-amber-50 px-1.5 py-1 text-[10px] font-medium text-amber-800"
+                          >
+                            <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden />
+                            <span>{preflightMessage(t, stockWarning)}</span>
+                          </p>
+                        );
+                      })()}
                       {!polywoodOnly && row.unit === "m²" && row.polywood_total_area_m2 ? (
                         <p className="mt-0.5 text-center text-[10px] text-app-muted">
                           {row.polywood_total_area_m2.toFixed(3)} m²
