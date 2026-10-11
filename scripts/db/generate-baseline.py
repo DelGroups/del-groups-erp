@@ -170,6 +170,18 @@ def constraints(c):
     out = []
     for r in rows:
         stmt = f"alter table only public.{q(r['t'])} add constraint {q(r['n'])} {r['def']};"
+        link = r.get("link")
+        if link:
+            # A foreign key between two modules that do not depend on each other (see
+            # partition()): it is in both install scripts, and whichever runs second adds it.
+            both = " and ".join(f"to_regclass({lit('public.' + q(t))}) is not null" for t in link)
+            out.append(
+                "do $$ begin\n"
+                f"  if {both} then\n"
+                f"    if not exists (select 1 from pg_constraint where conname = {lit(r['n'])} and conrelid = to_regclass({lit('public.' + q(r['t']))})) then\n"
+                f"      execute {dollar(stmt, 'c')};\n    end if;\n  end if;\nend $$;"
+            )
+            continue
         out.append(
             "do $$ begin\n"
             f"  if not exists (select 1 from pg_constraint where conname = {lit(r['n'])} and conrelid = 'public.{q(r['t'])}'::regclass) then\n"
@@ -384,6 +396,11 @@ def partition(c, order):
     module object (a foreign key to a module table, a trigger calling a module
     function, a view reading a module table) goes with that module, so the core
     baseline always builds on its own.
+
+    A foreign key between tables of two different modules goes into both install
+    scripts, guarded so that it is only added once both tables exist. The two
+    modules may not depend on each other (crm's deals point to production orders,
+    but crm works without production), so neither script may require the other.
     """
     rank = {"core": -1, **{m: i for i, m in enumerate(order)}}
     owner = {k: {} for k in ("tables", "functions", "sequences", "views", "buckets", "storage_policies")}
@@ -428,6 +445,9 @@ def partition(c, order):
             ref = re.search(r"REFERENCES (?:public\.)?\"?([\w]+)\"?", r["def"])
             if ref:
                 mods.append(table_of(ref.group(1)))
+                if "core" not in mods and mods[0] != mods[1]:
+                    r["link"] = (r["t"], ref.group(1))
+                    return mods
         return later(*mods)
 
     def trigger_owner(t):
@@ -468,7 +488,9 @@ def partition(c, order):
         if rule is None:
             sys.exit(f"live-catalog.json has an unknown section {kind!r}: teach partition() about it")
         for item in items:
-            parts[rule(item)][kind].append(item)
+            owners = rule(item)
+            for m in [owners] if isinstance(owners, str) else owners:
+                parts[m][kind].append(item)
     return parts
 
 

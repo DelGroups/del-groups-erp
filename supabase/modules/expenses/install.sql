@@ -774,8 +774,10 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_production_order_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+  if to_regclass('public.expenses') is not null and to_regclass('public.production_orders') is not null then
+    if not exists (select 1 from pg_constraint where conname = 'expenses_production_order_id_fkey' and conrelid = to_regclass('public.expenses')) then
+      execute $c$alter table only public.expenses add constraint expenses_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+    end if;
   end if;
 end $$;
 do $$ begin
@@ -804,8 +806,10 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_expenses_finance_expense_id_fkey' and conrelid = 'public.production_expenses'::regclass) then
-    execute $c$alter table only public.production_expenses add constraint production_expenses_finance_expense_id_fkey FOREIGN KEY (finance_expense_id) REFERENCES public.expenses(id) ON DELETE SET NULL;$c$;
+  if to_regclass('public.production_expenses') is not null and to_regclass('public.expenses') is not null then
+    if not exists (select 1 from pg_constraint where conname = 'production_expenses_finance_expense_id_fkey' and conrelid = to_regclass('public.production_expenses')) then
+      execute $c$alter table only public.production_expenses add constraint production_expenses_finance_expense_id_fkey FOREIGN KEY (finance_expense_id) REFERENCES public.expenses(id) ON DELETE SET NULL;$c$;
+    end if;
   end if;
 end $$;
 

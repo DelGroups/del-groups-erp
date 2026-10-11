@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { calcProductionCosting, type ProductionOrder } from "@/lib/production/types";
+import { calcProductionCosting, type ProductionOrder } from "../lib/types";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Props {

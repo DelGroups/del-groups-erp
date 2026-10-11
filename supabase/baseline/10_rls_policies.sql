@@ -15,10 +15,6 @@ alter table public.employees enable row level security;
 alter table public.inventory_count_items enable row level security;
 alter table public.inventory_counts enable row level security;
 alter table public.inventory_writeoffs enable row level security;
-alter table public.production_bom_items enable row level security;
-alter table public.production_boms enable row level security;
-alter table public.production_orders enable row level security;
-alter table public.production_stock_reservations enable row level security;
 alter table public.products enable row level security;
 alter table public.profiles enable row level security;
 alter table public.purchase_items enable row level security;
@@ -245,74 +241,6 @@ drop policy if exists inventory_writeoffs_update on public.inventory_writeoffs;
 create policy inventory_writeoffs_update on public.inventory_writeoffs as permissive for update to authenticated
   using (public.require_permission('can_writeoff_inventory'::text))
   with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists production_bom_items_delete on public.production_bom_items;
-create policy production_bom_items_delete on public.production_bom_items as permissive for delete to authenticated
-  using (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_bom_items_insert on public.production_bom_items;
-create policy production_bom_items_insert on public.production_bom_items as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_bom_items_select on public.production_bom_items;
-create policy production_bom_items_select on public.production_bom_items as permissive for select to authenticated
-  using (public.require_permission('can_view_production'::text));
-
-drop policy if exists production_bom_items_update on public.production_bom_items;
-create policy production_bom_items_update on public.production_bom_items as permissive for update to authenticated
-  using (public.require_permission('can_manage_production'::text))
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_boms_delete on public.production_boms;
-create policy production_boms_delete on public.production_boms as permissive for delete to authenticated
-  using (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_boms_insert on public.production_boms;
-create policy production_boms_insert on public.production_boms as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_boms_select on public.production_boms;
-create policy production_boms_select on public.production_boms as permissive for select to authenticated
-  using (public.require_permission('can_view_production'::text));
-
-drop policy if exists production_boms_update on public.production_boms;
-create policy production_boms_update on public.production_boms as permissive for update to authenticated
-  using (public.require_permission('can_manage_production'::text))
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_orders_delete on public.production_orders;
-create policy production_orders_delete on public.production_orders as permissive for delete to authenticated
-  using (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_orders_insert on public.production_orders;
-create policy production_orders_insert on public.production_orders as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_orders_select on public.production_orders;
-create policy production_orders_select on public.production_orders as permissive for select to authenticated
-  using ((public.require_permission('can_view_production'::text) OR public.require_permission('can_manage_production'::text) OR public.require_permission('can_view_reports'::text)));
-
-drop policy if exists production_orders_update on public.production_orders;
-create policy production_orders_update on public.production_orders as permissive for update to authenticated
-  using (public.require_permission('can_manage_production'::text))
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_stock_reservations_delete on public.production_stock_reservations;
-create policy production_stock_reservations_delete on public.production_stock_reservations as permissive for delete to authenticated
-  using (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_stock_reservations_insert on public.production_stock_reservations;
-create policy production_stock_reservations_insert on public.production_stock_reservations as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_production'::text));
-
-drop policy if exists production_stock_reservations_select on public.production_stock_reservations;
-create policy production_stock_reservations_select on public.production_stock_reservations as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists production_stock_reservations_update on public.production_stock_reservations;
-create policy production_stock_reservations_update on public.production_stock_reservations as permissive for update to authenticated
-  using (public.require_permission('can_manage_production'::text))
-  with check (public.require_permission('can_manage_production'::text));
 
 drop policy if exists products_delete on public.products;
 create policy products_delete on public.products as permissive for delete to authenticated

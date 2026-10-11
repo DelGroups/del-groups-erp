@@ -2,7 +2,7 @@ import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import {
   resolveCatalogWarehouseStock,
   warehouseStockBalancesFromMovements,
-} from "@/lib/production/warehouseStock";
+} from "./warehouseStock";
 import type { Product } from "@/types/database.types";
 
 type StockAdminClient = ReturnType<

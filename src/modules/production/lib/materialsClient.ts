@@ -1,5 +1,5 @@
-import { buildStrictMaterialInsertPayload } from "@/app/production/materialInsert";
-import type { ProductionMaterialInsertPayload } from "@/lib/production/payloads";
+import { buildStrictMaterialInsertPayload } from "./materialInsert";
+import type { ProductionMaterialInsertPayload } from "./payloads";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FromClient = { from: (table: string) => any };

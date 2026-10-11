@@ -1,0 +1,34 @@
+{
+  "why": "Production orders with their materials, stock reservations, contractors, contracts, outsourcing and expenses, production BOMs, and the RPCs and event processors of the production workflow. Product kits (product_bom, create_product_with_bom_atomic) and purchase requests (purchase_requests, shared with purchasing and reorder) stay in core. Foreign keys from core tables (sales, transactions, purchase_requests) to production_orders install with this module; foreign keys between production and crm or expenses are in both modules' scripts and are added once both tables exist.",
+  "tables": [
+    "production_bom_items",
+    "production_boms",
+    "production_contractors",
+    "production_contracts",
+    "production_expenses",
+    "production_materials",
+    "production_orders",
+    "production_outsourcing",
+    "production_stock_reservations"
+  ],
+  "functions": [
+    "complete_custom_production_delivery_atomic",
+    "compute_production_issued_material_cost",
+    "compute_production_wip_cost",
+    "create_production_expense_atomic",
+    "create_production_warehouse_slip",
+    "process_production_advance_payment_event",
+    "process_production_delivery_event",
+    "process_production_material_issue_event",
+    "process_production_ready_event",
+    "production_material_line_cost",
+    "production_record_furniture_receipt_from_order",
+    "production_record_material_issue_slip",
+    "sync_production_expense_to_ledger",
+    "trg_production_orders_delivery_slip"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

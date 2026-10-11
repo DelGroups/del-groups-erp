@@ -1,13 +1,13 @@
-import { defaultContractTermsAz } from "@/lib/production/constants";
+import { defaultContractTermsAz } from "./constants";
 import {
   normalizeProductionModel,
   type ProductionModel,
   PRODUCTION_MODEL_DEFAULT,
   PRODUCTION_MODELS,
-} from "@/lib/production/models";
-import { normalizeStatus, normalizeType, canonicalizeProductionOrderWrite } from "@/lib/production/ordersClient";
+} from "./models";
+import { normalizeStatus, normalizeType, canonicalizeProductionOrderWrite } from "./ordersClient";
 
-export { normalizeStatus, normalizeType } from "@/lib/production/ordersClient";
+export { normalizeStatus, normalizeType } from "./ordersClient";
 export {
   normalizeProductionModel,
   productionModelFromLegacy,
@@ -17,7 +17,7 @@ export {
   PRODUCTION_MODELS,
   PRODUCTION_MODEL_LABELS,
   type ProductionModel,
-} from "@/lib/production/models";
+} from "./models";
 
 export const PRODUCTION_ORDER_TYPES = ["Custom", "Series"] as const;
 export type ProductionOrderType = (typeof PRODUCTION_ORDER_TYPES)[number];

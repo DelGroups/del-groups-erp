@@ -16,6 +16,11 @@ automatically, and so does a core object that depends on it (a foreign key to a 
 table, a trigger calling a module function, a view reading a module table). The core
 baseline therefore builds on its own.
 
+A foreign key between tables of two modules (for example `deals.production_order_id`: crm and
+production do not depend on each other) is in both modules' install scripts, guarded so that it is
+added only once both tables exist. Each module installs on its own, in any order, and the link
+appears when the second one is installed (`tests/moduleSql.test.mjs` checks this).
+
 ## Changes
 
 Schema changes are still one file in `supabase/migrations/` (see `supabase/baseline/README.md`).
@@ -46,10 +51,15 @@ core and modules again.
 - `expenses`: `expenses`, `expense_attachments`, the `expense-attachments` bucket (no storage policies;
   files go through the service role), the expense RPCs (`record_`, `submit_`, `approve_`, `reject_`,
   `post_`, `reimburse_`, `cancel_expense_atomic()`) and their helpers, and the foreign key
-  `production_expenses.finance_expense_id`. `expense_categories` and `document_expenses` stay in core.
+  `production_expenses.finance_expense_id` (a link with production, see above). `expense_categories` and `document_expenses` stay in core.
 - `hr`: `employee_leaves` and the leave helpers `hr_leave_days_in_month()` / `hr_unpaid_leave_deduction()`.
   `employees` and `employee_departments` stay in core: profiles, sales, production orders and modules
   that do not depend on hr (consignment, expenses) point to them.
 - `payroll`: `payrolls`, `employee_advances`, `calculate_monthly_payroll_drafts()`, `pay_payroll_run_atomic()`,
   `pay_employee_advance_atomic()`. `salary_payments` stays in core: `payrolls.salary_payment_id` and
   `sales_commissions.payroll_id` both point to it, and payroll and commissions do not depend on each other.
+- `production`: production orders, materials, stock reservations, contractors, contracts, outsourcing,
+  expenses, production BOMs, and the production RPCs and event processors. `product_bom` (product kits,
+  with `create_product_with_bom_atomic()`) and `purchase_requests` (shared with purchasing) stay in core.
+  The foreign keys from core tables (`sales`, `transactions`, `purchase_requests`) to `production_orders`
+  install with production; those with crm (`deals`, `quotations`) and expenses are links (see above).

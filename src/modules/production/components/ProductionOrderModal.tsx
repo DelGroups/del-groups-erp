@@ -6,14 +6,14 @@ import {
   createProductionOrderAction,
   type CreateProductionOrderInput,
   type ProductionLookups,
-} from "@/lib/actions/production";
+} from "../actions/production";
 import {
   PRODUCTION_CREATION_TYPES,
   legacyFromProductionModel,
   productionCreationTypeToModel,
   type ProductionCreationType,
-} from "@/lib/production/models";
-import type { ProductionOrder } from "@/lib/production/types";
+} from "../lib/models";
+import type { ProductionOrder } from "../lib/types";
 import type { Supplier } from "@/types/database.types";
 
 interface Props {

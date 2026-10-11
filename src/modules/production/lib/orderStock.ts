@@ -1,4 +1,4 @@
-import type { ProductionMaterial } from "@/lib/production/types";
+import type { ProductionMaterial } from "./types";
 
 function num(value: unknown): number {
   const n = Number(value);

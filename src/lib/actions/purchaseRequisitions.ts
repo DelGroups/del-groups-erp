@@ -2,7 +2,7 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ActionAuthError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
-import type { PurchaseRequest } from "@/lib/production/types";
+import type { PurchaseRequest } from "@/modules/production";
 
 export type PurchaseRequisitionRow = PurchaseRequest & {
   production_order_no?: string | null;

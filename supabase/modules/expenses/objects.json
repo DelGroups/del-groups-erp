@@ -1,5 +1,5 @@
 {
-  "why": "Expense documents: the expenses with their attachments, and the RPCs that record, submit, approve, reject, post, reimburse and cancel them. Expense categories (expense_categories, financial_categories) and the additional costs on sales and purchase invoices (document_expenses) are used by core finance and stay in core. The foreign key production_expenses.finance_expense_id points here, so it is installed with this module.",
+  "why": "Expense documents: the expenses with their attachments, and the RPCs that record, submit, approve, reject, post, reimburse and cancel them. Expense categories (expense_categories, financial_categories) and the additional costs on sales and purchase invoices (document_expenses) are used by core finance and stay in core. The foreign keys with production (production_expenses.finance_expense_id, expenses.production_order_id) are in both modules' scripts and are added once both tables exist.",
   "tables": ["expense_attachments", "expenses"],
   "functions": [
     "approve_expense_atomic",

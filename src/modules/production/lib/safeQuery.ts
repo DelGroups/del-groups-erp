@@ -1,5 +1,5 @@
-import { canonicalizeProductionOrderWrite } from "@/lib/production/ordersClient";
-import { withNormalizedProductionOrderWrite } from "@/lib/production/types";
+import { canonicalizeProductionOrderWrite } from "./ordersClient";
+import { withNormalizedProductionOrderWrite } from "./types";
 
 /** PostgREST PGRST204: column missing from schema cache. */
 

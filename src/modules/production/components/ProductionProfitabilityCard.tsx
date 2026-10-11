@@ -11,7 +11,7 @@ import {
   type ProductionCosting,
   type ProductionOrder,
   type ProductionStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 
 const HEALTH_CLASS: Record<ProductionHealth, string> = {
   healthy: "bg-emerald-500/15 text-emerald-400",

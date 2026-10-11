@@ -1,4 +1,4 @@
-import type { CustomWorkflow, ProductionOrderType } from "@/lib/production/types";
+import type { CustomWorkflow, ProductionOrderType } from "./types";
 
 export const PRODUCTION_MODELS = [
   "series",

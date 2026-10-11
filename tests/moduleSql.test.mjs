@@ -43,3 +43,29 @@ test("a module's tables are no longer in the core baseline", () => {
     }
   }
 });
+
+test("a foreign key between two modules is in both install scripts and needs both tables", () => {
+  const ownerOf = new Map();
+  for (const id of order) {
+    const { tables = [] } = JSON.parse(readFileSync(new URL(`${id}/objects.json`, dir), "utf8"));
+    for (const table of tables) ownerOf.set(table, id);
+  }
+  const fk = /alter table only public\.(\w+) add constraint (\w+) FOREIGN KEY \([^)]*\) REFERENCES public\.(\w+)/g;
+  const scripts = Object.fromEntries(order.map((id) => [id, readFileSync(new URL(`${id}/install.sql`, dir), "utf8")]));
+  let links = 0;
+  for (const [id, sql] of Object.entries(scripts)) {
+    for (const [, table, name, ref] of sql.matchAll(fk)) {
+      const a = ownerOf.get(table);
+      const b = ownerOf.get(ref);
+      if (!a || !b || a === b) continue;
+      links++;
+      const other = id === a ? b : a;
+      assert.ok(scripts[other].includes(`conname = '${name}'`), `${name} is in ${id} but not in ${other}`);
+      const block = sql.slice(sql.lastIndexOf("do $$ begin", sql.indexOf(`conname = '${name}'`)), sql.indexOf(`conname = '${name}'`));
+      for (const t of [table, ref]) {
+        assert.ok(block.includes(`to_regclass('public.${t}') is not null`), `${name} in ${id} must wait for ${t}`);
+      }
+    }
+  }
+  assert.ok(links > 0, "expected at least one foreign key between modules (crm/expenses and production)");
+});

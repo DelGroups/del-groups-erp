@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { ProductionBomPage } from "@/modules/production/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function ProductionBomPage() {
-  return <PageClient />;
+export default function Page() {
+  return <ProductionBomPage />;
 }

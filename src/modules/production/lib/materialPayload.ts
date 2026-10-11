@@ -8,7 +8,7 @@ export {
   PRODUCTION_MATERIAL_EXTENDED_COLUMNS,
   PRODUCTION_MATERIAL_INSERT_KEYS,
   PRODUCTION_MATERIAL_LIVE_COLUMNS,
-} from "@/lib/production/payloads";
+} from "./payloads";
 
 export const PRODUCTION_MATERIAL_STRICT_INSERT_COLUMNS = [
   "production_order_id",
