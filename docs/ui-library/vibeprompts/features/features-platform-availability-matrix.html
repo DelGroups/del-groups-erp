@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/features/features-platform-availability-matrix/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platform availability matrix</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-16">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-semibold tracking-tight text-neutral-900">Where each feature works</h2>
+      <p class="mt-2 text-neutral-500">One account, five clients. Not everything makes sense everywhere.</p>
+    </div>
+    <div class="flex flex-wrap gap-4 text-xs text-neutral-500">
+      <span class="flex items-center gap-1.5 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> <span class="text-neutral-500">Available</span></span>
+      <span class="flex items-center gap-1.5 text-amber-500"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C6.2 2.2 5.1 2.5 5.1 2.5c-.7 1.7-.2 3.1-.1 3.4a5 5 0 0 0-1.3 3.4c0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1-.5 2V21"/><path d="M9 18c-2.7.8-2.7-1.3-3.8-1.6"/></svg> <span class="text-neutral-500">Partial</span></span>
+      <span class="flex items-center gap-1.5 text-neutral-300">— <span class="text-neutral-500">Not supported</span></span>
+    </div>
+  </div>
+
+  <div class="mt-8 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+    <table class="w-full min-w-[720px] text-sm">
+      <thead>
+        <tr class="border-b border-neutral-200 bg-neutral-50 text-[11px] uppercase tracking-widest text-neutral-400">
+          <th class="sticky left-0 bg-neutral-50 px-6 py-4 text-left font-medium">Feature</th>
+          <th class="px-4 py-4 font-medium">Web</th>
+          <th class="px-4 py-4 font-medium">iOS</th>
+          <th class="px-4 py-4 font-medium">Android</th>
+          <th class="px-4 py-4 font-medium">Desktop</th>
+          <th class="px-4 py-4 font-medium">CLI</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100 text-center">
+        <tr>
+          <td class="sticky left-0 bg-white px-6 py-4 text-left font-medium text-neutral-900">View dashboards</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-neutral-300">—</td>
+        </tr>
+        <tr class="bg-neutral-50/60">
+          <td class="sticky left-0 bg-neutral-50 px-6 py-4 text-left font-medium text-neutral-900">Edit reports</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+          <td class="px-4 py-4"><span class="text-amber-500"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C6.2 2.2 5.1 2.5 5.1 2.5c-.7 1.7-.2 3.1-.1 3.4a5 5 0 0 0-1.3 3.4c0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1-.5 2V21"/><path d="M9 18c-2.7.8-2.7-1.3-3.8-1.6"/></svg></span><span class="mt-0.5 block text-[10px] text-neutral-400">view only</span></td>
+          <td class="px-4 py-4"><span class="text-amber-500"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C6.2 2.2 5.1 2.5 5.1 2.5c-.7 1.7-.2 3.1-.1 3.4a5 5 0 0 0-1.3 3.4c0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1-.5 2V21"/><path d="M9 18c-2.7.8-2.7-1.3-3.8-1.6"/></svg></span><span class="mt-0.5 block text-[10px] text-neutral-400">view only</span></td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+        </tr>
+        <tr>
+          <td class="sticky left-0 bg-white px-6 py-4 text-left font-medium text-neutral-900">Offline access</td>
+          <td class="px-4 py-4 text-neutral-300">—</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-neutral-300">—</td>
+        </tr>
+        <tr class="bg-neutral-50/60">
+          <td class="sticky left-0 bg-neutral-50 px-6 py-4 text-left font-medium text-neutral-900">Push notifications</td>
+          <td class="px-4 py-4"><span class="text-amber-500"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C6.2 2.2 5.1 2.5 5.1 2.5c-.7 1.7-.2 3.1-.1 3.4a5 5 0 0 0-1.3 3.4c0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1-.5 2V21"/><path d="M9 18c-2.7.8-2.7-1.3-3.8-1.6"/></svg></span><span class="mt-0.5 block text-[10px] text-neutral-400">browser</span></td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-neutral-300">—</td>
+        </tr>
+        <tr>
+          <td class="sticky left-0 bg-white px-6 py-4 text-left font-medium text-neutral-900">Bulk export</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+          <td class="px-4 py-4 text-neutral-300">—</td><td class="px-4 py-4 text-neutral-300">—</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+        </tr>
+        <tr class="bg-neutral-50/60">
+          <td class="sticky left-0 bg-neutral-50 px-6 py-4 text-left font-medium text-neutral-900">Admin settings</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+          <td class="px-4 py-4 text-neutral-300">—</td><td class="px-4 py-4 text-neutral-300">—</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+        </tr>
+        <tr>
+          <td class="sticky left-0 bg-white px-6 py-4 text-left font-medium text-neutral-900">SSO sign-in</td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td><td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+          <td class="px-4 py-4"><span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">Q4</span></td>
+        </tr>
+        <tr class="bg-neutral-50/60">
+          <td class="sticky left-0 bg-neutral-50 px-6 py-4 text-left font-medium text-neutral-900">Scripting and automation</td>
+          <td class="px-4 py-4 text-neutral-300">—</td><td class="px-4 py-4 text-neutral-300">—</td><td class="px-4 py-4 text-neutral-300">—</td>
+          <td class="px-4 py-4"><span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">Q4</span></td>
+          <td class="px-4 py-4 text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="mt-4 text-xs leading-relaxed text-neutral-400">
+    Minimums: iOS 16, Android 11, macOS 13, Windows 10 22H2, Node 20 for the CLI. Older versions keep working but stop receiving new features.
+  </p>
+</section>
+</body></html>

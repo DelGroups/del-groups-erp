@@ -1,0 +1,113 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/hero/hero-event-hero-with-countdown/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event hero with countdown</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-20">
+  <div class="grid items-center gap-14 lg:grid-cols-2">
+    <div>
+      <p class="font-mono text-xs uppercase tracking-[0.2em] text-neutral-400">14–16 October 2026 · Rotterdam</p>
+
+      <h1 class="mt-6 text-6xl font-semibold leading-[0.95] tracking-tight text-neutral-900 sm:text-7xl">
+        Systems<br />
+        Practice <span class="font-light text-neutral-400">26</span>
+      </h1>
+
+      <p class="mt-6 max-w-md text-lg leading-relaxed text-neutral-500">
+        Three days on running software that other people depend on. Forty talks, no keynote about digital transformation, and a hallway track worth the ticket on its own.
+      </p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#" class="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Get tickets</a>
+        <a href="#" class="rounded-xl border border-neutral-200 px-6 py-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">See the programme</a>
+      </div>
+
+      <p class="mt-4 text-xs text-neutral-400">62 tickets left at the early rate. It rises to €480 on 1 September.</p>
+    </div>
+
+    <div class="rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Doors open in</p>
+
+      <div id="eventClock" class="mt-5 grid grid-cols-4 gap-3 text-center">
+        <div class="rounded-xl bg-neutral-50 py-4">
+          <p id="cdDays" class="font-mono text-3xl font-semibold tracking-tight text-neutral-900">57</p>
+          <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-400">Days</p>
+        </div>
+        <div class="rounded-xl bg-neutral-50 py-4">
+          <p id="cdHours" class="font-mono text-3xl font-semibold tracking-tight text-neutral-900">08</p>
+          <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-400">Hours</p>
+        </div>
+        <div class="rounded-xl bg-neutral-50 py-4">
+          <p id="cdMinutes" class="font-mono text-3xl font-semibold tracking-tight text-neutral-900">14</p>
+          <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-400">Minutes</p>
+        </div>
+        <div class="rounded-xl bg-neutral-50 py-4">
+          <p id="cdSeconds" class="font-mono text-3xl font-semibold tracking-tight text-neutral-900">02</p>
+          <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-400">Seconds</p>
+        </div>
+      </div>
+
+      <div class="mt-7 space-y-4 border-t border-neutral-200 pt-6">
+        <div class="flex items-start gap-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">Van Nelle Fabriek</p>
+            <p class="text-xs text-neutral-500">Van Nelleweg 1, Rotterdam</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">Wed to Fri, 09:00–18:00</p>
+            <p class="text-xs text-neutral-500">Workshops on the Tuesday, ticketed separately</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 12h4l2.5-7 5 14 2.5-7h4"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">In person, recorded</p>
+            <p class="text-xs text-neutral-500">Talks published free four weeks afterwards</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var TARGET = new Date("2026-10-14T09:00:00Z").getTime();
+
+var clock = document.getElementById("eventClock");
+var units = {
+  days: document.getElementById("cdDays"),
+  hours: document.getElementById("cdHours"),
+  minutes: document.getElementById("cdMinutes"),
+  seconds: document.getElementById("cdSeconds"),
+};
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function tick() {
+  var left = TARGET - Date.now();
+
+  if (left <= 0) {
+    clearInterval(handle);
+    clock.className = "mt-5 rounded-xl bg-green-50 px-5 py-8 text-center";
+    clock.innerHTML =
+      '<p class="text-lg font-semibold text-green-800">Doors are open</p>' +
+      '<p class="mt-1 text-sm text-green-700">Registration is on the ground floor, coffee is on the first.</p>';
+    return;
+  }
+
+  var seconds = Math.floor(left / 1000);
+  units.days.textContent = Math.floor(seconds / 86400);
+  units.hours.textContent = pad(Math.floor((seconds % 86400) / 3600));
+  units.minutes.textContent = pad(Math.floor((seconds % 3600) / 60));
+  units.seconds.textContent = pad(seconds % 60);
+}
+
+var handle = setInterval(tick, 1000);
+tick();
+</script>
+</body></html>

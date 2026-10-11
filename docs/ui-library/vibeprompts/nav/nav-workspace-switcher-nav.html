@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-workspace-switcher-nav/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace switcher nav</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="border-b border-neutral-200 bg-white">
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+    <div class="flex items-center gap-2">
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-neutral-900 text-sm text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="m12 7 5 5-5 5-5-5 5-5Z"/></svg></span>
+      <span class="h-5 w-px bg-neutral-200"></span>
+
+      <div class="relative">
+        <button id="wsButton" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition hover:bg-neutral-100">
+          <span id="wsAvatar" class="grid h-7 w-7 place-items-center rounded-md bg-amber-500 text-[11px] font-medium text-white">SF</span>
+          <span class="text-left leading-tight">
+            <span id="wsName" class="block text-sm font-medium text-neutral-900">Studioform</span>
+            <span id="wsPlan" class="block text-[11px] text-neutral-400">Team plan</span>
+          </span>
+          <span class="text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+        </button>
+
+        <div id="wsMenu" class="absolute left-0 top-full z-30 mt-2 hidden w-72 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+          <div class="p-1.5">
+            <input id="wsSearch" type="search" placeholder="Find a workspace…"
+              class="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-neutral-900" />
+          </div>
+
+          <div id="wsList" class="max-h-56 overflow-y-auto">
+            <button data-name="Studioform" data-plan="Team plan" data-initials="SF" data-color="bg-amber-500" class="ws-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-50">
+              <span class="grid h-7 w-7 place-items-center rounded-md bg-amber-500 text-[11px] font-medium text-white">SF</span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm text-neutral-900">Studioform</span><span class="block text-[11px] text-neutral-400">12 members</span></span>
+              <span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+            </button>
+            <button data-name="Northwind" data-plan="Scale plan" data-initials="NW" data-color="bg-neutral-900" class="ws-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-50">
+              <span class="grid h-7 w-7 place-items-center rounded-md bg-neutral-900 text-[11px] font-medium text-white">NW</span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm text-neutral-900">Northwind</span><span class="block text-[11px] text-neutral-400">48 members</span></span>
+            </button>
+            <button data-name="Halden Labs" data-plan="Starter plan" data-initials="HL" data-color="bg-green-600" class="ws-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-50">
+              <span class="grid h-7 w-7 place-items-center rounded-md bg-green-600 text-[11px] font-medium text-white">HL</span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm text-neutral-900">Halden Labs</span><span class="block text-[11px] text-neutral-400">4 members</span></span>
+            </button>
+            <button data-name="Corvid Studio" data-plan="Team plan" data-initials="CS" data-color="bg-neutral-500" class="ws-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-50">
+              <span class="grid h-7 w-7 place-items-center rounded-md bg-neutral-500 text-[11px] font-medium text-white">CS</span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm text-neutral-900">Corvid Studio</span><span class="block text-[11px] text-neutral-400">7 members</span></span>
+            </button>
+            <button data-name="Oakline Group" data-plan="Enterprise" data-initials="OG" data-color="bg-blue-600" class="ws-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-50">
+              <span class="grid h-7 w-7 place-items-center rounded-md bg-blue-600 text-[11px] font-medium text-white">OG</span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm text-neutral-900">Oakline Group</span><span class="block text-[11px] text-neutral-400">210 members</span></span>
+            </button>
+          </div>
+
+          <div class="mt-1.5 border-t border-neutral-200 pt-1.5">
+            <button class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg> Create workspace</button>
+            <button class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg> Manage workspaces</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="relative hidden sm:block">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+        <input type="search" placeholder="Search"
+          class="w-56 rounded-lg border border-neutral-200 py-1.5 pl-9 pr-12 text-sm outline-none transition focus:border-neutral-900" />
+        <kbd class="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[10px] text-neutral-400">⌘K</kbd>
+      </div>
+      <button class="relative grid h-9 w-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-100" aria-label="Notifications">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg><span class="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-red-500"></span>
+      </button>
+      <span class="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">RM</span>
+    </div>
+  </div>
+</header>
+<script>
+var button = document.getElementById("wsButton");
+var menu = document.getElementById("wsMenu");
+var search = document.getElementById("wsSearch");
+var items = Array.prototype.slice.call(document.querySelectorAll(".ws-item"));
+var avatar = document.getElementById("wsAvatar");
+var name = document.getElementById("wsName");
+var plan = document.getElementById("wsPlan");
+
+function open() {
+  menu.classList.remove("hidden");
+  search.value = "";
+  filter();
+  search.focus();
+}
+
+function close() {
+  menu.classList.add("hidden");
+}
+
+function filter() {
+  var q = search.value.trim().toLowerCase();
+  items.forEach(function (item) {
+    item.classList.toggle("hidden", q !== "" && item.dataset.name.toLowerCase().indexOf(q) === -1);
+  });
+}
+
+button.addEventListener("click", function (e) {
+  e.stopPropagation();
+  if (menu.classList.contains("hidden")) open();
+  else close();
+});
+
+search.addEventListener("input", filter);
+search.addEventListener("click", function (e) {
+  e.stopPropagation();
+});
+
+items.forEach(function (item) {
+  item.addEventListener("click", function () {
+    avatar.className = "grid h-7 w-7 place-items-center rounded-md text-[11px] font-medium text-white " + item.dataset.color;
+    avatar.textContent = item.dataset.initials;
+    name.textContent = item.dataset.name;
+    plan.textContent = item.dataset.plan;
+
+    items.forEach(function (other) {
+      var tick = other.querySelector("span:last-child");
+      if (tick && tick.textContent.trim() === "✓") tick.remove();
+    });
+    var check = document.createElement("span");
+    check.className = "text-neutral-900";
+    check.textContent = "✓";
+    item.appendChild(check);
+
+    close();
+  });
+});
+
+document.addEventListener("click", function () {
+  close();
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") close();
+});
+</script>
+</body></html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-prompt-token-counter/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt token counter</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-7">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-neutral-900">Token counter</h1>
+        <p class="mt-1 text-sm text-neutral-500">Paste a prompt and see whether it fits.</p>
+      </div>
+      <select id="tokModel" class="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-900">
+        <option value="200000|3" selected>200k context · $3/M</option>
+        <option value="128000|10">128k context · $10/M</option>
+        <option value="32000|0.5">32k context · $0.50/M</option>
+        <option value="8000|0.25">8k context · $0.25/M</option>
+      </select>
+    </div>
+
+    <textarea id="tokInput" rows="9" spellcheck="false" placeholder="Paste or type your prompt here…"
+      class="mt-5 w-full resize-none rounded-xl border border-neutral-200 px-4 py-3 font-mono text-sm leading-relaxed outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10">You are reviewing a pull request that changes how invoices are numbered. Point out anything that would break existing exports, and say plainly if the migration is missing a backfill.</textarea>
+
+    <div class="mt-5 grid grid-cols-2 divide-neutral-200 rounded-xl border border-neutral-200 py-4 text-center sm:grid-cols-4 sm:divide-x">
+      <div class="px-3 py-1"><p id="tokChars" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="mt-0.5 text-[10px] uppercase tracking-widest text-neutral-400">Characters</p></div>
+      <div class="px-3 py-1"><p id="tokWords" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="mt-0.5 text-[10px] uppercase tracking-widest text-neutral-400">Words</p></div>
+      <div class="px-3 py-1"><p id="tokTokens" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="mt-0.5 text-[10px] uppercase tracking-widest text-neutral-400">Tokens ≈</p></div>
+      <div class="px-3 py-1"><p id="tokCost" class="font-mono text-lg font-semibold text-neutral-900">$0.00</p><p class="mt-0.5 text-[10px] uppercase tracking-widest text-neutral-400">Input cost</p></div>
+    </div>
+
+    <div class="mt-5">
+      <div class="flex items-center justify-between text-xs">
+        <span id="tokUsageLabel" class="font-medium text-neutral-900">0 of 200,000 tokens</span>
+        <span id="tokRemaining" class="text-neutral-500">200,000 remaining</span>
+      </div>
+      <div class="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+        <div id="tokBar" class="h-full w-0 rounded-full bg-neutral-900 transition-[width] duration-200"></div>
+      </div>
+    </div>
+
+    <div class="mt-6 space-y-1.5 border-t border-neutral-200 pt-5 text-xs leading-relaxed text-neutral-400">
+      <p>Estimated at roughly four characters per token — accurate enough for planning, not for billing.</p>
+      <p>Whitespace and punctuation count. Code and non-Latin scripts tokenise less efficiently than prose.</p>
+      <p>The reply shares the same window, so leave room for it.</p>
+    </div>
+  </div>
+</section>
+<script>
+var input = document.getElementById("tokInput");
+var model = document.getElementById("tokModel");
+var chars = document.getElementById("tokChars");
+var words = document.getElementById("tokWords");
+var tokens = document.getElementById("tokTokens");
+var cost = document.getElementById("tokCost");
+var bar = document.getElementById("tokBar");
+var usage = document.getElementById("tokUsageLabel");
+var remaining = document.getElementById("tokRemaining");
+var timer;
+
+function fmt(n) {
+  return n.toLocaleString("en-US");
+}
+
+function update() {
+  var text = input.value;
+  var parts = model.value.split("|");
+  var window = Number(parts[0]);
+  var perMillion = Number(parts[1]);
+
+  var charCount = text.length;
+  var wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  // Four characters per token is the rule of thumb; good enough to plan against.
+  var tokenCount = Math.ceil(charCount / 4);
+  var ratio = Math.min(tokenCount / window, 1);
+
+  chars.textContent = fmt(charCount);
+  words.textContent = fmt(wordCount);
+  tokens.textContent = fmt(tokenCount);
+  cost.textContent = "$" + ((tokenCount / 1000000) * perMillion).toFixed(4);
+
+  usage.textContent = fmt(tokenCount) + " of " + fmt(window) + " tokens";
+  remaining.textContent = fmt(Math.max(window - tokenCount, 0)) + " remaining";
+
+  bar.style.width = ratio * 100 + "%";
+  bar.className =
+    "h-full rounded-full transition-[width] duration-200 " +
+    (ratio > 0.9 ? "bg-red-500" : ratio > 0.7 ? "bg-amber-400" : "bg-neutral-900");
+}
+
+input.addEventListener("input", function () {
+  clearTimeout(timer);
+  timer = setTimeout(update, 80);
+});
+
+model.addEventListener("change", update);
+update();
+</script>
+</body></html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-article-with-margin-notes/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article with margin notes</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<article class="mx-auto max-w-6xl px-6 py-16">
+  <div class="grid gap-10 xl:grid-cols-[minmax(0,680px)_260px]">
+    <div>
+      <h1 class="text-4xl font-semibold leading-tight tracking-tight text-neutral-900">The cost of a column</h1>
+      <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
+        <span class="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">MO</span>
+        <span>Mira Osei</span><span class="text-neutral-300">·</span><span>26 June 2026</span><span class="text-neutral-300">·</span><span>9 min read</span>
+      </div>
+
+      <p class="mt-8 text-lg leading-relaxed text-neutral-600">
+        Adding a column is the cheapest thing you can do in a schema migration and the most expensive thing you can do to a system. The statement takes milliseconds. Everything after it takes months.<sup class="ml-0.5 font-mono text-xs text-neutral-400">1</sup>
+      </p>
+
+      <p class="mt-5 leading-relaxed text-neutral-600">
+        Start with storage. A nullable timestamp on a table of four hundred million rows costs roughly three gigabytes once you account for alignment padding, and another three in every replica. That is not the expensive part.
+      </p>
+
+      <p class="mt-5 leading-relaxed text-neutral-600">
+        The expensive part is that the column now exists in seven years of backups, in the analytics mirror nobody remembers configuring, and in the export somebody built for the finance team in 2023.<sup class="ml-0.5 font-mono text-xs text-neutral-400">2</sup> Removing it later requires finding all of them.
+      </p>
+
+      <div class="my-10 border-l-2 border-neutral-900 pl-6 text-2xl font-medium leading-snug tracking-tight text-neutral-900">
+        A column is not a field. It is a promise to keep something working for as long as the table exists.
+      </div>
+
+      <p class="mt-5 leading-relaxed text-neutral-600">
+        None of this is an argument against adding columns. It is an argument for knowing what you are signing, and for writing the removal plan at the same time as the migration.
+      </p>
+
+      <div class="mt-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <span class="shrink-0 text-amber-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg></span>
+        <p class="text-sm leading-relaxed text-amber-900">
+          If your table is over a hundred million rows, do not add a default in the same statement. Postgres has rewritten the whole table for less.
+        </p>
+      </div>
+
+      <div class="mt-12 border-t border-neutral-200 pt-6">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Footnotes</p>
+        <ol class="mt-4 space-y-3 text-sm text-neutral-500">
+          <li class="flex gap-3"><span class="font-mono text-xs text-neutral-400">1</span><span>Measured across eleven migrations at three companies between 2021 and 2025. The median time from "add column" to "column fully removed" was 19 months. <a href="#" class="underline underline-offset-2 hover:text-neutral-900">↩</a></span></li>
+          <li class="flex gap-3"><span class="font-mono text-xs text-neutral-400">2</span><span>Finance exports are the single most common reason a deprecated column cannot be dropped. Ask before you assume nobody reads it. <a href="#" class="underline underline-offset-2 hover:text-neutral-900">↩</a></span></li>
+          <li class="flex gap-3"><span class="font-mono text-xs text-neutral-400">3</span><span>The alignment maths differs by engine; the shape of the argument does not. <a href="#" class="underline underline-offset-2 hover:text-neutral-900">↩</a></span></li>
+        </ol>
+      </div>
+    </div>
+
+    <aside class="space-y-8 xl:pt-32">
+      <div class="rounded-xl border border-neutral-200 p-4 xl:border-0 xl:p-0">
+        <p class="flex gap-2 text-xs leading-relaxed text-neutral-500">
+          <span class="font-mono text-neutral-400">1</span>
+          <span>Nineteen months is the median lifetime of a column that everyone agreed was temporary.</span>
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-neutral-200 p-4 xl:border-0 xl:p-0">
+        <p class="flex gap-2 text-xs leading-relaxed text-neutral-500">
+          <span class="font-mono text-neutral-400">2</span>
+          <span>We keep a register of every downstream consumer per table. It is tedious and it has saved us twice. <a href="#" class="underline underline-offset-2 hover:text-neutral-700">The template is public</a>.</span>
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-neutral-200 p-4 xl:border-0 xl:p-0">
+        <p class="flex gap-2 text-xs leading-relaxed text-neutral-500">
+          <span class="font-mono text-neutral-400">3</span>
+          <span>Alignment padding means a one-byte boolean rarely costs one byte.</span>
+        </p>
+      </div>
+    </aside>
+  </div>
+</article>
+</body></html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-glossary-index-a-to-z/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary index A to Z</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-14">
+  <h1 class="text-3xl font-semibold tracking-tight text-neutral-900">Glossary</h1>
+  <p class="mt-2 text-neutral-500"><span id="glossCount">9</span> terms, written for people who did not build the thing.</p>
+
+  <div class="relative mt-6">
+    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+    <input id="glossSearch" type="search" placeholder="Search terms and definitions…"
+      class="w-full rounded-xl border border-neutral-200 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+  </div>
+
+  <div id="glossRail" class="mt-5 flex flex-wrap gap-1">
+    <button data-letter="A" class="rail h-8 w-8 rounded-lg text-xs font-medium text-neutral-700 transition hover:bg-neutral-100">A</button>
+    <button data-letter="B" class="rail h-8 w-8 rounded-lg text-xs font-medium text-neutral-700 transition hover:bg-neutral-100">B</button>
+    <button data-letter="C" class="rail h-8 w-8 rounded-lg text-xs font-medium text-neutral-700 transition hover:bg-neutral-100">C</button>
+    <button data-letter="D" class="rail h-8 w-8 rounded-lg text-xs font-medium text-neutral-700 transition hover:bg-neutral-100">D</button>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">E</span>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">F</span>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">G</span>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">H</span>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">I</span>
+    <span class="grid h-8 w-8 place-items-center rounded-lg text-xs text-neutral-300">J–Z</span>
+  </div>
+
+  <div class="mt-10 space-y-10">
+    <div class="gloss-group" id="letter-A">
+      <div class="flex items-center gap-4">
+        <h2 class="text-2xl font-semibold text-neutral-900">A</h2>
+        <span class="h-px flex-1 bg-neutral-200"></span>
+      </div>
+      <div class="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+        <div class="gloss-item p-5">
+          <p class="flex flex-wrap items-baseline gap-2 text-sm font-medium text-neutral-900">Aggregation <span class="text-xs font-normal text-neutral-400">also called roll-up</span></p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Combining many rows into one figure — a sum, a count, an average. Every chart you see is an aggregation of something.</p>
+          <p class="mt-2.5 text-xs text-neutral-400">See also <a href="#" class="underline underline-offset-2 hover:text-neutral-700">cardinality</a>, <a href="#" class="underline underline-offset-2 hover:text-neutral-700">dimension</a></p>
+        </div>
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Audit log</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">An append-only record of who did what and when. Nothing in it can be edited, including by us.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="gloss-group" id="letter-B">
+      <div class="flex items-center gap-4">
+        <h2 class="text-2xl font-semibold text-neutral-900">B</h2>
+        <span class="h-px flex-1 bg-neutral-200"></span>
+      </div>
+      <div class="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Backfill</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Loading historical data into a new column or table after the fact, usually slowly and usually at night.</p>
+          <p class="mt-2.5 text-xs text-neutral-400">See also <a href="#" class="underline underline-offset-2 hover:text-neutral-700">incremental sync</a></p>
+        </div>
+        <div class="gloss-item p-5">
+          <p class="flex flex-wrap items-baseline gap-2 text-sm font-medium text-neutral-900">Burst capacity <span class="text-xs font-normal text-neutral-400">also called headroom</span></p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Short-lived allowance above your plan limit, so a launch day does not start returning errors.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="gloss-group" id="letter-C">
+      <div class="flex items-center gap-4">
+        <h2 class="text-2xl font-semibold text-neutral-900">C</h2>
+        <span class="h-px flex-1 bg-neutral-200"></span>
+      </div>
+      <div class="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Cardinality</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">How many distinct values a column holds. High cardinality makes charts unreadable and queries expensive.</p>
+        </div>
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Cursor</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">The marker a sync stores so the next run knows where it stopped. Usually an indexed timestamp.</p>
+        </div>
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Cache key</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">The fingerprint that decides whether two queries count as identical. Ours includes your access rules, so nobody sees a neighbour cached result.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="gloss-group" id="letter-D">
+      <div class="flex items-center gap-4">
+        <h2 class="text-2xl font-semibold text-neutral-900">D</h2>
+        <span class="h-px flex-1 bg-neutral-200"></span>
+      </div>
+      <div class="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Dimension</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">A column you group by rather than measure — region, plan, channel. Metrics are the numbers; dimensions are the slices.</p>
+        </div>
+        <div class="gloss-item p-5">
+          <p class="text-sm font-medium text-neutral-900">Deprovisioning</p>
+          <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Removing someone access automatically when your identity provider says they have left.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p id="glossEmpty" class="mt-10 hidden text-center text-sm text-neutral-500">No term matches that. Ask support and we will add it.</p>
+</section>
+<script>
+var search = document.getElementById("glossSearch");
+var items = Array.prototype.slice.call(document.querySelectorAll(".gloss-item"));
+var groups = Array.prototype.slice.call(document.querySelectorAll(".gloss-group"));
+var count = document.getElementById("glossCount");
+var empty = document.getElementById("glossEmpty");
+
+function apply() {
+  var q = search.value.trim().toLowerCase();
+  var shown = 0;
+
+  items.forEach(function (item) {
+    var visible = !q || item.textContent.toLowerCase().indexOf(q) !== -1;
+    item.classList.toggle("hidden", !visible);
+    if (visible) shown += 1;
+  });
+
+  // A letter heading with nothing under it is just noise.
+  groups.forEach(function (group) {
+    var any = Array.prototype.slice.call(group.querySelectorAll(".gloss-item")).some(function (item) {
+      return !item.classList.contains("hidden");
+    });
+    group.classList.toggle("hidden", !any);
+  });
+
+  count.textContent = shown;
+  empty.classList.toggle("hidden", shown !== 0);
+}
+
+search.addEventListener("input", apply);
+
+Array.prototype.slice.call(document.querySelectorAll(".rail")).forEach(function (button) {
+  button.addEventListener("click", function () {
+    var target = document.getElementById("letter-" + button.dataset.letter);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
+apply();
+</script>
+</body></html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/features/features-api-block-with-language-tabs/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API block with language tabs</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-20">
+  <div class="grid items-center gap-12 lg:grid-cols-2">
+    <div>
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">API first</p>
+      <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Wire it up before lunch</h2>
+      <p class="mt-4 leading-relaxed text-neutral-500">One endpoint, predictable errors and SDKs generated from the same spec the docs are built from.</p>
+
+      <div class="mt-8 space-y-4">
+        <div class="flex gap-3.5">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">Typed SDKs for six languages</p>
+            <p class="text-sm text-neutral-500">Generated on every release, versioned alongside the API.</p>
+          </div>
+        </div>
+        <div class="flex gap-3.5">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">Idempotent writes</p>
+            <p class="text-sm text-neutral-500">Retry safely with a key — duplicates collapse into one record.</p>
+          </div>
+        </div>
+        <div class="flex gap-3.5">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+          <div>
+            <p class="text-sm font-medium text-neutral-900">Webhook replay</p>
+            <p class="text-sm text-neutral-500">Re-deliver anything from the last 30 days from the dashboard.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex gap-5 text-sm font-medium">
+        <a href="#" class="text-neutral-900 underline underline-offset-4">API reference <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+        <a href="#" class="text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">Changelog</a>
+      </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl bg-neutral-900 shadow-xl">
+      <div class="flex items-center justify-between border-b border-neutral-800 px-3 py-2.5">
+        <div id="apiTabs" class="flex gap-1">
+          <button data-lang="curl" class="api-tab rounded-lg bg-neutral-800 px-3 py-1.5 font-mono text-xs text-white">cURL</button>
+          <button data-lang="ts" class="api-tab rounded-lg px-3 py-1.5 font-mono text-xs text-neutral-400 transition hover:text-neutral-200">TypeScript</button>
+          <button data-lang="py" class="api-tab rounded-lg px-3 py-1.5 font-mono text-xs text-neutral-400 transition hover:text-neutral-200">Python</button>
+        </div>
+        <button id="apiCopy" class="rounded-lg border border-neutral-700 px-2.5 py-1 text-[11px] font-medium text-neutral-300 transition hover:bg-neutral-800">Copy</button>
+      </div>
+
+      <pre id="apiCode" class="overflow-x-auto p-5 font-mono text-[12.5px] leading-relaxed text-neutral-300"><code>Loading snippet…</code></pre>
+
+      <div class="flex items-center gap-2 border-t border-neutral-800 px-5 py-3 font-mono text-xs text-neutral-500">
+        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> 200 OK · 18ms · allow
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var SNIPPETS = {
+  curl:
+    'curl https://api.northwind.dev/v1/decisions \\\n' +
+    '  -H "Authorization: Bearer $NW_KEY" \\\n' +
+    '  -H "Idempotency-Key: a41f-9c02" \\\n' +
+    '  -d actor="user_8812" \\\n' +
+    '  -d resource="invoice:4471"',
+  ts:
+    'import { Northwind } from "@northwind/sdk";\n\n' +
+    'const nw = new Northwind(process.env.NW_KEY);\n\n' +
+    'const decision = await nw.decisions.create({\n' +
+    '  actor: "user_8812",\n' +
+    '  resource: "invoice:4471",\n' +
+    '}, { idempotencyKey: "a41f-9c02" });',
+  py:
+    'from northwind import Northwind\n\n' +
+    'nw = Northwind(api_key=os.environ["NW_KEY"])\n\n' +
+    'decision = nw.decisions.create(\n' +
+    '    actor="user_8812",\n' +
+    '    resource="invoice:4471",\n' +
+    '    idempotency_key="a41f-9c02",\n' +
+    ')',
+};
+
+var tabs = Array.prototype.slice.call(document.querySelectorAll(".api-tab"));
+var code = document.getElementById("apiCode").querySelector("code");
+var copy = document.getElementById("apiCopy");
+var current = "curl";
+
+function show(lang) {
+  current = lang;
+  code.textContent = SNIPPETS[lang];
+  tabs.forEach(function (t) {
+    var on = t.dataset.lang === lang;
+    t.classList.toggle("bg-neutral-800", on);
+    t.classList.toggle("text-white", on);
+    t.classList.toggle("text-neutral-400", !on);
+  });
+}
+
+tabs.forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    show(tab.dataset.lang);
+  });
+});
+
+copy.addEventListener("click", function () {
+  navigator.clipboard.writeText(SNIPPETS[current]).then(function () {
+    copy.textContent = "Copied";
+    copy.classList.add("text-green-400");
+    setTimeout(function () {
+      copy.textContent = "Copy";
+      copy.classList.remove("text-green-400");
+    }, 1500);
+  });
+});
+
+show("curl");
+</script>
+</body></html>

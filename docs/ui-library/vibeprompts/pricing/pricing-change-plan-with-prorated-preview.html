@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/pricing/pricing-change-plan-with-prorated-preview/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change plan with prorated preview</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-16">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm">
+    <h2 class="text-lg font-semibold text-neutral-900">Change plan</h2>
+    <p class="mt-1 text-sm text-neutral-500">You are on <span class="font-medium text-neutral-700">Starter</span>. Your billing period renews on 14 March, 18 days from now.</p>
+
+    <div id="planList" class="mt-6 space-y-2.5">
+      <button data-plan="starter" data-price="19" class="plan-row flex w-full items-center gap-4 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="dot grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-neutral-300"><span class="h-2 w-2 rounded-full bg-neutral-900 opacity-0"></span></span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span class="text-sm font-medium text-neutral-900">Starter</span>
+            <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600">Current</span>
+          </span>
+          <span class="block text-xs text-neutral-500">One workspace, 3 seats, community support.</span>
+        </span>
+        <span class="text-sm font-medium text-neutral-900">$19<span class="text-xs font-normal text-neutral-400">/mo</span></span>
+      </button>
+
+      <button data-plan="team" data-price="59" class="plan-row flex w-full items-center gap-4 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="dot grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-neutral-300"><span class="h-2 w-2 rounded-full bg-neutral-900 opacity-0"></span></span>
+        <span class="min-w-0 flex-1">
+          <span class="text-sm font-medium text-neutral-900">Team</span>
+          <span class="block text-xs text-neutral-500">Unlimited workspaces, 25 seats, audit log.</span>
+        </span>
+        <span class="text-sm font-medium text-neutral-900">$59<span class="text-xs font-normal text-neutral-400">/mo</span></span>
+      </button>
+
+      <button data-plan="scale" data-price="149" class="plan-row flex w-full items-center gap-4 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="dot grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-neutral-300"><span class="h-2 w-2 rounded-full bg-neutral-900 opacity-0"></span></span>
+        <span class="min-w-0 flex-1">
+          <span class="text-sm font-medium text-neutral-900">Scale</span>
+          <span class="block text-xs text-neutral-500">SSO, data residency, 99.9% uptime SLA.</span>
+        </span>
+        <span class="text-sm font-medium text-neutral-900">$149<span class="text-xs font-normal text-neutral-400">/mo</span></span>
+      </button>
+    </div>
+
+    <div class="mt-6 rounded-xl bg-neutral-50 p-5">
+      <p class="text-sm font-medium text-neutral-900">Due today</p>
+      <dl class="mt-3 space-y-2 text-sm">
+        <div class="flex items-center justify-between">
+          <dt class="text-neutral-600" id="prorateLabel">Team, 18 days remaining</dt>
+          <dd class="font-mono text-neutral-900" id="prorateCharge">$35.40</dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt class="text-neutral-600">Unused time on Starter</dt>
+          <dd class="font-mono text-green-700" id="prorateCredit">−$11.40</dd>
+        </div>
+        <div class="flex items-center justify-between border-t border-neutral-200 pt-2 text-base font-semibold text-neutral-900">
+          <dt>Total</dt>
+          <dd class="font-mono" id="prorateTotal">$24.00</dd>
+        </div>
+      </dl>
+      <p class="mt-3 text-xs text-neutral-500" id="prorateNext">Then $59.00 on 14 March, and monthly after that.</p>
+    </div>
+
+    <div class="mt-6 flex justify-end gap-3">
+      <button class="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Cancel</button>
+      <button class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Confirm upgrade</button>
+    </div>
+  </div>
+</section>
+<script>
+var DAYS_LEFT = 18;
+var CYCLE = 30;
+var CURRENT = 19;
+
+var rows = Array.prototype.slice.call(document.querySelectorAll(".plan-row"));
+var label = document.getElementById("prorateLabel");
+var charge = document.getElementById("prorateCharge");
+var credit = document.getElementById("prorateCredit");
+var total = document.getElementById("prorateTotal");
+var next = document.getElementById("prorateNext");
+
+function money(n) {
+  return "$" + n.toFixed(2);
+}
+
+function select(row) {
+  rows.forEach(function (r) {
+    var on = r === row;
+    r.classList.toggle("border-neutral-900", on);
+    r.classList.toggle("ring-1", on);
+    r.classList.toggle("ring-neutral-900", on);
+    r.querySelector(".dot").classList.toggle("border-neutral-900", on);
+    r.querySelector(".dot span").classList.toggle("opacity-0", !on);
+  });
+
+  var price = Number(row.dataset.price);
+  var share = DAYS_LEFT / CYCLE;
+  var newCharge = price * share;
+  var unused = CURRENT * share;
+
+  label.textContent = row.querySelector("span span").textContent.trim() + ", " + DAYS_LEFT + " days remaining";
+  charge.textContent = money(newCharge);
+  credit.textContent = "−" + money(unused);
+  // Downgrades leave a credit rather than a charge; never show a negative total.
+  total.textContent = money(Math.max(newCharge - unused, 0));
+  next.textContent = "Then " + money(price) + " on 14 March, and monthly after that.";
+}
+
+rows.forEach(function (row) {
+  row.addEventListener("click", function () {
+    select(row);
+  });
+});
+
+select(rows[1]);
+</script>
+</body></html>

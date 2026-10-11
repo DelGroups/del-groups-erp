@@ -1,0 +1,93 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-collapsible-sidebar-nav/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collapsible sidebar nav</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<aside id="rail" class="flex h-screen w-[260px] shrink-0 flex-col border-r border-neutral-200 bg-white transition-all duration-200">
+  <div class="flex items-center gap-3 px-4 py-4">
+    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-sm text-white">A</div>
+    <span data-label class="flex-1 truncate text-sm font-semibold text-neutral-900">Acme Studio</span>
+    <button id="collapse" aria-label="Collapse sidebar" class="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m11 7-5 5 5 5m7-10-5 5 5 5"/></svg></button>
+  </div>
+
+  <div class="px-3 pb-2" data-label>
+    <input placeholder="Search…" class="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm outline-none focus:border-neutral-900 focus:bg-white" />
+  </div>
+
+  <nav id="nav" class="flex-1 overflow-y-auto px-3 py-2">
+    <button data-group="workspace" aria-expanded="true" class="flex w-full items-center justify-between px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-widest text-neutral-400" data-label>
+      Workspace <span data-caret class="transition"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+    </button>
+    <ul id="workspace" class="space-y-0.5">
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-neutral-900 bg-neutral-100 px-2.5 py-2 text-sm font-medium text-neutral-900"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9Z"/></svg></span><span data-label class="flex-1 truncate">Projects</span></a></li>
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 5c2.4-2.4 5.2-2.1 5.2-2.1s.3 2.8-2.1 5.2l-5.6 5.6-4.2-4.2L14 5Z"/><path d="m9 8-4.5.5L3 10l4 1m5 4 1 4 1.5-1.5.5-4.5M7 17c-1 1-3 1-3 1s0-2 1-3"/></svg></span><span data-label class="flex-1 truncate">Deployments</span><span data-label class="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-500">3</span></a></li>
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="4" y="3" width="16" height="7" rx="2"/><rect x="4" y="14" width="16" height="7" rx="2"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h5M12 17.5h5"/></svg></span><span data-label class="flex-1 truncate">Environments</span></a></li>
+    </ul>
+
+    <button data-group="insights" aria-expanded="true" class="flex w-full items-center justify-between px-2 pb-1 pt-5 text-[11px] font-medium uppercase tracking-widest text-neutral-400" data-label>
+      Insights <span data-caret class="transition"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+    </button>
+    <ul id="insights" class="space-y-0.5">
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/></svg></span><span data-label class="flex-1 truncate">Analytics</span></a></li>
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 12h4l2.5-7 5 14 2.5-7h4"/></svg></span><span data-label class="flex-1 truncate">Logs</span><span data-label class="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700">12</span></a></li>
+      <li><a href="#" data-nav class="flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50"><span class="w-4 shrink-0 text-center font-mono"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg></span><span data-label class="flex-1 truncate">Usage</span></a></li>
+    </ul>
+  </nav>
+
+  <div class="flex items-center gap-3 border-t border-neutral-100 px-4 py-3">
+    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">SM</div>
+    <div data-label class="min-w-0 flex-1">
+      <p class="truncate text-sm font-medium text-neutral-900">Sam Mercer</p>
+      <p class="truncate text-xs text-neutral-400">Team plan</p>
+    </div>
+  </div>
+</aside>
+<script>
+var STORAGE_KEY = "sidebar-collapsed";
+
+var rail = document.getElementById("rail");
+var collapse = document.getElementById("collapse");
+var labels = [].slice.call(document.querySelectorAll("[data-label]"));
+var groups = [].slice.call(document.querySelectorAll("[data-group]"));
+var links = [].slice.call(document.querySelectorAll("[data-nav]"));
+
+var ACTIVE = "flex items-center gap-3 rounded-lg border-l-2 border-neutral-900 bg-neutral-100 px-2.5 py-2 text-sm font-medium text-neutral-900";
+var IDLE = "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50";
+
+function setCollapsed(on) {
+  rail.classList.toggle("w-[260px]", !on);
+  rail.classList.toggle("w-[72px]", on);
+  labels.forEach(function (el) { el.classList.toggle("hidden", on); });
+  links.forEach(function (link) { link.classList.toggle("justify-center", on); });
+  collapse.querySelector("svg").classList.toggle("rotate-180", on);
+  collapse.setAttribute("aria-label", on ? "Expand sidebar" : "Collapse sidebar");
+  try { localStorage.setItem(STORAGE_KEY, on ? "1" : "0"); } catch (e) {}
+}
+
+collapse.addEventListener("click", function () {
+  setCollapsed(!rail.classList.contains("w-[72px]"));
+});
+
+groups.forEach(function (header) {
+  header.addEventListener("click", function () {
+    var list = document.getElementById(header.getAttribute("data-group"));
+    var open = header.getAttribute("aria-expanded") === "true";
+    header.setAttribute("aria-expanded", String(!open));
+    list.classList.toggle("hidden", open);
+    header.querySelector("[data-caret]").classList.toggle("-rotate-90", open);
+  });
+});
+
+links.forEach(function (link) {
+  link.addEventListener("click", function (e) {
+    e.preventDefault();
+    links.forEach(function (other) { other.className = IDLE; });
+    link.className = ACTIVE;
+    // Re-apply the collapsed layout, since the class swap above wiped it.
+    if (rail.classList.contains("w-[72px]")) links.forEach(function (l) { l.classList.add("justify-center"); });
+  });
+});
+
+try { if (localStorage.getItem(STORAGE_KEY) === "1") setCollapsed(true); } catch (e) {}
+</script>
+</body></html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/stats/stats-sustainability-impact-panel/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sustainability impact panel</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-green-50/40 px-6 py-16">
+  <div class="mx-auto max-w-5xl">
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Impact</p>
+    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Our footprint, measured and checked</h2>
+    <p class="mt-3 max-w-2xl leading-relaxed text-neutral-500">
+      Reported under the GHG Protocol for the 2025 calendar year, verified by Carbon Trust in March. Where an estimate was unavoidable we say so in the methodology.
+    </p>
+
+    <div class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-neutral-200 bg-white p-5">
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.47 3.45 5.47 3.45 9S14.3 18.53 12 21c-2.3-2.47-3.45-5.47-3.45-9S9.7 5.47 12 3Z"/></svg></span>
+        <p class="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">412<span class="ml-1 text-base font-normal text-neutral-400">tCO₂e</span></p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Total emissions</p>
+        <p class="mt-1.5 text-xs leading-relaxed text-neutral-500">Down 18% on 2024, despite headcount rising by a third.</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-5">
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></span>
+        <p class="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">94<span class="ml-1 text-base font-normal text-neutral-400">%</span></p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Renewable electricity</p>
+        <p class="mt-1.5 text-xs leading-relaxed text-neutral-500">Two regions still run on grid mix; both migrate in 2026.</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-5">
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></span>
+        <p class="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">1.9<span class="ml-1 text-base font-normal text-neutral-400">t</span></p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Hardware diverted</p>
+        <p class="mt-1.5 text-xs leading-relaxed text-neutral-500">Refurbished and rehomed rather than recycled or landfilled.</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-5">
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-green-100 text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 5c2.4-2.4 5.2-2.1 5.2-2.1s.3 2.8-2.1 5.2l-5.6 5.6-4.2-4.2L14 5Z"/><path d="m9 8-4.5.5L3 10l4 1m5 4 1 4 1.5-1.5.5-4.5M7 17c-1 1-3 1-3 1s0-2 1-3"/></svg></span>
+        <p class="mt-4 text-3xl font-semibold tracking-tight text-neutral-900">61<span class="ml-1 text-base font-normal text-neutral-400">t</span></p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Travel emissions</p>
+        <p class="mt-1.5 text-xs leading-relaxed text-neutral-500">Roughly 90 return short-haul flights, mostly to two conferences.</p>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 rounded-2xl border border-neutral-200 bg-white p-7 lg:grid-cols-2">
+      <div>
+        <p class="text-sm font-semibold text-neutral-900">Where the 412 tonnes sit</p>
+        <div class="mt-4 flex h-4 overflow-hidden rounded-full">
+          <div class="bg-neutral-900" style="width:12%"></div>
+          <div class="bg-neutral-400" style="width:23%"></div>
+          <div class="bg-green-500" style="width:65%"></div>
+        </div>
+        <div class="mt-4 space-y-2 text-sm">
+          <p class="flex items-center gap-2 text-neutral-600"><span class="h-2.5 w-2.5 rounded-sm bg-neutral-900"></span> Scope 1 · offices and vehicles <span class="ml-auto font-mono text-xs text-neutral-400">12%</span></p>
+          <p class="flex items-center gap-2 text-neutral-600"><span class="h-2.5 w-2.5 rounded-sm bg-neutral-400"></span> Scope 2 · purchased electricity <span class="ml-auto font-mono text-xs text-neutral-400">23%</span></p>
+          <p class="flex items-center gap-2 text-neutral-600"><span class="h-2.5 w-2.5 rounded-sm bg-green-500"></span> Scope 3 · cloud, travel, suppliers <span class="ml-auto font-mono text-xs text-neutral-400">65%</span></p>
+        </div>
+      </div>
+
+      <div class="lg:border-l lg:border-neutral-200 lg:pl-7">
+        <p class="text-sm font-semibold text-neutral-900">Progress against targets</p>
+        <div class="mt-4 space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-xs"><span class="text-neutral-600">50% cut in scope 1 and 2</span><span class="font-mono text-neutral-400">2028</span></div>
+            <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-neutral-100"><div class="h-full w-[64%] rounded-full bg-green-500"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs"><span class="text-neutral-600">100% renewable electricity</span><span class="font-mono text-neutral-400">2026</span></div>
+            <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-neutral-100"><div class="h-full w-[94%] rounded-full bg-green-500"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs"><span class="text-neutral-600">Supplier reporting coverage</span><span class="font-mono text-neutral-400">2027</span></div>
+            <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-neutral-100"><div class="h-full w-[38%] rounded-full bg-amber-400"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 flex flex-wrap gap-5 text-sm font-medium">
+      <a href="#" class="text-neutral-900 underline-offset-4 hover:underline">Full report (PDF) <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+      <a href="#" class="text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">Methodology</a>
+      <a href="#" class="text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">Verification statement</a>
+    </div>
+  </div>
+</section>
+</body></html>

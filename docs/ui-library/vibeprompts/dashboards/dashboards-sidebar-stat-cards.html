@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-sidebar-stat-cards/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar + stat cards</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen bg-neutral-50">
+  <aside class="hidden w-60 flex-col border-r border-neutral-200 bg-white p-4 lg:flex">
+    <div class="mb-6 flex items-center gap-2 px-2 font-semibold text-neutral-900"><span class="h-6 w-6 rounded-md bg-neutral-900"></span> Console</div>
+    <nav class="space-y-1 text-sm">
+      <a href="#" class="flex items-center gap-2 rounded-lg bg-neutral-900 px-3 py-2 font-medium text-white">Overview</a>
+      <a href="#" class="flex items-center gap-2 rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100">Analytics</a>
+      <a href="#" class="flex items-center gap-2 rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100">Customers</a>
+      <a href="#" class="flex items-center gap-2 rounded-lg px-3 py-2 text-neutral-600 hover:bg-neutral-100">Settings</a>
+    </nav>
+    <div class="mt-auto flex items-center gap-2 rounded-lg p-2 text-sm">
+      <span class="h-8 w-8 rounded-full bg-neutral-200"></span>
+      <span><span class="block font-medium text-neutral-900">Sam Lee</span><span class="block text-xs text-neutral-500">Admin</span></span>
+    </div>
+  </aside>
+  <main class="flex-1 p-6">
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-xl font-semibold text-neutral-900">Overview</h1>
+      <button class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">New report</button>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5"><p class="text-sm text-neutral-500">Revenue</p><p class="mt-2 text-2xl font-semibold text-neutral-900">$48.2k</p><p class="mt-1 text-xs text-green-600">↑ 12% vs last month</p></div>
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5"><p class="text-sm text-neutral-500">Users</p><p class="mt-2 text-2xl font-semibold text-neutral-900">8,940</p><p class="mt-1 text-xs text-green-600">↑ 4.1%</p></div>
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5"><p class="text-sm text-neutral-500">Churn</p><p class="mt-2 text-2xl font-semibold text-neutral-900">1.8%</p><p class="mt-1 text-xs text-red-600">↑ 0.3%</p></div>
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5"><p class="text-sm text-neutral-500">MRR</p><p class="mt-2 text-2xl font-semibold text-neutral-900">$12.4k</p><p class="mt-1 text-xs text-green-600">↑ 7%</p></div>
+    </div>
+  </main>
+</div>
+</body></html>

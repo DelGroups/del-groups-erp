@@ -1,0 +1,83 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/footer/footer-footer-with-status-and-region/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footer with status and region</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<footer class="border-t border-neutral-200 bg-white">
+  <div class="mx-auto max-w-6xl px-6 py-14">
+    <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <p class="text-lg font-semibold tracking-tight text-neutral-900">Meridian</p>
+        <p class="mt-3 max-w-xs text-sm leading-relaxed text-neutral-500">Infrastructure for teams that would rather ship features than maintain pipelines.</p>
+        <a href="#" class="mt-5 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+          </span>
+          All systems operational
+        </a>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Product</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-neutral-500">
+          <li><a href="#" class="transition hover:text-neutral-900">Platform</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Integrations</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Pricing</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Changelog</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Company</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-neutral-500">
+          <li><a href="#" class="transition hover:text-neutral-900">About</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Careers</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Journal</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Press kit</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Legal</p>
+        <ul class="mt-4 space-y-2.5 text-sm text-neutral-500">
+          <li><a href="#" class="transition hover:text-neutral-900">Terms</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Privacy</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Sub-processors</a></li>
+          <li><a href="#" class="transition hover:text-neutral-900">Data processing</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-12 flex flex-col gap-5 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-xs text-neutral-400">
+        © 2026 Meridian Systems BV · <a href="#" class="underline underline-offset-4 hover:text-neutral-700">Sitemap</a>
+      </p>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs text-neutral-600">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.47 3.45 5.47 3.45 9S14.3 18.53 12 21c-2.3-2.47-3.45-5.47-3.45-9S9.7 5.47 12 3Z"/></svg>
+          <select class="bg-transparent outline-none">
+            <option>English</option>
+            <option>Nederlands</option>
+            <option>Deutsch</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs text-neutral-600">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <select class="bg-transparent outline-none">
+            <option>EU (Frankfurt)</option>
+            <option>US (Oregon)</option>
+            <option>AU (Sydney)</option>
+          </select>
+        </label>
+        <span class="mx-1 hidden h-5 w-px bg-neutral-200 sm:block"></span>
+        <a href="#" class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C6.2 2.2 5.1 2.5 5.1 2.5c-.7 1.7-.2 3.1-.1 3.4a5 5 0 0 0-1.3 3.4c0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1-.5 2V21"/><path d="M9 18c-2.7.8-2.7-1.3-3.8-1.6"/></svg></a>
+        <a href="#" class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M5 4l14 16M19 4 5 20"/></svg></a>
+        <a href="#" class="grid h-8 w-8 place-items-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 9v11M7 5v.01M11 20v-6.5a4.5 4.5 0 0 1 9 0V20M11 9v11"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+</body></html>

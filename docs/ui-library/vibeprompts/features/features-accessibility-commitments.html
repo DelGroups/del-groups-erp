@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/features/features-accessibility-commitments/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility commitments</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-16">
+  <div class="max-w-2xl">
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Accessibility</p>
+    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Usable without a mouse, without colour, without hurry</h2>
+    <p class="mt-3 leading-relaxed text-neutral-500">
+      We target WCAG 2.2 level AA across the product and publish where we fall short. Three known issues are open right now, all in the chart editor.
+    </p>
+  </div>
+
+  <div class="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
+    <div class="grid gap-6 sm:grid-cols-2">
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Every action has a keyboard path</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Including drag-and-drop, which has an explicit move dialog behind the same shortcut.</p>
+      </div>
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 12h4l2.5-7 5 14 2.5-7h4"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Named, announced, in order</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Landmarks, live regions for async updates, and no icon-only control without a label.</p>
+      </div>
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Contrast checked in CI</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">4.5:1 for text and 3:1 for interface elements, enforced on every pull request.</p>
+      </div>
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Motion is optional</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Reduced-motion preferences remove transitions and auto-advancing carousels entirely.</p>
+      </div>
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Captions and transcripts</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Every tutorial video ships with human-checked captions and a full transcript.</p>
+      </div>
+      <div>
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+        <p class="mt-3 text-sm font-semibold text-neutral-900">Text scales to 200%</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Layouts reflow rather than clip, and nothing depends on a fixed pixel height.</p>
+      </div>
+    </div>
+
+    <aside class="rounded-2xl border border-neutral-200 bg-white p-6">
+      <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Conformance report</p>
+      <span class="mt-3 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">WCAG 2.2 AA</span>
+
+      <dl class="mt-5 space-y-3 border-t border-neutral-100 pt-4 text-sm">
+        <div class="flex items-center justify-between"><dt class="text-neutral-500">Last audit</dt><dd class="font-medium text-neutral-900">May 2026</dd></div>
+        <div class="flex items-center justify-between"><dt class="text-neutral-500">Audited by</dt><dd class="font-medium text-neutral-900">Tetralogical</dd></div>
+        <div class="flex items-center justify-between"><dt class="text-neutral-500">Known issues</dt><dd class="font-medium text-neutral-900">3 open</dd></div>
+      </dl>
+
+      <a href="#" class="mt-5 block rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Download the VPAT</a>
+      <a href="#" class="mt-2 block text-center text-xs text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">See the open issues</a>
+    </aside>
+  </div>
+
+  <div class="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 px-7 py-6">
+    <div>
+      <p class="text-sm font-semibold text-neutral-900">Hit a barrier? Tell us and we will fix it.</p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">
+        Write to <a href="#" class="font-medium text-neutral-900 underline underline-offset-4"><a class="__cf_email__" data-cfemail="1e7f7d7d7b6d6d5e70716c6a766977707a307a7b68" href="/cdn-cgi/l/email-protection">[email protected]</a></a> — we acknowledge within two working days and give a target date within five.
+      </p>
+    </div>
+    <p class="text-xs text-neutral-400">Tested with NVDA, JAWS, VoiceOver, TalkBack and Dragon.</p>
+  </div>
+</section>
+</body></html>

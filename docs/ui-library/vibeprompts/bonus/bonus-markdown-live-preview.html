@@ -1,0 +1,160 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-markdown-live-preview/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown live preview</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-12">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-5 py-3">
+      <p class="text-sm font-medium text-neutral-900">release-notes.md</p>
+      <p id="mdCount" class="font-mono text-xs text-neutral-400">0 words · 0 characters</p>
+      <div class="flex items-center gap-2">
+        <div class="flex rounded-lg border border-neutral-200 p-0.5">
+          <button id="mdSplit" class="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white">Split</button>
+          <button id="mdOnly" class="rounded-md px-3 py-1 text-xs font-medium text-neutral-600">Preview</button>
+        </div>
+        <button id="mdCopy" class="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Copy HTML</button>
+      </div>
+    </div>
+
+    <div id="mdGrid" class="grid md:grid-cols-2">
+      <textarea id="mdInput" spellcheck="false"
+        class="h-[420px] resize-none border-neutral-200 bg-neutral-50 p-6 font-mono text-[13px] leading-relaxed text-neutral-800 outline-none md:border-r"># Release 4.2
+
+Query caching is now **on by default** for every plan, including free.
+
+## What changed
+
+- Dashboards hit a warm cache for identical queries
+- Cache keys include the *row-level* access rules
+- Manual invalidation via `POST /v1/cache/purge`
+
+> Median dashboard load went from 1.4s to 380ms across the fleet.
+
+### Upgrading
+
+No action needed. To opt out per workspace, see [the docs](https://example.com).</textarea>
+
+      <div id="mdPreview" class="h-[420px] overflow-y-auto p-6"></div>
+    </div>
+  </div>
+</section>
+<script>
+var input = document.getElementById("mdInput");
+var preview = document.getElementById("mdPreview");
+var count = document.getElementById("mdCount");
+var grid = document.getElementById("mdGrid");
+var splitBtn = document.getElementById("mdSplit");
+var onlyBtn = document.getElementById("mdOnly");
+var copyBtn = document.getElementById("mdCopy");
+var timer;
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function inline(text) {
+  return text
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] text-neutral-800">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-neutral-900">$1</strong>')
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-neutral-900 underline underline-offset-2">$1</a>');
+}
+
+function render(source) {
+  // Escape before anything else, so pasted markup renders as text.
+  var lines = escapeHtml(source).split("\n");
+  var html = "";
+  var inList = false;
+  var inCode = false;
+
+  lines.forEach(function (line) {
+    if (line.indexOf("```") === 0) {
+      if (inCode) {
+        html += "</pre>";
+        inCode = false;
+      } else {
+        html += '<pre class="my-4 overflow-x-auto rounded-lg bg-neutral-900 p-4 font-mono text-xs text-neutral-200">';
+        inCode = true;
+      }
+      return;
+    }
+
+    if (inCode) {
+      html += line + "\n";
+      return;
+    }
+
+    if (line.indexOf("- ") === 0) {
+      if (!inList) {
+        html += '<ul class="my-3 list-disc space-y-1 pl-5 text-neutral-600">';
+        inList = true;
+      }
+      html += "<li>" + inline(line.slice(2)) + "</li>";
+      return;
+    }
+
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+
+    if (line.indexOf("### ") === 0) html += '<h3 class="mt-5 text-sm font-semibold text-neutral-900">' + inline(line.slice(4)) + "</h3>";
+    else if (line.indexOf("## ") === 0) html += '<h2 class="mt-6 text-lg font-semibold text-neutral-900">' + inline(line.slice(3)) + "</h2>";
+    else if (line.indexOf("# ") === 0) html += '<h1 class="text-2xl font-semibold tracking-tight text-neutral-900">' + inline(line.slice(2)) + "</h1>";
+    else if (line.indexOf("&gt; ") === 0) html += '<blockquote class="my-4 border-l-2 border-neutral-300 pl-4 italic text-neutral-500">' + inline(line.slice(5)) + "</blockquote>";
+    else if (line.trim() === "") html += "";
+    else html += '<p class="my-3 leading-relaxed text-neutral-600">' + inline(line) + "</p>";
+  });
+
+  if (inList) html += "</ul>";
+  if (inCode) html += "</pre>";
+  return html;
+}
+
+function update() {
+  var text = input.value;
+  preview.innerHTML = render(text);
+
+  var words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  count.textContent = words + " words · " + text.length + " characters";
+}
+
+input.addEventListener("input", function () {
+  clearTimeout(timer);
+  timer = setTimeout(update, 120);
+});
+
+splitBtn.addEventListener("click", function () {
+  grid.classList.add("md:grid-cols-2");
+  input.classList.remove("hidden");
+  splitBtn.classList.add("bg-neutral-900", "text-white");
+  splitBtn.classList.remove("text-neutral-600");
+  onlyBtn.classList.remove("bg-neutral-900", "text-white");
+  onlyBtn.classList.add("text-neutral-600");
+});
+
+onlyBtn.addEventListener("click", function () {
+  grid.classList.remove("md:grid-cols-2");
+  input.classList.add("hidden");
+  onlyBtn.classList.add("bg-neutral-900", "text-white");
+  onlyBtn.classList.remove("text-neutral-600");
+  splitBtn.classList.remove("bg-neutral-900", "text-white");
+  splitBtn.classList.add("text-neutral-600");
+});
+
+copyBtn.addEventListener("click", function () {
+  navigator.clipboard.writeText(preview.innerHTML).then(function () {
+    copyBtn.textContent = "Copied";
+    setTimeout(function () {
+      copyBtn.textContent = "Copy HTML";
+    }, 1500);
+  });
+});
+
+update();
+</script>
+</body></html>

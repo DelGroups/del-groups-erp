@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-bug-report-form/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bug report form</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Report a bug</h1>
+    <p class="mt-1.5 text-sm text-neutral-500">One issue per report, please — it keeps the thread readable. Check <a href="#" class="underline underline-offset-4 hover:text-neutral-900">the status page</a> first in case we already know.</p>
+
+    <div class="mt-7">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">Summary</label>
+      <input type="text" placeholder="Export finishes but the CSV is empty"
+        class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+    </div>
+
+    <div class="mt-5">
+      <p class="mb-2 text-xs font-medium text-neutral-700">Severity</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="rounded-xl border border-neutral-200 px-4 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50">Low</button>
+        <button class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800">Medium</button>
+        <button class="rounded-xl border border-neutral-200 px-4 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50">High</button>
+        <button class="rounded-xl border border-neutral-200 px-4 py-2 text-sm text-neutral-600 transition hover:bg-neutral-50">Critical</button>
+      </div>
+    </div>
+
+    <div class="mt-5">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">Steps to reproduce</label>
+      <textarea rows="5" placeholder="1. Open Reports &gt; Monthly revenue&#10;2. Click Export &gt; CSV&#10;3. Open the downloaded file"
+        class="w-full resize-none rounded-xl border border-neutral-200 px-3.5 py-2.5 font-mono text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10"></textarea>
+    </div>
+
+    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Expected</label>
+        <textarea rows="3" placeholder="A file with 4,812 rows"
+          class="w-full resize-none rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900"></textarea>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Actual</label>
+        <textarea rows="3" placeholder="Headers only, 0 rows"
+          class="w-full resize-none rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900"></textarea>
+      </div>
+    </div>
+
+    <div class="mt-5 rounded-xl border border-dashed border-neutral-300 px-5 py-7 text-center transition hover:border-neutral-400 hover:bg-neutral-50">
+      <p class="text-2xl text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 12 5.7-5.7a3 3 0 0 1 4.3 4.2l-7.8 7.8a5 5 0 0 1-7.1-7.1l7.4-7.4"/></svg></p>
+      <p class="mt-2 text-sm font-medium text-neutral-700">Drop a screenshot or a HAR file</p>
+      <p class="mt-1 text-xs text-neutral-400">PNG, JPG, HAR or LOG · up to 25 MB each</p>
+    </div>
+
+    <details class="mt-5 rounded-xl border border-neutral-200 px-5 py-4">
+      <summary class="cursor-pointer list-none text-sm font-medium text-neutral-900">Environment <span class="ml-1 text-xs font-normal text-neutral-400">— detected automatically, edit if wrong</span></summary>
+      <div class="mt-4 grid gap-4 sm:grid-cols-3">
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">Browser</label>
+          <input type="text" value="Chrome 128.0" class="w-full rounded-lg border border-neutral-200 px-3 py-2 font-mono text-xs outline-none focus:border-neutral-900" />
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">OS</label>
+          <input type="text" value="macOS 15.2" class="w-full rounded-lg border border-neutral-200 px-3 py-2 font-mono text-xs outline-none focus:border-neutral-900" />
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">App version</label>
+          <input type="text" value="4.2.1 (b8812)" class="w-full rounded-lg border border-neutral-200 px-3 py-2 font-mono text-xs outline-none focus:border-neutral-900" />
+        </div>
+      </div>
+    </details>
+
+    <div class="mt-7 flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-5">
+      <button class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Submit report</button>
+      <button class="rounded-xl px-4 py-2.5 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50">Save draft</button>
+      <p class="ml-auto text-xs text-neutral-400">Visible to your workspace admins</p>
+    </div>
+  </div>
+</section>
+</body></html>

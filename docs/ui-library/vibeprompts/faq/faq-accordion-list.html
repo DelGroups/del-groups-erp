@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-accordion-list/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accordion list</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-16">
+  <h2 class="mb-8 text-center text-3xl font-semibold text-neutral-900">Frequently asked questions</h2>
+  <div id="faq" class="divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
+    <details class="group p-5" open>
+      <summary class="flex cursor-pointer items-center justify-between text-sm font-medium text-neutral-900 [&::-webkit-details-marker]:hidden">
+        Can I cancel anytime?
+        <span class="transition group-open:rotate-45 text-neutral-400">+</span>
+      </summary>
+      <p class="mt-3 text-sm text-neutral-500">Yes. You can cancel your subscription at any time from your billing settings — no phone calls, no retention hoops.</p>
+    </details>
+    <details class="group p-5">
+      <summary class="flex cursor-pointer items-center justify-between text-sm font-medium text-neutral-900 [&::-webkit-details-marker]:hidden">
+        Do you offer a free trial?
+        <span class="transition group-open:rotate-45 text-neutral-400">+</span>
+      </summary>
+      <p class="mt-3 text-sm text-neutral-500">Every paid plan starts with a 14-day free trial. No credit card required to begin.</p>
+    </details>
+    <details class="group p-5">
+      <summary class="flex cursor-pointer items-center justify-between text-sm font-medium text-neutral-900 [&::-webkit-details-marker]:hidden">
+        Is my data secure?
+        <span class="transition group-open:rotate-45 text-neutral-400">+</span>
+      </summary>
+      <p class="mt-3 text-sm text-neutral-500">We're SOC 2 Type II compliant and encrypt data in transit and at rest.</p>
+    </details>
+  </div>
+</section>
+<script>
+// Progressive enhancement: the markup is already usable, this only enforces
+// "one answer at a time". Remove the script and you still have a working FAQ.
+var items = [].slice.call(document.querySelectorAll("#faq details"));
+
+items.forEach(function (item) {
+  item.addEventListener("toggle", function () {
+    if (!item.open) return;
+    items.forEach(function (other) {
+      if (other !== item) other.open = false;
+    });
+  });
+});
+</script>
+</body></html>

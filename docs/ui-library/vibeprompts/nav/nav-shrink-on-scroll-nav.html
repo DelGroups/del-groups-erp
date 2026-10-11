@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-shrink-on-scroll-nav/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shrink-on-scroll nav</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header id="shrinkNav" class="fixed inset-x-0 top-0 z-40 transition-all duration-300">
+  <div id="shrinkInner" class="mx-auto flex h-22 max-w-6xl items-center justify-between px-6 transition-all duration-300" style="height:88px">
+    <a href="#" id="shrinkMark" class="text-2xl font-semibold tracking-tight text-neutral-900 transition-all duration-300">Fernbrook</a>
+
+    <nav class="hidden items-center gap-8 text-sm text-neutral-600 md:flex">
+      <a href="#" class="transition hover:text-neutral-900">Work</a>
+      <a href="#" class="transition hover:text-neutral-900">Studio</a>
+      <a href="#" class="transition hover:text-neutral-900">Journal</a>
+      <a href="#" class="transition hover:text-neutral-900">Contact</a>
+    </nav>
+
+    <a href="#" id="shrinkCta" class="rounded-xl border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-900 transition-all duration-300">Start a project</a>
+  </div>
+
+  <div class="h-0.5 w-full bg-transparent">
+    <div id="shrinkProgress" class="h-full w-0 bg-neutral-900 transition-[width] duration-150"></div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-3xl space-y-6 px-6 pb-24 pt-36">
+  <h1 class="text-4xl font-semibold tracking-tight text-neutral-900">A studio for careful software</h1>
+  <p class="text-lg leading-relaxed text-neutral-500">Scroll and the header settles into its compact state, keeping the wordmark and the call to action reachable without taking a third of the screen.</p>
+  <div class="h-64 rounded-2xl bg-neutral-100"></div>
+  <div class="h-64 rounded-2xl bg-neutral-100"></div>
+  <div class="h-64 rounded-2xl bg-neutral-100"></div>
+  <div class="h-64 rounded-2xl bg-neutral-100"></div>
+</main>
+<script>
+var nav = document.getElementById("shrinkNav");
+var inner = document.getElementById("shrinkInner");
+var mark = document.getElementById("shrinkMark");
+var cta = document.getElementById("shrinkCta");
+var progress = document.getElementById("shrinkProgress");
+var compact = false;
+
+function apply(state) {
+  if (state === compact) return;
+  compact = state;
+
+  nav.classList.toggle("bg-white", state);
+  nav.classList.toggle("shadow-sm", state);
+  nav.classList.toggle("border-b", state);
+  nav.classList.toggle("border-neutral-200", state);
+
+  inner.style.height = state ? "60px" : "88px";
+
+  mark.classList.toggle("text-2xl", !state);
+  mark.classList.toggle("text-lg", state);
+
+  cta.classList.toggle("bg-neutral-900", state);
+  cta.classList.toggle("text-white", state);
+  cta.classList.toggle("border-neutral-900", state);
+  cta.classList.toggle("text-neutral-900", !state);
+  cta.classList.toggle("border-neutral-300", !state);
+}
+
+function onScroll() {
+  apply(window.scrollY > 40);
+
+  var max = document.documentElement.scrollHeight - window.innerHeight;
+  var ratio = max > 0 ? window.scrollY / max : 0;
+  progress.style.width = (ratio * 100).toFixed(2) + "%";
+}
+
+window.addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+</script>
+</body></html>

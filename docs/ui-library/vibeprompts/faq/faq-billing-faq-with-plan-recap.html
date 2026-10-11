@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-billing-faq-with-plan-recap/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billing FAQ with plan recap</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-16">
+  <div class="grid gap-10 lg:grid-cols-[300px_1fr] lg:gap-16">
+    <aside class="lg:sticky lg:top-24 lg:self-start">
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-semibold text-neutral-900">Team</p>
+          <span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Active</span>
+        </div>
+        <p class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">$59<span class="text-sm font-normal text-neutral-400">/mo</span></p>
+
+        <dl class="mt-6 space-y-3 border-t border-neutral-200 pt-5 text-sm">
+          <div class="flex items-center justify-between"><dt class="text-neutral-500">Seats</dt><dd class="font-medium text-neutral-900">12 of 25</dd></div>
+          <div class="flex items-center justify-between"><dt class="text-neutral-500">Next invoice</dt><dd class="font-medium text-neutral-900">14 Sep 2026</dd></div>
+          <div class="flex items-center justify-between"><dt class="text-neutral-500">Payment</dt><dd class="font-mono text-xs text-neutral-900">Visa ·· 4411</dd></div>
+        </dl>
+
+        <button class="mt-6 w-full rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Manage billing</button>
+        <a href="#" class="mt-3 block text-center text-xs text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">Download past invoices</a>
+      </div>
+    </aside>
+
+    <div>
+      <h2 class="text-3xl font-semibold tracking-tight text-neutral-900">Billing questions</h2>
+      <p class="mt-3 text-neutral-500">If something here does not match your invoice, reply to it and a human will look.</p>
+
+      <p class="mt-10 text-xs font-semibold uppercase tracking-widest text-neutral-400">Payments</p>
+      <div class="mt-3 divide-y divide-neutral-200 border-y border-neutral-200">
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">When is my card actually charged?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-180"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+          </summary>
+          <div class="mt-3 text-sm leading-relaxed text-neutral-500">
+            <p>It depends on the plan shape. Charges are attempted at 09:00 UTC and retried twice over four days if they fail.</p>
+            <table class="mt-4 w-full overflow-hidden rounded-lg border border-neutral-200 text-xs">
+              <tbody class="divide-y divide-neutral-200">
+                <tr><td class="px-3 py-2 font-medium text-neutral-900">Monthly</td><td class="px-3 py-2 text-neutral-500">Same date each month, in advance</td></tr>
+                <tr><td class="px-3 py-2 font-medium text-neutral-900">Annual</td><td class="px-3 py-2 text-neutral-500">On the anniversary, in advance</td></tr>
+                <tr><td class="px-3 py-2 font-medium text-neutral-900">Usage</td><td class="px-3 py-2 text-neutral-500">First working day of the following month</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Can we pay by invoice and bank transfer?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-180"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">From $5,000 annually, yes — net 30 as standard and net 60 on request. Below that we only take cards, because chasing small invoices costs more than the invoices.</p>
+        </details>
+
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Do you charge VAT?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-180"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">We charge VAT where required. Add a valid EU VAT number in billing settings and the reverse charge is applied to the next invoice automatically.</p>
+        </details>
+      </div>
+
+      <p class="mt-10 text-xs font-semibold uppercase tracking-widest text-neutral-400">Cancellation</p>
+      <div class="mt-3 divide-y divide-neutral-200 border-y border-neutral-200">
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">What happens to our data if we cancel?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-180"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">The workspace goes read-only at the end of the paid period and stays that way for 60 days, so exports still work. After that it is deleted, including backups, within a further 30 days.</p>
+        </details>
+
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Do you give refunds?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-180"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">On annual plans, pro rata for whole unused months. On monthly plans we do not, but you can cancel any time and keep access until the period ends.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+</body></html>

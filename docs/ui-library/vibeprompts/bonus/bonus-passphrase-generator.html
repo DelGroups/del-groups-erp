@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-passphrase-generator/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passphrase generator</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-lg px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <h1 class="text-xl font-semibold tracking-tight text-neutral-900">Passphrase generator</h1>
+    <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Four ordinary words are easier to remember and harder to crack than one word with punctuation stuffed into it.</p>
+
+    <div class="mt-6 rounded-xl bg-neutral-900 p-5">
+      <p id="phraseOut" class="break-words font-mono text-lg leading-relaxed text-white">correct-harbour-vessel-lantern</p>
+      <div class="mt-4 flex gap-2">
+        <button id="phraseNew" class="flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:bg-neutral-800"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg> Regenerate</button>
+        <button id="phraseCopy" class="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 transition hover:bg-neutral-200">Copy</button>
+      </div>
+    </div>
+
+    <div class="mt-6 space-y-4">
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-sm font-medium text-neutral-900">Words</label>
+          <span id="wordCount" class="font-mono text-sm text-neutral-500">4</span>
+        </div>
+        <input id="wordRange" type="range" min="3" max="8" value="4" class="mt-2 w-full accent-neutral-900" />
+      </div>
+
+      <label class="flex items-center justify-between rounded-xl border border-neutral-200 px-4 py-3">
+        <span class="text-sm text-neutral-700">Add a number</span>
+        <input id="optNumber" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+      </label>
+      <label class="flex items-center justify-between rounded-xl border border-neutral-200 px-4 py-3">
+        <span class="text-sm text-neutral-700">Add a symbol separator</span>
+        <input id="optSymbol" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+      </label>
+      <label class="flex items-center justify-between rounded-xl border border-neutral-200 px-4 py-3">
+        <span class="text-sm text-neutral-700">Capitalise each word</span>
+        <input id="optCaps" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+      </label>
+    </div>
+
+    <div class="mt-6 border-t border-neutral-200 pt-5">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium text-neutral-900">Strength</p>
+        <p id="strengthLabel" class="text-sm text-neutral-500">Strong</p>
+      </div>
+      <div id="strengthBar" class="mt-2.5 flex gap-1.5">
+        <span class="h-1.5 flex-1 rounded-full bg-neutral-200"></span>
+        <span class="h-1.5 flex-1 rounded-full bg-neutral-200"></span>
+        <span class="h-1.5 flex-1 rounded-full bg-neutral-200"></span>
+        <span class="h-1.5 flex-1 rounded-full bg-neutral-200"></span>
+      </div>
+      <p id="strengthMath" class="mt-2.5 font-mono text-xs text-neutral-400">52 bits · centuries to crack offline</p>
+    </div>
+  </div>
+</section>
+<script>
+var WORDS = [
+  "correct", "harbour", "vessel", "lantern", "meadow", "cobalt", "thicket", "anchor",
+  "kettle", "marble", "pebble", "willow", "cinder", "fathom", "quarry", "bramble",
+  "compass", "drifter", "ember", "granite", "juniper", "kelp", "lattice", "mortar",
+  "nimbus", "orchard", "plinth", "rafter", "saffron", "tundra", "vellum", "walnut",
+];
+var SYMBOLS = ["-", ".", "_", "+", "~"];
+
+var out = document.getElementById("phraseOut");
+var range = document.getElementById("wordRange");
+var countLabel = document.getElementById("wordCount");
+var optNumber = document.getElementById("optNumber");
+var optSymbol = document.getElementById("optSymbol");
+var optCaps = document.getElementById("optCaps");
+var bar = Array.prototype.slice.call(document.getElementById("strengthBar").children);
+var label = document.getElementById("strengthLabel");
+var math = document.getElementById("strengthMath");
+
+function pick(list) {
+  // crypto.getRandomValues, not Math.random — this is a secret, after all.
+  var buffer = new Uint32Array(1);
+  crypto.getRandomValues(buffer);
+  return list[buffer[0] % list.length];
+}
+
+function generate() {
+  var n = Number(range.value);
+  var separator = optSymbol.checked ? pick(SYMBOLS) : "-";
+  var words = [];
+
+  for (var i = 0; i < n; i++) {
+    var word = pick(WORDS);
+    words.push(optCaps.checked ? word.charAt(0).toUpperCase() + word.slice(1) : word);
+  }
+
+  var phrase = words.join(separator);
+  if (optNumber.checked) phrase += separator + String(pick(["17", "42", "83", "26", "95"]));
+
+  out.textContent = phrase;
+  score(n);
+}
+
+function score(n) {
+  var bits = Math.round(n * Math.log2(WORDS.length));
+  if (optNumber.checked) bits += 6;
+  if (optSymbol.checked) bits += 2;
+  if (optCaps.checked) bits += n;
+
+  var band = bits < 40 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4;
+  var names = ["", "Weak", "Fair", "Strong", "Very strong"];
+  var times = ["", "minutes", "days", "centuries", "longer than anyone will wait"];
+  var colors = ["", "bg-red-500", "bg-amber-400", "bg-green-500", "bg-green-600"];
+
+  bar.forEach(function (segment, i) {
+    segment.className = "h-1.5 flex-1 rounded-full " + (i < band ? colors[band] : "bg-neutral-200");
+  });
+
+  label.textContent = names[band];
+  math.textContent = bits + " bits · " + times[band] + " to crack offline";
+}
+
+range.addEventListener("input", function () {
+  countLabel.textContent = range.value;
+  generate();
+});
+
+[optNumber, optSymbol, optCaps].forEach(function (el) {
+  el.addEventListener("change", generate);
+});
+
+document.getElementById("phraseNew").addEventListener("click", generate);
+
+document.getElementById("phraseCopy").addEventListener("click", function () {
+  var btn = document.getElementById("phraseCopy");
+  navigator.clipboard.writeText(out.textContent).then(function () {
+    btn.textContent = "Copied";
+    setTimeout(function () {
+      btn.textContent = "Copy";
+    }, 1500);
+  });
+});
+
+generate();
+</script>
+</body></html>

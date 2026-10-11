@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-account-locked-with-recovery/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account locked with recovery</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-14">
+  <div class="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm">
+    <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-red-50 text-red-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 3 4.5 6v5.5c0 4.7 3.2 7.7 7.5 9.5 4.3-1.8 7.5-4.8 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+    <h1 class="mt-5 text-center text-lg font-semibold tracking-tight text-neutral-900">Too many attempts</h1>
+    <p class="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-neutral-500">
+      We locked <span class="font-medium text-neutral-700"><a class="__cf_email__" data-cfemail="b9cbd8dcf9d7d6cbcdd1ced0d7dd97dad6" href="/cdn-cgi/l/email-protection">[email protected]</a></span> after five failed sign-ins. This protects the account while we are unsure it is you.
+    </p>
+
+    <div id="lockPanel" class="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 p-5 text-center">
+      <p id="lockTimer" class="font-mono text-3xl font-semibold tracking-tight text-neutral-900">15:00</p>
+      <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200">
+        <div id="lockTrack" class="h-full w-full rounded-full bg-neutral-900 transition-[width] duration-1000 ease-linear"></div>
+      </div>
+      <p id="lockNote" class="mt-2.5 text-xs text-neutral-500">Sign-in reopens at 14:17 CET.</p>
+    </div>
+
+    <p class="mt-6 text-xs font-semibold uppercase tracking-widest text-neutral-400">Cannot wait?</p>
+    <div class="mt-3 space-y-2">
+      <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-medium text-neutral-900">Email me a sign-in link</span>
+          <span class="block text-xs text-neutral-500">Skips the password entirely. Valid for 10 minutes.</span>
+        </span>
+        <span class="text-neutral-300">›</span>
+      </button>
+      <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg></span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-medium text-neutral-900">Use a recovery code</span>
+          <span class="block text-xs text-neutral-500">One of the eight codes you saved when setting up 2FA.</span>
+        </span>
+        <span class="text-neutral-300">›</span>
+      </button>
+      <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-medium text-neutral-900">Ask a workspace admin</span>
+          <span class="block text-xs text-neutral-500">Jules and Mira can clear the lock for you.</span>
+        </span>
+        <span class="text-neutral-300">›</span>
+      </button>
+    </div>
+
+    <p class="mt-6 text-center text-[11px] leading-relaxed text-neutral-400">This attempt was logged from 84.22.11.7 · Rotterdam, NL</p>
+  </div>
+</div>
+<script>
+var TOTAL = 15 * 60;
+var left = TOTAL;
+
+var panel = document.getElementById("lockPanel");
+var timer = document.getElementById("lockTimer");
+var track = document.getElementById("lockTrack");
+
+function tick() {
+  var minutes = Math.floor(left / 60);
+  var seconds = left % 60;
+  timer.textContent = minutes + ":" + String(seconds).padStart(2, "0");
+  track.style.width = (left / TOTAL) * 100 + "%";
+
+  if (left > 0) {
+    left -= 1;
+    return;
+  }
+
+  clearInterval(handle);
+  // The lock has lifted — replace the countdown rather than leaving a dead 0:00.
+  panel.className = "mt-6 rounded-xl border border-green-200 bg-green-50 p-5 text-center";
+  panel.innerHTML =
+    '<p class="text-sm font-medium text-green-800">You can try again</p>' +
+    '<p class="mt-1 text-xs text-green-700">The lock has lifted. Five more attempts are available.</p>' +
+    '<button class="mt-4 rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white">Back to sign in</button>';
+}
+
+var handle = setInterval(tick, 1000);
+tick();
+</script>
+</body></html>

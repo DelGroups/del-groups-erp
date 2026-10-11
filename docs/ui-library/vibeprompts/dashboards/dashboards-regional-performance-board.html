@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-regional-performance-board/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regional performance board</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-neutral-50 px-6 py-10">
+  <div class="mx-auto max-w-6xl">
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6 lg:col-span-2">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-neutral-900">Global status</h2>
+          <div class="flex gap-4 text-xs text-neutral-500">
+            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-green-500"></span> Healthy</span>
+            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-400"></span> Degraded</span>
+            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-red-500"></span> Down</span>
+          </div>
+        </div>
+
+        <div class="relative mt-6 aspect-[2/1] w-full overflow-hidden rounded-xl bg-neutral-50">
+          <div class="grid h-full w-full grid-cols-24 gap-px p-2 opacity-60" style="grid-template-columns:repeat(24,minmax(0,1fr))">
+            <span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span>
+            <span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span>
+            <span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span><span></span><span class="rounded-sm bg-neutral-200"></span><span class="rounded-sm bg-neutral-200"></span>
+          </div>
+
+          <span data-region="eu-central" class="map-dot absolute h-3 w-3 rounded-full bg-green-500 ring-4 ring-green-500/20 transition-all" style="left:49%;top:34%"></span>
+          <span data-region="eu-west" class="map-dot absolute h-3 w-3 rounded-full bg-green-500 ring-4 ring-green-500/20 transition-all" style="left:45%;top:32%"></span>
+          <span data-region="us-east" class="map-dot absolute h-3 w-3 rounded-full bg-amber-400 ring-4 ring-amber-400/20 transition-all" style="left:26%;top:40%"></span>
+          <span data-region="ap-southeast" class="map-dot absolute h-3 w-3 rounded-full bg-red-500 ring-4 ring-red-500/20 transition-all" style="left:76%;top:60%"></span>
+          <span data-region="sa-east" class="map-dot absolute h-3 w-3 rounded-full bg-green-500 ring-4 ring-green-500/20 transition-all" style="left:33%;top:70%"></span>
+
+          <span id="mapTip" class="pointer-events-none absolute hidden rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[11px] text-white"></span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-neutral-200 bg-white p-4">
+        <p class="px-2 text-xs font-semibold uppercase tracking-widest text-neutral-400">Regions</p>
+        <div class="mt-2 max-h-80 space-y-0.5 overflow-y-auto">
+          <button data-region="eu-central" data-label="Frankfurt · 18 ms" class="region-row flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-neutral-50">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-green-500"></span>
+            <span class="min-w-0 flex-1"><span class="block font-mono text-xs text-neutral-900">eu-central</span><span class="block text-xs text-neutral-500">Frankfurt</span></span>
+            <span class="shrink-0 text-right"><span class="block font-mono text-xs text-neutral-900">18 ms</span><span class="block text-[11px] text-neutral-400">99.99%</span></span>
+          </button>
+          <button data-region="eu-west" data-label="Dublin · 24 ms" class="region-row flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-neutral-50">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-green-500"></span>
+            <span class="min-w-0 flex-1"><span class="block font-mono text-xs text-neutral-900">eu-west</span><span class="block text-xs text-neutral-500">Dublin</span></span>
+            <span class="shrink-0 text-right"><span class="block font-mono text-xs text-neutral-900">24 ms</span><span class="block text-[11px] text-neutral-400">99.98%</span></span>
+          </button>
+          <button data-region="us-east" data-label="Virginia · 210 ms" class="region-row flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-neutral-50">
+            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-400"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-mono text-xs text-neutral-900">us-east</span>
+              <span class="block text-xs text-neutral-500">Virginia</span>
+              <span class="mt-1 block text-[11px] text-amber-700">Elevated latency on write paths since 13:40 UTC.</span>
+            </span>
+            <span class="shrink-0 text-right"><span class="block font-mono text-xs text-neutral-900">210 ms</span><span class="block text-[11px] text-neutral-400">99.71%</span></span>
+          </button>
+          <button data-region="ap-southeast" data-label="Singapore · unavailable" class="region-row flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-neutral-50">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+            <span class="min-w-0 flex-1"><span class="block font-mono text-xs text-neutral-900">ap-southeast</span><span class="block text-xs text-neutral-500">Singapore</span></span>
+            <span class="shrink-0 text-right"><span class="block font-mono text-xs text-red-600">—</span><span class="block text-[11px] text-neutral-400">98.02%</span></span>
+          </button>
+          <button data-region="sa-east" data-label="São Paulo · 62 ms" class="region-row flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-neutral-50">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-green-500"></span>
+            <span class="min-w-0 flex-1"><span class="block font-mono text-xs text-neutral-900">sa-east</span><span class="block text-xs text-neutral-500">São Paulo</span></span>
+            <span class="shrink-0 text-right"><span class="block font-mono text-xs text-neutral-900">62 ms</span><span class="block text-[11px] text-neutral-400">99.95%</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-2 divide-neutral-200 rounded-2xl border border-neutral-200 bg-white py-5 text-center sm:grid-cols-4 sm:divide-x">
+      <div><p class="text-xl font-semibold text-neutral-900">14</p><p class="mt-1 text-[11px] uppercase tracking-widest text-neutral-400">Regions</p></div>
+      <div><p class="text-xl font-semibold text-neutral-900">41 ms</p><p class="mt-1 text-[11px] uppercase tracking-widest text-neutral-400">Median p99</p></div>
+      <div><p class="text-xl font-semibold text-neutral-900">99.94%</p><p class="mt-1 text-[11px] uppercase tracking-widest text-neutral-400">Fleet uptime</p></div>
+      <div><p class="text-xl font-semibold text-amber-600">2</p><p class="mt-1 text-[11px] uppercase tracking-widest text-neutral-400">Needing attention</p></div>
+    </div>
+  </div>
+</section>
+<script>
+var rows = Array.prototype.slice.call(document.querySelectorAll(".region-row"));
+var dots = Array.prototype.slice.call(document.querySelectorAll(".map-dot"));
+var tip = document.getElementById("mapTip");
+var pinned = null;
+
+function dotFor(region) {
+  return dots.filter(function (dot) {
+    return dot.dataset.region === region;
+  })[0];
+}
+
+function highlight(region, label) {
+  dots.forEach(function (dot) {
+    var on = dot.dataset.region === region;
+    dot.classList.toggle("h-5", on);
+    dot.classList.toggle("w-5", on);
+    dot.classList.toggle("h-3", !on);
+    dot.classList.toggle("w-3", !on);
+  });
+
+  var dot = dotFor(region);
+  if (!dot || !label) {
+    tip.classList.add("hidden");
+    return;
+  }
+
+  tip.textContent = label;
+  tip.style.left = dot.style.left;
+  tip.style.top = "calc(" + dot.style.top + " - 34px)";
+  tip.classList.remove("hidden");
+}
+
+rows.forEach(function (row) {
+  row.addEventListener("mouseenter", function () {
+    highlight(row.dataset.region, row.dataset.label);
+  });
+
+  row.addEventListener("mouseleave", function () {
+    // Fall back to whatever is pinned rather than clearing the map entirely.
+    if (pinned) highlight(pinned.dataset.region, pinned.dataset.label);
+    else highlight("", "");
+  });
+
+  row.addEventListener("click", function () {
+    pinned = pinned === row ? null : row;
+    rows.forEach(function (r) {
+      r.classList.toggle("bg-neutral-100", r === pinned);
+    });
+    if (pinned) highlight(row.dataset.region, row.dataset.label);
+    else highlight("", "");
+  });
+});
+</script>
+</body></html>

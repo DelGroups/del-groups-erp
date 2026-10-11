@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-conversational-faq-bubbles/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversational FAQ bubbles</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-16">
+  <div class="flex items-center gap-3 border-b border-neutral-200 pb-5">
+    <span class="grid h-11 w-11 place-items-center rounded-full bg-neutral-900 text-xs font-medium text-white">MO</span>
+    <div>
+      <p class="text-sm font-medium text-neutral-900">Mira from Northwind</p>
+      <p class="flex items-center gap-1.5 text-xs text-neutral-500"><span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> Usually replies in minutes</p>
+    </div>
+  </div>
+
+  <div class="mt-8 space-y-5">
+    <p class="text-center text-[11px] uppercase tracking-widest text-neutral-300">Today</p>
+
+    <div class="flex justify-end">
+      <p class="max-w-sm rounded-2xl rounded-br-md bg-neutral-900 px-4 py-3 text-sm leading-relaxed text-white">How long does setup actually take? Be honest.</p>
+    </div>
+    <div class="flex items-end gap-2.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+      <p class="max-w-md rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3 text-sm leading-relaxed text-neutral-800">About twenty minutes for a first source, and most of that is waiting for your warehouse to grant permissions. Teams with unusual auth take an afternoon.</p>
+    </div>
+
+    <div class="flex justify-end">
+      <p class="max-w-sm rounded-2xl rounded-br-md bg-neutral-900 px-4 py-3 text-sm leading-relaxed text-white">What do you need from our security team?</p>
+    </div>
+    <div class="flex items-end gap-2.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+      <div class="max-w-md rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3">
+        <p class="text-sm leading-relaxed text-neutral-800">Three things, usually:</p>
+        <div class="mt-3 rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600">
+          <p class="flex items-start gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> <span>A read-only role in the warehouse</span></p>
+          <p class="mt-1.5 flex items-start gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> <span>Our IP range added to the allow list</span></p>
+          <p class="mt-1.5 flex items-start gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> <span>Someone to sign the DPA</span></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center text-[11px] uppercase tracking-widest text-neutral-300">14:20</p>
+
+    <div class="flex justify-end">
+      <p class="max-w-sm rounded-2xl rounded-br-md bg-neutral-900 px-4 py-3 text-sm leading-relaxed text-white">Can we trial it on production data?</p>
+    </div>
+    <div class="flex items-end gap-2.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+      <p class="max-w-md rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3 text-sm leading-relaxed text-neutral-800">Yes, and we would rather you did. Trials run on a read-only connection, so nothing we do can write back to your systems.</p>
+    </div>
+
+    <div class="flex justify-end">
+      <p class="max-w-sm rounded-2xl rounded-br-md bg-neutral-900 px-4 py-3 text-sm leading-relaxed text-white">And if it does not work out?</p>
+    </div>
+    <div class="flex items-end gap-2.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+      <p class="max-w-md rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3 text-sm leading-relaxed text-neutral-800">Revoke the role and the connection dies immediately. Ask us to delete the workspace and everything, backups included, is gone within 30 days.</p>
+    </div>
+
+    <div class="flex items-end gap-2.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+      <span class="flex items-center gap-1 rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3.5">
+        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" style="animation-delay:0ms"></span>
+        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" style="animation-delay:150ms"></span>
+        <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" style="animation-delay:300ms"></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="mt-8 flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+    <input disabled placeholder="This thread is an illustration — open live chat to ask your own"
+      class="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-neutral-500 outline-none" />
+    <button disabled class="cursor-not-allowed rounded-lg bg-neutral-300 px-4 py-2 text-sm font-medium text-white">Send</button>
+  </div>
+</section>
+</body></html>

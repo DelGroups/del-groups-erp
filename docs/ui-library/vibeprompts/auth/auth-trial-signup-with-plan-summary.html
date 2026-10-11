@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-trial-signup-with-plan-summary/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trial signup with plan summary</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="grid min-h-screen lg:grid-cols-[1fr_420px]">
+  <div class="flex items-center justify-center bg-white px-6 py-14">
+    <div class="w-full max-w-sm">
+      <div class="mb-8">
+        <div class="mb-6 grid h-10 w-10 place-items-center rounded-xl bg-neutral-900 text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="m12 7 5 5-5 5-5-5 5-5Z"/></svg></div>
+        <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Start your trial</h1>
+        <p class="mt-1.5 text-sm text-neutral-500">Already have an account? <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">Sign in</a></p>
+      </div>
+
+      <form class="space-y-4">
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">Work email</label>
+          <input type="email" placeholder="<a class="__cf_email__" data-cfemail="fc859389bc9f93918c9d9285d29f9391" href="/cdn-cgi/l/email-protection">[email protected]</a>"
+            class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">Password</label>
+          <input type="password" placeholder="••••••••••"
+            class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+          <p class="mt-1.5 text-xs text-neutral-400">Ten characters or more. A passphrase is fine.</p>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-xs font-medium text-neutral-700">Company</label>
+          <input type="text" placeholder="Northwind"
+            class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+        </div>
+
+        <label class="flex items-start gap-2.5 text-sm text-neutral-600">
+          <input type="checkbox" class="mt-0.5 rounded border-neutral-300" />
+          <span>Send me occasional product updates. Roughly monthly, easy to stop.</span>
+        </label>
+
+        <button class="w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Start free trial</button>
+      </form>
+
+      <div class="my-6 flex items-center gap-3 text-xs uppercase tracking-widest text-neutral-400">
+        <span class="h-px flex-1 bg-neutral-200"></span>or<span class="h-px flex-1 bg-neutral-200"></span>
+      </div>
+      <button class="w-full rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Continue with Google</button>
+    </div>
+  </div>
+
+  <aside class="border-t border-neutral-200 bg-neutral-50 px-8 py-12 lg:sticky lg:top-0 lg:h-screen lg:border-l lg:border-t-0">
+    <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Your trial</p>
+    <p class="mt-4 text-xl font-semibold tracking-tight text-neutral-900">Team plan</p>
+    <p class="mt-1 text-sm text-neutral-500">14 days free, then $59 per month. Cancel in one click.</p>
+
+    <div class="mt-6 space-y-2.5 rounded-xl border border-neutral-200 bg-white p-5 text-sm text-neutral-600">
+      <p class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> Unlimited workspaces and seats</p>
+      <p class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> Every integration, including SSO</p>
+      <p class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> 12 months of audit history</p>
+      <p class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> Support from the engineers who built it</p>
+    </div>
+
+    <div class="mt-8 space-y-4 border-l border-neutral-200 pl-5">
+      <div class="relative">
+        <span class="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-neutral-900 ring-4 ring-neutral-50"></span>
+        <p class="text-sm font-medium text-neutral-900">Today</p>
+        <p class="text-xs text-neutral-500">Full access, nothing to pay.</p>
+      </div>
+      <div class="relative">
+        <span class="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-neutral-300 ring-4 ring-neutral-50"></span>
+        <p class="text-sm font-medium text-neutral-900">Day 11</p>
+        <p class="text-xs text-neutral-500">We email a reminder that three days remain.</p>
+      </div>
+      <div class="relative">
+        <span class="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-neutral-300 ring-4 ring-neutral-50"></span>
+        <p class="text-sm font-medium text-neutral-900">Day 14</p>
+        <p class="text-xs text-neutral-500">The workspace goes read-only until you choose a plan.</p>
+      </div>
+    </div>
+
+    <p class="mt-10 text-xs leading-relaxed text-neutral-400">No card required, and the trial never converts on its own — you decide at the end.</p>
+  </aside>
+</div>
+</body></html>

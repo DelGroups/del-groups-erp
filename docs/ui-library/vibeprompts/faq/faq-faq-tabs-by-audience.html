@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-faq-tabs-by-audience/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ tabs by audience</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div class="text-center">
+    <h2 class="text-3xl font-semibold tracking-tight text-neutral-900">Answers, depending on who is asking</h2>
+    <p class="mt-3 text-neutral-500">The same product raises very different questions across a buying committee.</p>
+  </div>
+
+  <div id="audienceTabs" class="mx-auto mt-8 inline-flex rounded-xl border border-neutral-200 p-1">
+    <button data-aud="buyers" class="aud-tab rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition">For buyers</button>
+    <button data-aud="admins" class="aud-tab rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 transition hover:text-neutral-900">For admins</button>
+    <button data-aud="devs" class="aud-tab rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 transition hover:text-neutral-900">For developers</button>
+  </div>
+
+  <div id="audiencePanel" class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200"></div>
+
+  <p id="audienceNext" class="mt-6 text-sm text-neutral-500"></p>
+</section>
+<script>
+var SETS = {
+  buyers: {
+    next: 'Next step for buyers: <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">see pricing and contract terms ↗</a>',
+    items: [
+      ["What does this replace?", "Usually two internal scripts and a reporting tool nobody enjoys owning. Most teams retire at least one line item in the first quarter."],
+      ["How is it priced?", "A flat platform fee plus usage above a generous included tier. Seats are unlimited, so adoption never raises the invoice."],
+      ["What does implementation cost?", "Nothing from us. There is no mandatory onboarding fee and no professional services requirement, on any plan."],
+      ["Can we get a reference call?", "Yes — we will introduce you to a customer in your industry at a comparable scale, usually within a week."],
+    ],
+  },
+  admins: {
+    next: 'Next step for admins: <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">read the deployment guide ↗</a>',
+    items: [
+      ["How do we provision users?", "SAML with SCIM. Groups map to roles, and removing someone from your directory revokes access on the next sync, within five minutes."],
+      ["Can we restrict data by team?", "Row-level rules attach to roles, so a regional manager sees their region and nothing else, including in exports and scheduled reports."],
+      ["What audit evidence do we get?", "Every read, write and permission change, exportable as CSV or streamed to your SIEM. Retention follows your policy, up to seven years."],
+      ["Is there a sandbox?", "Every workspace gets a staging environment on the same plan at no extra cost, with its own keys and its own data."],
+    ],
+  },
+  devs: {
+    next: 'Next step for developers: <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">open the API reference ↗</a>',
+    items: [
+      ["Is the API rate limited?", "1,000 requests a minute per key by default, raised on request. Limits are returned in headers so you can back off before you hit them."],
+      ["How do webhooks behave on failure?", "Exponential backoff for 24 hours, then the delivery is parked. Anything from the last 30 days can be replayed from the dashboard or the API."],
+      ["Which SDKs are official?", "TypeScript, Python, Go, Ruby, Java and PHP, all generated from the same OpenAPI spec on every release."],
+      ["Can we run it locally?", "Yes — a single container with a seeded dataset, so tests do not need network access or a shared staging key."],
+    ],
+  },
+};
+
+var tabs = Array.prototype.slice.call(document.querySelectorAll(".aud-tab"));
+var panel = document.getElementById("audiencePanel");
+var next = document.getElementById("audienceNext");
+
+function render(key) {
+  var set = SETS[key];
+
+  panel.innerHTML = set.items
+    .map(function (pair) {
+      return (
+        '<details class="group py-4">' +
+        '<summary class="flex cursor-pointer list-none items-center justify-between gap-4">' +
+        '<span class="text-sm font-medium text-neutral-900">' + pair[0] + "</span>" +
+        '<span class="text-neutral-400 transition-transform group-open:rotate-180">⌄</span>' +
+        "</summary>" +
+        '<p class="mt-3 text-sm leading-relaxed text-neutral-500">' + pair[1] + "</p>" +
+        "</details>"
+      );
+    })
+    .join("");
+
+  next.innerHTML = set.next;
+
+  tabs.forEach(function (t) {
+    var on = t.dataset.aud === key;
+    t.classList.toggle("bg-neutral-900", on);
+    t.classList.toggle("text-white", on);
+    t.classList.toggle("text-neutral-600", !on);
+  });
+
+  // Keep the choice in the URL so a refresh or a shared link lands in place.
+  var url = new URL(location.href);
+  url.searchParams.set("faq", key);
+  history.replaceState(null, "", url);
+}
+
+tabs.forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    render(tab.dataset.aud);
+  });
+});
+
+var initial = new URL(location.href).searchParams.get("faq");
+render(SETS[initial] ? initial : "buyers");
+</script>
+</body></html>

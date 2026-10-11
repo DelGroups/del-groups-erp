@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-log-viewer-with-live-tail/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log viewer with live tail</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-10">
+  <div class="flex flex-wrap items-center gap-3">
+    <select class="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-900">
+      <option>All services</option><option>ingest-api</option><option>sync-worker</option><option>web</option>
+    </select>
+
+    <div class="relative min-w-[180px] flex-1">
+      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+      <input id="logSearch" type="search" placeholder="Filter lines…"
+        class="w-full rounded-xl border border-neutral-200 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-900" />
+    </div>
+
+    <div class="flex gap-1.5">
+      <button data-level="debug" class="lvl rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition">debug</button>
+      <button data-level="info" class="lvl rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white transition">info</button>
+      <button data-level="warn" class="lvl rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white transition">warn</button>
+      <button data-level="error" class="lvl rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white transition">error</button>
+    </div>
+
+    <span id="liveBadge" class="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
+      <span class="relative flex h-2 w-2">
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+        <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+      </span>
+      Live
+    </span>
+
+    <button id="logPause" class="rounded-xl border border-neutral-200 px-3.5 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Pause</button>
+  </div>
+
+  <div id="logPanel" class="mt-4 h-96 overflow-y-auto rounded-xl bg-neutral-900 p-4 font-mono text-xs leading-relaxed"></div>
+
+  <div class="mt-2 flex items-center justify-between text-xs text-neutral-400">
+    <span id="logCount">0 lines</span>
+    <span>Retained for 7 days · exports available on Scale</span>
+  </div>
+</section>
+<script>
+var MESSAGES = [
+  ["info", "ingest-api", "POST /v1/events 200 in 18ms"],
+  ["info", "sync-worker", "batch 4,812 rows committed"],
+  ["debug", "web", "cache hit report:rep_8f21 ttl=280s"],
+  ["warn", "sync-worker", "retry 1/3 upstream timeout after 5s"],
+  ["info", "web", "GET /reports/monthly-revenue 200 in 41ms"],
+  ["error", "ingest-api", "connection reset by peer, dropping batch"],
+  ["debug", "ingest-api", "idempotency key a41f-9c02 seen before, skipping"],
+  ["info", "sync-worker", "cursor advanced to 2026-08-18T12:04:11Z"],
+  ["warn", "web", "slow query 2,140ms report:rep_44a1"],
+];
+
+var COLORS = {
+  debug: "text-neutral-500",
+  info: "text-blue-400",
+  warn: "text-amber-400",
+  error: "text-red-400",
+};
+
+var panel = document.getElementById("logPanel");
+var search = document.getElementById("logSearch");
+var countEl = document.getElementById("logCount");
+var pause = document.getElementById("logPause");
+var badge = document.getElementById("liveBadge");
+var levels = { debug: false, info: true, warn: true, error: true };
+var live = true;
+
+function stamp() {
+  var now = new Date();
+  return now.toTimeString().slice(0, 8) + "." + String(now.getMilliseconds()).padStart(3, "0");
+}
+
+function atBottom() {
+  return panel.scrollHeight - panel.scrollTop - panel.clientHeight < 40;
+}
+
+function append() {
+  var entry = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+  var stick = atBottom();
+
+  var line = document.createElement("div");
+  line.className = "log-line flex gap-3 py-0.5" + (entry[0] === "error" ? " -mx-2 border-l-2 border-red-500 bg-red-500/10 px-2" : "");
+  line.dataset.level = entry[0];
+  line.innerHTML =
+    '<span class="shrink-0 text-neutral-600">' + stamp() + "</span>" +
+    '<span class="w-12 shrink-0 ' + COLORS[entry[0]] + '">' + entry[0] + "</span>" +
+    '<span class="shrink-0 text-neutral-500">' + entry[1] + "</span>" +
+    '<span class="text-neutral-300">' + entry[2] + "</span>";
+
+  panel.appendChild(line);
+
+  // Keep the buffer bounded, or an hour of tailing eats the tab.
+  while (panel.children.length > 80) panel.removeChild(panel.firstChild);
+
+  filter();
+  if (stick) panel.scrollTop = panel.scrollHeight;
+}
+
+function filter() {
+  var q = search.value.trim().toLowerCase();
+  var shown = 0;
+
+  Array.prototype.slice.call(panel.children).forEach(function (line) {
+    var ok = levels[line.dataset.level] && (!q || line.textContent.toLowerCase().indexOf(q) !== -1);
+    line.classList.toggle("hidden", !ok);
+    if (ok) shown += 1;
+  });
+
+  countEl.textContent = shown + (shown === 1 ? " line" : " lines");
+}
+
+Array.prototype.slice.call(document.querySelectorAll(".lvl")).forEach(function (chip) {
+  chip.addEventListener("click", function () {
+    var key = chip.dataset.level;
+    levels[key] = !levels[key];
+    chip.classList.toggle("bg-neutral-900", levels[key]);
+    chip.classList.toggle("border-neutral-900", levels[key]);
+    chip.classList.toggle("text-white", levels[key]);
+    chip.classList.toggle("text-neutral-500", !levels[key]);
+    filter();
+  });
+});
+
+search.addEventListener("input", filter);
+
+pause.addEventListener("click", function () {
+  live = !live;
+  pause.textContent = live ? "Pause" : "Resume";
+  badge.classList.toggle("opacity-40", !live);
+});
+
+setInterval(function () {
+  if (live) append();
+}, 1000);
+
+for (var i = 0; i < 14; i++) append();
+</script>
+</body></html>

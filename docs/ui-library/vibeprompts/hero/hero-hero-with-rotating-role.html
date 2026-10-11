@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/hero/hero-hero-with-rotating-role/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero with rotating role</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-white px-6 py-28">
+  <div class="mx-auto max-w-3xl text-center">
+    <p class="text-xs font-medium uppercase tracking-[0.2em] text-neutral-400">Scheduling, solved</p>
+
+    <h1 class="mt-5 text-5xl font-semibold leading-[1.08] tracking-tight text-neutral-900 sm:text-6xl">
+      The calendar that works<br class="hidden sm:block" />
+      the way
+      <span class="inline-flex items-center rounded-xl bg-neutral-100 px-3 py-1 align-middle">
+        <span id="rotator" class="inline-block text-neutral-900 transition-all duration-300">clinics</span>
+      </span>
+      do
+    </h1>
+
+    <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-neutral-500">
+      Rules for buffers, travel time and double-booking that match how your team actually runs its day.
+    </p>
+
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Start free</a>
+      <a href="#" class="flex items-center gap-2 rounded-xl border border-neutral-200 px-6 py-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg> Watch the 2-minute tour</a>
+    </div>
+
+    <p class="mt-10 text-xs text-neutral-400">Clinics · Studios · Field teams · Universities</p>
+  </div>
+</section>
+<script>
+var WORDS = ["clinics", "studios", "field teams", "universities"];
+var el = document.getElementById("rotator");
+var i = 0;
+var timer;
+
+// Reserve the widest word up front so the box never resizes mid-rotation.
+var probe = document.createElement("span");
+probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap";
+probe.className = el.className;
+document.body.appendChild(probe);
+var widest = 0;
+WORDS.forEach(function (w) {
+  probe.textContent = w;
+  widest = Math.max(widest, probe.offsetWidth);
+});
+document.body.removeChild(probe);
+el.style.minWidth = Math.ceil(widest) + "px";
+
+function tick() {
+  el.classList.add("opacity-0", "-translate-y-1");
+  setTimeout(function () {
+    i = (i + 1) % WORDS.length;
+    el.textContent = WORDS[i];
+    el.classList.remove("opacity-0", "-translate-y-1");
+  }, 300);
+}
+
+function start() {
+  stop();
+  timer = setInterval(tick, 2500);
+}
+
+function stop() {
+  clearInterval(timer);
+}
+
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) stop();
+  else start();
+});
+
+start();
+</script>
+</body></html>

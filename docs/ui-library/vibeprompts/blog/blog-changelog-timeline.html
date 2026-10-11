@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-changelog-timeline/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog timeline</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-16">
+  <div class="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-8">
+    <div>
+      <h1 class="text-3xl font-semibold text-neutral-900">Changelog</h1>
+      <p class="mt-2 text-neutral-500">We ship on Tuesdays. Breaking changes get a month of notice.</p>
+    </div>
+    <button class="rounded-xl border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-neutral-50">Subscribe to updates</button>
+  </div>
+
+  <div class="mt-10 space-y-10">
+    <article class="grid gap-4 md:grid-cols-[140px_1fr]">
+      <div class="md:pt-1">
+        <p class="text-sm text-neutral-500">17 Aug 2026</p>
+        <span class="mt-1 inline-block rounded-md border border-neutral-200 px-1.5 py-0.5 font-mono text-xs text-neutral-600">v4.2.0</span>
+      </div>
+      <div class="relative border-neutral-200 pb-2 md:border-l md:pl-8">
+        <span class="absolute -left-[5px] top-2 hidden h-2.5 w-2.5 rounded-full bg-neutral-900 md:block"></span>
+        <h2 class="font-semibold text-neutral-900">Per-branch environment variables</h2>
+        <div class="mt-2 flex flex-wrap gap-2 text-[11px] font-medium">
+          <span class="rounded-md bg-green-50 px-2 py-0.5 text-green-700">New</span>
+          <span class="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700">Improved</span>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-neutral-600">
+          Variables can now be scoped to a branch pattern, so preview builds stop borrowing production credentials by accident.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-neutral-600">
+          <li class="flex gap-2"><span class="text-neutral-400">→</span> Pattern matching supports globs, e.g. <span class="font-mono text-xs">release/*</span></li>
+          <li class="flex gap-2"><span class="text-neutral-400">→</span> Secrets inherit from the default set unless overridden</li>
+          <li class="flex gap-2"><span class="text-neutral-400">→</span> The variable editor now shows which builds used a value last</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="grid gap-4 md:grid-cols-[140px_1fr]">
+      <div class="md:pt-1">
+        <p class="text-sm text-neutral-500">5 Aug 2026</p>
+        <span class="mt-1 inline-block rounded-md border border-neutral-200 px-1.5 py-0.5 font-mono text-xs text-neutral-600">v4.1.0</span>
+      </div>
+      <div class="relative border-neutral-200 pb-2 md:border-l md:pl-8">
+        <span class="absolute -left-[5px] top-2 hidden h-2.5 w-2.5 rounded-full bg-neutral-900 md:block"></span>
+        <h2 class="font-semibold text-neutral-900">Runner images split into layers</h2>
+        <div class="mt-2 flex flex-wrap gap-2 text-[11px] font-medium">
+          <span class="rounded-md bg-blue-50 px-2 py-0.5 text-blue-700">Improved</span>
+          <span class="rounded-md bg-amber-50 px-2 py-0.5 text-amber-700">Breaking</span>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-neutral-600">
+          Base tooling and language runtimes now live in separate layers, which cuts a cold runner start from 41 to 12 seconds.
+        </p>
+        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+          <p class="font-medium">Breaking: pinned image digests</p>
+          <p class="mt-1">Anything pinning <span class="font-mono text-xs">runner@sha256:…</span> must repin before 1 October. Tag-based references keep working.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="grid gap-4 md:grid-cols-[140px_1fr]">
+      <div class="md:pt-1">
+        <p class="text-sm text-neutral-500">22 Jul 2026</p>
+        <span class="mt-1 inline-block rounded-md border border-neutral-200 px-1.5 py-0.5 font-mono text-xs text-neutral-600">v4.0.3</span>
+      </div>
+      <div class="relative border-neutral-200 pb-2 md:border-l md:pl-8">
+        <span class="absolute -left-[5px] top-2 hidden h-2.5 w-2.5 rounded-full bg-neutral-900 md:block"></span>
+        <h2 class="font-semibold text-neutral-900">Cache keys no longer collide across packages</h2>
+        <div class="mt-2 flex flex-wrap gap-2 text-[11px] font-medium">
+          <span class="rounded-md bg-red-50 px-2 py-0.5 text-red-700">Fixed</span>
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-neutral-600">
+          In monorepos, two packages with identical lockfile hashes could share a cache entry. Keys now include the workspace path.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-neutral-600">
+          <li class="flex gap-2"><span class="text-neutral-400">→</span> Existing entries are invalidated once, on first build</li>
+          <li class="flex gap-2"><span class="text-neutral-400">→</span> Restore logs now print the full key that matched</li>
+        </ul>
+      </div>
+    </article>
+  </div>
+
+  <div class="mt-12 border-t border-neutral-200 pt-6 text-center">
+    <a href="#" class="text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Older releases →</a>
+  </div>
+</section>
+</body></html>

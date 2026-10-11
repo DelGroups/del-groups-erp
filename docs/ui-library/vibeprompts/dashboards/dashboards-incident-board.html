@@ -1,0 +1,110 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-incident-board/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident board</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-neutral-50 px-6 py-10">
+  <div class="mx-auto max-w-4xl">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Incidents</h1>
+        <span class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+          </span>
+          4 open
+        </span>
+      </div>
+      <div class="flex gap-2">
+        <button class="rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Subscribe</button>
+        <button class="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-neutral-800">Declare incident</button>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-xl border border-neutral-200 bg-white px-5 py-4">
+        <p class="text-2xl font-semibold text-neutral-900">4</p>
+        <p class="mt-1 text-xs uppercase tracking-widest text-neutral-400">Open</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white px-5 py-4">
+        <p class="text-2xl font-semibold text-neutral-900">2</p>
+        <p class="mt-1 text-xs uppercase tracking-widest text-neutral-400">Mitigated</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white px-5 py-4">
+        <p class="text-2xl font-semibold text-neutral-900">7</p>
+        <p class="mt-1 text-xs uppercase tracking-widest text-neutral-400">Resolved today</p>
+      </div>
+    </div>
+
+    <p class="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-neutral-400"><span class="h-2.5 w-2.5 rounded-sm bg-red-500"></span> Severity 1</p>
+    <div class="mt-3 divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div class="flex flex-wrap items-center gap-4 px-5 py-4">
+        <span class="rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">SEV1</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">Elevated 5xx on the ingest API</p>
+          <p class="mt-0.5 text-xs text-neutral-500">ingest-eu-central · started 14:02 UTC</p>
+        </div>
+        <span class="font-mono text-xs text-neutral-500">41m</span>
+        <span class="flex">
+          <span class="grid h-7 w-7 place-items-center rounded-full bg-neutral-900 text-[10px] text-white ring-2 ring-white">MO</span>
+          <span class="-ml-2 grid h-7 w-7 place-items-center rounded-full bg-amber-500 text-[10px] text-white ring-2 ring-white">TS</span>
+        </span>
+        <span class="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700">Investigating</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-4 px-5 py-4">
+        <span class="rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">SEV1</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">Scheduled exports failing for large workspaces</p>
+          <p class="mt-0.5 text-xs text-neutral-500">export-worker · started 12:31 UTC</p>
+        </div>
+        <span class="font-mono text-xs text-neutral-500">2h 12m</span>
+        <span class="flex">
+          <span class="grid h-7 w-7 place-items-center rounded-full bg-green-600 text-[10px] text-white ring-2 ring-white">DK</span>
+        </span>
+        <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">Mitigated</span>
+      </div>
+    </div>
+
+    <p class="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-neutral-400"><span class="h-2.5 w-2.5 rounded-sm bg-amber-400"></span> Severity 2</p>
+    <div class="mt-3 divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div class="flex flex-wrap items-center gap-4 px-5 py-4">
+        <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">SEV2</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">Dashboard load times above 3s in ap-southeast</p>
+          <p class="mt-0.5 text-xs text-neutral-500">web-ap-southeast · started 11:04 UTC</p>
+        </div>
+        <span class="font-mono text-xs text-neutral-500">3h 39m</span>
+        <span class="flex"><span class="grid h-7 w-7 place-items-center rounded-full bg-blue-600 text-[10px] text-white ring-2 ring-white">LR</span></span>
+        <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">Monitoring</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-4 px-5 py-4">
+        <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">SEV2</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">Webhook retries queued behind a slow consumer</p>
+          <p class="mt-0.5 text-xs text-neutral-500">webhook-dispatch · started 09:48 UTC</p>
+        </div>
+        <span class="font-mono text-xs text-neutral-500">4h 55m</span>
+        <span class="flex"><span class="grid h-7 w-7 place-items-center rounded-full bg-neutral-500 text-[10px] text-white ring-2 ring-white">RG</span></span>
+        <span class="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600">Identified</span>
+      </div>
+    </div>
+
+    <p class="mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-neutral-400"><span class="h-2.5 w-2.5 rounded-sm bg-neutral-300"></span> Severity 3</p>
+    <div class="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div class="flex flex-wrap items-center gap-4 px-5 py-4 opacity-60">
+        <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">SEV3</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900 line-through">Stale avatars served from the CDN edge</p>
+          <p class="mt-0.5 text-xs text-neutral-500">cdn · resolved 08:12 UTC</p>
+        </div>
+        <span class="font-mono text-xs text-neutral-500">22m</span>
+        <span class="flex"><span class="grid h-7 w-7 place-items-center rounded-full bg-neutral-400 text-[10px] text-white ring-2 ring-white">HB</span></span>
+        <span class="rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-medium text-green-700">Resolved</span>
+      </div>
+    </div>
+
+    <a href="#" class="mt-6 inline-block text-sm font-medium text-neutral-900 underline-offset-4 hover:underline">Full incident history <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+  </div>
+</section>
+</body></html>

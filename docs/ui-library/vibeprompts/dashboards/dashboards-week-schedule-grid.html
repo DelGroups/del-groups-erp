@@ -1,0 +1,117 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-week-schedule-grid/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week schedule grid</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-10">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">August 2026</h1>
+      <div class="flex items-center gap-1">
+        <button class="grid h-8 w-8 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50">‹</button>
+        <button class="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Today</button>
+        <button class="grid h-8 w-8 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50">›</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="flex rounded-xl border border-neutral-200 p-1">
+        <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600">Day</button>
+        <button class="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white">Week</button>
+        <button class="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600">Month</button>
+      </div>
+      <button class="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-neutral-800">New event</button>
+    </div>
+  </div>
+
+  <div class="mt-6 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+    <div class="min-w-[840px]">
+      <div class="grid grid-cols-[56px_repeat(7,1fr)] border-b border-neutral-200">
+        <div></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Mon</p><p class="mt-1 text-sm font-medium text-neutral-900">17</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Tue</p><p class="mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full bg-neutral-900 text-sm font-medium text-white">18</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Wed</p><p class="mt-1 text-sm font-medium text-neutral-900">19</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Thu</p><p class="mt-1 text-sm font-medium text-neutral-900">20</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Fri</p><p class="mt-1 text-sm font-medium text-neutral-900">21</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Sat</p><p class="mt-1 text-sm font-medium text-neutral-300">22</p></div>
+        <div class="border-l border-neutral-200 px-3 py-3 text-center"><p class="text-[11px] uppercase tracking-widest text-neutral-400">Sun</p><p class="mt-1 text-sm font-medium text-neutral-300">23</p></div>
+      </div>
+
+      <div class="relative grid grid-cols-[56px_repeat(7,1fr)]">
+        <div class="text-right">
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">08:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">09:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">10:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">11:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">12:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">13:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">14:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">15:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">16:00</div>
+          <div class="h-14 pr-2 pt-1 font-mono text-[11px] text-neutral-400">17:00</div>
+        </div>
+
+        <div class="relative border-l border-neutral-200">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+          <div class="absolute inset-x-1 rounded-lg border-l-2 border-blue-500 bg-blue-50 p-2" style="top:56px;height:52px">
+            <p class="text-[11px] font-medium text-blue-900">Standup</p>
+            <p class="text-[10px] text-blue-700">09:00 – 09:15</p>
+          </div>
+          <div class="absolute inset-x-1 rounded-lg border-l-2 border-neutral-900 bg-neutral-100 p-2" style="top:224px;height:108px">
+            <p class="text-[11px] font-medium text-neutral-900">Roadmap review</p>
+            <p class="text-[10px] text-neutral-600">12:00 – 14:00</p>
+          </div>
+        </div>
+
+        <div class="relative border-l border-neutral-200">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+          <div class="absolute left-1 w-[calc(50%-6px)] rounded-lg border-l-2 border-green-600 bg-green-50 p-2" style="top:112px;height:80px">
+            <p class="text-[11px] font-medium text-green-900">Design crit</p>
+            <p class="text-[10px] text-green-700">10:00 – 11:30</p>
+          </div>
+          <div class="absolute right-1 w-[calc(50%-6px)] rounded-lg border-l-2 border-amber-500 bg-amber-50 p-2" style="top:140px;height:80px">
+            <p class="text-[11px] font-medium text-amber-900">Vendor call</p>
+            <p class="text-[10px] text-amber-700">10:30 – 12:00</p>
+          </div>
+        </div>
+
+        <div class="relative border-l border-neutral-200">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+          <div class="absolute inset-x-1 rounded-lg border-l-2 border-neutral-900 bg-neutral-100 p-2" style="top:168px;height:56px">
+            <p class="text-[11px] font-medium text-neutral-900">1:1 with Mira</p>
+            <p class="text-[10px] text-neutral-600">11:00 – 12:00</p>
+          </div>
+        </div>
+
+        <div class="relative border-l border-neutral-200">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+          <div class="absolute inset-x-1 rounded-lg border-l-2 border-blue-500 bg-blue-50 p-2" style="top:280px;height:112px">
+            <p class="text-[11px] font-medium text-blue-900">Migration window</p>
+            <p class="text-[10px] text-blue-700">13:00 – 15:00</p>
+          </div>
+        </div>
+
+        <div class="relative border-l border-neutral-200">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+          <div class="absolute inset-x-1 rounded-lg border-l-2 border-green-600 bg-green-50 p-2" style="top:392px;height:56px">
+            <p class="text-[11px] font-medium text-green-900">Retro</p>
+            <p class="text-[10px] text-green-700">15:00 – 16:00</p>
+          </div>
+        </div>
+
+        <div class="relative border-l border-neutral-200 bg-neutral-50/60">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+        </div>
+
+        <div class="relative border-l border-neutral-200 bg-neutral-50/60">
+          <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:100%_56px]"></div>
+        </div>
+
+        <div class="pointer-events-none absolute inset-x-0 flex items-center" style="top:322px">
+          <span class="ml-[52px] h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+          <span class="h-px flex-1 bg-red-500"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</body></html>

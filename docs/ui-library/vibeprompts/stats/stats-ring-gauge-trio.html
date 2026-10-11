@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/stats/stats-ring-gauge-trio/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ring gauge trio</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-16">
+  <div class="mb-10 max-w-xl">
+    <h2 class="text-2xl font-semibold tracking-tight text-neutral-900">Service health this week</h2>
+    <p class="mt-2 text-sm text-neutral-500">Measured against the targets agreed with each customer, not internal averages.</p>
+  </div>
+
+  <div class="grid gap-5 sm:grid-cols-3">
+    <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center">
+      <p class="text-sm font-medium text-neutral-900">Tickets within SLA</p>
+      <div class="relative mx-auto mt-5 h-36 w-36">
+        <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#f5f5f5" stroke-width="10" />
+          <circle class="ring" data-value="94" cx="50" cy="50" r="42" fill="none" stroke="#16a34a" stroke-width="10" stroke-linecap="round"
+            style="stroke-dasharray:263.9; stroke-dashoffset:263.9; transition:stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)" />
+        </svg>
+        <div class="absolute inset-0 grid place-items-center">
+          <div>
+            <p class="text-3xl font-semibold tracking-tight text-neutral-900">94<span class="text-lg text-neutral-400">%</span></p>
+            <p class="text-[11px] uppercase tracking-widest text-neutral-400">Target 90</p>
+          </div>
+        </div>
+      </div>
+      <p class="mt-5 text-sm leading-relaxed text-neutral-500">First response inside the promised window.</p>
+      <p class="mt-3 border-t border-neutral-100 pt-3 font-mono text-xs text-neutral-400">1,204 of 1,281 tickets</p>
+    </div>
+
+    <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center">
+      <p class="text-sm font-medium text-neutral-900">Backlog under 7 days</p>
+      <div class="relative mx-auto mt-5 h-36 w-36">
+        <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#f5f5f5" stroke-width="10" />
+          <circle class="ring" data-value="61" cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round"
+            style="stroke-dasharray:263.9; stroke-dashoffset:263.9; transition:stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)" />
+        </svg>
+        <div class="absolute inset-0 grid place-items-center">
+          <div>
+            <p class="text-3xl font-semibold tracking-tight text-neutral-900">61<span class="text-lg text-neutral-400">%</span></p>
+            <p class="text-[11px] uppercase tracking-widest text-neutral-400">Target 80</p>
+          </div>
+        </div>
+      </div>
+      <p class="mt-5 text-sm leading-relaxed text-neutral-500">Older items are concentrated in billing.</p>
+      <p class="mt-3 border-t border-neutral-100 pt-3 font-mono text-xs text-neutral-400">148 of 242 open items</p>
+    </div>
+
+    <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center">
+      <p class="text-sm font-medium text-neutral-900">Self-serve resolution</p>
+      <div class="relative mx-auto mt-5 h-36 w-36">
+        <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#f5f5f5" stroke-width="10" />
+          <circle class="ring" data-value="38" cx="50" cy="50" r="42" fill="none" stroke="#171717" stroke-width="10" stroke-linecap="round"
+            style="stroke-dasharray:263.9; stroke-dashoffset:263.9; transition:stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)" />
+        </svg>
+        <div class="absolute inset-0 grid place-items-center">
+          <div>
+            <p class="text-3xl font-semibold tracking-tight text-neutral-900">38<span class="text-lg text-neutral-400">%</span></p>
+            <p class="text-[11px] uppercase tracking-widest text-neutral-400">No target</p>
+          </div>
+        </div>
+      </div>
+      <p class="mt-5 text-sm leading-relaxed text-neutral-500">Answered by docs before a ticket was opened.</p>
+      <p class="mt-3 border-t border-neutral-100 pt-3 font-mono text-xs text-neutral-400">790 deflected searches</p>
+    </div>
+  </div>
+</section>
+<script>
+var CIRCUMFERENCE = 2 * Math.PI * 42;
+var rings = Array.prototype.slice.call(document.querySelectorAll(".ring"));
+
+rings.forEach(function (ring) {
+  ring.style.strokeDasharray = CIRCUMFERENCE.toFixed(1);
+  ring.style.strokeDashoffset = CIRCUMFERENCE.toFixed(1);
+});
+
+// Set the target on the next frame so the transition has somewhere to travel.
+requestAnimationFrame(function () {
+  rings.forEach(function (ring) {
+    var value = Number(ring.dataset.value) / 100;
+    ring.style.strokeDashoffset = (CIRCUMFERENCE * (1 - value)).toFixed(1);
+  });
+});
+</script>
+</body></html>

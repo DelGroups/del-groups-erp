@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/hero/hero-install-command-hero/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install command hero</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-neutral-950 px-6 py-24">
+  <div class="mx-auto max-w-3xl text-center">
+    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">
+      <span class="h-1.5 w-1.5 rounded-full bg-green-400"></span> v4.2 — incremental builds
+    </span>
+    <h1 class="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">
+      Your build, in under a second
+    </h1>
+    <p class="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-neutral-400">
+      A compiler that caches what it already knows. Drop it into an existing repo and keep every script you have.
+    </p>
+
+    <div class="mx-auto mt-10 max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 text-left">
+      <div class="flex items-center gap-4 border-b border-white/10 px-4 py-2.5">
+        <div class="flex gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-full bg-white/15"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-white/15"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-white/15"></span>
+        </div>
+        <div id="pms" class="ml-auto flex gap-1 text-xs">
+          <button data-pm="npm" class="rounded-md bg-white/10 px-2.5 py-1 font-medium text-white">npm</button>
+          <button data-pm="pnpm" class="rounded-md px-2.5 py-1 text-neutral-400 transition hover:text-white">pnpm</button>
+          <button data-pm="bun" class="rounded-md px-2.5 py-1 text-neutral-400 transition hover:text-white">bun</button>
+          <button data-pm="deno" class="rounded-md px-2.5 py-1 text-neutral-400 transition hover:text-white">deno</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 px-5 py-4">
+        <code class="flex-1 truncate font-mono text-sm text-neutral-200"><span class="text-neutral-500">$</span> <span id="command">npm install @acme/build</span></code>
+        <button id="copyCmd" class="shrink-0 rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-neutral-300 transition hover:bg-white/5">Copy</button>
+      </div>
+    </div>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="rounded-xl bg-white px-5 py-3 text-sm font-medium text-neutral-900 transition hover:bg-neutral-200">Start the tutorial</a>
+      <a href="#" class="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/5">Read the docs</a>
+    </div>
+    <p class="mt-6 text-xs text-neutral-500">MIT licensed · Zero config · 12k stars on GitHub</p>
+  </div>
+</section>
+<script>
+var COMMANDS = {
+  npm: "npm install @acme/build",
+  pnpm: "pnpm add @acme/build",
+  bun: "bun add @acme/build",
+  deno: "deno add npm:@acme/build"
+};
+
+var tabs = [].slice.call(document.querySelectorAll("#pms [data-pm]"));
+var command = document.getElementById("command");
+var copyCmd = document.getElementById("copyCmd");
+
+var ACTIVE = "rounded-md bg-white/10 px-2.5 py-1 font-medium text-white";
+var IDLE = "rounded-md px-2.5 py-1 text-neutral-400 transition hover:text-white";
+
+function select(pm) {
+  tabs.forEach(function (tab) {
+    tab.className = tab.getAttribute("data-pm") === pm ? ACTIVE : IDLE;
+  });
+  command.textContent = COMMANDS[pm];
+}
+
+tabs.forEach(function (tab) {
+  tab.addEventListener("click", function () { select(tab.getAttribute("data-pm")); });
+});
+
+copyCmd.addEventListener("click", function () {
+  // Copy what people would actually run — the "$" is decoration.
+  navigator.clipboard.writeText(command.textContent).then(function () {
+    copyCmd.textContent = "✓ Copied";
+    setTimeout(function () { copyCmd.textContent = "Copy"; }, 1600);
+  });
+});
+
+select("npm");
+</script>
+</body></html>

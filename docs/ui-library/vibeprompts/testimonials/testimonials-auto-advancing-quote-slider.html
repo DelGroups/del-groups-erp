@@ -1,0 +1,113 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/testimonials/testimonials-auto-advancing-quote-slider/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto-advancing quote slider</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div id="slider" class="rounded-3xl border border-neutral-200 bg-neutral-50 px-8 py-12 text-center">
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">What teams tell us</p>
+
+    <div id="slide" class="transition-opacity duration-300">
+      <blockquote id="quote" class="mx-auto mt-6 max-w-2xl text-2xl font-medium leading-snug text-neutral-900">
+        "We replaced four internal tools with this and still ended the quarter with fewer incidents."
+      </blockquote>
+      <div class="mt-8 flex items-center justify-center gap-3">
+        <span id="avatar" class="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-sm font-medium text-white">AR</span>
+        <div class="text-left">
+          <p id="name" class="text-sm font-medium text-neutral-900">Alex Rivera</p>
+          <p id="role" class="text-xs text-neutral-500">CTO · Northwind</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 flex items-center justify-center gap-4">
+      <button id="quotePrev" aria-label="Previous quote" class="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 transition hover:text-neutral-900">←</button>
+      <div id="quoteDots" class="flex items-center gap-2"></div>
+      <button id="quoteNext" aria-label="Next quote" class="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 transition hover:text-neutral-900">→</button>
+    </div>
+  </div>
+</section>
+<script>
+var INTERVAL = 6000;
+
+var QUOTES = [
+  {
+    quote: "We replaced four internal tools with this and still ended the quarter with fewer incidents.",
+    initials: "AR", name: "Alex Rivera", role: "CTO · Northwind"
+  },
+  {
+    quote: "The migration took an afternoon. The part I did not expect was how quiet our on-call got.",
+    initials: "PK", name: "Priya Kapoor", role: "Head of Platform · Meridian"
+  },
+  {
+    quote: "Our designers open pull requests now. That sentence would have been a joke last year.",
+    initials: "JO", name: "Jonas Ohlsson", role: "Director of Engineering · Calla"
+  },
+  {
+    quote: "Procurement asked for the security review. It came back clean in three days.",
+    initials: "MT", name: "Mei Tanaka", role: "VP Engineering · Lantern"
+  }
+];
+
+var slider = document.getElementById("slider");
+var slide = document.getElementById("slide");
+var quote = document.getElementById("quote");
+var avatar = document.getElementById("avatar");
+var name = document.getElementById("name");
+var role = document.getElementById("role");
+var dots = document.getElementById("quoteDots");
+
+var ACTIVE = "h-2 w-6 rounded-full bg-neutral-900 transition-all";
+var IDLE = "h-2 w-2 rounded-full bg-neutral-300 transition-all";
+
+var index = 0;
+var timer = null;
+
+QUOTES.forEach(function (item, i) {
+  var dot = document.createElement("button");
+  dot.className = IDLE;
+  dot.setAttribute("aria-label", "Quote " + (i + 1));
+  dot.addEventListener("click", function () { go(i); });
+  dots.appendChild(dot);
+});
+
+function paint() {
+  var item = QUOTES[index];
+  quote.textContent = '"' + item.quote + '"';
+  avatar.textContent = item.initials;
+  name.textContent = item.name;
+  role.textContent = item.role;
+  [].slice.call(dots.children).forEach(function (dot, i) {
+    dot.className = i === index ? ACTIVE : IDLE;
+  });
+}
+
+function go(next) {
+  index = (next + QUOTES.length) % QUOTES.length;
+  // Fade out, swap the text while it is invisible, fade back in.
+  slide.classList.add("opacity-0");
+  setTimeout(function () {
+    paint();
+    slide.classList.remove("opacity-0");
+  }, 300);
+  restart();
+}
+
+function restart() {
+  clearInterval(timer);
+  timer = setInterval(function () { go(index + 1); }, INTERVAL);
+}
+
+document.getElementById("quotePrev").addEventListener("click", function () { go(index - 1); });
+document.getElementById("quoteNext").addEventListener("click", function () { go(index + 1); });
+
+// Nobody wants a quote to slide away mid-sentence.
+slider.addEventListener("mouseenter", function () { clearInterval(timer); });
+slider.addEventListener("mouseleave", restart);
+slider.addEventListener("focusin", function () { clearInterval(timer); });
+slider.addEventListener("focusout", restart);
+
+paint();
+restart();
+</script>
+</body></html>

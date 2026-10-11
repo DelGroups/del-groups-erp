@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-docs-bar-with-version-switcher/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs bar with version switcher</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
+    <a href="#" class="flex items-center gap-2">
+      <span class="h-7 w-7 rounded-lg bg-neutral-900"></span>
+      <span class="text-sm font-semibold text-neutral-900">Acme <span class="text-neutral-400">Docs</span></span>
+    </a>
+
+    <div class="relative">
+      <button id="versionButton" aria-expanded="false" class="flex items-center gap-2 rounded-lg border border-neutral-200 px-2.5 py-1 font-mono text-xs text-neutral-700 transition hover:bg-neutral-50">
+        <span id="versionLabel">v4.2</span><span class="text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+      </button>
+      <div id="versionMenu" class="absolute left-0 top-full z-50 mt-2 hidden w-60 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+        <button data-version="v4.2" data-latest class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-neutral-50">
+          <span><span class="font-mono text-neutral-900">v4.2</span> <span class="text-xs text-neutral-400">Latest</span></span><span data-check><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+        </button>
+        <button data-version="v4.1" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-neutral-50">
+          <span><span class="font-mono text-neutral-900">v4.1</span> <span class="text-xs text-neutral-400">Maintenance</span></span><span data-check class="hidden"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+        </button>
+        <button data-version="v3.8" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-neutral-50">
+          <span><span class="font-mono text-neutral-900">v3.8</span> <span class="text-xs text-neutral-400">Security fixes only</span></span><span data-check class="hidden"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+        </button>
+        <button data-version="v2.0" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-neutral-50">
+          <span><span class="font-mono text-neutral-900">v2.0</span> <span class="text-xs text-neutral-400">End of life</span></span><span data-check class="hidden"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="ml-auto hidden items-center gap-6 text-sm text-neutral-600 md:flex">
+      <a href="#" class="transition hover:text-neutral-900">Guides</a>
+      <a href="#" class="transition hover:text-neutral-900">API</a>
+      <a href="#" class="transition hover:text-neutral-900">Changelog</a>
+      <button class="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 transition hover:bg-neutral-50">Ask AI <span class="font-mono">⌘K</span></button>
+    </nav>
+  </div>
+
+  <div class="mx-auto flex max-w-6xl items-center gap-2 px-6 pb-3 text-xs text-neutral-400">
+    <a href="#" class="hover:text-neutral-900">Docs</a><span>/</span>
+    <a href="#" class="hover:text-neutral-900">Deploying</a><span>/</span>
+    <span class="text-neutral-700">Preview environments</span>
+  </div>
+
+  <div id="oldNotice" class="hidden border-t border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs text-amber-800">
+    You are reading the docs for <span id="oldVersion" class="font-mono">v4.1</span>.
+    <a href="#" id="toLatest" class="font-medium underline">Jump to the latest release</a>
+  </div>
+</header>
+<script>
+var button = document.getElementById("versionButton");
+var menu = document.getElementById("versionMenu");
+var label = document.getElementById("versionLabel");
+var notice = document.getElementById("oldNotice");
+var oldVersion = document.getElementById("oldVersion");
+var options = [].slice.call(menu.querySelectorAll("[data-version]"));
+
+function setOpen(open) {
+  menu.classList.toggle("hidden", !open);
+  button.setAttribute("aria-expanded", String(open));
+}
+
+function choose(option) {
+  var version = option.getAttribute("data-version");
+  label.textContent = version;
+
+  options.forEach(function (other) {
+    other.querySelector("[data-check]").classList.toggle("hidden", other !== option);
+  });
+
+  // Anything that is not the newest release gets the "you are reading old docs" strip.
+  var latest = option.hasAttribute("data-latest");
+  notice.classList.toggle("hidden", latest);
+  oldVersion.textContent = version;
+
+  setOpen(false);
+  button.focus();
+}
+
+button.addEventListener("click", function () {
+  setOpen(menu.classList.contains("hidden"));
+});
+
+options.forEach(function (option) {
+  option.addEventListener("click", function () { choose(option); });
+});
+
+document.addEventListener("click", function (e) {
+  if (!menu.contains(e.target) && !button.contains(e.target)) setOpen(false);
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Escape" || menu.classList.contains("hidden")) return;
+  setOpen(false);
+  button.focus();
+});
+
+document.getElementById("toLatest").addEventListener("click", function (e) {
+  e.preventDefault();
+  choose(options[0]);
+});
+</script>
+</body></html>

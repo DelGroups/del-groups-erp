@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-mobile-drawer-menu/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile drawer menu</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="sticky top-0 z-40 border-b border-neutral-200 bg-white/90 backdrop-blur">
+  <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+    <a href="#" class="text-lg font-semibold tracking-tight text-neutral-900">Halden</a>
+
+    <nav class="hidden gap-7 text-sm text-neutral-600 md:flex">
+      <a href="#" class="transition hover:text-neutral-900">Product</a>
+      <a href="#" class="transition hover:text-neutral-900">Solutions</a>
+      <a href="#" class="transition hover:text-neutral-900">Pricing</a>
+      <a href="#" class="transition hover:text-neutral-900">Docs</a>
+    </nav>
+
+    <div class="hidden items-center gap-4 md:flex">
+      <a href="#" class="text-sm text-neutral-600 transition hover:text-neutral-900">Sign in</a>
+      <a href="#" class="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800">Get started</a>
+    </div>
+
+    <button id="drawerOpen" class="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 md:hidden" aria-label="Open menu">
+      <span class="h-0.5 w-5 rounded-full bg-neutral-900"></span>
+      <span class="h-0.5 w-5 rounded-full bg-neutral-900"></span>
+      <span class="h-0.5 w-5 rounded-full bg-neutral-900"></span>
+    </button>
+  </div>
+</header>
+
+<div id="drawer" class="pointer-events-none fixed inset-0 z-50 md:hidden">
+  <div id="drawerBackdrop" class="absolute inset-0 bg-neutral-900/40 opacity-0 backdrop-blur-sm transition-opacity duration-300"></div>
+
+  <aside id="drawerPanel" class="absolute right-0 top-0 flex h-full w-4/5 max-w-xs translate-x-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out">
+    <div class="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
+      <span class="text-lg font-semibold tracking-tight text-neutral-900">Halden</span>
+      <button id="drawerClose" class="grid h-9 w-9 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50" aria-label="Close menu"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-5 py-4">
+      <a href="#" class="drawer-link block border-b border-neutral-100 py-3.5 text-base font-medium text-neutral-900">Product</a>
+      <a href="#" class="drawer-link block border-b border-neutral-100 py-3.5 text-base font-medium text-neutral-900">Solutions</a>
+      <a href="#" class="drawer-link block border-b border-neutral-100 py-3.5 text-base font-medium text-neutral-900">Pricing</a>
+      <a href="#" class="drawer-link block border-b border-neutral-100 py-3.5 text-base font-medium text-neutral-900">Docs</a>
+
+      <p class="mt-6 text-xs font-medium uppercase tracking-widest text-neutral-400">Resources</p>
+      <div class="mt-2 space-y-2">
+        <a href="#" class="drawer-link block text-sm text-neutral-500">Changelog</a>
+        <a href="#" class="drawer-link block text-sm text-neutral-500">Community</a>
+        <a href="#" class="drawer-link block text-sm text-neutral-500">Status</a>
+      </div>
+    </nav>
+
+    <div class="space-y-2 border-t border-neutral-200 p-5">
+      <a href="#" class="block rounded-xl bg-neutral-900 py-3 text-center text-sm font-medium text-white">Get started</a>
+      <a href="#" class="block rounded-xl border border-neutral-200 py-3 text-center text-sm font-medium text-neutral-700">Sign in</a>
+    </div>
+  </aside>
+</div>
+<script>
+var drawer = document.getElementById("drawer");
+var panel = document.getElementById("drawerPanel");
+var backdrop = document.getElementById("drawerBackdrop");
+var openBtn = document.getElementById("drawerOpen");
+var closeBtn = document.getElementById("drawerClose");
+var links = Array.prototype.slice.call(document.querySelectorAll(".drawer-link"));
+
+function open() {
+  drawer.classList.remove("pointer-events-none");
+  backdrop.classList.remove("opacity-0");
+  panel.classList.remove("translate-x-full");
+  document.body.style.overflow = "hidden";
+  closeBtn.focus();
+}
+
+function close() {
+  backdrop.classList.add("opacity-0");
+  panel.classList.add("translate-x-full");
+  document.body.style.overflow = "";
+  // Wait for the slide-out before taking the layer out of the hit test.
+  setTimeout(function () {
+    drawer.classList.add("pointer-events-none");
+  }, 300);
+  openBtn.focus();
+}
+
+openBtn.addEventListener("click", open);
+closeBtn.addEventListener("click", close);
+backdrop.addEventListener("click", close);
+links.forEach(function (link) {
+  link.addEventListener("click", close);
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !drawer.classList.contains("pointer-events-none")) close();
+});
+</script>
+</body></html>

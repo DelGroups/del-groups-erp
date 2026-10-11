@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/pricing/pricing-usage-based-estimator/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage-based estimator</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-16">
+  <div class="grid gap-8 rounded-3xl border border-neutral-200 bg-white p-8 md:grid-cols-2">
+    <div class="space-y-8">
+      <div>
+        <div class="flex items-baseline justify-between">
+          <label for="calls" class="text-sm font-medium text-neutral-700">Monthly API calls</label>
+          <span id="callsOut" class="text-2xl font-semibold text-neutral-900">2.6M</span>
+        </div>
+        <input id="calls" type="range" min="0" max="100" value="50" class="mt-3 w-full accent-neutral-900" />
+        <div class="mt-1 flex justify-between text-xs text-neutral-400"><span>100K</span><span>10M</span></div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between">
+          <label for="seats" class="text-sm font-medium text-neutral-700">Team seats</label>
+          <span id="seatsOut" class="text-2xl font-semibold text-neutral-900">8</span>
+        </div>
+        <input id="seats" type="range" min="1" max="50" value="8" class="mt-3 w-full accent-neutral-900" />
+        <div class="mt-1 flex justify-between text-xs text-neutral-400"><span>1</span><span>50</span></div>
+      </div>
+    </div>
+    <div class="rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
+      <h3 class="text-sm font-medium text-neutral-900">Your estimate</h3>
+      <dl class="mt-4 space-y-2.5 text-sm">
+        <div class="flex justify-between"><dt class="text-neutral-500">Platform fee</dt><dd class="text-neutral-900">$49</dd></div>
+        <div class="flex justify-between"><dt id="callsRow" class="text-neutral-500">2.6M calls</dt><dd id="callsCost" class="text-neutral-900">$104</dd></div>
+        <div class="flex justify-between"><dt id="seatsRow" class="text-neutral-500">8 seats</dt><dd id="seatsCost" class="text-neutral-900">$96</dd></div>
+      </dl>
+      <div class="mt-4 flex items-baseline justify-between border-t border-neutral-200 pt-4">
+        <span class="text-sm text-neutral-500">Estimated total</span>
+        <span class="text-3xl font-semibold text-neutral-900"><span id="total">$249</span><span class="text-base font-normal text-neutral-500">/mo</span></span>
+      </div>
+      <button class="mt-5 w-full rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white hover:bg-neutral-800">Start metering</button>
+      <p class="mt-3 text-center text-xs text-neutral-400">Billed monthly at $0.05 per 1K calls after the included tier.</p>
+    </div>
+  </div>
+</section>
+<script>
+// Pricing model — the single place to change rates.
+var PLATFORM_FEE = 49;   // flat monthly fee
+var RATE_PER_1K  = 0.05; // metered rate beyond the included tier
+var INCLUDED     = 500000;
+var PER_SEAT     = 12;
+var MIN_CALLS    = 100000;
+var MAX_CALLS    = 10000000;
+
+var calls = document.getElementById("calls");
+var seats = document.getElementById("seats");
+
+// Square the slider position so the low end of the range gets more travel —
+// most teams live nearer 100K than 10M, and a linear map buries that end.
+function callsFor(position) {
+  var t = position / 100;
+  return Math.round(MIN_CALLS + t * t * (MAX_CALLS - MIN_CALLS));
+}
+
+function formatCalls(n) {
+  return n >= 1000000 ? (n / 1000000).toFixed(1) + "M" : Math.round(n / 1000) + "K";
+}
+
+function money(n) {
+  return "$" + Math.round(n).toLocaleString("en-US");
+}
+
+function render() {
+  var n = callsFor(Number(calls.value));
+  var seatCount = Number(seats.value);
+  var metered = Math.max(0, n - INCLUDED) / 1000 * RATE_PER_1K;
+  var seatCost = seatCount * PER_SEAT;
+
+  document.getElementById("callsOut").textContent = formatCalls(n);
+  document.getElementById("seatsOut").textContent = seatCount;
+  document.getElementById("callsRow").textContent = formatCalls(n) + " calls";
+  document.getElementById("callsCost").textContent = money(metered);
+  document.getElementById("seatsRow").textContent =
+    seatCount + (seatCount === 1 ? " seat" : " seats");
+  document.getElementById("seatsCost").textContent = money(seatCost);
+  document.getElementById("total").textContent = money(PLATFORM_FEE + metered + seatCost);
+}
+
+calls.addEventListener("input", render);
+seats.addEventListener("input", render);
+render();
+</script>
+</body></html>

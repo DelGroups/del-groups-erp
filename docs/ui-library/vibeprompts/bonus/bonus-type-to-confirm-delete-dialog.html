@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-type-to-confirm-delete-dialog/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type-to-confirm delete dialog</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="dangerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
+  <div id="dangerCard" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+    <div class="flex items-start gap-3">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-lg text-red-600">!</span>
+      <div>
+        <h2 class="font-semibold text-neutral-900">Delete acme/payments-api</h2>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">This removes the repository and everything attached to it. It cannot be undone.</p>
+      </div>
+    </div>
+
+    <ul class="mt-5 space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
+      <li class="flex items-center gap-2"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> 3 environments, including production</li>
+      <li class="flex items-center gap-2"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> 412 build records and their logs</li>
+      <li class="flex items-center gap-2"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> 8 API tokens scoped to this repo</li>
+    </ul>
+
+    <label for="dangerInput" class="mt-5 block text-sm text-neutral-600">
+      Type <span class="rounded-md bg-neutral-100 px-1.5 py-0.5 font-mono text-xs text-neutral-900">acme/payments-api</span> to confirm
+    </label>
+    <input id="dangerInput" autocomplete="off" placeholder="acme/payments-api"
+      class="mt-2 w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 font-mono text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+
+    <div class="mt-6 flex items-center justify-end gap-3">
+      <button id="dangerCancel" class="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Cancel</button>
+      <button id="dangerConfirm" disabled class="cursor-not-allowed rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white opacity-40 transition hover:bg-red-700">Delete repository</button>
+    </div>
+
+    <p class="mt-4 text-center text-xs text-neutral-400">This action is recorded in the audit log with your account and IP.</p>
+  </div>
+</div>
+<script>
+var TARGET = "acme/payments-api";
+
+var modal = document.getElementById("dangerModal");
+var card = document.getElementById("dangerCard");
+var input = document.getElementById("dangerInput");
+var confirm = document.getElementById("dangerConfirm");
+var cancel = document.getElementById("dangerCancel");
+
+function matches() {
+  return input.value.trim() === TARGET;
+}
+
+function sync() {
+  var ok = matches();
+  confirm.disabled = !ok;
+  confirm.classList.toggle("opacity-40", !ok);
+  confirm.classList.toggle("cursor-not-allowed", !ok);
+
+  // Only complain once what they typed can no longer become the target.
+  var diverged = input.value.length > 0 && TARGET.indexOf(input.value.trim()) !== 0;
+  input.classList.toggle("border-red-400", diverged);
+  input.classList.toggle("ring-4", diverged);
+  input.classList.toggle("ring-red-500/10", diverged);
+}
+
+function close() {
+  modal.classList.add("hidden");
+}
+
+input.addEventListener("input", sync);
+
+input.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && matches()) confirm.click();
+});
+
+confirm.addEventListener("click", function () {
+  confirm.disabled = true;
+  confirm.textContent = "Deleting…";
+  confirm.classList.add("opacity-60", "cursor-not-allowed");
+  // Fire the real request here; close the dialog when it resolves.
+});
+
+cancel.addEventListener("click", close);
+modal.addEventListener("click", function (e) { if (!card.contains(e.target)) close(); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+
+input.focus();
+sync();
+</script>
+</body></html>

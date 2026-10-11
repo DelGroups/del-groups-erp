@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-agent-run-trace/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent run trace</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-14">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 px-6 py-5">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-semibold tracking-tight text-neutral-900">Triage inbox</h1>
+          <span class="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 ring-1 ring-inset ring-green-200">Completed</span>
+        </div>
+        <p class="mt-1 font-mono text-xs text-neutral-400">run_8fc21a · claude-agent · 5 steps</p>
+      </div>
+      <div class="flex items-center gap-5">
+        <div class="text-right">
+          <p id="traceTime" class="font-mono text-sm font-semibold text-neutral-900">12.4s</p>
+          <p class="text-[10px] uppercase tracking-widest text-neutral-400">Duration</p>
+        </div>
+        <div class="text-right">
+          <p id="traceTokens" class="font-mono text-sm font-semibold text-neutral-900">18,240</p>
+          <p class="text-[10px] uppercase tracking-widest text-neutral-400">Tokens</p>
+        </div>
+        <button id="traceReplay" class="flex items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg> Replay</button>
+      </div>
+    </div>
+
+    <ol id="traceSteps" class="divide-y divide-neutral-100"></ol>
+
+    <div class="border-t border-neutral-200 bg-neutral-50 px-6 py-3 text-xs text-neutral-400">
+      Steps are recorded in order. Expand one to see the exact input the model sent and what came back.
+    </div>
+  </div>
+</section>
+<script>
+var KINDS = {
+  thought: { dot: "bg-neutral-300", badge: "bg-neutral-100 text-neutral-600" },
+  tool: { dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700" },
+  output: { dot: "bg-green-500", badge: "bg-green-50 text-green-700" }
+};
+
+var STEPS = [
+  {
+    kind: "thought", name: "Plan the pass", ms: 900, tokens: 1240,
+    result: "Sort unread threads by sender, then look for anything billing related.",
+    detail: "The user asked for a morning triage. Start broad, narrow to invoices,\nand never archive anything a human has already replied to."
+  },
+  {
+    kind: "tool", name: "search_inbox", ms: 2100, tokens: 4120,
+    result: "14 unread threads matched, 3 flagged as billing.",
+    detail: "→ { \"query\": \"is:unread newer_than:2d\", \"limit\": 50 }\n← { \"matched\": 14, \"billing\": 3, \"oldest\": \"2026-08-18T07:12:00Z\" }"
+  },
+  {
+    kind: "tool", name: "fetch_thread", ms: 1600, tokens: 3380,
+    result: "Pulled thread_5521 — overdue invoice from Northwind.",
+    detail: "→ { \"id\": \"thread_5521\" }\n← { \"subject\": \"Invoice 4471 past due\", \"messages\": 4, \"amount\": 1840 }"
+  },
+  {
+    kind: "thought", name: "Decide the action", ms: 1400, tokens: 2600,
+    result: "Draft a reply rather than send — money is involved.",
+    detail: "Sending on someone's behalf about an unpaid invoice is not reversible.\nLeave it in drafts and say so plainly in the summary."
+  },
+  {
+    kind: "output", name: "Summarise for the user", ms: 6400, tokens: 6900,
+    result: "3 billing threads surfaced, 1 draft written, nothing sent.",
+    detail: "Northwind invoice 4471 is 9 days past due. A reply is waiting in your\ndrafts. Two smaller threads need a yes or no from you before I touch them."
+  }
+];
+
+var list = document.getElementById("traceSteps");
+var timeEl = document.getElementById("traceTime");
+var tokenEl = document.getElementById("traceTokens");
+var timers = [];
+
+function row(step, index, last) {
+  var kind = KINDS[step.kind];
+  var item = document.createElement("li");
+  item.className = "relative transition duration-300";
+  item.innerHTML =
+    (last ? "" : '<span class="absolute left-9 top-11 bottom-1 w-px bg-neutral-100"></span>') +
+    '<button data-toggle class="flex w-full items-start gap-3 px-6 py-4 text-left transition hover:bg-neutral-50">' +
+      '<span class="mt-1.5 flex h-3 w-3 shrink-0 items-center justify-center rounded-full ring-4 ring-white ' + kind.dot + '"></span>' +
+      '<span class="min-w-0 flex-1">' +
+        '<span class="flex items-center gap-2">' +
+          '<span class="rounded-md px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ' + kind.badge + '">' + step.kind + '</span>' +
+          '<span class="truncate text-sm font-medium text-neutral-900">' + step.name + '</span>' +
+        '</span>' +
+        '<span class="mt-1 block truncate text-sm text-neutral-500">' + step.result + '</span>' +
+      '</span>' +
+      '<span class="shrink-0 pt-0.5 text-right">' +
+        '<span class="block font-mono text-xs text-neutral-500">' + (step.ms / 1000).toFixed(1) + 's</span>' +
+        '<span class="block font-mono text-[11px] text-neutral-300">' + step.tokens.toLocaleString("en-US") + ' tk</span>' +
+      '</span>' +
+    '</button>' +
+    '<div data-panel class="hidden px-6 pb-5 pl-[3.75rem]">' +
+      '<pre class="overflow-x-auto rounded-xl bg-neutral-900 p-4 font-mono text-xs leading-relaxed text-neutral-200">' + step.detail + '</pre>' +
+    '</div>';
+  return item;
+}
+
+STEPS.forEach(function (step, index) {
+  list.appendChild(row(step, index, index === STEPS.length - 1));
+});
+
+// One panel at a time — a trace is read top to bottom, not fanned open.
+list.addEventListener("click", function (e) {
+  var button = e.target.closest("[data-toggle]");
+  if (!button) return;
+  var panel = button.nextElementSibling;
+  var wasOpen = !panel.classList.contains("hidden");
+  [].slice.call(list.querySelectorAll("[data-panel]")).forEach(function (p) {
+    p.classList.add("hidden");
+  });
+  if (!wasOpen) panel.classList.remove("hidden");
+});
+
+document.getElementById("traceReplay").addEventListener("click", function () {
+  timers.forEach(clearTimeout);
+  timers = [];
+
+  var ms = 0;
+  var tokens = 0;
+  timeEl.textContent = "0.0s";
+  tokenEl.textContent = "0";
+
+  var rows = [].slice.call(list.children);
+  rows.forEach(function (item) {
+    item.classList.add("translate-y-1", "opacity-0");
+    item.querySelector("[data-panel]").classList.add("hidden");
+  });
+
+  rows.forEach(function (item, index) {
+    timers.push(setTimeout(function () {
+      item.classList.remove("translate-y-1", "opacity-0");
+      ms += STEPS[index].ms;
+      tokens += STEPS[index].tokens;
+      timeEl.textContent = (ms / 1000).toFixed(1) + "s";
+      tokenEl.textContent = tokens.toLocaleString("en-US");
+    }, 320 * index));
+  });
+});
+</script>
+</body></html>

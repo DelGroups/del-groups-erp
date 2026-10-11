@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-welcome-tour-modal/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome tour modal</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="welcomeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-6 backdrop-blur-sm">
+  <div id="welcomeCard" class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div class="relative grid h-40 place-items-center bg-gradient-to-br from-neutral-100 via-neutral-50 to-neutral-200">
+      <span class="text-4xl text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 1.15 3.1a4 4 0 0 0 2.36 2.36L18.6 9.6l-3.09 1.15a4 4 0 0 0-2.36 2.36L12 16.2l-1.15-3.09a4 4 0 0 0-2.36-2.36L5.4 9.6l3.09-1.14a4 4 0 0 0 2.36-2.36L12 3Z"/><path d="m18.5 15 .55 1.45a2 2 0 0 0 1.18 1.18l1.47.55-1.47.55a2 2 0 0 0-1.18 1.18l-.55 1.47-.55-1.47a2 2 0 0 0-1.18-1.18l-1.47-.55 1.47-.55a2 2 0 0 0 1.18-1.18L18.5 15Z"/></svg></span>
+      <span class="absolute right-4 top-4 rounded-full bg-white/70 px-2 py-0.5 font-mono text-[10px] text-neutral-500">v4.2</span>
+    </div>
+
+    <div class="p-7">
+      <h2 class="text-xl font-semibold tracking-tight text-neutral-900">Welcome, Rae</h2>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-500">
+        Your workspace is ready and the first sync is running in the background. Here are three things worth doing while it finishes.
+      </p>
+
+      <div class="mt-6 space-y-2">
+        <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:border-neutral-300 hover:bg-neutral-50">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/></svg></span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-2">
+              <span class="text-sm font-medium text-neutral-900">Open a prebuilt report</span>
+              <span class="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Start here</span>
+            </span>
+            <span class="block text-xs text-neutral-500">See the shape of things before building your own.</span>
+          </span>
+          <span class="text-neutral-300">›</span>
+        </button>
+
+        <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:border-neutral-300 hover:bg-neutral-50">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-medium text-neutral-900">Invite the two people who will use it</span>
+            <span class="block text-xs text-neutral-500">Seats are unlimited on your plan.</span>
+          </span>
+          <span class="text-neutral-300">›</span>
+        </button>
+
+        <button class="flex w-full items-center gap-3.5 rounded-xl border border-neutral-200 p-4 text-left transition hover:border-neutral-300 hover:bg-neutral-50">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-medium text-neutral-900">Grab an API key</span>
+            <span class="block text-xs text-neutral-500">If you would rather start from the command line.</span>
+          </span>
+          <span class="text-neutral-300">›</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 bg-neutral-50 px-7 py-4">
+      <label class="flex items-center gap-2 text-sm text-neutral-600">
+        <input id="welcomeDismiss" type="checkbox" class="rounded border-neutral-300" /> Do not show this again
+      </label>
+      <div class="flex gap-2">
+        <button id="welcomeSkip" class="rounded-xl px-4 py-2.5 text-sm font-medium text-neutral-600 transition hover:bg-neutral-100">Skip the tour</button>
+        <button id="welcomeStart" class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Take the tour</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var KEY = "welcome:v4.2:dismissed";
+var modal = document.getElementById("welcomeModal");
+var card = document.getElementById("welcomeCard");
+var dismiss = document.getElementById("welcomeDismiss");
+
+function close() {
+  if (dismiss.checked) {
+    try {
+      localStorage.setItem(KEY, "1");
+    } catch (e) {
+      // Blocked storage just means they see this again next time.
+    }
+  }
+  modal.remove();
+}
+
+document.getElementById("welcomeSkip").addEventListener("click", close);
+document.getElementById("welcomeStart").addEventListener("click", close);
+
+modal.addEventListener("click", function (e) {
+  if (!card.contains(e.target)) close();
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") close();
+});
+
+try {
+  if (localStorage.getItem(KEY) === "1") modal.remove();
+} catch (e) {}
+</script>
+</body></html>

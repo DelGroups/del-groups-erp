@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-stepper-progress/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stepper progress</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-xl p-6">
+  <ol id="steps" class="mb-8 flex items-center">
+    <li class="flex items-center">
+      <span data-step="0" class="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-sm text-white ring-4 ring-neutral-900/15">1</span>
+    </li>
+    <li data-line="0" class="h-px flex-1 bg-neutral-200"></li>
+    <li class="flex items-center">
+      <span data-step="1" class="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-sm text-neutral-400">2</span>
+    </li>
+    <li data-line="1" class="h-px flex-1 bg-neutral-200"></li>
+    <li class="flex items-center">
+      <span data-step="2" class="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-sm text-neutral-400">3</span>
+    </li>
+  </ol>
+  <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+    <h2 id="stepTitle" class="text-lg font-semibold text-neutral-900">Create your account</h2>
+    <p id="stepDesc" class="mt-1 text-sm text-neutral-500">Confirm your email address so we know where to send important updates.</p>
+    <div class="mt-6 flex justify-between">
+      <button id="back" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50">Back</button>
+      <button id="next" class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">Continue</button>
+    </div>
+  </div>
+</div>
+<script>
+var STEPS = [
+  { title: "Create your account", desc: "Confirm your email address so we know where to send important updates." },
+  { title: "Set up your workspace", desc: "Give your workspace a name and invite a few teammates to get going." },
+  { title: "Connect your tools", desc: "Link the services you already use so your data lands here automatically." }
+];
+
+var DONE = "flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-sm text-white";
+var CURRENT = DONE + " ring-4 ring-neutral-900/15";
+var UPCOMING = "flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-sm text-neutral-400";
+
+var circles = [].slice.call(document.querySelectorAll("[data-step]"));
+var lines = [].slice.call(document.querySelectorAll("[data-line]"));
+var title = document.getElementById("stepTitle");
+var desc = document.getElementById("stepDesc");
+var back = document.getElementById("back");
+var next = document.getElementById("next");
+
+var index = 0;
+
+function render() {
+  circles.forEach(function (circle, i) {
+    circle.className = i < index ? DONE : i === index ? CURRENT : UPCOMING;
+    circle.textContent = i < index ? "✓" : String(i + 1);
+  });
+
+  lines.forEach(function (line, i) {
+    line.className = "h-px flex-1 " + (i < index ? "bg-neutral-900" : "bg-neutral-200");
+  });
+
+  title.textContent = STEPS[index].title;
+  desc.textContent = STEPS[index].desc;
+
+  back.disabled = index === 0;
+  back.classList.toggle("opacity-40", index === 0);
+  back.classList.toggle("cursor-not-allowed", index === 0);
+  next.textContent = index === STEPS.length - 1 ? "Finish" : "Continue";
+}
+
+back.addEventListener("click", function () {
+  if (index > 0) { index -= 1; render(); }
+});
+
+next.addEventListener("click", function () {
+  if (index < STEPS.length - 1) {
+    index += 1;
+    render();
+    return;
+  }
+  circles.forEach(function (circle) { circle.className = DONE; circle.textContent = "✓"; });
+  lines.forEach(function (line) { line.className = "h-px flex-1 bg-neutral-900"; });
+  title.textContent = "You are all set";
+  desc.textContent = "Your workspace is ready. You can change any of this later in settings.";
+  next.textContent = "Go to dashboard";
+});
+
+render();
+</script>
+</body></html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-skeleton-loading-state/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeleton loading state</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-2xl p-6">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
+      <div>
+        <h2 class="text-sm font-semibold text-neutral-900">Recent projects</h2>
+        <p id="loadStatus" class="text-xs text-neutral-400">Loading…</p>
+      </div>
+      <button id="reload" class="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Refresh</button>
+    </div>
+
+    <div id="skeleton" class="animate-pulse divide-y divide-neutral-100">
+      <div class="flex items-center gap-4 px-5 py-4">
+        <div class="h-9 w-9 shrink-0 rounded-full bg-neutral-200"></div>
+        <div class="flex-1 space-y-2"><div class="h-2.5 w-40 rounded-full bg-neutral-200"></div><div class="h-2 w-24 rounded-full bg-neutral-100"></div></div>
+        <div class="h-5 w-16 rounded-full bg-neutral-200"></div>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <div class="h-9 w-9 shrink-0 rounded-full bg-neutral-200"></div>
+        <div class="flex-1 space-y-2"><div class="h-2.5 w-52 rounded-full bg-neutral-200"></div><div class="h-2 w-32 rounded-full bg-neutral-100"></div></div>
+        <div class="h-5 w-12 rounded-full bg-neutral-200"></div>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <div class="h-9 w-9 shrink-0 rounded-full bg-neutral-200"></div>
+        <div class="flex-1 space-y-2"><div class="h-2.5 w-32 rounded-full bg-neutral-200"></div><div class="h-2 w-40 rounded-full bg-neutral-100"></div></div>
+        <div class="h-5 w-20 rounded-full bg-neutral-200"></div>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <div class="h-9 w-9 shrink-0 rounded-full bg-neutral-200"></div>
+        <div class="flex-1 space-y-2"><div class="h-2.5 w-44 rounded-full bg-neutral-200"></div><div class="h-2 w-20 rounded-full bg-neutral-100"></div></div>
+        <div class="h-5 w-14 rounded-full bg-neutral-200"></div>
+      </div>
+    </div>
+
+    <div id="loaded" class="hidden divide-y divide-neutral-100">
+      <div class="flex items-center gap-4 px-5 py-4">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">PA</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">payments-api</p>
+          <p class="truncate text-xs text-neutral-400">acme/payments-api · main</p>
+        </div>
+        <span class="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">Passing</span>
+        <span class="w-16 text-right text-xs text-neutral-400">2m ago</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-medium text-neutral-700">WB</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">web-storefront</p>
+          <p class="truncate text-xs text-neutral-400">acme/web-storefront · release/4.2</p>
+        </div>
+        <span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Running</span>
+        <span class="w-16 text-right text-xs text-neutral-400">now</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-medium text-neutral-700">ET</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">events-tracker</p>
+          <p class="truncate text-xs text-neutral-400">acme/events-tracker · main</p>
+        </div>
+        <span class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Failed</span>
+        <span class="w-16 text-right text-xs text-neutral-400">18m ago</span>
+      </div>
+      <div class="flex items-center gap-4 px-5 py-4">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-medium text-neutral-700">DS</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-neutral-900">design-system</p>
+          <p class="truncate text-xs text-neutral-400">acme/design-system · main</p>
+        </div>
+        <span class="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">Passing</span>
+        <span class="w-16 text-right text-xs text-neutral-400">1h ago</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var DELAY = 1400;
+
+var skeleton = document.getElementById("skeleton");
+var loaded = document.getElementById("loaded");
+var status = document.getElementById("loadStatus");
+var reload = document.getElementById("reload");
+
+function show(waiting) {
+  skeleton.classList.toggle("hidden", !waiting);
+  loaded.classList.toggle("hidden", waiting);
+  reload.disabled = waiting;
+  reload.classList.toggle("opacity-40", waiting);
+  status.textContent = waiting
+    ? "Loading…"
+    : loaded.children.length + " projects · updated just now";
+}
+
+function load() {
+  show(true);
+  // Stand-in for the fetch — resolve yours here and render before flipping.
+  setTimeout(function () { show(false); }, DELAY);
+}
+
+reload.addEventListener("click", load);
+load();
+</script>
+</body></html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-content-search-results/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content search results</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-12">
+  <div class="relative">
+    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+    <input type="search" value="incremental sync"
+      class="w-full rounded-xl border border-neutral-200 py-3.5 pl-11 pr-11 text-base outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+    <button class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700" aria-label="Clear"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <p class="mt-3 text-sm text-neutral-500">42 results · <span class="font-mono text-xs">0.031s</span></p>
+
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap gap-2">
+      <button class="rounded-full bg-neutral-900 px-3.5 py-1.5 text-xs font-medium text-white">All 42</button>
+      <button class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Articles 14</button>
+      <button class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Docs 21</button>
+      <button class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Videos 4</button>
+      <button class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Changelog 3</button>
+    </div>
+    <select class="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-900">
+      <option>Most relevant</option><option>Newest</option>
+    </select>
+  </div>
+
+  <div class="mt-8 divide-y divide-neutral-200 border-y border-neutral-200">
+    <a href="#" class="block py-5 transition hover:bg-neutral-50">
+      <p class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg> Docs</p>
+      <p class="mt-1.5 text-base font-medium text-neutral-900">Configuring an <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark></p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">Choose a cursor column, set the batch size, and let the first run establish a watermark. An <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark> reads only rows changed since that point.</p>
+      <p class="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-400">docs / sources / syncs<span class="text-neutral-300">·</span>Updated 12 Aug</p>
+    </a>
+
+    <a href="#" class="block py-5 transition hover:bg-neutral-50">
+      <div class="flex items-center gap-2">
+        <p class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg> Docs</p>
+        <span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">Updated recently</span>
+      </div>
+      <p class="mt-1.5 text-base font-medium text-neutral-900">Cursor columns and watermarks</p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">Every <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark> stores a watermark. Choosing an unindexed column is the most common reason a sync times out.</p>
+      <p class="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-400">docs / sources / cursors<span class="text-neutral-300">·</span>Updated 16 Aug</p>
+    </a>
+
+    <a href="#" class="block py-5 transition hover:bg-neutral-50">
+      <p class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/></svg> Article</p>
+      <p class="mt-1.5 text-base font-medium text-neutral-900">Backfilling without melting production</p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">The trick is to treat the backfill as an <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark> that happens to start from zero, with the same checkpoints and the same rate limits.</p>
+      <p class="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-400">journal / migrations<span class="text-neutral-300">·</span>26 Jun</p>
+    </a>
+
+    <a href="#" class="block py-5 transition hover:bg-neutral-50">
+      <p class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg> Video</p>
+      <p class="mt-1.5 text-base font-medium text-neutral-900">Setting up your first sync (4:12)</p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">Walks through a full <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark> against a Postgres source, including what to do when the preview returns nothing.</p>
+      <p class="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-400">videos / getting-started<span class="text-neutral-300">·</span>04 May</p>
+    </a>
+
+    <a href="#" class="block py-5 transition hover:bg-neutral-50">
+      <div class="flex items-center gap-2">
+        <p class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg> Changelog</p>
+        <span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">Updated recently</span>
+      </div>
+      <p class="mt-1.5 text-base font-medium text-neutral-900">v4.2 — faster cursors and composite watermarks</p>
+      <p class="mt-1 text-sm leading-relaxed text-neutral-500">An <mark class="rounded bg-amber-100 px-0.5 text-neutral-900">incremental sync</mark> can now use two columns as a composite watermark, which fixes ties on identical timestamps.</p>
+      <p class="mt-2 flex items-center gap-3 font-mono text-xs text-neutral-400">changelog / 4.2<span class="text-neutral-300">·</span>02 Aug</p>
+    </a>
+  </div>
+
+  <div class="mt-8 flex items-center justify-between">
+    <button disabled class="rounded-xl border border-neutral-200 px-3.5 py-2 text-sm font-medium text-neutral-300">Previous</button>
+    <div class="flex gap-1">
+      <button class="h-9 w-9 rounded-lg bg-neutral-900 text-sm font-medium text-white">1</button>
+      <button class="h-9 w-9 rounded-lg text-sm font-medium text-neutral-600 transition hover:bg-neutral-100">2</button>
+      <button class="h-9 w-9 rounded-lg text-sm font-medium text-neutral-600 transition hover:bg-neutral-100">3</button>
+      <span class="grid h-9 w-9 place-items-center text-sm text-neutral-400">…</span>
+      <button class="h-9 w-9 rounded-lg text-sm font-medium text-neutral-600 transition hover:bg-neutral-100">9</button>
+    </div>
+    <button class="rounded-xl border border-neutral-200 px-3.5 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Next</button>
+  </div>
+
+  <div class="mt-8 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4 text-sm text-neutral-600">
+    People searching this also looked for <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">sync timed out</a> and <a href="#" class="font-medium text-neutral-900 underline underline-offset-4">cursor column index</a>.
+  </div>
+</section>
+</body></html>

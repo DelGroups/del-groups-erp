@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-product-tour-coachmark/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product tour coachmark</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="relative mx-auto max-w-xl p-6 pb-64">
+  <div class="flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white p-2">
+    <button class="rounded-lg px-3 py-2 text-sm text-neutral-400">Drafts</button>
+    <div class="relative">
+      <button class="rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 ring-4 ring-neutral-900/15">Automations</button>
+
+      <div id="coachmark" class="absolute left-1/2 top-full z-30 mt-3 w-72 -translate-x-1/2 rounded-2xl bg-neutral-900 p-4 text-left shadow-2xl">
+        <span class="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-neutral-900"></span>
+        <p id="tourCount" class="text-[11px] font-medium uppercase tracking-wider text-neutral-500">Step 2 of 4</p>
+        <h3 id="tourTitle" class="mt-1 text-sm font-semibold text-white">Automate the repetitive part</h3>
+        <p id="tourBody" class="mt-1.5 text-sm leading-relaxed text-neutral-400">Rules live here. Start from a template and adjust the trigger — nothing runs until you enable it.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <div id="tourDots" class="flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600"></span>
+            <span class="h-1.5 w-4 rounded-full bg-white"></span>
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600"></span>
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600"></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="tourSkip" class="rounded-lg px-2.5 py-1.5 text-xs text-neutral-400 hover:text-white">Skip tour</button>
+            <button id="tourNext" class="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-neutral-200">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="rounded-lg px-3 py-2 text-sm text-neutral-400">Reports</button>
+  </div>
+</div>
+<script>
+var TOUR = [
+  { title: "Start from your drafts", body: "Anything unfinished waits here. Nothing is published until you say so." },
+  { title: "Automate the repetitive part", body: "Rules live here. Start from a template and adjust the trigger — nothing runs until you enable it." },
+  { title: "Watch the numbers", body: "Reports refresh every fifteen minutes. Pin the ones your team actually reads." },
+  { title: "That is the tour", body: "You can reopen it any time from the help menu in the top right." }
+];
+
+var count = document.getElementById("tourCount");
+var title = document.getElementById("tourTitle");
+var body = document.getElementById("tourBody");
+var dots = [].slice.call(document.querySelectorAll("#tourDots span"));
+var next = document.getElementById("tourNext");
+var skip = document.getElementById("tourSkip");
+var mark = document.getElementById("coachmark");
+
+var index = 1; // the markup opens on step 2, where the highlight already sits
+
+function render() {
+  count.textContent = "Step " + (index + 1) + " of " + TOUR.length;
+  title.textContent = TOUR[index].title;
+  body.textContent = TOUR[index].body;
+  next.textContent = index === TOUR.length - 1 ? "Done" : "Next";
+
+  dots.forEach(function (dot, i) {
+    dot.className =
+      "h-1.5 rounded-full " + (i === index ? "w-4 bg-white" : "w-1.5 bg-neutral-600");
+  });
+}
+
+function end() {
+  mark.remove();
+}
+
+next.addEventListener("click", function () {
+  if (index < TOUR.length - 1) {
+    index += 1;
+    render();
+  } else {
+    end();
+  }
+});
+
+skip.addEventListener("click", end);
+render();
+</script>
+</body></html>

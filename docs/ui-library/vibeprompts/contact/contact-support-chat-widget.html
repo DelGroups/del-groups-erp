@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-support-chat-widget/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support chat widget</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+  <div id="chatPanel" class="hidden w-[22rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
+    <header class="flex items-center gap-3 bg-neutral-900 px-4 py-3">
+      <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-white">RS</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-white">Rosa · Support</p>
+        <p class="flex items-center gap-1.5 text-[11px] text-neutral-400"><span class="h-1.5 w-1.5 rounded-full bg-green-400"></span> Typically replies in 2 minutes</p>
+      </div>
+      <button id="chatClose" aria-label="Close chat" class="text-neutral-400 transition hover:text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+
+    <div id="chatLog" class="h-72 space-y-3 overflow-y-auto bg-neutral-50 p-4">
+      <div class="max-w-[80%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-sm leading-relaxed text-neutral-700 shadow-sm">
+        Hi! Ask me anything about plans, migrations or a stuck build — I can pull up your workspace if you share the name.
+      </div>
+    </div>
+
+    <div id="chatChips" class="flex flex-wrap gap-2 border-t border-neutral-100 bg-white px-4 py-3">
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600 transition hover:bg-neutral-50">Pricing question</button>
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600 transition hover:bg-neutral-50">Report a bug</button>
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600 transition hover:bg-neutral-50">Book a demo</button>
+    </div>
+
+    <form id="chatForm" class="flex items-center gap-2 border-t border-neutral-100 px-3 py-3">
+      <input id="chatInput" placeholder="Write a message…" autocomplete="off"
+        class="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <button aria-label="Send message" class="shrink-0 rounded-xl bg-neutral-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 19V5m0 0-5 5m5-5 5 5"/></svg></button>
+    </form>
+  </div>
+
+  <button id="chatLauncher" aria-label="Open support chat" class="relative flex h-14 w-14 items-center justify-center rounded-full bg-neutral-900 text-xl text-white shadow-lg transition hover:bg-neutral-800">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg>
+    <span id="chatBadge" class="absolute right-1 top-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></span>
+  </button>
+</div>
+<script>
+var REPLIES = [
+  { match: /pric|cost|plan|billing/i, text: "Team is $49 a month for the workspace plus $9 per extra seat. Annual billing takes 20% off — want me to send a quote?" },
+  { match: /bug|error|fail|broken|stuck/i, text: "Sorry about that. Paste the build ID and I will pull the logs — most stuck builds are a cache key change, which we can clear from here." },
+  { match: /demo|call|meeting|sales/i, text: "Happy to set one up. Thirty minutes, screen share, no slides — what does your Thursday look like?" },
+  { match: /migrat|import|move|switch/i, text: "Migrations usually take an afternoon. We can run both pipelines side by side until you are confident, then flip the default." }
+];
+
+var FALLBACK = "Good question — let me check with the team and come back to you here within the hour.";
+
+var launcher = document.getElementById("chatLauncher");
+var panel = document.getElementById("chatPanel");
+var badge = document.getElementById("chatBadge");
+var log = document.getElementById("chatLog");
+var form = document.getElementById("chatForm");
+var input = document.getElementById("chatInput");
+
+function bubble(text, mine) {
+  var el = document.createElement("div");
+  el.className = mine
+    ? "ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-neutral-900 px-3.5 py-2.5 text-sm leading-relaxed text-neutral-100"
+    : "max-w-[80%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-sm leading-relaxed text-neutral-700 shadow-sm";
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+function answer(question) {
+  var typing = bubble("● ● ●", false);
+  typing.className += " animate-pulse text-neutral-400";
+
+  setTimeout(function () {
+    var reply = REPLIES.filter(function (r) { return r.match.test(question); })[0];
+    typing.remove();
+    bubble(reply ? reply.text : FALLBACK, false);
+  }, 900);
+}
+
+function send(text) {
+  var message = text.trim();
+  if (!message) return;
+  bubble(message, true);
+  input.value = "";
+  answer(message);
+}
+
+launcher.addEventListener("click", function () {
+  var open = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !open);
+  badge.classList.add("hidden"); // Nothing is unread once it has been opened.
+  if (open) input.focus();
+});
+
+document.getElementById("chatClose").addEventListener("click", function () {
+  panel.classList.add("hidden");
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") panel.classList.add("hidden");
+});
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  send(input.value);
+});
+
+[].slice.call(document.querySelectorAll("#chatChips button")).forEach(function (chip) {
+  chip.addEventListener("click", function () { send(chip.textContent); });
+});
+</script>
+</body></html>
