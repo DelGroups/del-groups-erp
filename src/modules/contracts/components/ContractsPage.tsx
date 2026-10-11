@@ -2,12 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import ContractAttachmentButton from "@/components/contracts/ContractAttachmentButton";
-import ContractLinkedInvoicesModal from "@/components/contracts/ContractLinkedInvoicesModal";
+import ContractAttachmentButton from "./ContractAttachmentButton";
+import ContractLinkedInvoicesModal from "./ContractLinkedInvoicesModal";
 import ContractPrintTemplate, {
   type ContractPrintData,
-} from "@/components/contracts/ContractPrintTemplate";
-import ContractStatsCards from "@/components/contracts/ContractStatsCards";
+} from "./ContractPrintTemplate";
+import ContractStatsCards from "./ContractStatsCards";
 import {
   Ban,
   FileText,
@@ -37,7 +37,7 @@ import {
   type Contract,
   type ContractStatus,
   type ContractType,
-} from "@/lib/contracts/api";
+} from "../lib/api";
 import { filterLegalCustomers, filterLegalSuppliers } from "@/lib/customers/entityType";
 import type { CompanyBranding } from "@/lib/print/types";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";

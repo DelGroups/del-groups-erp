@@ -2,7 +2,7 @@
 
 import React from "react";
 import KpiCard from "@/components/dashboard/KpiCard";
-import { computeContractStats, type Contract } from "@/lib/contracts/api";
+import { computeContractStats, type Contract } from "../lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 import { FileText, ShoppingCart, Truck, Wallet } from "lucide-react";
 

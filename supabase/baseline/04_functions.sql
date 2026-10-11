@@ -12887,37 +12887,6 @@ AS $function$
   ) IN ('ALL_RECORDS', '"ALL_RECORDS"');
 $function$;
 
-CREATE OR REPLACE FUNCTION public.validate_contract_legal_party()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  IF NEW.type IN ('sale', 'service') THEN
-    IF NOT EXISTS (
-      SELECT 1
-      FROM customers c
-      WHERE c.id = NEW.party_id
-        AND c.entity_type = 'legal'
-        AND COALESCE(TRIM(c.voen), '') <> ''
-    ) THEN
-      RAISE EXCEPTION 'contract_requires_legal_customer_with_voen';
-    END IF;
-  ELSIF NEW.type = 'purchase' THEN
-    IF NOT EXISTS (
-      SELECT 1
-      FROM suppliers s
-      WHERE s.id = NEW.party_id
-        AND s.entity_type = 'legal'
-        AND COALESCE(TRIM(s.voen), '') <> ''
-    ) THEN
-      RAISE EXCEPTION 'contract_requires_legal_supplier_with_voen';
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.validate_transaction_row()
  RETURNS trigger
  LANGUAGE plpgsql

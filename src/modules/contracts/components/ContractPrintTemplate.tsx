@@ -5,7 +5,7 @@ import {
   getContractStatusLabel,
   getContractTypeLabel,
   type Contract,
-} from "@/lib/contracts/api";
+} from "../lib/api";
 import type { CompanyBranding } from "@/lib/print/types";
 import { useI18n } from "@/i18n/I18nProvider";
 

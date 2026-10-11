@@ -5,11 +5,11 @@ import { FileText, Plus } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { VatMode } from "@/lib/finance/vatEngine";
 import {
+  ContractQuickCreateModal,
   fetchActiveContractsForParty,
   formatContractOptionLabel,
   type Contract,
-} from "@/lib/contracts/api";
-import ContractQuickCreateModal from "@/components/contracts/ContractQuickCreateModal";
+} from "@/modules/contracts";
 
 export interface OfficialTransactionSectionProps {
   transactionType: "sale" | "purchase";

@@ -1,5 +1,5 @@
-import ContractsPageClient from "./page.client";
+import { ContractsPage } from "@/modules/contracts/pages";
 
-export default function ContractsPage() {
-  return <ContractsPageClient />;
+export default function Page() {
+  return <ContractsPage />;
 }
