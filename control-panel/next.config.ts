@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   // Turbopack only resolves files inside its root, and tracing must include them too.
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
+  // Don't let `next dev` write AGENTS.md / CLAUDE.md here; the repo root has them.
+  agentRules: false,
 };
 
 export default nextConfig;
