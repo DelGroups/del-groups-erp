@@ -12,6 +12,7 @@ import {
 } from "@/lib/ai/context";
 import { completeAssistantChat, getAiProviderConfig, type ChatTurn } from "@/lib/ai/complete";
 import { PRODUCT_NAME } from "@/lib/brand";
+import { requireModuleApi } from "@/lib/modules/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export function OPTIONS() {
 export async function GET() {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
   const config = getAiProviderConfig();
   return jsonWithCors({
     configured: Boolean(config.provider),
@@ -37,6 +40,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
 
   const limit = rateLimit(`ai:${auth.user.id}:${getClientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!limit.allowed) {

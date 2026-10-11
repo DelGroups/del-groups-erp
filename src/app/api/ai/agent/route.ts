@@ -11,6 +11,7 @@ import { ensureConversation, loadHistory, saveTurn } from "@/lib/ai/native/store
 import { PRODUCT_NAME } from "@/lib/brand";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import { companyDisplayName, EMPTY_COMPANY_PROFILE } from "@/lib/company/profile";
+import { getEnabledModules, requireModuleApi } from "@/lib/modules/server";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,8 @@ function systemPrompt(language: string, company: { name: string; currency: strin
 export async function GET() {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
   const access = nativeAssistantAccess(auth.profile);
   return NextResponse.json({ enabled: access.enabled });
 }
@@ -54,6 +57,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
 
   const access = nativeAssistantAccess(auth.profile);
   if (!access.enabled) {
@@ -121,7 +126,7 @@ export async function POST(request: NextRequest) {
       history,
       userMessage: message,
       today: new Date().toISOString().slice(0, 10),
-      ctx: { client, profile: auth.profile },
+      ctx: { client, profile: auth.profile, enabledModules: await getEnabledModules() },
     });
     status = result.status;
   } catch (err) {

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import ERPLayout from "@/components/layout/ERPLayout";
 import CommandPalette from "@/components/layout/CommandPalette";
 import AiAssistantWidget from "@/components/ai/AiAssistantWidget";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import { SidebarMenuProvider } from "@/components/layout/SidebarContext";
 import { getRequiredPermission } from "@/lib/auth/routePermissions";
@@ -21,6 +22,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
   const pathname = usePathname();
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const aiEnabled = useEnabledModules().isEnabled("ai");
   const requiredPermission =
     permission === undefined ? getRequiredPermission(pathname) : permission;
 
@@ -66,7 +68,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
       </ERPLayout>
 
       <CommandPalette />
-      <AiAssistantWidget />
+      {aiEnabled ? <AiAssistantWidget /> : null}
     </SidebarMenuProvider>
   );
 }

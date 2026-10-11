@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
@@ -18,6 +18,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import type { DashboardData } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -57,6 +58,12 @@ export default function ManagementDashboardPage() {
   const canReconcileAr =
     can("can_manage_finance") || can("can_edit_sales") || can("can_manage_settings");
   const companyName = useCompanyProfile().displayName;
+  // Widgets of modules the tenant does not have are hidden.
+  const { isEnabled } = useEnabledModules();
+  const showSales = isEnabled("sales");
+  const showPurchases = isEnabled("purchases");
+  const showAccounting = isEnabled("accounting");
+  const showInventory = isEnabled("inventory");
   const [loading, setLoading] = useState(true);
   const [reconcilingAr, setReconcilingAr] = useState(false);
   const [data, setData] = useState<DashboardData>(emptyDashboard);
@@ -151,7 +158,7 @@ export default function ManagementDashboardPage() {
           </>
         }
       >
-          {hasArDiscrepancies ? (
+          {showSales && hasArDiscrepancies ? (
             <Alert variant="warning" title={t("dashboard.arDiscrepancyTitle")}>
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -187,60 +194,76 @@ export default function ManagementDashboardPage() {
           ) : null}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <KpiCard
-              label={t("dashboard.kpiRevenue")}
-              value={loading ? "..." : `${kpis.monthlyRevenue.toFixed(2)} ${t("common.currency")}`}
-              sublabel="Cari ay satışları"
-              icon={<TrendingUp className="h-5 w-5" />}
-              accent="emerald"
-            />
-            <KpiCard
-              label={t("dashboard.kpiExpenses")}
-              value={loading ? "..." : `${kpis.monthlyExpenses.toFixed(2)} ${t("common.currency")}`}
-              sublabel="Məxaric əməliyyatları"
-              icon={<ArrowDownRight className="h-5 w-5" />}
-              accent="rose"
-            />
-            <KpiCard
-              label={t("dashboard.kpiProfit")}
-              value={loading ? "..." : `${kpis.netProfit.toFixed(2)} ${t("common.currency")}`}
-              sublabel={kpis.netProfit >= 0 ? "Mənfəətli ay" : "Mənfi balans"}
-              icon={
-                kpis.netProfit >= 0 ? (
-                  <TrendingUp className="h-5 w-5" />
-                ) : (
-                  <TrendingDown className="h-5 w-5" />
-                )
-              }
-              accent={kpis.netProfit >= 0 ? "blue" : "rose"}
-            />
-            <KpiCard
-              label={t("dashboard.kpiCustomerDebt")}
-              value={loading ? "..." : `${kpis.customerDebts.toFixed(2)} ${t("common.currency")}`}
-              sublabel={t("dashboard.kpiCustomerDebtHint")}
-              icon={<ArrowUpRight className="h-5 w-5" />}
-              accent="amber"
-            />
-            <KpiCard
-              label={t("dashboard.kpiSupplierDebt")}
-              value={loading ? "..." : `${kpis.supplierDebts.toFixed(2)} ${t("common.currency")}`}
-              sublabel="Ödənilməmiş alışlar"
-              icon={<Wallet className="h-5 w-5" />}
-              accent="indigo"
-            />
+            {showSales ? (
+              <KpiCard
+                label={t("dashboard.kpiRevenue")}
+                value={loading ? "..." : `${kpis.monthlyRevenue.toFixed(2)} ${t("common.currency")}`}
+                sublabel="Cari ay satışları"
+                icon={<TrendingUp className="h-5 w-5" />}
+                accent="emerald"
+              />
+            ) : null}
+            {showAccounting ? (
+              <KpiCard
+                label={t("dashboard.kpiExpenses")}
+                value={loading ? "..." : `${kpis.monthlyExpenses.toFixed(2)} ${t("common.currency")}`}
+                sublabel="Məxaric əməliyyatları"
+                icon={<ArrowDownRight className="h-5 w-5" />}
+                accent="rose"
+              />
+            ) : null}
+            {showAccounting ? (
+              <KpiCard
+                label={t("dashboard.kpiProfit")}
+                value={loading ? "..." : `${kpis.netProfit.toFixed(2)} ${t("common.currency")}`}
+                sublabel={kpis.netProfit >= 0 ? "Mənfəətli ay" : "Mənfi balans"}
+                icon={
+                  kpis.netProfit >= 0 ? (
+                    <TrendingUp className="h-5 w-5" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5" />
+                  )
+                }
+                accent={kpis.netProfit >= 0 ? "blue" : "rose"}
+              />
+            ) : null}
+            {showSales ? (
+              <KpiCard
+                label={t("dashboard.kpiCustomerDebt")}
+                value={loading ? "..." : `${kpis.customerDebts.toFixed(2)} ${t("common.currency")}`}
+                sublabel={t("dashboard.kpiCustomerDebtHint")}
+                icon={<ArrowUpRight className="h-5 w-5" />}
+                accent="amber"
+              />
+            ) : null}
+            {showPurchases ? (
+              <KpiCard
+                label={t("dashboard.kpiSupplierDebt")}
+                value={loading ? "..." : `${kpis.supplierDebts.toFixed(2)} ${t("common.currency")}`}
+                sublabel="Ödənilməmiş alışlar"
+                icon={<Wallet className="h-5 w-5" />}
+                accent="indigo"
+              />
+            ) : null}
           </div>
 
-          <Panel title={t("dashboard.monthlyTrendTitle")} subtitle={t("dashboard.monthlyTrendSubtitle")}>
-            <MonthlyTrendChart data={data.monthlyTrend} />
-          </Panel>
+          {showAccounting ? (
+            <Panel title={t("dashboard.monthlyTrendTitle")} subtitle={t("dashboard.monthlyTrendSubtitle")}>
+              <MonthlyTrendChart data={data.monthlyTrend} />
+            </Panel>
+          ) : null}
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <Panel title={t("dashboard.lowStock")}>
-              <LowStockAlerts products={data.lowStockAlerts} />
-            </Panel>
-            <Panel title={t("dashboard.recentActivity")} subtitle={t("dashboard.recentActivitySubtitle")}>
-              <RecentTransactionsTable rows={data.recentActivities} />
-            </Panel>
+            {showInventory ? (
+              <Panel title={t("dashboard.lowStock")}>
+                <LowStockAlerts products={data.lowStockAlerts} />
+              </Panel>
+            ) : null}
+            {showAccounting ? (
+              <Panel title={t("dashboard.recentActivity")} subtitle={t("dashboard.recentActivitySubtitle")}>
+                <RecentTransactionsTable rows={data.recentActivities} />
+              </Panel>
+            ) : null}
           </div>
       </ERPPage>
       <ToastMessage message={toastMessage} variant={toastVariant} />

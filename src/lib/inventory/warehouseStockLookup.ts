@@ -13,7 +13,7 @@ export async function fetchWarehouseStockForProductsAction(
   warehouseId: string
 ): Promise<WarehouseStockLookupResult> {
   try {
-    await requirePermissionAction("can_view_products");
+    await requirePermissionAction("can_view_products", { module: "inventory" });
     const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
     if (uniqueIds.length === 0 || !warehouseId) {
       return { success: true, data: {} };

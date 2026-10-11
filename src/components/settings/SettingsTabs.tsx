@@ -2,12 +2,14 @@
 
 import React from "react";
 import Link from "next/link";
-import { Blocks, Building2, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { Blocks, Boxes, Building2, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { PermissionKey } from "@/types/database.types";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
+import type { ModuleId } from "@/modules/types";
 
 interface SettingsTab {
   id: string;
@@ -15,6 +17,9 @@ interface SettingsTab {
   path: string;
   icon: LucideIcon;
   permission: PermissionKey;
+  /** Hidden when the tenant does not have this module. */
+  module?: ModuleId;
+  adminOnly?: boolean;
 }
 
 const SETTINGS_TABS: SettingsTab[] = [
@@ -41,6 +46,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "commissions",
+    module: "commissions",
     titleKey: "settings.commissionRulesTab",
     path: "/settings/commissions",
     icon: Percent,
@@ -62,6 +68,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "barcode",
+    module: "barcode",
     titleKey: "settings.barcodeTab",
     path: "/settings/barcode",
     icon: Barcode,
@@ -69,6 +76,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "crm",
+    module: "crm",
     titleKey: "settings.crmTab",
     path: "/settings/crm",
     icon: KanbanSquare,
@@ -76,6 +84,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "tax-payroll",
+    module: "tax-az",
     titleKey: "settings.taxPayrollTab",
     path: "/settings/tax-payroll",
     icon: Scale,
@@ -83,6 +92,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "procurement",
+    module: "purchases",
     titleKey: "settings.procurementTab",
     path: "/settings/procurement",
     icon: ShoppingBag,
@@ -90,6 +100,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "ai",
+    module: "ai",
     titleKey: "settings.aiTab",
     path: "/settings/ai",
     icon: Sparkles,
@@ -97,10 +108,19 @@ const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     id: "studio",
+    module: "studio",
     titleKey: "nav.items.studio",
     path: "/settings/studio",
     icon: Blocks,
     permission: "can_manage_settings",
+  },
+  {
+    id: "modules",
+    titleKey: "settings.modulesTab",
+    path: "/settings/modules",
+    icon: Boxes,
+    permission: "can_manage_settings",
+    adminOnly: true,
   },
   {
     id: "audit",
@@ -112,10 +132,15 @@ const SETTINGS_TABS: SettingsTab[] = [
 ];
 
 export default function SettingsTabs({ activeTab }: { activeTab: string }) {
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const { t } = useI18n();
+  const { isEnabled } = useEnabledModules();
   const tabs = SETTINGS_TABS.filter(
-    (tab) => can(tab.permission) && (isBarcodeModuleEnabled() || tab.id !== "barcode")
+    (tab) =>
+      can(tab.permission) &&
+      (!tab.adminOnly || isAdmin) &&
+      isEnabled(tab.module) &&
+      (isBarcodeModuleEnabled() || tab.id !== "barcode")
   );
 
   return (

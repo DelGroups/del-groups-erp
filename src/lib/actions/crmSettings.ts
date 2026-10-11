@@ -17,7 +17,7 @@ const ALLOWED_SEAL_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "ima
 
 export async function getCrmConfigAction(): Promise<ActionResult<CrmConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "crm" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
@@ -33,7 +33,7 @@ export async function getCrmConfigAction(): Promise<ActionResult<CrmConfig>> {
 
 export async function saveCrmConfigAction(input: CrmConfig): Promise<ActionResult<CrmConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "crm" });
     const config = parseCrmConfig({
       ...input,
       quote_prefix: clampString(input.quote_prefix || DEFAULT_CRM_CONFIG.quote_prefix, 24),
@@ -60,7 +60,7 @@ export async function saveCrmConfigAction(input: CrmConfig): Promise<ActionResul
 
 export async function uploadCrmSealAction(formData: FormData): Promise<ActionResult<{ url: string }>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "crm" });
     const file = formData.get("file");
     if (!(file instanceof File) || file.size <= 0) {
       return { success: false, error: "Şəkil seçin" };

@@ -55,7 +55,7 @@ export async function runNativeAgent(input: {
   ctx: ToolContext;
 }): Promise<AgentResult> {
   const client = new Anthropic({ apiKey: input.apiKey, timeout: 60_000, maxRetries: 2 });
-  const tools = toolsForProfile(input.ctx.profile);
+  const tools = toolsForProfile(input.ctx.profile, input.ctx.enabledModules);
   const effort = TIER_EFFORT[input.tier];
   const useFallbacks = supportsFallbacks(input.model);
 

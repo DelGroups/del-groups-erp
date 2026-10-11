@@ -65,6 +65,7 @@ export async function ensurePolywoodWarehouseAction(): Promise<
   PolywoodActionResult<{ warehouse: Warehouse }>
 > {
   try {
+    // Not gated by the polywood module: the sales invoice form calls it too.
     await requirePermissionAction("can_view_products");
     const warehouse = await ensurePolywoodWarehouseAdmin();
     return { success: true, data: { warehouse } };
@@ -78,7 +79,7 @@ export async function importPolywoodStockAction(
   rows: PolywoodImportRow[]
 ): Promise<PolywoodActionResult<{ imported: number; skipped: number }>> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "polywood" });
     const admin = createSupabaseAdminClient();
     const warehouse = await ensurePolywoodWarehouseAdmin();
 
@@ -210,7 +211,7 @@ export async function addPolywoodPiecesAction(input: {
   fullSheetLengthM?: number;
 }): Promise<PolywoodActionResult<{ added: number }>> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "polywood" });
     const warehouse = await ensurePolywoodWarehouseAdmin();
     const admin = createSupabaseAdminClient();
 
@@ -246,7 +247,7 @@ export async function deletePolywoodInventoryAction(input: {
   pieceIds?: string[];
 }): Promise<PolywoodActionResult<{ deletedPieces: number; removedLengthM: number }>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_products");
+    const { user } = await requirePermissionAction("can_manage_products", { module: "polywood" });
     const admin = createSupabaseAdminClient();
     const warehouse = await ensurePolywoodWarehouseAdmin();
 

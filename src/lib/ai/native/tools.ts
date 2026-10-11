@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
+import { moduleForAiTool } from "@/modules/enabled";
 import { isCriticalStock, productMinStock } from "@/lib/inventory/safetyStock";
 import { normalizeUnifiedTransactionType } from "@/lib/finance/unifiedLedger";
 import { isValidUuid } from "@/lib/auth/validate";
@@ -19,7 +20,15 @@ import { formatFieldValue, parseStudioField, type StudioField, type StudioModelK
 export type ToolContext = {
   client: SupabaseClient;
   profile: UserProfile | null;
+  /** Modules the tenant has; a tool whose module is missing is neither offered nor run. */
+  enabledModules: ReadonlySet<string>;
 };
+
+/** True when the module whose data the tool reads is enabled (tools of no module always are). */
+export function isToolInPlan(name: string, enabledModules: ReadonlySet<string>): boolean {
+  const owner = moduleForAiTool(name);
+  return !owner || enabledModules.has(owner);
+}
 
 export type ToolOutput = {
   /** JSON-serialisable payload returned to the model. */
@@ -515,8 +524,13 @@ const TOOLS: ToolDef[] = [
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
 /** Tools this user may call, in a fixed order (keeps the prompt cache stable per permission set). */
-export function toolsForProfile(profile: UserProfile | null): Anthropic.Tool[] {
-  return TOOLS.filter((tool) => userHasLegacyPermission(profile, tool.permission)).map((tool) => ({
+export function toolsForProfile(
+  profile: UserProfile | null,
+  enabledModules: ReadonlySet<string>
+): Anthropic.Tool[] {
+  return TOOLS.filter(
+    (tool) => isToolInPlan(tool.name, enabledModules) && userHasLegacyPermission(profile, tool.permission)
+  ).map((tool) => ({
     name: tool.name,
     description: tool.description,
     input_schema: tool.input_schema,
@@ -535,6 +549,9 @@ export type ToolRunResult = {
 export async function runTool(name: string, rawInput: unknown, ctx: ToolContext): Promise<ToolRunResult> {
   const tool = BY_NAME.get(name);
   if (!tool) return { content: `Unknown tool: ${name}`, isError: true, links: [] };
+  if (!isToolInPlan(name, ctx.enabledModules)) {
+    return { content: "This module is not in the company's plan.", isError: true, links: [] };
+  }
   if (!userHasLegacyPermission(ctx.profile, tool.permission)) {
     return { content: "Permission denied for this user.", isError: true, links: [] };
   }

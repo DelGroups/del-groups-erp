@@ -13,7 +13,7 @@ import {
 
 export async function getBarcodeLabelConfigAction(): Promise<ActionResult<BarcodeLabelConfig>> {
   try {
-    await requirePermissionAction("can_view_settings");
+    await requirePermissionAction("can_view_settings", { module: "barcode" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
@@ -32,7 +32,7 @@ export async function saveBarcodeLabelConfigAction(
   input: BarcodeLabelConfig
 ): Promise<ActionResult<BarcodeLabelConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "barcode" });
     const config: BarcodeLabelConfig = {
       ...parseBarcodeLabelConfig(input),
       header_title: clampString(input.header_title || DEFAULT_BARCODE_LABEL_CONFIG.header_title, 80),

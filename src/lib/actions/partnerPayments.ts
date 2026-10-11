@@ -20,7 +20,7 @@ export async function createPartnerPaymentAction(
   }>
 > {
   try {
-    await requirePermissionAction("can_manage_finance");
+    await requirePermissionAction("can_manage_finance", { module: "accounting" });
     const result = await createPartnerPayment(input, { useAdmin: true });
 
     if (!result.success) {

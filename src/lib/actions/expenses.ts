@@ -31,6 +31,7 @@ import {
 } from "@/lib/expenses/expenseDocuments";
 import type { PermissionKey } from "@/types/database.types";
 import type { ActionResult } from "@/lib/supabase/actionResult";
+import { assertModulesEnabled } from "@/lib/modules/server";
 
 export interface ExpenseAccountOption {
   id: string;
@@ -65,6 +66,7 @@ async function requireAnyExpensePermission(
     throw new ActionAuthError("Hesabınız deaktiv edilib. Administratorla əlaqə saxlayın.");
   }
   if (permissions.some((permission) => userHasPermission(profile, permission))) {
+    await assertModulesEnabled("expenses");
     return { user, profile };
   }
   throw new ActionAuthError("İcazəniz yoxdur");

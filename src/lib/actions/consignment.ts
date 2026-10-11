@@ -185,7 +185,7 @@ export async function fetchConsignmentLookupsAction(): Promise<
   ConsignmentActionResult<ConsignmentLookups>
 > {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const [partners, products, warehouses, customers, employees] = await Promise.all([
       admin.from("consignment_partners").select("*").order("name"),
@@ -222,7 +222,7 @@ export async function saveConsignmentPartnerAction(input: {
   is_active?: boolean;
 }): Promise<ConsignmentActionResult<ConsignmentPartner>> {
   try {
-    await requirePermissionAction("can_manage_consignments");
+    await requirePermissionAction("can_manage_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const name = input.name.trim();
     if (!name) return { success: false, error: "Tərəfdaş adı tələb olunur" };
@@ -276,7 +276,7 @@ export async function listConsignmentDispatchesAction(): Promise<
   ConsignmentActionResult<ConsignmentDispatch[]>
 > {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("consignment_dispatches")
@@ -306,7 +306,7 @@ export async function listConsignmentReturnsAction(): Promise<
   ConsignmentActionResult<ConsignmentReturn[]>
 > {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("consignment_returns")
@@ -344,7 +344,7 @@ export async function createConsignmentDispatchAtomicAction(input: {
   sales_rep_name?: string | null;
 }): Promise<ConsignmentActionResult<ConsignmentDispatch>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_consignments");
+    const { user } = await requirePermissionAction("can_manage_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const items = input.items.filter((item) => item.product_id && item.quantity > 0);
     if (!input.partner_id) return { success: false, error: "Tərəfdaş seçin" };
@@ -378,7 +378,7 @@ export async function listConsignmentInventoryAction(filters?: {
   category?: string;
 }): Promise<ConsignmentActionResult<ConsignmentInventoryRow[]>> {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     let query = admin.from("consignment_inventory").select("*").order("product_name");
     if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
@@ -414,7 +414,7 @@ export async function createConsignmentReturnAction(input: {
   items: { product_id: string; quantity: number }[];
 }): Promise<ConsignmentActionResult<ConsignmentReturn>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_consignments");
+    const { user } = await requirePermissionAction("can_manage_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const wanted = input.items.filter((item) => item.product_id && item.quantity > 0);
     if (!wanted.length) return { success: false, error: "Qaytarılacaq məhsul seçin" };
@@ -527,7 +527,7 @@ export async function listConsignmentReportsAction(): Promise<
   ConsignmentActionResult<ConsignmentMonthlyReport[]>
 > {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("consignment_monthly_reports")
@@ -564,7 +564,7 @@ export async function settleConsignmentPartnerAtomicAction(input: {
   sales_rep_name?: string | null;
 }): Promise<ConsignmentActionResult<ConsignmentMonthlyReport>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_consignments");
+    const { user } = await requirePermissionAction("can_manage_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     if (!input.partner_id) return { success: false, error: "Tərəfdaş seçin" };
     if (!/^\d{4}-\d{2}$/.test(input.report_period)) {
@@ -617,7 +617,7 @@ export async function fetchConsignmentSourceStockAction(
   warehouseId: string
 ): Promise<ConsignmentActionResult<number>> {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     if (!productId || !warehouseId) return { success: true, data: 0 };
     const admin = createSupabaseAdminClient();
     const stock = await getProductStockAtWarehouse(admin, productId, warehouseId);
@@ -633,7 +633,7 @@ export async function resolveConsignmentBarcodeAction(
   warehouseId: string
 ): Promise<ConsignmentActionResult<ConsignmentBarcodeLine>> {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const trimmed = barcode.trim();
     if (!trimmed) return { success: false, error: "Barkod boşdur" };
     if (!warehouseId) return { success: false, error: "Əvvəlcə anbar seçin" };
@@ -684,7 +684,7 @@ export async function resolveConsignmentProductBarcodeAction(
   barcode: string
 ): Promise<ConsignmentActionResult<ConsignmentProductLookup>> {
   try {
-    await requirePermissionAction("can_view_consignments");
+    await requirePermissionAction("can_view_consignments", { module: "consignment" });
     const trimmed = barcode.trim();
     if (!trimmed) return { success: false, error: "Barkod boşdur" };
 
@@ -724,7 +724,7 @@ export async function setConsignmentInitialBalanceAtomicAction(input: {
   items: ConsignmentDispatchItem[];
 }): Promise<ConsignmentActionResult<ConsignmentDispatch>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_consignments");
+    const { user } = await requirePermissionAction("can_manage_consignments", { module: "consignment" });
     const admin = createSupabaseAdminClient();
     const items = input.items.filter((item) => item.product_id && item.quantity > 0);
     if (!input.partner_id) return { success: false, error: "Tərəfdaş seçin" };

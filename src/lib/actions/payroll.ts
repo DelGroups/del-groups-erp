@@ -15,7 +15,7 @@ export async function processPayrollAction(
   payload: ProcessPayrollPayload
 ): Promise<ProcessPayrollResult> {
   try {
-    await requirePermissionAction("can_manage_hr");
+    await requirePermissionAction("can_manage_hr", { module: "payroll" });
 
     const employeeId = payload.employeeId?.trim() ?? "";
     const accountId = payload.accountId?.trim() ?? "";

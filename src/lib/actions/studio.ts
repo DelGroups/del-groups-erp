@@ -30,7 +30,7 @@ function mapDbError(message: string): string {
 /** All field definitions of a model (archived included), for the Studio settings page. */
 export async function listStudioFieldsAction(modelKey: StudioModelKey): Promise<ActionResult<StudioField[]>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "studio" });
     if (!isStudioModel(modelKey)) return { success: false, error: "studio.errors.model" };
     const client = await studioClient();
     const { data, error } = await client
@@ -53,7 +53,7 @@ export async function listStudioFieldsAction(modelKey: StudioModelKey): Promise<
 
 export async function createStudioFieldAction(input: FieldDefinitionInput): Promise<ActionResult<StudioField>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "studio" });
     const checked = validateFieldDefinition(input);
     if (!checked.ok) return { success: false, error: checked.error };
     const client = await studioClient();
@@ -75,7 +75,7 @@ export async function updateStudioFieldAction(
   input: Omit<FieldDefinitionInput, "model_key" | "name" | "field_type"> & { active?: boolean }
 ): Promise<ActionResult<StudioField>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "studio" });
     const client = await studioClient();
     const { data: current, error: loadError } = await client.from("studio_fields").select(COLUMNS).eq("id", id).single();
     if (loadError || !current) return { success: false, error: mapDbError(loadError?.message || "not found") };

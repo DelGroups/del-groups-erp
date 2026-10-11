@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
@@ -52,18 +53,19 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const { displayName, roleName, loading, signOut, can, isAdmin } = useAuth();
   const { t } = useI18n();
 
+  const { isEnabled } = useEnabledModules();
   const visibleSections = useMemo(() => {
-    if (isAdmin) return NAV_SECTIONS;
-
     return NAV_SECTIONS.map((section) => ({
       ...section,
       items: section.items.filter((item) => {
+        if (!isEnabled(item.module)) return false;
+        if (isAdmin) return true;
         const permission = getNavItemPermission(item.path);
         if (!permission) return true;
         return can(permission);
       }),
     })).filter((section) => section.items.length > 0);
-  }, [can, isAdmin]);
+  }, [can, isAdmin, isEnabled]);
 
   const activeSectionId = useMemo(
     () => getActiveSectionId(pathname, visibleSections),

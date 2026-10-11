@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { buildNavSections, MODULES } from "@/modules/registry";
-import type { FeatureFlag } from "@/modules/types";
+import type { FeatureFlag, ModuleId } from "@/modules/types";
 import {
   LayoutDashboard,
   Package,
@@ -48,6 +48,8 @@ export interface NavItem {
   path: string;
   icon: LucideIcon;
   keywords?: string[];
+  /** Module the page belongs to; hidden when the tenant does not have it. */
+  module: ModuleId;
 }
 
 export interface NavSection {
@@ -120,6 +122,7 @@ export const NAV_SECTIONS: NavSection[] = buildNavSections(MODULES, (flag) => FE
       path: item.path,
       icon: navIcon(item.icon),
       ...(item.keywords ? { keywords: item.keywords } : {}),
+      module: item.module,
     })),
   })
 );

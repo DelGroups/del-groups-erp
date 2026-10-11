@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthContext } from "@/lib/supabaseServer";
+import { requireModuleApi } from "@/lib/modules/server";
+import { moduleForPermission } from "@/modules/enabled";
 import {
   ADMIN_ROLE_NAME,
   hasPermission,
@@ -65,6 +67,11 @@ export async function requirePermissionApi(
       error: NextResponse.json({ error: "İcazəniz yoxdur" }, { status: 403 }),
     };
   }
+
+  // The module that owns the permission must be in the tenant's plan.
+  const owner = moduleForPermission(permission);
+  const notInPlan = owner ? await requireModuleApi(owner) : null;
+  if (notInPlan) return { ...auth, error: notInPlan };
 
   return auth;
 }

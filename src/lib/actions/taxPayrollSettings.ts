@@ -16,7 +16,7 @@ import {
 
 export async function getTaxPayrollConfigAction(): Promise<ActionResult<TaxPayrollConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "tax-az" });
     const admin = createSupabaseAdminClient();
     const [{ data, error }, { profile }] = await Promise.all([
       admin.from("system_settings").select("value").eq("key", TAX_PAYROLL_CONFIG_KEY).maybeSingle(),
@@ -42,7 +42,7 @@ export async function saveTaxPayrollConfigAction(
   input: TaxPayrollConfig
 ): Promise<ActionResult<TaxPayrollConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "tax-az" });
     const config = parseTaxPayrollConfig(input);
     const admin = createSupabaseAdminClient();
     const { error } = await admin.from("system_settings").upsert(
