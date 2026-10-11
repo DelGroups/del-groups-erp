@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasAuthenticatedSession } from "@/lib/auth/homeRouteAuth";
 import { isPublicAuthPath } from "@/lib/auth/publicRoutes";
+import { isModuleEnabled } from "@/lib/modules/server";
+import { moduleForPath } from "@/modules/enabled";
+
+const NOT_IN_PLAN_PATH = "/not-in-plan";
 
 /** Query params Supabase attaches to invite/recovery/magic-link redirects. */
 const AUTH_LINK_PARAMS = ["code", "token_hash"] as const;
@@ -40,6 +44,14 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set("next", pathname);
     }
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Pages of a module the tenant does not have show "not in your plan" (URL unchanged).
+  const moduleId = moduleForPath(pathname);
+  if (moduleId && !(await isModuleEnabled(moduleId, request))) {
+    const notInPlan = new URL(NOT_IN_PLAN_PATH, request.url);
+    notInPlan.searchParams.set("module", moduleId);
+    return NextResponse.rewrite(notInPlan);
   }
 
   return NextResponse.next();

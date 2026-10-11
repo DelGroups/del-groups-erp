@@ -14,7 +14,7 @@ import {
 
 export async function getN8nAiConfigAction(): Promise<ActionResult<N8nAiPublicConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "ai" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
@@ -33,7 +33,7 @@ export async function saveN8nAiConfigAction(input: {
   secret_token?: string;
 }): Promise<ActionResult<N8nAiPublicConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "ai" });
     const checked = validateN8nWebhookUrl(input.webhook_url || "");
     if (!checked.ok) return { success: false, error: checked.error };
 

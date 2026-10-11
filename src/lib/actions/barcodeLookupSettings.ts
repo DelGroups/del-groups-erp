@@ -14,7 +14,7 @@ export async function getBarcodeLookupApiConfigAction(): Promise<
   ActionResult<BarcodeLookupApiConfig>
 > {
   try {
-    await requirePermissionAction("can_view_settings");
+    await requirePermissionAction("can_view_settings", { module: "barcode" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
@@ -33,7 +33,7 @@ export async function saveBarcodeLookupApiConfigAction(
   input: BarcodeLookupApiConfig
 ): Promise<ActionResult<BarcodeLookupApiConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "barcode" });
     const config = parseBarcodeLookupApiConfig(input);
     const checked = validateBarcodeLookupApiConfig(config);
     if (!checked.ok) return { success: false, error: checked.error };

@@ -2,6 +2,9 @@ import type { PermissionKey, UserProfile } from "@/types/database.types";
 import type { User } from "@supabase/supabase-js";
 import { getServerAuthContext } from "@/lib/supabaseServer";
 import { userHasPermission } from "@/lib/auth/routePermissions";
+import { assertModulesEnabled } from "@/lib/modules/server";
+import { moduleForPermission } from "@/modules/enabled";
+import type { ModuleId } from "@/modules/types";
 
 export class ActionAuthError extends Error {
   constructor(message: string) {
@@ -15,8 +18,14 @@ export type ActionAuthContext = {
   profile: UserProfile | null;
 };
 
+/**
+ * Signed-in, active user with `permission`, in a module the tenant has: the
+ * module that owns the permission and, if given, `options.module` (for actions
+ * of a module that reuses another module's permission, e.g. CRM settings).
+ */
 export async function requirePermissionAction(
-  permission: PermissionKey
+  permission: PermissionKey,
+  options?: { module?: ModuleId }
 ): Promise<ActionAuthContext> {
   const { user, profile } = await getServerAuthContext();
 
@@ -33,6 +42,8 @@ export async function requirePermissionAction(
   if (!allowed) {
     throw new ActionAuthError("İcazəniz yoxdur");
   }
+
+  await assertModulesEnabled(moduleForPermission(permission), options?.module);
 
   return { user, profile };
 }

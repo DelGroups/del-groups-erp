@@ -15,6 +15,7 @@ import { NAV_SECTIONS } from "@/lib/navigation/navConfig";
 import { useShellStore } from "@/stores/shellStore";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getNavItemPermission } from "@/lib/auth/routePermissions";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useI18n } from "@/i18n/I18nProvider";
 import { FilePlus, Receipt, UserPlus } from "lucide-react";
 
@@ -31,17 +32,19 @@ export default function CommandPalette() {
   const open = useShellStore((s) => s.commandPaletteOpen);
   const setOpen = useShellStore((s) => s.setCommandPaletteOpen);
 
+  const { isEnabled } = useEnabledModules();
   const visibleSections = useMemo(() => {
-    if (isAdmin) return NAV_SECTIONS;
     return NAV_SECTIONS.map((section) => ({
       ...section,
       items: section.items.filter((item) => {
+        if (!isEnabled(item.module)) return false;
+        if (isAdmin) return true;
         const permission = getNavItemPermission(item.path);
         if (!permission) return true;
         return can(permission);
       }),
     })).filter((section) => section.items.length > 0);
-  }, [can, isAdmin]);
+  }, [can, isAdmin, isEnabled]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

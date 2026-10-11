@@ -221,24 +221,31 @@ export interface RouteRule {
   prefix: string;
   permission: PermissionKey;
   exact?: boolean;
+  /** Module that declared the rule. */
+  module: ModuleId;
 }
 
 /** Page access rules, most specific (longest) prefix first. */
 export function buildRouteRules(modules: readonly ModuleManifest[]): RouteRule[] {
   return modules
-    .flatMap((m) => m.routes.map((r) => ({ ...r })))
+    .flatMap((m) => m.routes.map((r) => ({ ...r, module: m.id })))
     .sort((a, b) => b.prefix.length - a.prefix.length || a.prefix.localeCompare(b.prefix));
 }
 
-export function resolveRoutePermission(rules: readonly RouteRule[], pathname: string): PermissionKey | null {
+/** The rule that decides access to `pathname`, or null when no rule applies. */
+export function matchRouteRule(rules: readonly RouteRule[], pathname: string): RouteRule | null {
   for (const rule of rules) {
     if (rule.exact) {
-      if (pathname === rule.prefix) return rule.permission;
+      if (pathname === rule.prefix) return rule;
       continue;
     }
-    if (pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`)) return rule.permission;
+    if (pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`)) return rule;
   }
   return null;
+}
+
+export function resolveRoutePermission(rules: readonly RouteRule[], pathname: string): PermissionKey | null {
+  return matchRouteRule(rules, pathname)?.permission ?? null;
 }
 
 /** Menu and linked paths → the permission needed to see the link. */

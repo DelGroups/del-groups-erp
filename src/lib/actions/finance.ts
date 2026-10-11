@@ -31,6 +31,7 @@ import {
 } from "@/lib/finance/financialCategories";
 import { fetchTransactionsRaw } from "@/lib/finance/transactionQueries";
 import type { ActionResult } from "@/lib/supabase/actionResult";
+import { assertModulesEnabled } from "@/lib/modules/server";
 
 export type { ActionResult };
 
@@ -55,6 +56,7 @@ async function requireFinanceOrExpenseManageAction(): Promise<ActionAuthContext>
     userHasLegacyPermission(profile, "can_manage_finance") ||
     userHasLegacyPermission(profile, "can_manage_expenses")
   ) {
+    await assertModulesEnabled("accounting");
     return { user, profile };
   }
   throw new ActionAuthError("İcazəniz yoxdur");

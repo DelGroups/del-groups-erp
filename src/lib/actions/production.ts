@@ -134,6 +134,7 @@ import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
 import { normalizeEmployee } from "@/types/database.types";
+import { assertModulesEnabled } from "@/lib/modules/server";
 
 export type ProductionActionResult<T = void> =
   | { success: true; data?: T }
@@ -175,6 +176,7 @@ async function requireProductionIssuePermission() {
     userHasPermission(profile, "can_writeoff_inventory") ||
     userHasPermission(profile, "can_manage_warehouses")
   ) {
+    await assertModulesEnabled("production");
     return { user, profile };
   }
   throw new ActionAuthError("İcazəniz yoxdur");

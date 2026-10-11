@@ -3,6 +3,7 @@ import { handleOptions } from "@/lib/apiSecurity";
 import { requirePermissionApi } from "@/lib/auth/apiAuth";
 import { loadBarcodeLookupApiConfigForServer } from "@/lib/barcode/loadLookupApiConfig";
 import { lookupBarcodeWithConfig } from "@/lib/barcode/lookupBarcodeService";
+import { requireModuleApi } from "@/lib/modules/server";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ export function OPTIONS() {
 export async function GET(request: NextRequest) {
   const auth = await requirePermissionApi("can_manage_products");
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("barcode");
+  if (notInPlan) return notInPlan;
 
   const barcode = request.nextUrl.searchParams.get("barcode")?.trim() ?? "";
   if (!barcode) {

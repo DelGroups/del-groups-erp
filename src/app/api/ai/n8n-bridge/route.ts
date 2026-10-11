@@ -22,6 +22,7 @@ import {
   type BridgeUpstreamResult,
 } from "@/lib/ai/n8nBridgeResponse";
 import { erpAgentSessionId, resolveTargetAgent, type ErpAiAgentId } from "@/lib/ai/agents";
+import { requireModuleApi } from "@/lib/modules/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -64,6 +65,8 @@ async function loadRuntime() {
 export async function GET() {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
   const runtime = await loadRuntime();
   return jsonWithCors({
     configured: Boolean(runtime?.url),
@@ -74,6 +77,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const auth = await requireAuthenticatedApi();
   if (auth.error) return auth.error;
+  const notInPlan = await requireModuleApi("ai");
+  if (notInPlan) return notInPlan;
 
   const limit = rateLimit(`n8n:${auth.user.id}:${getClientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!limit.allowed) {

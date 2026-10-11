@@ -11,7 +11,7 @@ import {
 
 export async function getProcurementConfigAction(): Promise<ActionResult<ProcurementConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "purchases" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
@@ -29,7 +29,7 @@ export async function saveProcurementConfigAction(
   input: ProcurementConfig
 ): Promise<ActionResult<ProcurementConfig>> {
   try {
-    await requirePermissionAction("can_manage_settings");
+    await requirePermissionAction("can_manage_settings", { module: "purchases" });
     const config = parseProcurementConfig(input);
     const admin = createSupabaseAdminClient();
     const { error } = await admin.from("system_settings").upsert(

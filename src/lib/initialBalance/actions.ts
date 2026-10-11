@@ -55,7 +55,7 @@ export async function peekInitialBalanceDocNoAction(
   entryType: InitialBalanceEntryType = "opening_balance"
 ): Promise<InitialBalanceActionResult<string>> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.rpc("peek_next_initial_balance_doc_no", {
       p_prefix: DOC_NO_PREFIX[entryType],
@@ -72,7 +72,7 @@ export async function fetchInitialBalanceListAction(): Promise<
   InitialBalanceActionResult<InitialBalanceDocument[]>
 > {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("inventory_initial_balances")
@@ -92,7 +92,7 @@ export async function fetchInitialBalanceByIdAction(
   id: string
 ): Promise<InitialBalanceActionResult<InitialBalanceDocument>> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
@@ -140,7 +140,7 @@ export async function saveInitialBalanceDraftAction(
   input: SaveInitialBalanceInput
 ): Promise<InitialBalanceActionResult<{ id: string; document_number: string }>> {
   try {
-    const { user, profile } = await requirePermissionAction("can_manage_products");
+    const { user, profile } = await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
 
     if (!input.items.length) {
@@ -285,7 +285,7 @@ export async function postInitialBalanceDocumentAction(
   documentId: string
 ): Promise<InitialBalanceActionResult<{ document_number: string }>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_products");
+    const { user } = await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
 
     const { data: header, error: headerError } = await admin
@@ -506,7 +506,7 @@ export async function cancelInitialBalanceDocumentAction(
   documentId: string
 ): Promise<InitialBalanceActionResult> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
     const { data: header } = await admin
       .from("inventory_initial_balances")
@@ -540,7 +540,7 @@ export async function deleteInitialBalanceDraftAction(
   documentId: string
 ): Promise<InitialBalanceActionResult> {
   try {
-    await requirePermissionAction("can_manage_products");
+    await requirePermissionAction("can_manage_products", { module: "inventory" });
     const admin = createSupabaseAdminClient();
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
@@ -578,7 +578,7 @@ export async function unpostInitialBalanceDocumentAction(
   reason?: string
 ): Promise<InitialBalanceActionResult<{ document_number: string }>> {
   try {
-    const { user } = await requirePermissionAction("can_unpost_inventory");
+    const { user } = await requirePermissionAction("can_unpost_inventory", { module: "inventory" });
     if (!documentId) return { success: false, error: "Document ID is required" };
 
     const admin = createSupabaseAdminClient();

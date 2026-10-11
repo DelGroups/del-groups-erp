@@ -17,6 +17,8 @@ import {
 import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/brand";
 import { getPublicCompanyInfo } from "@/lib/company/server";
 import { CompanyInfoProvider } from "@/hooks/useCompanyProfile";
+import { EnabledModulesProvider } from "@/hooks/useEnabledModules";
+import { getEnabledModules } from "@/lib/modules/server";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -72,7 +74,12 @@ export default async function RootLayout({
     toPublicTenantConfig(getTenantConfig(requestHeaders))
   );
   // Company name for the first paint and the login page (cached per tenant).
-  const companyInfo = await getPublicCompanyInfo(requestHeaders);
+  // Also the modules in the tenant's plan, so menus and widgets are right on the first paint.
+  const [companyInfo, enabledModuleSet] = await Promise.all([
+    getPublicCompanyInfo(requestHeaders),
+    getEnabledModules(requestHeaders),
+  ]);
+  const enabledModules = [...enabledModuleSet];
 
   return (
     <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} suppressHydrationWarning>
@@ -89,15 +96,17 @@ export default async function RootLayout({
       <body className={`${inter.variable} min-h-screen bg-app font-sans text-app antialiased`}>
         <ThemeProvider>
           <CompanyInfoProvider value={companyInfo}>
-            <AuthProvider>
-              <QueryProvider>
-                <I18nProvider>
-                  {children}
-                  <SonnerProvider />
-                  <TableColumnResizer />
-                </I18nProvider>
-              </QueryProvider>
-            </AuthProvider>
+            <EnabledModulesProvider value={enabledModules}>
+              <AuthProvider>
+                <QueryProvider>
+                  <I18nProvider>
+                    {children}
+                    <SonnerProvider />
+                    <TableColumnResizer />
+                  </I18nProvider>
+                </QueryProvider>
+              </AuthProvider>
+            </EnabledModulesProvider>
           </CompanyInfoProvider>
         </ThemeProvider>
       </body>

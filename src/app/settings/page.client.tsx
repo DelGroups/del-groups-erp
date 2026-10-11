@@ -5,6 +5,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import AiN8nSettingsCard from "@/components/settings/AiN8nSettingsCard";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import FileDropzone from "@/components/settings/FileDropzone";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const { can, isAdmin } = useAuth();
   const company = useCompanyProfile();
+  const { isEnabled: isModuleEnabled } = useEnabledModules();
   const refreshCompany = useRefreshCompanyProfile();
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"logo" | "seal" | null>(null);
@@ -348,7 +350,7 @@ export default function SettingsPage() {
             </form>
           )}
 
-          <AiN8nSettingsCard />
+          {isModuleEnabled("ai") ? <AiN8nSettingsCard /> : null}
         </div>
         </PermissionGuard>
       <ToastMessage message={toastMessage} variant={toastVariant} />

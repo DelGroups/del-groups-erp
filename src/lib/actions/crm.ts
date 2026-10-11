@@ -96,7 +96,7 @@ export async function createDealAction(payload: {
   notes?: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_crm");
+    const { user } = await requirePermissionAction("can_manage_crm", { module: "crm" });
     const title = clampString(payload.title || "", 240);
     if (!title) return { success: false, error: "Sövdələşmə adı tələb olunur" };
 
@@ -135,7 +135,7 @@ export async function updateDealStageAction(
   stage: string
 ): Promise<ActionResult> {
   try {
-    await requirePermissionAction("can_manage_crm");
+    await requirePermissionAction("can_manage_crm", { module: "crm" });
     if (!isValidUuid(dealId)) return { success: false, error: "Etibarlı sövdələşmə seçin" };
     const client = await createSupabaseServerClient();
     const config = await loadCrmConfig(client);
@@ -166,7 +166,7 @@ export async function saveQuotationAction(payload: {
   status?: QuotationStatus;
 }): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
   try {
-    const { user } = await requirePermissionAction("can_manage_crm");
+    const { user } = await requirePermissionAction("can_manage_crm", { module: "crm" });
     if (!isValidUuid(payload.dealId)) return { success: false, error: "Etibarlı sövdələşmə seçin" };
 
     const items = normalizeItems(payload.items);
@@ -249,7 +249,7 @@ export async function convertQuotationToProductionAction(
   quotationId: string
 ): Promise<ActionResult<{ orderId: string; orderNo?: string }>> {
   try {
-    await requirePermissionAction("can_manage_crm");
+    await requirePermissionAction("can_manage_crm", { module: "crm" });
     const { profile } = await getServerAuthContext();
     if (!userHasPermission(profile, "can_manage_production")) {
       return { success: false, error: "İstehsalata göndərmək üçün istehsalat icazəsi lazımdır" };
