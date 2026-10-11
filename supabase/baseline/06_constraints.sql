@@ -90,18 +90,8 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expense_attachments_pkey' and conrelid = 'public.expense_attachments'::regclass) then
-    execute $c$alter table only public.expense_attachments add constraint expense_attachments_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'expense_categories_pkey' and conrelid = 'public.expense_categories'::regclass) then
     execute $c$alter table only public.expense_categories add constraint expense_categories_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_pkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -375,16 +365,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expense_attachments_storage_path_key' and conrelid = 'public.expense_attachments'::regclass) then
-    execute $c$alter table only public.expense_attachments add constraint expense_attachments_storage_path_key UNIQUE (storage_path);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_code_key' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_code_key UNIQUE (code);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_count_id_product_id_key' and conrelid = 'public.inventory_count_items'::regclass) then
     execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_count_id_product_id_key UNIQUE (count_id, product_id);$c$;
   end if;
@@ -572,21 +552,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_leaves_status_check' and conrelid = 'public.employee_leaves'::regclass) then
     execute $c$alter table only public.employee_leaves add constraint employee_leaves_status_check CHECK (((status)::text = ANY ((ARRAY['APPROVED'::character varying, 'PENDING'::character varying, 'REJECTED'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_payment_mode_check' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_payment_mode_check CHECK ((payment_mode = ANY (ARRAY['company'::text, 'employee'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_status_check' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'approved'::text, 'posted'::text, 'cancelled'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_vat_check' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_vat_check CHECK (((vat_amount >= (0)::numeric) AND (vat_rate >= (0)::numeric) AND (vat_rate <= (100)::numeric) AND (vat_amount <= amount)));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1030,66 +995,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expense_attachments_expense_id_fkey' and conrelid = 'public.expense_attachments'::regclass) then
-    execute $c$alter table only public.expense_attachments add constraint expense_attachments_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_account_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_category_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.financial_categories(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_department_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.employee_departments(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_employee_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_journal_entry_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_production_order_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_reimbursement_journal_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_reimbursement_journal_id_fkey FOREIGN KEY (reimbursement_journal_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_supplier_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_transaction_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_vat_account_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_vat_account_id_fkey FOREIGN KEY (vat_account_id) REFERENCES public.accounts(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'expenses_vat_transaction_id_fkey' and conrelid = 'public.expenses'::regclass) then
-    execute $c$alter table only public.expenses add constraint expenses_vat_transaction_id_fkey FOREIGN KEY (vat_transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'financial_categories_coa_id_fkey' and conrelid = 'public.financial_categories'::regclass) then
     execute $c$alter table only public.financial_categories add constraint financial_categories_coa_id_fkey FOREIGN KEY (coa_id) REFERENCES public.chart_of_accounts(id) ON DELETE SET NULL;$c$;
   end if;
@@ -1347,11 +1252,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'production_expenses_account_id_fkey' and conrelid = 'public.production_expenses'::regclass) then
     execute $c$alter table only public.production_expenses add constraint production_expenses_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_expenses_finance_expense_id_fkey' and conrelid = 'public.production_expenses'::regclass) then
-    execute $c$alter table only public.production_expenses add constraint production_expenses_finance_expense_id_fkey FOREIGN KEY (finance_expense_id) REFERENCES public.expenses(id) ON DELETE SET NULL;$c$;
   end if;
 end $$;
 do $$ begin

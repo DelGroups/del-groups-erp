@@ -2,7 +2,6 @@
 CREATE OR REPLACE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 CREATE OR REPLACE TRIGGER trg_ensure_partner_for_customer AFTER INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION public.ensure_partner_for_customer();
 CREATE OR REPLACE TRIGGER trg_employees_normalize_status BEFORE INSERT OR UPDATE OF status ON public.employees FOR EACH ROW EXECUTE FUNCTION public.normalize_employee_status();
-CREATE OR REPLACE TRIGGER trg_audit_expenses AFTER INSERT OR DELETE OR UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('FINANCE');
 CREATE OR REPLACE TRIGGER trg_inventory_count_item_derive BEFORE INSERT OR UPDATE ON public.inventory_count_items FOR EACH ROW EXECUTE FUNCTION public.inventory_count_item_derive();
 CREATE OR REPLACE TRIGGER trg_audit_inventory_counts AFTER INSERT OR DELETE OR UPDATE ON public.inventory_counts FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('INVENTORY');
 CREATE OR REPLACE TRIGGER trg_audit_inventory_writeoffs AFTER INSERT OR DELETE OR UPDATE ON public.inventory_writeoffs FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('INVENTORY');

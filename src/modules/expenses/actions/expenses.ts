@@ -28,7 +28,7 @@ import {
   type ExpenseSaveInput,
   type ExpenseStatus,
   type ExpenseSummary,
-} from "@/lib/expenses/expenseDocuments";
+} from "../lib/expenseDocuments";
 import type { PermissionKey } from "@/types/database.types";
 import type { ActionResult } from "@/lib/supabase/actionResult";
 import { assertModulesEnabled } from "@/lib/modules/server";

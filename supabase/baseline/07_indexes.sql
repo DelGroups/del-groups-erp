@@ -21,15 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_employee_leaves_period ON public.employee_leaves 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_erp_events_idempotency ON public.erp_events USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_erp_events_source ON public.erp_events USING btree (source_table, source_id);
 CREATE INDEX IF NOT EXISTS idx_erp_events_type_created ON public.erp_events USING btree (event_type, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_expense_attachments_expense ON public.expense_attachments USING btree (expense_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_expense_categories_name ON public.expense_categories USING btree (lower((name)::text));
-CREATE INDEX IF NOT EXISTS idx_expenses_account_id ON public.expenses USING btree (account_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_category_id ON public.expenses USING btree (category_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_employee_id ON public.expenses USING btree (employee_id) WHERE (employee_id IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON public.expenses USING btree (expense_date DESC);
-CREATE INDEX IF NOT EXISTS idx_expenses_production_order ON public.expenses USING btree (production_order_id) WHERE (production_order_id IS NOT NULL);
-CREATE INDEX IF NOT EXISTS idx_expenses_status ON public.expenses USING btree (status);
-CREATE INDEX IF NOT EXISTS idx_expenses_supplier_id ON public.expenses USING btree (supplier_id);
 CREATE INDEX IF NOT EXISTS idx_financial_categories_parent ON public.financial_categories USING btree (parent_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_financial_categories_unique_child ON public.financial_categories USING btree (parent_id, lower((name)::text)) WHERE (parent_id IS NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_financial_categories_unique_root ON public.financial_categories USING btree (lower((name)::text), type) WHERE (parent_id IS NULL);

@@ -14,8 +14,6 @@ alter table public.employee_advances enable row level security;
 alter table public.employee_departments enable row level security;
 alter table public.employee_leaves enable row level security;
 alter table public.employees enable row level security;
-alter table public.expense_attachments enable row level security;
-alter table public.expenses enable row level security;
 alter table public.inventory_count_items enable row level security;
 alter table public.inventory_counts enable row level security;
 alter table public.inventory_writeoffs enable row level security;
@@ -215,27 +213,6 @@ drop policy if exists employees_update on public.employees;
 create policy employees_update on public.employees as permissive for update to authenticated
   using ((public.require_permission('can_manage_hr'::text) AND (public.user_is_admin() OR public.user_can_read_employee_row(department))))
   with check ((public.require_permission('can_manage_hr'::text) AND (public.user_is_admin() OR public.user_can_read_employee_row(department))));
-
-drop policy if exists expense_attachments_select on public.expense_attachments;
-create policy expense_attachments_select on public.expense_attachments as permissive for select to authenticated
-  using ((public.require_permission('can_view_expenses'::text) OR public.require_permission('can_manage_expenses'::text)));
-
-drop policy if exists expenses_delete on public.expenses;
-create policy expenses_delete on public.expenses as permissive for delete to authenticated
-  using (public.require_permission('can_manage_expenses'::text));
-
-drop policy if exists expenses_insert on public.expenses;
-create policy expenses_insert on public.expenses as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_expenses'::text));
-
-drop policy if exists expenses_select on public.expenses;
-create policy expenses_select on public.expenses as permissive for select to authenticated
-  using (public.require_permission('can_view_expenses'::text));
-
-drop policy if exists expenses_update on public.expenses;
-create policy expenses_update on public.expenses as permissive for update to authenticated
-  using (public.require_permission('can_manage_expenses'::text))
-  with check (public.require_permission('can_manage_expenses'::text));
 
 drop policy if exists inventory_count_items_delete on public.inventory_count_items;
 create policy inventory_count_items_delete on public.inventory_count_items as permissive for delete to authenticated

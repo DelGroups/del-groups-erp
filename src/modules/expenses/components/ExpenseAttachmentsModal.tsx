@@ -9,13 +9,13 @@ import {
   createExpenseAttachmentUploadAction,
   deleteExpenseAttachmentAction,
   listExpenseAttachmentsAction,
-} from "@/lib/actions/expenses";
+} from "../actions/expenses";
 import {
   normalizeAttachmentMime,
   validateExpenseAttachment,
   type ExpenseAttachment,
   type ExpenseDocument,
-} from "@/lib/expenses/expenseDocuments";
+} from "../lib/expenseDocuments";
 
 const BUCKET = "expense-attachments";
 

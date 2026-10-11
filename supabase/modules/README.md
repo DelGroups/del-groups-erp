@@ -43,3 +43,7 @@ core and modules again.
   `monthly_commissions` / `monthly_commission_details`. The payroll functions
   `calculate_monthly_payroll_drafts()` and `pay_payroll_run_atomic()` stay in core but read
   `sales_commissions` when they run.
+- `expenses`: `expenses`, `expense_attachments`, the `expense-attachments` bucket (no storage policies;
+  files go through the service role), the expense RPCs (`record_`, `submit_`, `approve_`, `reject_`,
+  `post_`, `reimburse_`, `cancel_expense_atomic()`) and their helpers, and the foreign key
+  `production_expenses.finance_expense_id`. `expense_categories` and `document_expenses` stay in core.
