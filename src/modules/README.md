@@ -12,7 +12,7 @@ the manifests, checks them and generates:
 
 ## Code layout
 
-Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**, **hr**). A moved module looks like:
+Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**, **hr**, **payroll**). A moved module looks like:
 
 ```
 src/modules/crm/
@@ -28,6 +28,11 @@ Its SQL is in `supabase/modules/<id>/` (see the README there).
 only `@/modules/<id>` or, from `src/app`, `@/modules/<id>/pages`. Inside a module use relative
 imports and never reach into another module's folders; call its public API or emit an
 `erp_events` event instead. Core code (`src/lib`, `src/components`) must not import modules.
+
+**Tabs on another module's screen:** a module that builds on another can add tabs to its screen when the
+host offers a slot, without the host importing it. HR's employees screen takes `EmployeesPageTab`s
+(`@/modules/hr`); payroll exports its tabs from `@/modules/payroll/pages`, and the route file
+`src/app/employees/page.client.tsx` passes them in when payroll is enabled.
 
 ## Adding to a manifest
 

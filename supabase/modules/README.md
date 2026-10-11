@@ -50,3 +50,6 @@ core and modules again.
 - `hr`: `employee_leaves` and the leave helpers `hr_leave_days_in_month()` / `hr_unpaid_leave_deduction()`.
   `employees` and `employee_departments` stay in core: profiles, sales, production orders and modules
   that do not depend on hr (consignment, expenses) point to them.
+- `payroll`: `payrolls`, `employee_advances`, `calculate_monthly_payroll_drafts()`, `pay_payroll_run_atomic()`,
+  `pay_employee_advance_atomic()`. `salary_payments` stays in core: `payrolls.salary_payment_id` and
+  `sales_commissions.payroll_id` both point to it, and payroll and commissions do not depend on each other.

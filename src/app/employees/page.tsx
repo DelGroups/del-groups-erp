@@ -1,7 +1,7 @@
-import { EmployeesPage } from "@/modules/hr/pages";
+import EmployeesPageClient from "./page.client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <EmployeesPage />;
+  return <EmployeesPageClient />;
 }

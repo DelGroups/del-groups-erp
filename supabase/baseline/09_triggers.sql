@@ -14,7 +14,6 @@ do $$ begin
   end if;
 end $$;
 CREATE OR REPLACE TRIGGER trg_journal_entry_lines_no_delete BEFORE DELETE ON public.journal_entry_lines FOR EACH ROW EXECUTE FUNCTION public.block_journal_entry_delete();
-CREATE OR REPLACE TRIGGER trg_audit_payrolls AFTER INSERT OR DELETE OR UPDATE ON public.payrolls FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('PAYROLL');
 CREATE OR REPLACE TRIGGER trg_polywood_pieces_barcode BEFORE INSERT OR UPDATE ON public.polywood_pieces FOR EACH ROW EXECUTE FUNCTION public.ensure_inventory_barcode();
 CREATE OR REPLACE TRIGGER trg_audit_production_contractors AFTER DELETE OR UPDATE ON public.production_contractors FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('PRODUCTION');
 CREATE OR REPLACE TRIGGER trg_audit_production_expenses AFTER INSERT OR DELETE OR UPDATE ON public.production_expenses FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('PRODUCTION');

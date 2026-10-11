@@ -151,19 +151,6 @@ create table if not exists public.document_number_counters (
   last_no integer not null
 );
 
-create table if not exists public.employee_advances (
-  id uuid not null,
-  employee_id uuid not null,
-  amount numeric(15,2) not null,
-  request_date date not null,
-  status character varying(20) not null,
-  account_id uuid,
-  transaction_id uuid,
-  description text,
-  created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
-);
-
 create table if not exists public.employee_departments (
   id uuid not null,
   code text not null,
@@ -431,33 +418,6 @@ create table if not exists public.payments (
   idempotency_key text,
   created_by uuid,
   created_at timestamp with time zone not null
-);
-
-create table if not exists public.payrolls (
-  id uuid not null,
-  period_month integer not null,
-  period_year integer not null,
-  employee_id uuid not null,
-  base_salary numeric(15,2) not null,
-  bonuses_commissions numeric(15,2) not null,
-  advances_deducted numeric(15,2) not null,
-  other_deductions numeric(15,2) not null,
-  net_salary numeric(15,2) not null,
-  status character varying(20) not null,
-  paid_at timestamp with time zone,
-  account_id uuid,
-  transaction_id uuid,
-  salary_payment_id uuid,
-  notes text,
-  created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null,
-  gross_salary numeric(15,2) not null,
-  dsmf_employee numeric(15,2) not null,
-  dsmf_employer numeric(15,2) not null,
-  its_employee numeric(15,2) not null,
-  its_employer numeric(15,2) not null,
-  income_tax numeric(15,2) not null,
-  taxable_income numeric(15,2) not null
 );
 
 create table if not exists public.polywood_inventory_items (

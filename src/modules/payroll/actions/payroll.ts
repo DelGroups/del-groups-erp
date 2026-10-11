@@ -1,6 +1,6 @@
 "use server";
 
-/** Payroll runs and salary advances. Moves to src/modules/payroll with the payroll module. */
+/** Payroll runs and salary advances. */
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import {
   ActionAuthError,

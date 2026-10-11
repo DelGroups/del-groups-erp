@@ -14,7 +14,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs USING btr
 CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug_unique ON public.categories USING btree (slug) WHERE ((slug IS NOT NULL) AND (TRIM(BOTH FROM slug) <> ''::text));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON public.chart_of_accounts USING btree (code);
 CREATE INDEX IF NOT EXISTS idx_doc_expenses_doc ON public.document_expenses USING btree (document_type, document_id);
-CREATE INDEX IF NOT EXISTS idx_employee_advances_employee ON public.employee_advances USING btree (employee_id, status, request_date DESC);
 CREATE INDEX IF NOT EXISTS idx_employee_departments_active_sort ON public.employee_departments USING btree (is_active, sort_order, name);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_erp_events_idempotency ON public.erp_events USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_erp_events_source ON public.erp_events USING btree (source_table, source_id);
@@ -49,8 +48,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_partners_supplier_unique ON public.partner
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_idempotency ON public.payments USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_payments_partner_id ON public.payments USING btree (partner_id, payment_date DESC);
 CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON public.payments USING btree (payment_date DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_payrolls_period_employee ON public.payrolls USING btree (period_year, period_month, employee_id);
-CREATE INDEX IF NOT EXISTS idx_payrolls_status ON public.payrolls USING btree (period_year DESC, period_month DESC, status);
 CREATE INDEX IF NOT EXISTS idx_polywood_inventory_items_product ON public.polywood_inventory_items USING btree (product_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_polywood_pieces_barcode_unique ON public.polywood_pieces USING btree (barcode) WHERE ((barcode IS NOT NULL) AND (btrim(barcode) <> ''::text));
 CREATE INDEX IF NOT EXISTS idx_polywood_pieces_product_available ON public.polywood_pieces USING btree (product_id, warehouse_id) WHERE (status = 'available'::text);

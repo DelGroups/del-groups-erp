@@ -1,0 +1,9 @@
+{
+  "why": "Monthly payroll runs and salary advances, with the RPCs that calculate the drafts, pay a run and pay an advance. salary_payments stays in core: both payrolls.salary_payment_id and sales_commissions.payroll_id point to it, and payroll and commissions do not depend on each other.",
+  "tables": ["employee_advances", "payrolls"],
+  "functions": ["calculate_monthly_payroll_drafts", "pay_employee_advance_atomic", "pay_payroll_run_atomic"],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}
