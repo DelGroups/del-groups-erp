@@ -37,7 +37,7 @@ export async function listAuditLogsAction(
 ): Promise<ActionResult<AuditLogListResult>> {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data: configRow } = await admin
       .from("system_settings")

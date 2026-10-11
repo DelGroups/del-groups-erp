@@ -19,7 +19,7 @@ export async function fetchWarehouseStockForProductsAction(
       return { success: true, data: {} };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("warehouse_stocks")
       .select("product_id, current_stock")

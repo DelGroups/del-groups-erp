@@ -7,7 +7,7 @@ import type { Warehouse } from "@/types/database.types";
  * permissions first. Used by the sales invoice form (core) and the polywood module's actions.
  */
 export async function ensurePolywoodWarehouseAdmin(): Promise<Warehouse> {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data: existing } = await admin
     .from("warehouses")
     .select("*")

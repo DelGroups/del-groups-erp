@@ -23,7 +23,7 @@ export async function fetchTrialBalanceAction(
       return { success: false, error: "Tarix aralığı tələb olunur" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("get_gl_trial_balance", {
       p_start_date: startDate,
       p_end_date: endDate,
@@ -52,7 +52,7 @@ export async function fetchPartnerReconciliationAction(
       return { success: false, error: "Tarix aralığı tələb olunur" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("get_partner_reconciliation_act", {
       p_partner_id: partnerId,
       p_start_date: startDate,
@@ -81,7 +81,7 @@ export async function fetchInventoryTurnoverAction(
       return { success: false, error: "Tarix aralığı tələb olunur" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("get_inventory_turnover_report", {
       p_start_date: startDate,
       p_end_date: endDate,

@@ -18,7 +18,7 @@ const ALLOWED_SEAL_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "ima
 export async function getCrmConfigAction(): Promise<ActionResult<CrmConfig>> {
   try {
     await requirePermissionAction("can_manage_settings", { module: "crm" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
       .select("value")
@@ -42,7 +42,7 @@ export async function saveCrmConfigAction(input: CrmConfig): Promise<ActionResul
     if (config.stages.length < 2) {
       return { success: false, error: "Ən azı iki pipeline mərhələsi lazımdır" };
     }
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("system_settings").upsert(
       {
         key: CRM_CONFIG_KEY,
@@ -74,7 +74,7 @@ export async function uploadCrmSealAction(formData: FormData): Promise<ActionRes
     }
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
     const path = `seals/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const buffer = Buffer.from(await file.arrayBuffer());
     const { error } = await admin.storage.from(SEAL_BUCKET).upload(path, buffer, {
       contentType: mime,

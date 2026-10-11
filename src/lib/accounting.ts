@@ -158,7 +158,7 @@ export async function createJournalEntry(
   }
 
   const client = options?.useAdmin
-    ? createSupabaseAdminClient()
+    ? await createSupabaseAdminClient()
     : await createSupabaseServerClient();
 
   const { data, error } = await client.rpc("create_journal_entry", {
@@ -181,7 +181,7 @@ export async function fetchGlAccounts(options?: {
   useAdmin?: boolean;
 }): Promise<GlAccount[]> {
   const client = options?.useAdmin
-    ? createSupabaseAdminClient()
+    ? await createSupabaseAdminClient()
     : await createSupabaseServerClient();
 
   const { data, error } = await client
@@ -231,7 +231,7 @@ export async function createPartnerPayment(
   }
 
   const client = options?.useAdmin
-    ? createSupabaseAdminClient()
+    ? await createSupabaseAdminClient()
     : await createSupabaseServerClient();
 
   const paymentDate = toIsoDate(input.paymentDate);
@@ -281,7 +281,7 @@ export async function resolveGlAccountIdByCode(
   if (!normalized) return null;
 
   const client = options?.useAdmin
-    ? createSupabaseAdminClient()
+    ? await createSupabaseAdminClient()
     : await createSupabaseServerClient();
 
   const { data, error } = await client

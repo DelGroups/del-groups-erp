@@ -102,6 +102,64 @@ docker run -d \
 
 Health check: `GET /login` should return 200.
 
+#### 5a. Many companies from one deployment (multi-tenant, prompt 8)
+
+Off by default. With `CONTROL_PLANE_URL` / `CONTROL_PLANE_SERVICE_ROLE_KEY` empty, the
+app serves one company from `NEXT_PUBLIC_SUPABASE_*`, exactly as above.
+
+When they are set, `src/proxy.ts` looks up every request's `Host` in the control panel
+(`control-panel/`, its own Supabase project; lookup `erp_tenant_runtime()`, cached 60 s):
+
+| Tenant | Pages | API |
+| --- | --- | --- |
+| unknown domain | "address not found" page (404) | `404 {"error":"unknown_tenant"}` |
+| `trial`, `active`, `past_due` | normal | normal |
+| `read_only` | readable, with a banner; any POST / server action is refused | GET only, otherwise `403 tenant_read_only` |
+| `suspended`, `cancelled` | "account suspended" page | `403 tenant_suspended` |
+| `provisioning` | "being prepared" page | `503 tenant_provisioning` |
+| control plane unreachable | "temporarily unavailable" page | `503 tenant_lookup_failed` |
+
+Each tenant's Supabase URL and anon key reach the app as request headers signed by the
+proxy. The service-role key is fetched server-side from the control plane, kept in
+memory and never sent to the browser. Register the production domain as a tenant before
+turning this on, or it shows "not found".
+
+Note: `read_only` blocks mutations that go through this server (server actions, POST/PUT/
+PATCH/DELETE on `/api`). Writes the browser sends straight to Supabase are not blocked by
+the proxy; enforcing read-only in the tenant database comes with plan limits (prompt 12).
+
+**Caddy on-demand TLS.** Caddy gets a certificate for a tenant's subdomain or custom domain
+the first time it is visited, after asking the ERP whether the domain is registered.
+`/api/tenant/domain-check?domain=<host>` answers 200 only for a domain mapped to a tenant
+that is not cancelled (in single-tenant mode: only the host of `NEXT_PUBLIC_SITE_URL`),
+404 otherwise. Caddyfile:
+
+```caddyfile
+{
+	on_demand_tls {
+		ask http://erp:3000/api/tenant/domain-check
+	}
+}
+
+# Every tenant domain (subdomains of the product domain and custom domains).
+https:// {
+	tls {
+		on_demand
+	}
+	reverse_proxy erp:3000
+}
+```
+
+Keep the existing explicit `erp.del-groups.com { ... }` block as it is; a site block with
+a host name takes precedence over the catch-all `https://` block. Caddy calls the `ask`
+URL over the internal Docker network, so the endpoint needs no public exposure, and it
+answers for any `Host` (the proxy does not resolve a tenant for `/api/tenant/*`).
+
+**Cache invalidation.** The control panel can clear the ERP's tenant cache at once after a
+change: set the same random `TENANT_WEBHOOK_SECRET` in both apps and
+`ERP_TENANT_WEBHOOK_URL=https://<erp-domain>/api/tenant/invalidate` in the control panel.
+The body is signed (HMAC-SHA256, header `x-erp-signature`) and must be under five minutes old.
+
 ### 6. Nginx reverse proxy (VPS)
 
 ```nginx

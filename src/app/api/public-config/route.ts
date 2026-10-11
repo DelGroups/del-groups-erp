@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getTenantConfig, toPublicTenantConfig } from "@/lib/tenant/config";
+import { toPublicTenantConfig } from "@/lib/tenant/config";
+import { getServerTenantConfig } from "@/lib/tenant/server";
 
 export const dynamic = "force-dynamic";
 
 /** Serves the current tenant's public Supabase config from the runtime server env. */
 export async function GET(request: NextRequest) {
-  const tenant = getTenantConfig(request);
+  const tenant = getServerTenantConfig(request);
   const config = toPublicTenantConfig(tenant);
 
   if (!config) {

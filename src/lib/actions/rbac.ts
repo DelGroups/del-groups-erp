@@ -20,7 +20,7 @@ export async function fetchRbacLookupsAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_roles");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const [warehousesRes, accountsRes, profilesRes] = await Promise.all([
       admin.from("warehouses").select("id,name").order("name").limit(200),
       admin.from("accounts").select("id,name").order("name").limit(200),
@@ -82,7 +82,7 @@ export async function updateUserPermissionOverridesAction(input: {
 
     let error = userUpdate.error;
     if (error || !userUpdate.data) {
-      const admin = createSupabaseAdminClient();
+      const admin = await createSupabaseAdminClient();
       const adminResult = await admin
         .from("profiles")
         .update(patch as never)

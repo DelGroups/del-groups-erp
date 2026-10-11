@@ -41,7 +41,7 @@ const REFERENCE_TYPE: Record<InitialBalanceEntryType, string> = {
 };
 
 async function nextDocNo(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   entryType: InitialBalanceEntryType
 ): Promise<string> {
   const prefix = DOC_NO_PREFIX[entryType];
@@ -56,7 +56,7 @@ export async function peekInitialBalanceDocNoAction(
 ): Promise<InitialBalanceActionResult<string>> {
   try {
     await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("peek_next_initial_balance_doc_no", {
       p_prefix: DOC_NO_PREFIX[entryType],
     });
@@ -73,7 +73,7 @@ export async function fetchInitialBalanceListAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("inventory_initial_balances")
       .select("*")
@@ -93,7 +93,7 @@ export async function fetchInitialBalanceByIdAction(
 ): Promise<InitialBalanceActionResult<InitialBalanceDocument>> {
   try {
     await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
       .select("*")
@@ -141,7 +141,7 @@ export async function saveInitialBalanceDraftAction(
 ): Promise<InitialBalanceActionResult<{ id: string; document_number: string }>> {
   try {
     const { user, profile } = await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     if (!input.items.length) {
       return { success: false, error: "At least one line item is required" };
@@ -250,7 +250,7 @@ function calcWeightedBuyPrice(
 }
 
 async function insertMetricPieces(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   productId: string,
   warehouseId: string,
   pieceLengths: number[],
@@ -286,7 +286,7 @@ export async function postInitialBalanceDocumentAction(
 ): Promise<InitialBalanceActionResult<{ document_number: string }>> {
   try {
     const { user } = await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
@@ -507,7 +507,7 @@ export async function cancelInitialBalanceDocumentAction(
 ): Promise<InitialBalanceActionResult> {
   try {
     await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: header } = await admin
       .from("inventory_initial_balances")
       .select("status")
@@ -541,7 +541,7 @@ export async function deleteInitialBalanceDraftAction(
 ): Promise<InitialBalanceActionResult> {
   try {
     await requirePermissionAction("can_manage_products", { module: "inventory" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: header, error: headerError } = await admin
       .from("inventory_initial_balances")
       .select("status")
@@ -581,7 +581,7 @@ export async function unpostInitialBalanceDocumentAction(
     const { user } = await requirePermissionAction("can_unpost_inventory", { module: "inventory" });
     if (!documentId) return { success: false, error: "Document ID is required" };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("unpost_inventory_initial_balance", {
       p_document_id: documentId,
       p_reason: reason?.trim() || null,

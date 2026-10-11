@@ -58,7 +58,7 @@ jobs:
           initdb -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 > /dev/null
           pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP" -l "$RUNNER_TEMP/pg.log" -w start
 
-      - name: Migrations (twice) and RLS / audit checks
+      - name: Migrations (twice), RLS / audit and tenant lookup checks
         run: |
           PSQL=(psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1)
           "${PSQL[@]}" -f scripts/db/supabase-shim.sql
@@ -66,8 +66,10 @@ jobs:
           for pass in 1 2; do
             for f in control-panel/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
           done
-          "${PSQL[@]}" -f control-panel/supabase/tests/rls_and_audit.sql | tee "$RUNNER_TEMP/result.txt"
-          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/result.txt"
+          for t in rls_and_audit runtime_lookup; do
+            "${PSQL[@]}" -f "control-panel/supabase/tests/$t.sql" | tee "$RUNNER_TEMP/$t.txt"
+            grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/$t.txt"
+          done
 
       - name: Server log on failure
         if: failure()

@@ -34,7 +34,7 @@ export async function createEmployeeDepartmentAction(input: {
     const code = normalizeCode(input.code || slugifyDepartmentCode(name));
     if (!code) return { success: false, error: "Şöbə kodu düzgün deyil" };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("employee_departments")
       .insert([
@@ -77,7 +77,7 @@ export async function updateEmployeeDepartmentAction(
 ): Promise<DepartmentActionResult<EmployeeDepartmentRow>> {
   try {
     await requirePermissionAction("can_manage_hr");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data: existing, error: loadError } = await admin
       .from("employee_departments")
@@ -149,7 +149,7 @@ export async function deleteEmployeeDepartmentAction(
 ): Promise<DepartmentActionResult> {
   try {
     await requirePermissionAction("can_manage_hr");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data: row, error: loadError } = await admin
       .from("employee_departments")

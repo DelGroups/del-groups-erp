@@ -20,4 +20,7 @@ begin
   update vault.secrets set secret = coalesce(new_secret, secret), name = coalesce(new_name, name),
     description = coalesce(new_description, description), updated_at = now() where id = secret_id;
 end $$;
+-- Supabase exposes the plain values through this view (only to privileged roles).
+create or replace view vault.decrypted_secrets as
+  select id, name, description, secret, secret as decrypted_secret, updated_at from vault.secrets;
 revoke all on schema vault from public;

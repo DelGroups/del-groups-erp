@@ -53,7 +53,7 @@ export function OPTIONS() {
 }
 
 async function loadRuntime() {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data } = await admin
     .from("system_settings")
     .select("value")
@@ -284,7 +284,7 @@ async function uploadAssistantFile(
   try {
     const ext = extensionFor(mime, originalName);
     const path = `${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.storage.from(AI_ASSISTANT_BUCKET).upload(path, buffer, {
       contentType: mime || "application/octet-stream",
       upsert: false,

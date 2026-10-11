@@ -2,7 +2,8 @@ import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database.types";
 import { fetchUserProfile } from "@/lib/auth/profile";
-import { getTenantConfig, supabaseClientCredentials } from "@/lib/tenant/config";
+import { supabaseClientCredentials } from "@/lib/tenant/config";
+import { getServerTenantConfig } from "@/lib/tenant/server";
 
 /**
  * Request-scoped Supabase client for server components and route handlers.
@@ -10,7 +11,7 @@ import { getTenantConfig, supabaseClientCredentials } from "@/lib/tenant/config"
  */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
-  const { url, anonKey } = supabaseClientCredentials(getTenantConfig(await headers()));
+  const { url, anonKey } = supabaseClientCredentials(getServerTenantConfig(await headers()));
 
   return createServerClient<Database>(
     url,

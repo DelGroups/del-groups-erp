@@ -1,6 +1,6 @@
 import type { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
-type StockClient = ReturnType<typeof createSupabaseAdminClient> | { from: (table: string) => unknown };
+type StockClient = Awaited<ReturnType<typeof createSupabaseAdminClient>> | { from: (table: string) => unknown };
 
 const NULL_WAREHOUSE_SENTINEL = "00000000-0000-0000-0000-000000000000";
 
@@ -14,7 +14,7 @@ export async function getProductStockAtWarehouse(
   productId: string,
   warehouseId: string
 ): Promise<number> {
-  const { data: exact, error: exactError } = await (client as ReturnType<typeof createSupabaseAdminClient>)
+  const { data: exact, error: exactError } = await (client as Awaited<ReturnType<typeof createSupabaseAdminClient>>)
     .from("warehouse_stocks")
     .select("current_stock")
     .eq("product_id", productId)
@@ -23,7 +23,7 @@ export async function getProductStockAtWarehouse(
 
   if (!exactError && exact) return num(exact.current_stock);
 
-  const { data: legacy } = await (client as ReturnType<typeof createSupabaseAdminClient>)
+  const { data: legacy } = await (client as Awaited<ReturnType<typeof createSupabaseAdminClient>>)
     .from("warehouse_stocks")
     .select("current_stock, warehouse_id")
     .eq("product_id", productId);
@@ -36,7 +36,7 @@ export async function getProductStockAtWarehouse(
     }
   }
 
-  const { data: product } = await (client as ReturnType<typeof createSupabaseAdminClient>)
+  const { data: product } = await (client as Awaited<ReturnType<typeof createSupabaseAdminClient>>)
     .from("products")
     .select("stock, warehouse_id")
     .eq("id", productId)
@@ -50,7 +50,7 @@ export async function getProductStockAtWarehouse(
 }
 
 export async function adjustProductStockAtWarehouse(
-  client: ReturnType<typeof createSupabaseAdminClient>,
+  client: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   productId: string,
   warehouseId: string,
   delta: number

@@ -26,7 +26,7 @@ export type BackupActionResult<T = void> =
   | { success: false; error: string };
 
 async function fetchTableRows(table: BackupTableName): Promise<Record<string, unknown>[]> {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const select =
     table === "production_materials" ? PRODUCTION_MATERIAL_LIVE_COLUMNS.join(",") : "*";
   const { data, error } = await admin.from(table).select(select);
@@ -88,7 +88,7 @@ export async function restoreFullBackupAction(
       return { success: false, error: "Backup tables missing" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const warnings: string[] = [];
 
     for (const table of BACKUP_DELETE_ORDER) {
@@ -148,7 +148,7 @@ export async function exportCustomersCsvAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("customers")
       .select("code, full_name, name, phone, company_name, address, voen, balance")
@@ -195,7 +195,7 @@ export async function exportProductsCsvAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("products")
       .select("code, name, category, buy_price, sell_price, stock, min_stock, unit")
@@ -242,7 +242,7 @@ export async function exportInvoicesCsvAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const [{ data: sales, error: salesError }, { data: purchases, error: purchasesError }] =
       await Promise.all([
@@ -310,7 +310,7 @@ export async function exportExpensesPayrollCsvAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const [{ data: expenses, error: expError }, { data: payroll, error: payError }] =
       await Promise.all([

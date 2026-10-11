@@ -1,7 +1,9 @@
 import { PRODUCT_NAME } from "@/lib/brand";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { getTenantConfig, type TenantConfigSource } from "@/lib/tenant/config";
+import type { TenantConfigSource } from "@/lib/tenant/config";
+import { getServerTenantConfig, isMultiTenant } from "@/lib/tenant/server";
+import { requestTenantSource } from "@/lib/tenant/request";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import {
   companyDisplayName,
@@ -42,8 +44,9 @@ const publicCache = new Map<string, { value: PublicCompanyInfo; expires: number 
  * with the service role (anonymous visitors cannot read the profile) and
  * cached in memory per tenant.
  */
-export async function getPublicCompanyInfo(source?: TenantConfigSource): Promise<PublicCompanyInfo> {
-  const { tenantId } = getTenantConfig(source);
+export async function getPublicCompanyInfo(requested?: TenantConfigSource): Promise<PublicCompanyInfo> {
+  const source = await requestTenantSource(requested);
+  const { tenantId } = getServerTenantConfig(source);
   const cached = publicCache.get(tenantId);
   if (cached && cached.expires > Date.now()) return cached.value;
 
@@ -51,7 +54,7 @@ export async function getPublicCompanyInfo(source?: TenantConfigSource): Promise
   let ttl = PUBLIC_TTL_MS;
   try {
     const { profile } = await withTimeout(
-      loadCompanyProfile(createSupabaseAdminClient(source)),
+      createSupabaseAdminClient(source).then((admin) => loadCompanyProfile(admin)),
       PUBLIC_TIMEOUT_MS
     );
     value = {
@@ -69,7 +72,9 @@ export async function getPublicCompanyInfo(source?: TenantConfigSource): Promise
 
 /** Drops the cached public info, e.g. after the profile was saved. */
 export function invalidatePublicCompanyInfo(source?: TenantConfigSource): void {
-  publicCache.delete(getTenantConfig(source).tenantId);
+  // Without a request at hand in multi-tenant mode the tenant is unknown: drop all.
+  if (!source && isMultiTenant()) publicCache.clear();
+  else publicCache.delete(getServerTenantConfig(source).tenantId);
 }
 
 /** Full profile for server actions and route handlers, read as the current user. */

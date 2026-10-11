@@ -14,7 +14,7 @@ export async function saveProductBomAction(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await requirePermissionAction("can_manage_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { error: productError } = await admin
       .from("products")
@@ -64,7 +64,7 @@ export async function fetchProductAvailableStockAction(
 ): Promise<{ success: boolean; stock: number; error?: string }> {
   try {
     await requirePermissionAction("can_view_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("get_product_available_stock", {
       p_product_id: productId,
     });
@@ -86,7 +86,7 @@ export async function fetchCompositeAvailableStockAction(
 ): Promise<{ success: boolean; stock: number; error?: string }> {
   try {
     await requirePermissionAction("can_view_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("get_composite_available_stock", {
       p_product_id: productId,
     });
@@ -113,7 +113,7 @@ export async function fetchProductStocksBatchAction(
       return { success: true, stocks: {} };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: productRows, error: productError } = await admin
       .from("products")
       .select("id, is_composite")
@@ -157,7 +157,7 @@ export async function fetchCompositeBomIndexAction(): Promise<{
 }> {
   try {
     await requirePermissionAction("can_view_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("product_bom")
       .select("parent_product_id, component_product_id");
@@ -234,7 +234,7 @@ export async function resolveConfiguratorKitAction(
       return { success: false, error: "Oturacaq və ayaq eyni məhsul ola bilməz" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const [{ data: seat, error: seatError }, { data: base, error: baseError }] =
       await Promise.all([
@@ -358,7 +358,7 @@ export async function resolveConfiguratorKitAction(
 export async function fetchProductBomAction(parentProductId: string) {
   try {
     await requirePermissionAction("can_manage_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("product_bom")
       .select(

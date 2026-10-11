@@ -5,9 +5,9 @@ function num(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type StockAdminClient = ReturnType<
+type StockAdminClient = Awaited<ReturnType<
   typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient
->;
+>>;
 
 export function resolveCatalogWarehouseStock(
   movementBalances: Map<string, number>,

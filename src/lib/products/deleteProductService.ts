@@ -1,6 +1,6 @@
 import type { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
-type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
+type AdminClient = Awaited<ReturnType<typeof createSupabaseAdminClient>>;
 
 export type DeleteProductServiceResult = { success: boolean; error?: string };
 

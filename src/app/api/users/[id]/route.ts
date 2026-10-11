@@ -75,7 +75,7 @@ export async function PATCH(
 
   let admin;
   try {
-    admin = createSupabaseAdminClient();
+    admin = await createSupabaseAdminClient();
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Server konfiqurasiya xətası" },
@@ -201,7 +201,7 @@ export async function DELETE(
 
   let admin;
   try {
-    admin = createSupabaseAdminClient();
+    admin = await createSupabaseAdminClient();
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Server konfiqurasiya xətası" },

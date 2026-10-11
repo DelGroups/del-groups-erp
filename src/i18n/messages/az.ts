@@ -3176,6 +3176,26 @@ export const azMessages = {
       back: "Ana səhifəyə qayıt",
     },
   },
+  tenantStatus: {
+    notFound: {
+      title: "Bu ünvan tapılmadı",
+      body: "Bu domen heç bir şirkətə bağlı deyil. Ünvanı yoxlayın və ya administratorla əlaqə saxlayın.",
+    },
+    suspended: {
+      title: "Hesab dayandırılıb",
+      body: "Bu şirkətin hesabı dayandırılıb. Məlumatlarınız silinməyib. Bərpa üçün administratorla əlaqə saxlayın.",
+    },
+    preparing: {
+      title: "Sistem hazırlanır",
+      body: "Şirkətiniz üçün ERP hazırlanır. Bir neçə dəqiqədən sonra yenidən yoxlayın.",
+    },
+    unavailable: {
+      title: "Müvəqqəti əlçatan deyil",
+      body: "Şirkət məlumatlarını indi yükləmək mümkün olmadı. Bir az sonra yenidən cəhd edin.",
+    },
+    readOnlyBanner: "Hesab yalnız oxuma rejimindədir: məlumatlara baxmaq və ixrac etmək olar, yeni sənəd yaratmaq və dəyişiklik etmək olmaz.",
+    retry: "Yenidən yoxla",
+  },
 } as const;
 
 export type Messages = {

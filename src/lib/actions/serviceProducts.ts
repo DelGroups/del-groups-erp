@@ -17,7 +17,7 @@ const DEFAULT_SERVICE_PRODUCTS = [
 ] as const;
 
 async function resolveServicesCategoryId(
-  admin: ReturnType<typeof createSupabaseAdminClient>
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>
 ): Promise<string | null> {
   const { data: existing } = await admin
     .from("categories")
@@ -47,7 +47,7 @@ export async function ensureDefaultServiceProductsAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_products");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const categoryId = await resolveServicesCategoryId(admin);
 
     if (!categoryId) {

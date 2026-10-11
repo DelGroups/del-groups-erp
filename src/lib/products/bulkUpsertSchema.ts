@@ -1,7 +1,7 @@
 import type { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { ProductInsert } from "@/types/database.types";
 
-type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
+type SupabaseAdmin = Awaited<ReturnType<typeof createSupabaseAdminClient>>;
 
 /** Columns added in later migrations — omitted when PostgREST schema cache lacks them. */
 const OPTIONAL_PRODUCT_COLUMNS = [
