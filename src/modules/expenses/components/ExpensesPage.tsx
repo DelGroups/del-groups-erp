@@ -15,7 +15,7 @@ import {
   submitExpenseAction,
   saveExpenseAction,
   type ExpenseFormOptions,
-} from "@/lib/actions/expenses";
+} from "../actions/expenses";
 import {
   EXPENSE_STATUSES,
   firstDayOfMonthIsoDate,
@@ -26,14 +26,14 @@ import {
   type ExpenseSaveInput,
   type ExpenseStatus,
   type ExpenseSummary,
-} from "@/lib/expenses/expenseDocuments";
+} from "../lib/expenseDocuments";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { downloadTextFile, rowsToCsv } from "@/lib/csv/csvUtils";
 import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
-import ExpenseFormModal from "@/components/expenses/ExpenseFormModal";
-import ExpenseAttachmentsModal from "@/components/expenses/ExpenseAttachmentsModal";
-import ExpenseMonthlyReport from "@/components/expenses/ExpenseMonthlyReport";
+import ExpenseFormModal from "./ExpenseFormModal";
+import ExpenseAttachmentsModal from "./ExpenseAttachmentsModal";
+import ExpenseMonthlyReport from "./ExpenseMonthlyReport";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";

@@ -8,7 +8,7 @@ import {
   buildMonthlyReport,
   type ExpenseDocument,
   type ExpenseReportGroup,
-} from "@/lib/expenses/expenseDocuments";
+} from "../lib/expenseDocuments";
 
 interface Props {
   rows: ExpenseDocument[];

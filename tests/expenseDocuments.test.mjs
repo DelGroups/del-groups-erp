@@ -14,7 +14,7 @@ import {
   splitGross,
   summarizeExpenses,
   todayIsoDate,
-} from "../src/lib/expenses/expenseDocuments.ts";
+} from "../src/modules/expenses/lib/expenseDocuments.ts";
 
 test("a VAT-inclusive amount splits into net + VAT that add back up", () => {
   assert.deepEqual(splitGross(118, 18), { net: 100, vat: 18 });

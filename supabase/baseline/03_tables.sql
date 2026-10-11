@@ -222,67 +222,11 @@ create table if not exists public.erp_events (
   created_at timestamp with time zone not null
 );
 
-create table if not exists public.expense_attachments (
-  id uuid not null,
-  expense_id uuid not null,
-  storage_path text not null,
-  file_name text not null,
-  mime_type text,
-  size_bytes bigint,
-  created_by uuid,
-  created_at timestamp with time zone not null
-);
-
 create table if not exists public.expense_categories (
   id uuid not null,
   name character varying(200) not null,
   is_active boolean not null,
   created_at timestamp with time zone not null
-);
-
-create table if not exists public.expenses (
-  id uuid not null,
-  code text not null,
-  category text not null,
-  amount numeric(12,2) not null,
-  account_id uuid,
-  notes text,
-  created_at timestamp with time zone,
-  production_order_id uuid,
-  expense_date date not null,
-  category_id uuid,
-  supplier_id uuid,
-  payee text,
-  reference_no text,
-  description text,
-  net_amount numeric(14,2),
-  vat_rate numeric(5,2) not null,
-  vat_amount numeric(14,2) not null,
-  department_id uuid,
-  status text not null,
-  transaction_id uuid,
-  journal_entry_id uuid,
-  created_by uuid,
-  posted_at timestamp with time zone,
-  posted_by uuid,
-  cancelled_at timestamp with time zone,
-  cancelled_by uuid,
-  cancel_reason text,
-  updated_at timestamp with time zone not null,
-  payment_mode text not null,
-  employee_id uuid,
-  submitted_at timestamp with time zone,
-  submitted_by uuid,
-  approved_at timestamp with time zone,
-  approved_by uuid,
-  rejected_at timestamp with time zone,
-  rejected_by uuid,
-  rejected_reason text,
-  reimbursed_at timestamp with time zone,
-  reimbursed_by uuid,
-  reimbursement_journal_id uuid,
-  vat_account_id uuid,
-  vat_transaction_id uuid
 );
 
 create table if not exists public.financial_categories (

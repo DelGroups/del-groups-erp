@@ -1,0 +1,23 @@
+{
+  "why": "Expense documents: the expenses with their attachments, and the RPCs that record, submit, approve, reject, post, reimburse and cancel them. Expense categories (expense_categories, financial_categories) and the additional costs on sales and purchase invoices (document_expenses) are used by core finance and stay in core. The foreign key production_expenses.finance_expense_id points here, so it is installed with this module.",
+  "tables": ["expense_attachments", "expenses"],
+  "functions": [
+    "approve_expense_atomic",
+    "assert_expense_date_postable",
+    "cancel_expense_atomic",
+    "expense_cash_out",
+    "expense_coa_id",
+    "expense_memo",
+    "next_expense_doc_no",
+    "post_expense_atomic",
+    "post_expense_internal",
+    "record_expense_atomic",
+    "reimburse_expense_atomic",
+    "reject_expense_atomic",
+    "submit_expense_atomic"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": ["expense-attachments"],
+  "storage_policies": []
+}

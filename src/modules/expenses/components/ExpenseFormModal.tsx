@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
-import type { ExpenseFormOptions } from "@/lib/actions/expenses";
+import type { ExpenseFormOptions } from "../actions/expenses";
 import {
   guessVatAccountId,
   roundMoney,
@@ -13,7 +13,7 @@ import {
   type ExpenseDocument,
   type ExpensePaymentMode,
   type ExpenseSaveInput,
-} from "@/lib/expenses/expenseDocuments";
+} from "../lib/expenseDocuments";
 
 const VAT_RATES = [0, 18];
 
