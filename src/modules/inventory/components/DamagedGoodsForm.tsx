@@ -7,12 +7,12 @@ import {
   createEmptyDamagedGoodsItem,
   generateWriteoffDocumentNumber,
 } from "@/types/database.types";
-import type { WriteoffRecord } from "@/lib/inventory/writeoff";
+import type { WriteoffRecord } from "../lib/writeoff";
 import {
   fetchProductsByWarehouse,
   submitDamagedGoodsWriteoff,
   updateInventoryWriteoff,
-} from "@/lib/inventory/writeoff";
+} from "../lib/writeoff";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";

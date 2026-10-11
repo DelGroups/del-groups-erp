@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchWarehouseStockDashboard } from "@/lib/inventory/fetchWarehouseStockDashboard";
+import { fetchWarehouseStockDashboard } from "../lib/fetchWarehouseStockDashboard";
 
 export const warehouseStockDashboardKey = ["inventory", "warehouse-stock-dashboard"] as const;
 

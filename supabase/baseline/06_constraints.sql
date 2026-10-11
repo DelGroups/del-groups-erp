@@ -100,31 +100,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_pkey' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_pkey' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balance_items_pkey' and conrelid = 'public.inventory_initial_balance_items'::regclass) then
-    execute $c$alter table only public.inventory_initial_balance_items add constraint inventory_initial_balance_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_pkey' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_writeoffs_pkey' and conrelid = 'public.inventory_writeoffs'::regclass) then
-    execute $c$alter table only public.inventory_writeoffs add constraint inventory_writeoffs_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'journal_entries_pkey' and conrelid = 'public.journal_entries'::regclass) then
     execute $c$alter table only public.journal_entries add constraint journal_entries_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -210,16 +185,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfer_items_pkey' and conrelid = 'public.stock_transfer_items'::regclass) then
-    execute $c$alter table only public.stock_transfer_items add constraint stock_transfer_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_pkey' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'studio_fields_pkey' and conrelid = 'public.studio_fields'::regclass) then
     execute $c$alter table only public.studio_fields add constraint studio_fields_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -290,21 +255,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_count_id_product_id_key' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_count_id_product_id_key UNIQUE (count_id, product_id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_document_number_key' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_document_number_key UNIQUE (document_number);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_document_number_key' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_document_number_key UNIQUE (document_number);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'journal_entries_entry_no_key' and conrelid = 'public.journal_entries'::regclass) then
     execute $c$alter table only public.journal_entries add constraint journal_entries_entry_no_key UNIQUE (entry_no);$c$;
   end if;
@@ -342,11 +292,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sales_invoice_number_key' and conrelid = 'public.sales'::regclass) then
     execute $c$alter table only public.sales add constraint sales_invoice_number_key UNIQUE (invoice_number);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_reference_number_key' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_reference_number_key UNIQUE (reference_number);$c$;
   end if;
 end $$;
 do $$ begin
@@ -472,36 +417,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'inventory_batches_unit_cost_check' and conrelid = 'public.inventory_batches'::regclass) then
     execute $c$alter table only public.inventory_batches add constraint inventory_batches_unit_cost_check CHECK ((unit_cost >= (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_actual_full_sheets_check' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_actual_full_sheets_check CHECK (((actual_full_sheets IS NULL) OR (actual_full_sheets >= 0)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_actual_qty_check' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_actual_qty_check CHECK (((actual_qty IS NULL) OR (actual_qty >= (0)::numeric)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_check' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_check CHECK (((subcategory_name IS NULL) OR (category_name IS NOT NULL)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_status_check' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'in_progress'::text, 'review'::text, 'posted'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_entry_type_check' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_entry_type_check CHECK ((entry_type = ANY (ARRAY['opening_balance'::text, 'receipt'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_status_check' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'posted'::text, 'cancelled'::text])));$c$;
   end if;
 end $$;
 do $$ begin
@@ -660,21 +575,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfer_items_quantity_check' and conrelid = 'public.stock_transfer_items'::regclass) then
-    execute $c$alter table only public.stock_transfer_items add constraint stock_transfer_items_quantity_check CHECK ((quantity > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_distinct_warehouses' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_distinct_warehouses CHECK ((from_warehouse_id <> to_warehouse_id));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_status_check' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'completed'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'studio_fields_field_type_check' and conrelid = 'public.studio_fields'::regclass) then
     execute $c$alter table only public.studio_fields add constraint studio_fields_field_type_check CHECK ((field_type = ANY (ARRAY['text'::text, 'textarea'::text, 'integer'::text, 'decimal'::text, 'money'::text, 'date'::text, 'checkbox'::text, 'selection'::text, 'url'::text])));$c$;
   end if;
@@ -822,76 +722,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'inventory_batches_product_id_fkey' and conrelid = 'public.inventory_batches'::regclass) then
     execute $c$alter table only public.inventory_batches add constraint inventory_batches_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_count_id_fkey' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_count_id_fkey FOREIGN KEY (count_id) REFERENCES public.inventory_counts(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_counted_by_fkey' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_counted_by_fkey FOREIGN KEY (counted_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_count_items_product_id_fkey' and conrelid = 'public.inventory_count_items'::regclass) then
-    execute $c$alter table only public.inventory_count_items add constraint inventory_count_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_created_by_fkey' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_journal_entry_id_fkey' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_posted_by_fkey' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_posted_by_fkey FOREIGN KEY (posted_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_counts_warehouse_id_fkey' and conrelid = 'public.inventory_counts'::regclass) then
-    execute $c$alter table only public.inventory_counts add constraint inventory_counts_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balance_items_document_id_fkey' and conrelid = 'public.inventory_initial_balance_items'::regclass) then
-    execute $c$alter table only public.inventory_initial_balance_items add constraint inventory_initial_balance_items_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.inventory_initial_balances(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balance_items_product_id_fkey' and conrelid = 'public.inventory_initial_balance_items'::regclass) then
-    execute $c$alter table only public.inventory_initial_balance_items add constraint inventory_initial_balance_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_created_by_fkey' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_posted_by_fkey' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_posted_by_fkey FOREIGN KEY (posted_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_unposted_by_fkey' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_unposted_by_fkey FOREIGN KEY (unposted_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_initial_balances_warehouse_id_fkey' and conrelid = 'public.inventory_initial_balances'::regclass) then
-    execute $c$alter table only public.inventory_initial_balances add constraint inventory_initial_balances_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'inventory_writeoffs_warehouse_id_fkey' and conrelid = 'public.inventory_writeoffs'::regclass) then
-    execute $c$alter table only public.inventory_writeoffs add constraint inventory_writeoffs_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -1127,36 +957,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'stock_movements_warehouse_id_fkey' and conrelid = 'public.stock_movements'::regclass) then
     execute $c$alter table only public.stock_movements add constraint stock_movements_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfer_items_offcut_id_fkey' and conrelid = 'public.stock_transfer_items'::regclass) then
-    execute $c$alter table only public.stock_transfer_items add constraint stock_transfer_items_offcut_id_fkey FOREIGN KEY (offcut_id) REFERENCES public.polywood_pieces(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfer_items_product_id_fkey' and conrelid = 'public.stock_transfer_items'::regclass) then
-    execute $c$alter table only public.stock_transfer_items add constraint stock_transfer_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfer_items_transfer_id_fkey' and conrelid = 'public.stock_transfer_items'::regclass) then
-    execute $c$alter table only public.stock_transfer_items add constraint stock_transfer_items_transfer_id_fkey FOREIGN KEY (transfer_id) REFERENCES public.stock_transfers(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_created_by_fkey' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_from_warehouse_id_fkey' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_from_warehouse_id_fkey FOREIGN KEY (from_warehouse_id) REFERENCES public.warehouses(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'stock_transfers_to_warehouse_id_fkey' and conrelid = 'public.stock_transfers'::regclass) then
-    execute $c$alter table only public.stock_transfers add constraint stock_transfers_to_warehouse_id_fkey FOREIGN KEY (to_warehouse_id) REFERENCES public.warehouses(id);$c$;
   end if;
 end $$;
 do $$ begin

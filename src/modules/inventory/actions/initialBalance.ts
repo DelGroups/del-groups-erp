@@ -9,7 +9,7 @@ import type {
   SaveInitialBalanceInput,
   InitialBalanceDocument,
   InitialBalanceEntryType,
-} from "@/lib/initialBalance/types";
+} from "../lib/initialBalanceTypes";
 import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { Product } from "@/types/database.types";

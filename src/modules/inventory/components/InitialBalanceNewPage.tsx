@@ -4,14 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { FormLayout } from "@/components/ui/form-layout";
-import InitialBalanceForm from "@/components/initialBalance/InitialBalanceForm";
-import { fetchInitialBalanceByIdAction } from "@/lib/initialBalance/actions";
+import InitialBalanceForm from "./InitialBalanceForm";
+import { fetchInitialBalanceByIdAction } from "../actions/initialBalance";
 import { fetchProductsCatalog } from "@/lib/products/api";
-import type { InitialBalanceDocument, InitialBalanceEntryType } from "@/lib/initialBalance/types";
+import type { InitialBalanceDocument, InitialBalanceEntryType } from "../lib/initialBalanceTypes";
 import type { Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 
-export default function InitialBalanceNewPageClient() {
+export default function InitialBalanceNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft");

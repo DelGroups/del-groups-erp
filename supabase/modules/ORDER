@@ -1,5 +1,6 @@
 # Modules with an install script, in install order (a module after the modules it depends on).
 # One id per line; checked against src/modules (tests/moduleSql.test.mjs).
+inventory
 contracts
 sales
 crm

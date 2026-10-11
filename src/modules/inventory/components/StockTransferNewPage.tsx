@@ -9,7 +9,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
-import StockTransferPrintTemplate from "@/components/inventory/StockTransferPrintTemplate";
+import StockTransferPrintTemplate from "./StockTransferPrintTemplate";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -19,7 +19,7 @@ import {
   resolveTransferBarcode,
   type StockTransferLineInput,
   type StockTransferPrintData,
-} from "@/lib/inventory/stockTransfer";
+} from "../lib/stockTransfer";
 import type { Warehouse } from "@/types/database.types";
 import { generateStockTransferDocumentNumber } from "@/types/database.types";
 
@@ -41,7 +41,7 @@ function createEmptyLine(): StockTransferLineInput {
   };
 }
 
-export default function StockTransferNewPageClient() {
+export default function StockTransferNewPage() {
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const { printData, setPrintData } = useDocumentPrint<StockTransferPrintData>();

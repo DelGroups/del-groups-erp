@@ -28,7 +28,7 @@ import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import { ResizableTh } from "@/components/ui/table";
-import { InventoryCountStatusBadge, VarianceAmount } from "@/components/inventoryCount/InventoryCountStatusBadge";
+import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import { useToast } from "@/hooks/useToast";
@@ -46,12 +46,12 @@ import {
   saveInventoryCountProgressAction,
   submitInventoryCountAction,
   type InventoryCountLineInput,
-} from "@/lib/inventoryCount/actions";
+} from "../actions/inventoryCount";
 import {
   INVENTORY_COUNT_STATUSES,
   type InventoryCountDetail,
   type InventoryCountLine,
-} from "@/lib/inventoryCount/types";
+} from "../lib/inventoryCountTypes";
 
 const PAGE_SIZE = 100;
 const EPS = 0.0005;
@@ -309,7 +309,7 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => vo
 
 type PendingConfirm = "post" | "resync" | "zero" | null;
 
-export default function InventoryCountDocumentPageClient() {
+export default function InventoryCountDetailPage() {
   const { t } = useI18n();
   const router = useRouter();
   const params = useParams<{ id: string }>();

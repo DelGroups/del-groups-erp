@@ -1,4 +1,4 @@
-import type { InitialBalanceLineItem } from "@/lib/initialBalance/types";
+import type { InitialBalanceLineItem } from "./initialBalanceTypes";
 import { isMetricProduct, resolveMetricBuyCostPerMeter } from "@/lib/polywood/metricReceive";
 import type { Product } from "@/types/database.types";
 

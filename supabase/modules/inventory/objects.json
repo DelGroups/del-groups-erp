@@ -1,0 +1,39 @@
+{
+  "why": "The inventory documents behind the inventory screens: stock counts (with their RPCs and the warehouse category lookup they use), stock transfers, write-offs and initial balances (with their journal posting and document numbers). The stock engine stays in core: warehouses, warehouse_stocks, stock_movements, inventory batches (FIFO), warehouse slips and polywood pieces, which sales, purchases, production and products use.",
+  "tables": [
+    "inventory_count_items",
+    "inventory_counts",
+    "inventory_initial_balance_items",
+    "inventory_initial_balances",
+    "inventory_writeoffs",
+    "stock_transfer_items",
+    "stock_transfers"
+  ],
+  "functions": [
+    "_inventory_count_authorize",
+    "_inventory_count_lock",
+    "_inventory_count_set_stock",
+    "get_warehouse_active_categories",
+    "inventory_count_book_qty",
+    "inventory_count_item_derive",
+    "inventory_count_post",
+    "inventory_count_refresh_totals",
+    "inventory_count_reopen",
+    "inventory_count_resync_book",
+    "inventory_count_scan",
+    "inventory_count_start",
+    "inventory_count_submit",
+    "inventory_count_unit_cost",
+    "inventory_warehouse_product_ids",
+    "next_initial_balance_doc_no",
+    "next_inventory_count_doc_no",
+    "peek_next_initial_balance_doc_no",
+    "post_initial_balance_journal",
+    "save_count_progress",
+    "unpost_inventory_initial_balance"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

@@ -2,9 +2,6 @@
 CREATE OR REPLACE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 CREATE OR REPLACE TRIGGER trg_ensure_partner_for_customer AFTER INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION public.ensure_partner_for_customer();
 CREATE OR REPLACE TRIGGER trg_employees_normalize_status BEFORE INSERT OR UPDATE OF status ON public.employees FOR EACH ROW EXECUTE FUNCTION public.normalize_employee_status();
-CREATE OR REPLACE TRIGGER trg_inventory_count_item_derive BEFORE INSERT OR UPDATE ON public.inventory_count_items FOR EACH ROW EXECUTE FUNCTION public.inventory_count_item_derive();
-CREATE OR REPLACE TRIGGER trg_audit_inventory_counts AFTER INSERT OR DELETE OR UPDATE ON public.inventory_counts FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('INVENTORY');
-CREATE OR REPLACE TRIGGER trg_audit_inventory_writeoffs AFTER INSERT OR DELETE OR UPDATE ON public.inventory_writeoffs FOR EACH ROW EXECUTE FUNCTION public.audit_log_row_change('INVENTORY');
 CREATE OR REPLACE TRIGGER trg_journal_entries_no_delete BEFORE DELETE ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.block_journal_entry_delete();
 CREATE OR REPLACE TRIGGER trg_journal_entries_period_guard BEFORE INSERT OR DELETE OR UPDATE ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.guard_journal_entry_period();
 CREATE OR REPLACE TRIGGER trg_journal_entries_sync_document_fields BEFORE INSERT OR UPDATE ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.sync_journal_entry_document_fields();

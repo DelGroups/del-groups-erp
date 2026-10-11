@@ -10,7 +10,7 @@ import type {
   InventoryCountOption,
   InventoryCountStatus,
   WarehouseCategoryPath,
-} from "@/lib/inventoryCount/types";
+} from "../lib/inventoryCountTypes";
 
 export type InventoryCountActionResult<T = void> =
   | { success: true; data?: T }

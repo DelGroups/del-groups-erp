@@ -1,7 +1,7 @@
-import InitialBalanceListPageClient from "./page.client";
+import { InitialBalanceListPage } from "@/modules/inventory/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function InitialBalanceListPage() {
-  return <InitialBalanceListPageClient />;
+export default function Page() {
+  return <InitialBalanceListPage />;
 }

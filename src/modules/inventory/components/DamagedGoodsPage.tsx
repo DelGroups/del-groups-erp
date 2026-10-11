@@ -3,11 +3,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
-import DamagedGoodsForm from "@/components/inventory/DamagedGoodsForm";
-import DamagedGoodsViewModal from "@/components/inventory/DamagedGoodsViewModal";
+import DamagedGoodsForm from "./DamagedGoodsForm";
+import DamagedGoodsViewModal from "./DamagedGoodsViewModal";
 import DamagedGoodsPrintTemplate, {
   type DamagedGoodsPrintData,
-} from "@/components/inventory/DamagedGoodsPrintTemplate";
+} from "./DamagedGoodsPrintTemplate";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
@@ -15,7 +15,7 @@ import { fetchProductsCatalog } from "@/lib/products/api";
 import {
   fetchInventoryWriteoffs,
   type WriteoffRecord,
-} from "@/lib/inventory/writeoff";
+} from "../lib/writeoff";
 import type { Warehouse } from "@/types/database.types";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
