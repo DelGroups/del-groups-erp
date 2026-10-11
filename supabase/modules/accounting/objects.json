@@ -1,0 +1,9 @@
+{
+  "why": "The RPCs only the accounting screens call: the GL balance sheet, general ledger and P&L reports, and the supplier opening balance. The ledger itself stays in core: chart of accounts, accounts, transactions, journal entries and lines, accounting periods, partners, the GL views, journal posting, the trial balance (also used by inventory turnover) and partner balances, which sales, purchases, payroll, expenses and production post to.",
+  "tables": [],
+  "functions": ["get_gl_balance_sheet", "get_gl_general_ledger", "get_gl_pl_summary", "set_supplier_opening_balance_atomic"],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import UnifiedLedgerRowActions from "@/components/finance/UnifiedLedgerRowActions";
+import UnifiedLedgerRowActions from "./UnifiedLedgerRowActions";
 import Button from "@/components/ui/button";
 import Card, { CardMeta } from "@/components/ui/card";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";

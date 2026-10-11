@@ -77,3 +77,6 @@ core and modules again.
 - `inventory`: stock counts, stock transfers, write-offs and initial balances (tables and RPCs, including
   `get_warehouse_active_categories()` used by counts). The stock engine stays in core: `warehouses`,
   `warehouse_stocks`, `stock_movements`, inventory batches (FIFO), warehouse slips and `polywood_pieces`.
+- `accounting`: the GL balance sheet, general ledger and P&L report RPCs and the supplier opening balance.
+  The ledger stays in core (chart of accounts, accounts, transactions, journal entries and lines, accounting
+  periods, partners, GL views, journal posting, trial balance, partner balances): every posting module uses it.

@@ -14,8 +14,8 @@ import type { ExpenseCategoryOption } from "@/lib/finance/financialCategories";
 import {
   canDeleteLedgerTransaction,
   canEditLedgerTransaction,
-} from "@/lib/finance/ledgerTransactionRules";
-import { printLedgerReceipt } from "@/lib/finance/printLedgerReceipt";
+} from "../lib/ledgerTransactionRules";
+import { printLedgerReceipt } from "../lib/printLedgerReceipt";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
   formatReferenceTypeLabel,

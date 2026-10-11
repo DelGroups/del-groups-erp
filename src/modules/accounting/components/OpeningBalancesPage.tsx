@@ -25,7 +25,7 @@ import {
   fetchSupplierOpeningBalancesAction,
   setSupplierOpeningBalanceAction,
   type SupplierOpeningBalanceRow,
-} from "@/lib/actions/supplierAp";
+} from "../actions/supplierAp";
 
 type TabId = "cash-bank" | "customers" | "suppliers";
 
@@ -125,7 +125,7 @@ function PartnerBalanceTable<T extends { id: string; code: string; name: string;
   );
 }
 
-export default function FinanceOpeningBalancesPageClient() {
+export default function OpeningBalancesPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");

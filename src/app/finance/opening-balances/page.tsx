@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { OpeningBalancesPage } from "@/modules/accounting/pages";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <PageClient />;
+  return <OpeningBalancesPage />;
 }
