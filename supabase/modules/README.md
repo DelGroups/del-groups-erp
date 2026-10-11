@@ -66,3 +66,7 @@ core and modules again.
 - `polywood`: `polywood_inventory_items` (rows of the Polywood stock import). Cut sheets (`polywood_pieces`) and
   the mixed-dimensional sale RPCs stay in core: sales, purchases, stock transfers, inventory counts, initial
   balance and production use them.
+- `purchases`: `purchase_items`, `supplier_delivery_ratings` and the purchase workflow RPCs (draft save/post,
+  receipt, cancel/void, document numbers). `purchases` itself stays in core with `suppliers`: partner payables,
+  reconciliation, payments, the GL views and supplier AP read it, some from SQL functions that need the table
+  when they are created. Its own triggers (`purchases_default_posted_when_blank`, partner sync) stay in core.

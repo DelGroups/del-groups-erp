@@ -24,13 +24,13 @@ import {
 } from "@/lib/purchases/helpers";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { submitPurchase, updatePurchase } from "@/lib/purchases/submitPurchase";
+import { submitPurchase, updatePurchase } from "../lib/submitPurchase";
 import {
   isPurchaseDraft,
   isPurchasePosted,
   type PurchaseDocumentStatus,
 } from "@/lib/invoices/invoiceStatus";
-import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocumentStatusBadge";
+import PurchaseDocumentStatusBadge from "./PurchaseDocumentStatusBadge";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
@@ -60,8 +60,8 @@ import {
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
-import QuickAddSupplierModal from "@/components/purchases/QuickAddSupplierModal";
-import QuickAddProductModal from "@/components/purchases/QuickAddProductModal";
+import QuickAddSupplierModal from "./QuickAddSupplierModal";
+import QuickAddProductModal from "./QuickAddProductModal";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
@@ -85,8 +85,8 @@ import {
   filterLegalSuppliers,
   isLegalEntityWithVoen,
 } from "@/lib/customers/entityType";
-import SupplierRatingModal from "@/components/purchases/SupplierRatingModal";
-import { rateSupplierDeliveryAction } from "@/lib/actions/supplierRating";
+import SupplierRatingModal from "./SupplierRatingModal";
+import { rateSupplierDeliveryAction } from "../actions/supplierRating";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { formatSupplierOptionLabel, supplierDisplayName } from "@/lib/purchases/supplierScore";
 import { useProcurementConfig } from "@/hooks/useProcurementConfig";

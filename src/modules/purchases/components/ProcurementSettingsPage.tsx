@@ -12,7 +12,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import {
   getProcurementConfigAction,
   saveProcurementConfigAction,
-} from "@/lib/actions/procurementSettings";
+} from "../actions/procurementSettings";
 import {
   DEFAULT_PROCUREMENT_CONFIG,
   parseProcurementConfig,
