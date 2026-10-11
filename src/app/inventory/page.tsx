@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { WarehouseStockPage } from "@/modules/inventory/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function InventoryPage() {
-  return <PageClient />;
+export default function Page() {
+  return <WarehouseStockPage />;
 }

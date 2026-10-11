@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import InitialBalanceNewPageClient from "./page.client";
+import { InitialBalanceNewPage } from "@/modules/inventory/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function InitialBalanceNewPage() {
+export default function Page() {
   return (
     <Suspense fallback={null}>
-      <InitialBalanceNewPageClient />
+      <InitialBalanceNewPage />
     </Suspense>
   );
 }

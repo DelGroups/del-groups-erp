@@ -12,9 +12,6 @@ alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_departments enable row level security;
 alter table public.employees enable row level security;
-alter table public.inventory_count_items enable row level security;
-alter table public.inventory_counts enable row level security;
-alter table public.inventory_writeoffs enable row level security;
 alter table public.products enable row level security;
 alter table public.profiles enable row level security;
 alter table public.purchases enable row level security;
@@ -24,8 +21,6 @@ alter table public.sale_items enable row level security;
 alter table public.sales enable row level security;
 alter table public.settings enable row level security;
 alter table public.stock_movements enable row level security;
-alter table public.stock_transfer_items enable row level security;
-alter table public.stock_transfers enable row level security;
 alter table public.studio_fields enable row level security;
 alter table public.suppliers enable row level security;
 alter table public.system_settings enable row level security;
@@ -190,57 +185,6 @@ create policy employees_update on public.employees as permissive for update to a
   using ((public.require_permission('can_manage_hr'::text) AND (public.user_is_admin() OR public.user_can_read_employee_row(department))))
   with check ((public.require_permission('can_manage_hr'::text) AND (public.user_is_admin() OR public.user_can_read_employee_row(department))));
 
-drop policy if exists inventory_count_items_delete on public.inventory_count_items;
-create policy inventory_count_items_delete on public.inventory_count_items as permissive for delete to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_count_items_insert on public.inventory_count_items;
-create policy inventory_count_items_insert on public.inventory_count_items as permissive for insert to authenticated
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_count_items_select on public.inventory_count_items;
-create policy inventory_count_items_select on public.inventory_count_items as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists inventory_count_items_update on public.inventory_count_items;
-create policy inventory_count_items_update on public.inventory_count_items as permissive for update to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text))
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_counts_delete on public.inventory_counts;
-create policy inventory_counts_delete on public.inventory_counts as permissive for delete to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_counts_insert on public.inventory_counts;
-create policy inventory_counts_insert on public.inventory_counts as permissive for insert to authenticated
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_counts_select on public.inventory_counts;
-create policy inventory_counts_select on public.inventory_counts as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists inventory_counts_update on public.inventory_counts;
-create policy inventory_counts_update on public.inventory_counts as permissive for update to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text))
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_writeoffs_delete on public.inventory_writeoffs;
-create policy inventory_writeoffs_delete on public.inventory_writeoffs as permissive for delete to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_writeoffs_insert on public.inventory_writeoffs;
-create policy inventory_writeoffs_insert on public.inventory_writeoffs as permissive for insert to authenticated
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists inventory_writeoffs_select on public.inventory_writeoffs;
-create policy inventory_writeoffs_select on public.inventory_writeoffs as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists inventory_writeoffs_update on public.inventory_writeoffs;
-create policy inventory_writeoffs_update on public.inventory_writeoffs as permissive for update to authenticated
-  using (public.require_permission('can_writeoff_inventory'::text))
-  with check (public.require_permission('can_writeoff_inventory'::text));
-
 drop policy if exists products_delete on public.products;
 create policy products_delete on public.products as permissive for delete to authenticated
   using (public.require_permission('can_manage_products'::text));
@@ -390,40 +334,6 @@ create policy stock_movements_insert on public.stock_movements as permissive for
 drop policy if exists stock_movements_select on public.stock_movements;
 create policy stock_movements_select on public.stock_movements as permissive for select to authenticated
   using (public.require_permission('can_view_products'::text));
-
-drop policy if exists stock_transfer_items_delete on public.stock_transfer_items;
-create policy stock_transfer_items_delete on public.stock_transfer_items as permissive for delete to authenticated
-  using (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists stock_transfer_items_insert on public.stock_transfer_items;
-create policy stock_transfer_items_insert on public.stock_transfer_items as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists stock_transfer_items_select on public.stock_transfer_items;
-create policy stock_transfer_items_select on public.stock_transfer_items as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists stock_transfer_items_update on public.stock_transfer_items;
-create policy stock_transfer_items_update on public.stock_transfer_items as permissive for update to authenticated
-  using (public.require_permission('can_manage_warehouses'::text))
-  with check (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists stock_transfers_delete on public.stock_transfers;
-create policy stock_transfers_delete on public.stock_transfers as permissive for delete to authenticated
-  using (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists stock_transfers_insert on public.stock_transfers;
-create policy stock_transfers_insert on public.stock_transfers as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists stock_transfers_select on public.stock_transfers;
-create policy stock_transfers_select on public.stock_transfers as permissive for select to authenticated
-  using (public.require_permission('can_view_products'::text));
-
-drop policy if exists stock_transfers_update on public.stock_transfers;
-create policy stock_transfers_update on public.stock_transfers as permissive for update to authenticated
-  using (public.require_permission('can_manage_warehouses'::text))
-  with check (public.require_permission('can_manage_warehouses'::text));
 
 drop policy if exists studio_fields_insert on public.studio_fields;
 create policy studio_fields_insert on public.studio_fields as permissive for insert to authenticated

@@ -1,5 +1,5 @@
-import StockTransferNewPageClient from "./page.client";
+import { StockTransferNewPage } from "@/modules/inventory/pages";
 
-export default function StockTransferNewPage() {
-  return <StockTransferNewPageClient />;
+export default function Page() {
+  return <StockTransferNewPage />;
 }

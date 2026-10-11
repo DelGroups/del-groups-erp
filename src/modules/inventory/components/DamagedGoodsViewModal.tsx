@@ -2,7 +2,7 @@
 
 import React from "react";
 import { X } from "lucide-react";
-import type { WriteoffRecord } from "@/lib/inventory/writeoff";
+import type { WriteoffRecord } from "../lib/writeoff";
 import type { Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 

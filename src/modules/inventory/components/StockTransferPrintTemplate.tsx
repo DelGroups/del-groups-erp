@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { StockTransferPrintData } from "@/lib/inventory/stockTransfer";
+import type { StockTransferPrintData } from "../lib/stockTransfer";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface StockTransferPrintTemplateProps {

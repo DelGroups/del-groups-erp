@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { handleOptions } from "@/lib/apiSecurity";
 import { requirePermissionApi } from "@/lib/auth/apiAuth";
-import { submitStockTransfer, type SubmitStockTransferPayload } from "@/lib/inventory/stockTransfer";
+import { submitStockTransfer, type SubmitStockTransferPayload } from "@/modules/inventory";
 import { requireModuleApi } from "@/lib/modules/server";
 
 export const runtime = "nodejs";

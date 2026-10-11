@@ -16,8 +16,8 @@ import {
   deleteInitialBalanceDraftAction,
   fetchInitialBalanceListAction,
   unpostInitialBalanceDocumentAction,
-} from "@/lib/initialBalance/actions";
-import type { InitialBalanceDocument } from "@/lib/initialBalance/types";
+} from "../actions/initialBalance";
+import type { InitialBalanceDocument } from "../lib/initialBalanceTypes";
 import { useI18n } from "@/i18n/I18nProvider";
 
 /** Drafts open editable; posted/cancelled documents open read-only in the same form. */
@@ -100,7 +100,7 @@ function UnpostConfirmModal({
   );
 }
 
-export default function InitialBalanceListPageClient() {
+export default function InitialBalanceListPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { can } = useAuth();

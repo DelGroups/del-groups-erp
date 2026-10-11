@@ -26,13 +26,6 @@ CREATE INDEX IF NOT EXISTS idx_inventory_batch_consumptions_sale ON public.inven
 CREATE INDEX IF NOT EXISTS idx_inventory_batch_consumptions_source ON public.inventory_batch_consumptions USING btree (source_type, source_id) WHERE (source_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_inventory_batches_document ON public.inventory_batches USING btree (document_type, document_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_batches_product_fifo ON public.inventory_batches USING btree (product_id, created_at, id) WHERE (remaining_qty > (0)::numeric);
-CREATE INDEX IF NOT EXISTS idx_inventory_count_items_count ON public.inventory_count_items USING btree (count_id, line_no);
-CREATE INDEX IF NOT EXISTS idx_inventory_counts_date ON public.inventory_counts USING btree (count_date DESC, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_inventory_counts_open ON public.inventory_counts USING btree (warehouse_id, status) WHERE (status = ANY (ARRAY['in_progress'::text, 'review'::text]));
-CREATE INDEX IF NOT EXISTS idx_inventory_initial_balance_items_document ON public.inventory_initial_balance_items USING btree (document_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_initial_balances_entry_type ON public.inventory_initial_balances USING btree (entry_type, doc_date DESC);
-CREATE INDEX IF NOT EXISTS idx_inventory_initial_balances_status ON public.inventory_initial_balances USING btree (status, doc_date DESC);
-CREATE INDEX IF NOT EXISTS idx_inventory_writeoffs_document_number ON public.inventory_writeoffs USING btree (document_number);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON public.journal_entries USING btree (date DESC);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_document ON public.journal_entries USING btree (document_type, document_id) WHERE (document_id IS NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_entries_idempotency ON public.journal_entries USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
@@ -92,8 +85,6 @@ CREATE INDEX IF NOT EXISTS idx_sales_warehouse_sent ON public.sales USING btree 
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product_created ON public.stock_movements USING btree (product_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_reference ON public.stock_movements USING btree (reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse_created ON public.stock_movements USING btree (warehouse_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_stock_transfer_items_transfer ON public.stock_transfer_items USING btree (transfer_id);
-CREATE INDEX IF NOT EXISTS idx_stock_transfers_date ON public.stock_transfers USING btree (transfer_date DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_studio_fields_model ON public.studio_fields USING btree (model_key, sequence) WHERE active;
 CREATE INDEX IF NOT EXISTS idx_sub_categories_category_id ON public.sub_categories USING btree (category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions USING btree (account_id) WHERE (account_id IS NOT NULL);

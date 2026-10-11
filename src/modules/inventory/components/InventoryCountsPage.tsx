@@ -14,7 +14,7 @@ import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
-import { InventoryCountStatusBadge, VarianceAmount } from "@/components/inventoryCount/InventoryCountStatusBadge";
+import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
@@ -24,14 +24,14 @@ import {
   fetchInventoryCountsAction,
   fetchInventoryCountWarehousesAction,
   fetchWarehouseCategoriesAction,
-} from "@/lib/inventoryCount/actions";
+} from "../actions/inventoryCount";
 import {
   INVENTORY_COUNT_STATUSES,
   type InventoryCountDocument,
   type InventoryCountOption,
   type InventoryCountStatus,
   type WarehouseCategoryPath,
-} from "@/lib/inventoryCount/types";
+} from "../lib/inventoryCountTypes";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -225,7 +225,7 @@ function CreateCountModal({
   );
 }
 
-export default function InventoryCountsPageClient() {
+export default function InventoryCountsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();

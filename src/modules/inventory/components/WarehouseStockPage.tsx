@@ -13,12 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResizableTh, Td, TablePagination } from "@/components/ui/table";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
-import { useWarehouseStockDashboard } from "@/hooks/useWarehouseStockDashboard";
+import { useWarehouseStockDashboard } from "../hooks/useWarehouseStockDashboard";
 import {
   computeWarehouseStockKpis,
   type WarehouseStockRow,
   type WarehouseStockStatus,
-} from "@/lib/inventory/fetchWarehouseStockDashboard";
+} from "../lib/fetchWarehouseStockDashboard";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   AlertTriangle,
@@ -65,7 +65,7 @@ function formatQty(value: number, unit: string | null): string {
   return unit ? `${formatted} ${unit}` : formatted;
 }
 
-export default function InventoryPageClient() {
+export default function WarehouseStockPage() {
   const { t } = useI18n();
   const { data, isLoading, isFetching, error, refetch } = useWarehouseStockDashboard();
 

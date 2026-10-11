@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { DamagedGoodsPage } from "@/modules/inventory/pages";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <PageClient />;
+  return <DamagedGoodsPage />;
 }

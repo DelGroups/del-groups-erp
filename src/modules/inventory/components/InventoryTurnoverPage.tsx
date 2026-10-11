@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import InventoryTurnoverTable from "@/components/reports/InventoryTurnoverTable";
+import InventoryTurnoverTable from "./InventoryTurnoverTable";
 import { fetchInventoryTurnoverAction } from "@/lib/actions/accountingReports";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import type {
@@ -50,7 +50,7 @@ function sumTotals(rows: InventoryTurnoverRow[]): InventoryTurnoverTotals {
   );
 }
 
-export default function InventoryTurnoverPageClient({
+export default function InventoryTurnoverPage({
   productId = null,
 }: {
   /** `?productId=` from the Kardex link on /inventory: show only that product. */

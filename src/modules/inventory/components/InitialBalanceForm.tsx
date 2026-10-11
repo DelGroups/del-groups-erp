@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, FileText, Layers, Plus, Save, Trash2 } from "lucide-react";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
-import CategoryBulkSelectModal from "@/components/initialBalance/CategoryBulkSelectModal";
+import CategoryBulkSelectModal from "./CategoryBulkSelectModal";
 import { findProductByBarcodeInList } from "@/lib/products/barcode";
 import { resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
@@ -15,18 +15,18 @@ import {
   formatPieceLengthsInput,
   parsePieceLengthsInput,
   syncMetricLineFromPieces,
-} from "@/lib/initialBalance/helpers";
+} from "../lib/initialBalanceHelpers";
 import {
   peekInitialBalanceDocNoAction,
   postInitialBalanceDocumentAction,
   saveInitialBalanceDraftAction,
-} from "@/lib/initialBalance/actions";
-import { fetchWarehouseStockForProductsAction } from "@/lib/inventory/warehouseStockLookup";
+} from "../actions/initialBalance";
+import { fetchWarehouseStockForProductsAction } from "../lib/warehouseStockLookup";
 import type {
   InitialBalanceDocument,
   InitialBalanceEntryType,
   InitialBalanceLineItem,
-} from "@/lib/initialBalance/types";
+} from "../lib/initialBalanceTypes";
 import type { Product, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";

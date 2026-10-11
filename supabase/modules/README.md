@@ -74,3 +74,6 @@ core and modules again.
   sold items, stock restore, cancel/void, document numbers). No tables: `sales` and `sale_items` stay in core
   (receivables, reconciliation, payments, partner merge, inventory costing and cut sheets use them), with the
   `sales` triggers and the stock functions they call.
+- `inventory`: stock counts, stock transfers, write-offs and initial balances (tables and RPCs, including
+  `get_warehouse_active_categories()` used by counts). The stock engine stays in core: `warehouses`,
+  `warehouse_stocks`, `stock_movements`, inventory batches (FIFO), warehouse slips and `polywood_pieces`.

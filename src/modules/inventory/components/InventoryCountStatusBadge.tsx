@@ -3,7 +3,7 @@
 import React from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { InventoryCountStatus } from "@/lib/inventoryCount/types";
+import type { InventoryCountStatus } from "../lib/inventoryCountTypes";
 
 const VARIANT: Record<InventoryCountStatus, BadgeVariant> = {
   draft: "neutral",
