@@ -1,0 +1,76 @@
+name: db-baseline
+
+# Builds an empty ERP database from supabase/baseline + supabase/migrations on a
+# plain Postgres 17 (no Docker, no Supabase stack) and checks that the baseline
+# matches the production catalog snapshot in supabase/baseline/live-catalog.json.
+# Never connects to production.
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "scripts/db/**"
+      - ".github/workflows/db-baseline.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - "scripts/db/**"
+      - ".github/workflows/db-baseline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-fresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres@127.0.0.1:55432/postgres
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Postgres 17
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Start an empty server
+        run: |
+          PGDATA="$RUNNER_TEMP/pgdata"
+          initdb -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 > /dev/null
+          pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP -c wal_level=logical" -l "$RUNNER_TEMP/pg.log" -w start
+          psql "$DATABASE_URL" -Atc "select version()"
+
+      - name: Generated baseline files are up to date
+        run: |
+          python3 scripts/db/generate-baseline.py
+          git diff --exit-code -- supabase/baseline || {
+            echo "::error::supabase/baseline/*.sql does not match live-catalog.json. Run python3 scripts/db/generate-baseline.py and commit."
+            exit 1
+          }
+
+      - name: Build from baseline
+        run: scripts/db/build-fresh.sh --plain-postgres --baseline-only
+
+      - name: Compare with production snapshot
+        run: |
+          psql "$DATABASE_URL" -X -q -At -f supabase/baseline/catalog.sql > "$RUNNER_TEMP/fresh-catalog.json"
+          set +e
+          python3 scripts/db/compare-catalog.py supabase/baseline/live-catalog.json "$RUNNER_TEMP/fresh-catalog.json" | tee "$RUNNER_TEMP/diff.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Baseline vs production snapshot'; echo '```'; tail -n 200 "$RUNNER_TEMP/diff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Baseline is safe to re-run
+        run: scripts/db/build-fresh.sh --plain-postgres --baseline-only
+
+      - name: Newer migrations apply on top of the baseline
+        run: scripts/db/build-fresh.sh --plain-postgres
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/pg.log" || true
