@@ -45,11 +45,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'commission_rules_pkey' and conrelid = 'public.commission_rules'::regclass) then
-    execute $c$alter table only public.commission_rules add constraint commission_rules_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'company_settings_pkey' and conrelid = 'public.company_settings'::regclass) then
     execute $c$alter table only public.company_settings add constraint company_settings_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -72,11 +67,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_advances_pkey' and conrelid = 'public.employee_advances'::regclass) then
     execute $c$alter table only public.employee_advances add constraint employee_advances_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_commission_rules_pkey' and conrelid = 'public.employee_commission_rules'::regclass) then
-    execute $c$alter table only public.employee_commission_rules add constraint employee_commission_rules_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -162,16 +152,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'journal_entry_lines_pkey' and conrelid = 'public.journal_entry_lines'::regclass) then
     execute $c$alter table only public.journal_entry_lines add constraint journal_entry_lines_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'monthly_commission_details_pkey' and conrelid = 'public.monthly_commission_details'::regclass) then
-    execute $c$alter table only public.monthly_commission_details add constraint monthly_commission_details_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'monthly_commissions_pkey' and conrelid = 'public.monthly_commissions'::regclass) then
-    execute $c$alter table only public.monthly_commissions add constraint monthly_commissions_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -297,11 +277,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sales_pkey' and conrelid = 'public.sales'::regclass) then
     execute $c$alter table only public.sales add constraint sales_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_commissions_pkey' and conrelid = 'public.sales_commissions'::regclass) then
-    execute $c$alter table only public.sales_commissions add constraint sales_commissions_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -432,11 +407,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'journal_entries_idempotency_key_key' and conrelid = 'public.journal_entries'::regclass) then
     execute $c$alter table only public.journal_entries add constraint journal_entries_idempotency_key_key UNIQUE (idempotency_key);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'monthly_commissions_salesperson_id_year_month_key' and conrelid = 'public.monthly_commissions'::regclass) then
-    execute $c$alter table only public.monthly_commissions add constraint monthly_commissions_salesperson_id_year_month_key UNIQUE (salesperson_id, year_month);$c$;
   end if;
 end $$;
 do $$ begin
@@ -577,11 +547,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_advances_status_check' and conrelid = 'public.employee_advances'::regclass) then
     execute $c$alter table only public.employee_advances add constraint employee_advances_status_check CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PAID'::character varying, 'DEDUCTED'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_commission_rules_commission_rate_check' and conrelid = 'public.employee_commission_rules'::regclass) then
-    execute $c$alter table only public.employee_commission_rules add constraint employee_commission_rules_commission_rate_check CHECK ((commission_rate >= (0)::numeric));$c$;
   end if;
 end $$;
 do $$ begin
@@ -895,11 +860,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_commissions_status_check' and conrelid = 'public.sales_commissions'::regclass) then
-    execute $c$alter table only public.sales_commissions add constraint sales_commissions_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'paid'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'stock_movements_movement_type_check' and conrelid = 'public.stock_movements'::regclass) then
     execute $c$alter table only public.stock_movements add constraint stock_movements_movement_type_check CHECK ((movement_type = ANY (ARRAY['in'::text, 'out'::text])));$c$;
   end if;
@@ -1057,11 +1017,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_advances_transaction_id_fkey' and conrelid = 'public.employee_advances'::regclass) then
     execute $c$alter table only public.employee_advances add constraint employee_advances_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_commission_rules_employee_id_fkey' and conrelid = 'public.employee_commission_rules'::regclass) then
-    execute $c$alter table only public.employee_commission_rules add constraint employee_commission_rules_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin
@@ -1272,16 +1227,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'journal_entry_lines_partner_id_fkey' and conrelid = 'public.journal_entry_lines'::regclass) then
     execute $c$alter table only public.journal_entry_lines add constraint journal_entry_lines_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'monthly_commission_details_monthly_commission_id_fkey' and conrelid = 'public.monthly_commission_details'::regclass) then
-    execute $c$alter table only public.monthly_commission_details add constraint monthly_commission_details_monthly_commission_id_fkey FOREIGN KEY (monthly_commission_id) REFERENCES public.monthly_commissions(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'monthly_commissions_salesperson_id_fkey' and conrelid = 'public.monthly_commissions'::regclass) then
-    execute $c$alter table only public.monthly_commissions add constraint monthly_commissions_salesperson_id_fkey FOREIGN KEY (salesperson_id) REFERENCES public.employees(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin
@@ -1677,21 +1622,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sales_warehouse_slip_id_fkey' and conrelid = 'public.sales'::regclass) then
     execute $c$alter table only public.sales add constraint sales_warehouse_slip_id_fkey FOREIGN KEY (warehouse_slip_id) REFERENCES public.warehouse_slips(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_commissions_employee_id_fkey' and conrelid = 'public.sales_commissions'::regclass) then
-    execute $c$alter table only public.sales_commissions add constraint sales_commissions_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_commissions_payroll_id_fkey' and conrelid = 'public.sales_commissions'::regclass) then
-    execute $c$alter table only public.sales_commissions add constraint sales_commissions_payroll_id_fkey FOREIGN KEY (payroll_id) REFERENCES public.salary_payments(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_commissions_sale_id_fkey' and conrelid = 'public.sales_commissions'::regclass) then
-    execute $c$alter table only public.sales_commissions add constraint sales_commissions_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin

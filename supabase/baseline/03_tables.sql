@@ -103,18 +103,6 @@ create table if not exists public.chart_of_accounts (
   created_at timestamp with time zone
 );
 
-create table if not exists public.commission_rules (
-  id uuid not null,
-  category_name text not null,
-  min_amount numeric(12,2),
-  max_amount numeric(12,2),
-  commission_rate numeric(5,2) not null,
-  created_at timestamp with time zone,
-  max_sales numeric,
-  min_sales numeric,
-  commission_percentage numeric
-);
-
 create table if not exists public.company_settings (
   id uuid not null,
   company_name character varying(255),
@@ -174,14 +162,6 @@ create table if not exists public.employee_advances (
   description text,
   created_at timestamp with time zone not null,
   updated_at timestamp with time zone not null
-);
-
-create table if not exists public.employee_commission_rules (
-  id uuid not null,
-  employee_id uuid not null,
-  category_name text not null,
-  commission_rate numeric not null,
-  created_at timestamp with time zone not null
 );
 
 create table if not exists public.employee_departments (
@@ -475,27 +455,6 @@ create table if not exists public.journal_entry_lines (
   partner_id uuid,
   account_id uuid,
   line_memo text
-);
-
-create table if not exists public.monthly_commission_details (
-  id uuid not null,
-  monthly_commission_id uuid,
-  category_name text not null,
-  category_sales_amount numeric(12,2) not null,
-  applied_rate numeric(5,2) not null,
-  calculated_commission numeric(12,2) not null
-);
-
-create table if not exists public.monthly_commissions (
-  id uuid not null,
-  salesperson_id uuid,
-  year_month text not null,
-  total_sales_amount numeric(12,2),
-  total_commission_amount numeric(12,2),
-  status text,
-  calculated_at timestamp with time zone,
-  approved_at timestamp with time zone,
-  notes text
 );
 
 create table if not exists public.n8n_chat_histories (
@@ -1062,22 +1021,6 @@ create table if not exists public.sales (
   inventory_deducted_at timestamp with time zone,
   currency_breakdown jsonb not null,
   custom_fields jsonb not null
-);
-
-create table if not exists public.sales_commissions (
-  id uuid not null,
-  sale_id uuid not null,
-  employee_id uuid,
-  seller_name text,
-  sale_doc_no text,
-  product_category text,
-  product_name text,
-  sale_amount numeric not null,
-  commission_rate numeric not null,
-  commission_amount numeric not null,
-  status text not null,
-  payroll_id uuid,
-  created_at timestamp with time zone not null
 );
 
 create table if not exists public.settings (

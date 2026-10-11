@@ -15,7 +15,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug_unique ON public.categorie
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON public.chart_of_accounts USING btree (code);
 CREATE INDEX IF NOT EXISTS idx_doc_expenses_doc ON public.document_expenses USING btree (document_type, document_id);
 CREATE INDEX IF NOT EXISTS idx_employee_advances_employee ON public.employee_advances USING btree (employee_id, status, request_date DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_commission_rules_employee_category ON public.employee_commission_rules USING btree (employee_id, lower(category_name));
 CREATE INDEX IF NOT EXISTS idx_employee_departments_active_sort ON public.employee_departments USING btree (is_active, sort_order, name);
 CREATE INDEX IF NOT EXISTS idx_employee_leaves_employee ON public.employee_leaves USING btree (employee_id, start_date DESC);
 CREATE INDEX IF NOT EXISTS idx_employee_leaves_period ON public.employee_leaves USING btree (start_date, end_date) WHERE ((status)::text = 'APPROVED'::text);
@@ -129,8 +128,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_production_order_id_unique ON public
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_production_order_unique ON public.sales USING btree (production_order_id) WHERE (production_order_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_sales_status ON public.sales USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_sales_warehouse_sent ON public.sales USING btree (warehouse_sent);
-CREATE INDEX IF NOT EXISTS idx_sales_commissions_employee_status ON public.sales_commissions USING btree (employee_id, status);
-CREATE INDEX IF NOT EXISTS idx_sales_commissions_sale_id ON public.sales_commissions USING btree (sale_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product_created ON public.stock_movements USING btree (product_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_reference ON public.stock_movements USING btree (reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse_created ON public.stock_movements USING btree (warehouse_id, created_at DESC);

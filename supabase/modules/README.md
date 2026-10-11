@@ -39,3 +39,7 @@ core and modules again.
   `consignment_orders`, and the RPCs `consignment_adjust_warehouse_stock()`,
   `create_consignment_dispatch_atomic()`, `set_consignment_initial_balance_atomic()`,
   `settle_consignment_partner_atomic()`.
+- `commissions`: `commission_rules`, `employee_commission_rules`, `sales_commissions`, and the older
+  `monthly_commissions` / `monthly_commission_details`. The payroll functions
+  `calculate_monthly_payroll_drafts()` and `pay_payroll_run_atomic()` stay in core but read
+  `sales_commissions` when they run.

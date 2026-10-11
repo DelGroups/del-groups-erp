@@ -1,24 +1,23 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PageLayout from "@/components/layout/PageLayout";
-import { ArrowLeft, Plus, Trash2, Layers } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Layers, Calculator } from "lucide-react";
 import type { CommissionRule } from "@/types/database.types";
 import { normalizeCommissionRule, parseNullableMaxSales } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 
-export default function CommissionsSettingsPage() {
+export default function CommissionRulesPage() {
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [rules, setRules] = useState<CommissionRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form states
   const [categoryName, setCategoryName] = useState("");
   const [minSales, setMinSales] = useState<string>("0");
   const [maxSales, setMaxSales] = useState<string>("");
@@ -95,6 +94,14 @@ export default function CommissionsSettingsPage() {
               </p>
             </div>
           </div>
+
+          <Link
+  href="/commissions"
+  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+>
+  <Calculator className="w-4 h-4" />
+  {t("commissions.pendingCommissions")}
+</Link>
         </div>
 
         <div className="p-6 space-y-6 max-w-6xl">
