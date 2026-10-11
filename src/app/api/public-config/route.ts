@@ -1,26 +1,27 @@
-import { NextResponse } from "next/server";
-import { getPublicSupabaseConfigStatus } from "@/lib/env";
+import { NextResponse, type NextRequest } from "next/server";
+import { getTenantConfig, toPublicTenantConfig } from "@/lib/tenant/config";
 
 export const dynamic = "force-dynamic";
 
-/** Serves public Supabase config from server env (works even when NEXT_PUBLIC_* were not inlined at build). */
-export async function GET() {
-  const status = getPublicSupabaseConfigStatus();
+/** Serves the current tenant's public Supabase config from the runtime server env. */
+export async function GET(request: NextRequest) {
+  const tenant = getTenantConfig(request);
+  const config = toPublicTenantConfig(tenant);
 
-  if (!status.isConfigured) {
+  if (!config) {
     return NextResponse.json(
       {
         configured: false,
-        issue: status.configIssue,
-        urlPreview: status.rawUrlPreview,
+        issue: tenant.issue,
+        urlPreview: tenant.urlPreview,
       },
-      { status: 503 }
+      { status: 503, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  return NextResponse.json({
-    configured: true,
-    url: status.url,
-    anonKey: status.anonKey,
-  });
+  return NextResponse.json(
+    { configured: true, ...config },
+    // Per-host value; short private cache so tabs don't refetch on every load.
+    { headers: { "Cache-Control": "private, max-age=300", Vary: "Host" } }
+  );
 }
