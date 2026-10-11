@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from "@/lib/brand";
+
 export const DEFAULT_ERP_AGENT = "Del";
 
 /**
@@ -27,7 +29,7 @@ export const ERP_AI_AGENTS: readonly ErpAiAgent[] = [
     id: "Del",
     emoji: "🤖",
     label: "Del",
-    role: "Del Groups ERP Əməliyyat və Maliyyə Köməkçisi",
+    role: `${PRODUCT_NAME} Əməliyyat və Maliyyə Köməkçisi`,
     isDefault: true,
   },
   {

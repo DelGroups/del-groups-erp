@@ -18,11 +18,14 @@ export interface ConsignmentHistoryEntry {
   created_at: string | null;
 }
 
-export const DEFAULT_CONSIGNMENT_TERMS_AZ = `1. Bu sənəd malların əmanət (konsiqnasiya) şərtləri ilə tərəfdaşa təhvilini təsdiqləyir.
-2. Malın mülkiyyəti DEL GROUPS MMC-yə məxsusdur və satılana qədər anbar qalığı tərəfdaşın öhdəliyindədir.
+/** Default consignment terms, naming the company that owns the goods (Settings → Company). */
+export function defaultConsignmentTermsAz(companyName: string): string {
+  return `1. Bu sənəd malların əmanət (konsiqnasiya) şərtləri ilə tərəfdaşa təhvilini təsdiqləyir.
+2. Malın mülkiyyəti ${companyName}-yə məxsusdur və satılana qədər anbar qalığı tərəfdaşın öhdəliyindədir.
 3. Tərəfdaş aylıq satış hesabatı təqdim edir; satılan miqdar əmanət qalığından çox ola bilməz.
 4. Satılmayan mallar şirkətin tələbi ilə əsas anbara qaytarılır.
 5. Zədələnmə, itki və ya qeyri-qanuni satış tərəfdaşın məsuliyyətidir.`;
+}
 
 export interface ConsignmentPartner {
   id: string;

@@ -1,47 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import {
-  DEFAULT_COMPANY_BRANDING,
-  type CompanyBranding,
-} from "@/lib/print/types";
+import type { CompanyBranding } from "@/lib/print/types";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
   TAX_PAYROLL_CONFIG_KEY,
   parseTaxPayrollConfig,
 } from "@/lib/tax/payrollConfig";
 
+/** Company details for printed documents (Settings → Company). */
 export function useCompanyBranding(): CompanyBranding {
-  const [branding, setBranding] = useState<CompanyBranding>(DEFAULT_COMPANY_BRANDING);
+  const company = useCompanyProfile();
+  const [taxVoen, setTaxVoen] = useState<string | null>(null);
 
   useEffect(() => {
-    void (async () => {
-      const [{ data: settings }, { data: company }, { data: taxRow }] = await Promise.all([
-        supabase
-          .from("settings")
-          .select("company_name, logo_url, voen, address, phone")
-          .limit(1)
-          .maybeSingle(),
-        supabase.from("company_settings").select("*").limit(1).maybeSingle(),
-        supabase.from("system_settings").select("value").eq("key", TAX_PAYROLL_CONFIG_KEY).maybeSingle(),
-      ]);
-      const taxConfig = parseTaxPayrollConfig(taxRow?.value);
-
-      setBranding({
-        companyName:
-          company?.company_name ||
-          settings?.company_name ||
-          DEFAULT_COMPANY_BRANDING.companyName,
-        logoUrl: settings?.logo_url || null,
-        voen: taxConfig.company_voen || company?.voen || settings?.voen || null,
-        address: company?.address || settings?.address || null,
-        phone: company?.phone || settings?.phone || null,
-        email: company?.email || null,
-        bankName: company?.bank_name || null,
-        iban: company?.iban || null,
-      });
-    })();
+    void supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", TAX_PAYROLL_CONFIG_KEY)
+      .maybeSingle()
+      .then(({ data }) => setTaxVoen(parseTaxPayrollConfig(data?.value).company_voen || null));
   }, []);
 
-  return branding;
+  const { profile, legalName } = company;
+  return useMemo(
+    () => ({
+      companyName: legalName,
+      logoUrl: profile.logoUrl || null,
+      // The VÖEN on the tax settings page wins, as before.
+      voen: taxVoen || profile.voen || null,
+      address: profile.address || null,
+      phone: profile.phone || null,
+      email: profile.email || null,
+      bankName: profile.bankName || null,
+      iban: profile.iban || null,
+    }),
+    [legalName, profile, taxVoen]
+  );
 }

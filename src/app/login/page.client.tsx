@@ -9,8 +9,7 @@ import ThemeSwitcher from "@/components/theme/ThemeSwitcher";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase, ensureSupabaseReady, getSupabaseClientInfo } from "@/lib/supabase";
 import type { SupabaseConfigIssue } from "@/lib/env";
-
-const DEFAULT_COMPANY_NAME = "DEL GROUPS MMC";
+import { usePublicCompanyInfo } from "@/hooks/useCompanyProfile";
 
 function mapLoginError(
   message: string,
@@ -34,32 +33,10 @@ function mapLoginError(
   }
 }
 
-function CompanyLogo({
-  logoUrl,
-  companyName,
-}: {
-  logoUrl: string;
-  companyName: string;
-}) {
-  const [imgError, setImgError] = useState(false);
-  const showImage = Boolean(logoUrl) && !imgError;
-
-  if (showImage) {
-    return (
-      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-app bg-app-card p-2 shadow-md backdrop-blur-md">
-        <img
-          src={logoUrl}
-          alt={`${companyName} logo`}
-          className="h-full w-full object-contain"
-          onError={() => setImgError(true)}
-        />
-      </div>
-    );
-  }
-
+function CompanyLogo({ initials }: { initials: string }) {
   return (
     <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-app bg-[image:var(--app-gradient)] shadow-lg shadow-indigo-500/25">
-      <span className="text-2xl font-bold tracking-widest text-white">DG</span>
+      <span className="text-2xl font-bold tracking-widest text-white">{initials}</span>
     </div>
   );
 }
@@ -72,8 +49,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [companyName, setCompanyName] = useState(DEFAULT_COMPANY_NAME);
-  const [logoUrl, setLogoUrl] = useState("");
+  const company = usePublicCompanyInfo();
   const [error, setError] = useState(() => {
     const param = searchParams.get("error");
     return param ? mapLoginError(param, t) : "";
@@ -93,17 +69,6 @@ function LoginForm() {
 
   useEffect(() => {
     if (!configReady) return;
-
-    void supabase
-      .from("settings")
-      .select("company_name, logo_url")
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data?.company_name) setCompanyName(data.company_name);
-        if (data?.logo_url) setLogoUrl(data.logo_url);
-      })
-      .catch(() => undefined);
 
     void supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) router.replace(nextPath);
@@ -215,9 +180,9 @@ function LoginForm() {
       />
 
       <div className="relative space-y-2 text-center">
-        <CompanyLogo logoUrl={logoUrl} companyName={companyName} />
+        <CompanyLogo initials={company.initials} />
         <h1 className="pt-3 text-xl font-bold tracking-[0.18em] text-app">
-          {companyName}
+          {company.displayName}
         </h1>
         <p className="text-xs font-medium tracking-wide text-app-muted">
           {t("auth.loginTitle")}
@@ -249,7 +214,7 @@ function LoginForm() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ad@delgroups.az"
+              placeholder={company.emailPlaceholder}
               className={inputClassName}
             />
           </div>

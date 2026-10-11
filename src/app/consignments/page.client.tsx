@@ -17,7 +17,6 @@ import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentRe
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-import { supabase } from "@/lib/supabase";
 import {
   createConsignmentReturnAction,
   fetchConsignmentLookupsAction,
@@ -40,6 +39,7 @@ import { Handshake, Printer, FileSpreadsheet, PackageMinus, PackagePlus, Receipt
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 type TabId = "inventory" | "history" | "partners" | "alerts";
 
@@ -85,7 +85,7 @@ export default function ConsignmentPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const companyName = useCompanyProfile().displayName;
   const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const { printData: printDispatch, setPrintData: setPrintDispatch } =
@@ -106,13 +106,12 @@ export default function ConsignmentPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [look, disp, ret, inv, reps, settings] = await Promise.all([
+    const [look, disp, ret, inv, reps] = await Promise.all([
       fetchConsignmentLookupsAction(),
       listConsignmentDispatchesAction(),
       listConsignmentReturnsAction(),
       listConsignmentInventoryAction(),
       listConsignmentReportsAction(),
-      supabase.from("settings").select("company_name").limit(1).maybeSingle(),
     ]);
     if (!look.success) setError(look.error || t("consignments.loadError"));
     else setLookups(look.data || null);
@@ -120,7 +119,6 @@ export default function ConsignmentPage() {
     if (ret.success) setReturns(ret.data || []);
     if (inv.success) setInventory(inv.data || []);
     if (reps.success) setReports(reps.data || []);
-    if (settings.data?.company_name) setCompanyName(String(settings.data.company_name));
     setLoading(false);
   }, [t]);
 

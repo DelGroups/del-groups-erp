@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Mail, TriangleAlert } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/lib/supabase";
+import { usePublicCompanyInfo } from "@/hooks/useCompanyProfile";
 
 function ForgotPasswordForm() {
   const { t } = useI18n();
+  const company = usePublicCompanyInfo();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -79,7 +81,7 @@ function ForgotPasswordForm() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="ad@delgroups.az"
+            placeholder={company.emailPlaceholder}
             disabled={success}
             className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)] disabled:bg-app-card-hover"
           />

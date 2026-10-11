@@ -12,7 +12,10 @@ import {
 import { fetchUserProfile } from "@/lib/auth/profile";
 import { createSupabaseServerClient, getServerAuthContext } from "@/lib/supabaseServer";
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
-import { DEFAULT_CONTRACT_TERMS_AZ } from "@/lib/production/constants";
+import { defaultContractTermsAz } from "@/lib/production/constants";
+import { PRODUCT_NAME } from "@/lib/brand";
+import { companyDisplayName } from "@/lib/company/profile";
+import { getServerCompanyProfile } from "@/lib/company/server";
 import {
   buildSyntheticProductionContract,
   withPrintableProductionContract,
@@ -1264,7 +1267,10 @@ export async function createProductionOrderAction(
       advance_account_id: advanceAccountId,
       expected_delivery_date: input.expected_delivery_date || null,
       project_scope: input.project_scope?.trim() || null,
-      terms: resolvedType === "Custom" ? DEFAULT_CONTRACT_TERMS_AZ : null,
+      terms:
+        resolvedType === "Custom"
+          ? defaultContractTermsAz(companyDisplayName(await getServerCompanyProfile(), PRODUCT_NAME))
+          : null,
       notes: input.notes?.trim() || null,
       created_by: user.id,
     });
@@ -2667,7 +2673,8 @@ export async function saveProductionContractAction(
 
     const contractNo = resolveContractNumber(order) || createDocNo("PC");
     const contractDate = formatContractDateYmd(order.contract?.contract_date, order.created_at);
-    const terms = order.terms || DEFAULT_CONTRACT_TERMS_AZ;
+    const companyName = companyDisplayName(await getServerCompanyProfile(), PRODUCT_NAME);
+    const terms = order.terms || defaultContractTermsAz(companyName);
     const projectScope = order.project_scope || order.notes || null;
 
     const contractSource = buildContractMappingSourceFromOrder(order, orderId, {
@@ -2706,12 +2713,15 @@ export async function saveProductionContractAction(
       ) {
         return {
           success: true,
-          data: withPrintableProductionContract({
-            ...order,
-            terms: syntheticOverrides.terms,
-            project_scope: syntheticOverrides.project_scope || order.project_scope,
-            contract: buildSyntheticProductionContract(order, syntheticOverrides),
-          }),
+          data: withPrintableProductionContract(
+            {
+              ...order,
+              terms: syntheticOverrides.terms,
+              project_scope: syntheticOverrides.project_scope || order.project_scope,
+              contract: buildSyntheticProductionContract(order, syntheticOverrides, companyName),
+            },
+            companyName
+          ),
         };
       }
       return { success: false, error: formatProductionDbError(written.error) };
@@ -2732,10 +2742,10 @@ export async function saveProductionContractAction(
       ...baseAfter,
       contract:
         persistedContract ||
-        buildSyntheticProductionContract(order, syntheticOverrides),
+        buildSyntheticProductionContract(order, syntheticOverrides, companyName),
     };
 
-    return { success: true, data: withPrintableProductionContract(merged) };
+    return { success: true, data: withPrintableProductionContract(merged, companyName) };
   } catch (err) {
     if (err instanceof ActionAuthError) return { success: false, error: err.message };
     return { success: false, error: err instanceof Error ? err.message : "Failed" };

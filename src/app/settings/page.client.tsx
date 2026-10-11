@@ -1,71 +1,71 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import AiN8nSettingsCard from "@/components/settings/AiN8nSettingsCard";
+import FileDropzone from "@/components/settings/FileDropzone";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import { useCompanyProfile, useRefreshCompanyProfile } from "@/hooks/useCompanyProfile";
+import { saveCompanyProfileAction, uploadCompanyAssetAction } from "@/lib/actions/companyProfile";
+import { emailPlaceholder, type CompanyProfile } from "@/lib/company/profile";
 import {
-  Settings, 
-  Building2, 
-  Save, 
-  Percent, 
-  CreditCard, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  CheckCircle2 
+  Settings,
+  Building2,
+  Save,
+  Percent,
+  CreditCard,
+  Phone,
+  Mail,
+  MapPin,
+  CheckCircle2,
+  Image as ImageIcon,
 } from "lucide-react";
 
 export default function SettingsPage() {
   const { t } = useI18n();
-  const { can } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { can, isAdmin } = useAuth();
+  const company = useCompanyProfile();
+  const refreshCompany = useRefreshCompanyProfile();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<"logo" | "seal" | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
-  const [recordId, setRecordId] = useState<string | null>(null);
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
 
-  const [companyName, setCompanyName] = useState("Del Groups MMC");
-  const [voen, setVoen] = useState("");
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [iban, setIban] = useState("");
-  const [vatRate, setVatRate] = useState("18");
-  const [currency, setCurrency] = useState("AZN");
+  const [form, setForm] = useState<CompanyProfile>(company.profile);
+  const [vatRate, setVatRate] = useState(String(company.profile.defaultVatRate));
+  const loading = !company.loaded;
+  const brandingLocked = !isAdmin || company.source === "legacy";
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  // Reset the form whenever a (re)loaded profile arrives.
+  const [formSource, setFormSource] = useState<CompanyProfile | null>(null);
+  if (company.loaded && formSource !== company.profile) {
+    setFormSource(company.profile);
+    setForm(company.profile);
+    setVatRate(String(company.profile.defaultVatRate));
+  }
 
-  const fetchSettings = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("company_settings")
-      .select("*")
-      .limit(1)
-      .single();
+  const patch = (next: Partial<CompanyProfile>) => setForm((prev) => ({ ...prev, ...next }));
+  const errorText = (error?: string) =>
+    error?.startsWith("settings.") ? t(error) : t("common.errorOccurred", { message: error || "" });
 
-    if (data && !error) {
-      setRecordId(data.id);
-      setCompanyName(data.company_name || "Del Groups MMC");
-      setVoen(data.voen || "");
-      setAddress(data.address || "");
-      setPhone(data.phone || "");
-      setEmail(data.email || "");
-      setBankName(data.bank_name || "");
-      setIban(data.iban || "");
-      setVatRate(data.vat_rate?.toString() || "18");
-      setCurrency(data.currency || "AZN");
+  const handleUpload = async (kind: "logo" | "seal", file: File) => {
+    setUploading(kind);
+    const formData = new FormData();
+    formData.append("kind", kind);
+    formData.append("file", file);
+    const result = await uploadCompanyAssetAction(formData);
+    setUploading(null);
+    if (!result.success) {
+      showError(errorText(result.error));
+      return;
     }
-    setLoading(false);
+    const url = result.data?.url ?? "";
+    patch(kind === "logo" ? { logoUrl: url } : { sealUrl: url });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -73,39 +73,47 @@ export default function SettingsPage() {
     setSaving(true);
     setSuccessMsg("");
 
-    const payload = {
-      company_name: companyName,
-      voen,
-      address,
-      phone,
-      email,
-      bank_name: bankName,
-      iban,
-      vat_rate: parseFloat(vatRate) || 18,
-      currency,
-    };
+    const result = await saveCompanyProfileAction({
+      ...form,
+      defaultVatRate: parseFloat(vatRate) || 18,
+    });
 
-    let error;
-    if (recordId) {
-      const res = await supabase
-        .from("company_settings")
-        .update(payload)
-        .eq("id", recordId);
-      error = res.error;
-    } else {
-      const res = await supabase.from("company_settings").insert([payload]);
-      error = res.error;
-    }
-
-    if (!error) {
+    if (result.success) {
       setSuccessMsg(t("settings.saveSuccess"));
       setTimeout(() => setSuccessMsg(""), 4000);
-      fetchSettings();
+      await refreshCompany();
     } else {
-      showError(t("common.errorOccurred", { message: error.message }));
+      showError(errorText(result.error));
     }
     setSaving(false);
   };
+
+  const assetField = (kind: "logo" | "seal", url: string) => (
+    <div>
+      <p className="mb-2 text-xs font-semibold text-app">{t(`settings.${kind}`)}</p>
+      {url ? (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-app bg-app p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="" className="h-16 w-16 object-contain" />
+          <button
+            type="button"
+            className="btn-ghost text-xs"
+            disabled={brandingLocked}
+            onClick={() => patch(kind === "logo" ? { logoUrl: "" } : { sealUrl: "" })}
+          >
+            {t("settings.removeImage")}
+          </button>
+        </div>
+      ) : null}
+      <FileDropzone
+        accept="image/png,image/jpeg,image/webp"
+        disabled={brandingLocked || uploading !== null}
+        label={uploading === kind ? t("settings.uploading") : t("settings.uploadImage")}
+        hint={t("settings.imageHint")}
+        onFile={(file) => void handleUpload(kind, file)}
+      />
+    </div>
+  );
 
   return (
     <PageLayout>
@@ -140,6 +148,36 @@ export default function SettingsPage() {
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-6">
+              {/* Brand card: header name, logo, seal (admin only) */}
+              <div className="app-card app-card-elevated p-6 space-y-4">
+                <h2 className="text-sm font-bold text-app flex items-center gap-2 pb-2 border-b border-app">
+                  <ImageIcon className="w-4 h-4 text-app-accent" />
+                  {t("settings.branding")}
+                </h2>
+                <p className="text-xs text-app-muted">
+                  {company.source === "legacy" ? t("settings.migrationPending") : t("settings.adminOnlyNote")}
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-app mb-1">
+                    {t("settings.displayName")}
+                  </label>
+                  <input
+                    type="text"
+                    value={form.displayName}
+                    disabled={brandingLocked}
+                    onChange={(e) => patch({ displayName: e.target.value })}
+                    className="app-input"
+                  />
+                  <p className="mt-1 text-[11px] text-app-muted">{t("settings.displayNameHint")}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assetField("logo", form.logoUrl)}
+                  {assetField("seal", form.sealUrl)}
+                </div>
+              </div>
+
               {/* Company Info Card */}
               <div className="app-card app-card-elevated p-6 space-y-4">
                 <h2 className="text-sm font-bold text-app flex items-center gap-2 pb-2 border-b border-app">
@@ -155,8 +193,8 @@ export default function SettingsPage() {
                     <input
                       type="text"
                       required
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
+                      value={form.legalName}
+                      onChange={(e) => patch({ legalName: e.target.value })}
                       className="app-input"
                     />
                   </div>
@@ -167,8 +205,8 @@ export default function SettingsPage() {
                     </label>
                     <input
                       type="text"
-                      value={voen}
-                      onChange={(e) => setVoen(e.target.value)}
+                      value={form.voen}
+                      onChange={(e) => patch({ voen: e.target.value })}
                       placeholder={t("settings.voenPlaceholder")}
                       className="app-input font-mono"
                     />
@@ -182,8 +220,8 @@ export default function SettingsPage() {
                       <Phone className="w-4 h-4 absolute left-3 top-2.5 text-app-muted" />
                       <input
                         type="text"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        value={form.phone}
+                        onChange={(e) => patch({ phone: e.target.value })}
                         placeholder="+994 50 000 00 00"
                         className="w-full pl-9 pr-3 py-2 border border-app rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
                       />
@@ -198,9 +236,9 @@ export default function SettingsPage() {
                       <Mail className="w-4 h-4 absolute left-3 top-2.5 text-app-muted" />
                       <input
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="info@delgroups.az"
+                        value={form.email}
+                        onChange={(e) => patch({ email: e.target.value })}
+                        placeholder={emailPlaceholder(form, "info")}
                         className="w-full pl-9 pr-3 py-2 border border-app rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
                       />
                     </div>
@@ -214,8 +252,8 @@ export default function SettingsPage() {
                       <MapPin className="w-4 h-4 absolute left-3 top-2.5 text-app-muted" />
                       <input
                         type="text"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
+                        value={form.address}
+                        onChange={(e) => patch({ address: e.target.value })}
                         placeholder={t("settings.addressPlaceholder")}
                         className="w-full pl-9 pr-3 py-2 border border-app rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
                       />
@@ -238,8 +276,8 @@ export default function SettingsPage() {
                     </label>
                     <input
                       type="text"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
+                      value={form.bankName}
+                      onChange={(e) => patch({ bankName: e.target.value })}
                       placeholder={t("settings.bankPlaceholder")}
                       className="app-input"
                     />
@@ -251,8 +289,8 @@ export default function SettingsPage() {
                     </label>
                     <input
                       type="text"
-                      value={iban}
-                      onChange={(e) => setIban(e.target.value)}
+                      value={form.iban}
+                      onChange={(e) => patch({ iban: e.target.value })}
                       placeholder="AZ00000000000000000000000000"
                       className="app-input font-mono"
                     />
@@ -279,8 +317,8 @@ export default function SettingsPage() {
                       {t("settings.baseCurrency")}
                     </label>
                     <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
+                      value={form.defaultCurrency}
+                      onChange={(e) => patch({ defaultCurrency: e.target.value })}
                       className="app-input font-bold"
                     >
                       <option value="AZN">AZN (₼)</option>

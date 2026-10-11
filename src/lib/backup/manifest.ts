@@ -1,3 +1,4 @@
+import type { PRODUCT_SLUG } from "@/lib/brand";
 export const BACKUP_VERSION = 1;
 
 /** Insert order: parents before children */
@@ -50,7 +51,7 @@ export const BACKUP_DELETE_ORDER: BackupTableName[] = [...BACKUP_TABLES].reverse
 export interface SystemBackupPayload {
   version: number;
   createdAt: string;
-  app: "del-groups-erp";
+  app: typeof PRODUCT_SLUG;
   tables: Partial<Record<BackupTableName, Record<string, unknown>[]>>;
 }
 

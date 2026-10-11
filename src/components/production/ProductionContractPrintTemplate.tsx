@@ -52,7 +52,7 @@ export default function ProductionContractPrintTemplate({ data }: Props) {
   });
   const advancePayment = resolveContractAdvancePayment({ ...order, ...(contract || {}) });
   const projectScope = resolveProjectScope(order) || "—";
-  const contractTerms = resolveContractTerms(order) || "—";
+  const contractTerms = resolveContractTerms(order, companyName) || "—";
   const formattedContractDate = formatDate(contractDate) || "—";
   const formattedDeliveryDate =
     formatDate(resolveContractDeliveryDate({ ...(contract || {}), ...order })) || "—";
@@ -155,7 +155,7 @@ export default function ProductionContractPrintTemplate({ data }: Props) {
         <div className="text-center">
           <div className="mb-10 h-16 border-b border-slate-400" />
           <p className="font-bold">{t("production.contract.companySignature")}</p>
-          <p className="text-xs text-slate-500">{t("production.contract.companyManagement")}</p>
+          <p className="text-xs text-slate-500">{displayText(companyName)}</p>
         </div>
       </section>
     </div>

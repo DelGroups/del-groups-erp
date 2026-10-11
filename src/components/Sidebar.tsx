@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
@@ -45,8 +45,9 @@ interface SidebarProps {
 export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const desktopExpanded = !useShellStore((s) => s.sidebarCollapsed);
   const toggleSidebarCollapsed = useShellStore((s) => s.toggleSidebarCollapsed);
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
-  const [logoUrl, setLogoUrl] = useState("");
+  const company = useCompanyProfile();
+  const companyName = company.displayName;
+  const logoUrl = company.profile.logoUrl;
   const pathname = usePathname();
   const { displayName, roleName, loading, signOut, can, isAdmin } = useAuth();
   const { t } = useI18n();
@@ -78,17 +79,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
     if (current) initial[current] = true;
     return initial;
   });
-
-  useEffect(() => {
-    async function fetchSettings() {
-      const { data: setRes } = await supabase.from("settings").select("*").limit(1).single();
-      if (setRes) {
-        if (setRes.company_name) setCompanyName(setRes.company_name);
-        if (setRes.logo_url) setLogoUrl(setRes.logo_url);
-      }
-    }
-    fetchSettings();
-  }, []);
 
   useEffect(() => {
     if (!activeSectionId) return;

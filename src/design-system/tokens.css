@@ -1,5 +1,5 @@
 /**
- * Del Groups ERP — Gentelella Design Tokens (canonical)
+ * ERP — Gentelella Design Tokens (canonical)
  * ---------------------------------------------------------------------------
  * RULE: Components MUST reference semantic `--erp-*` tokens only.
  *       Never hardcode hex/rgb values in TSX or component CSS.

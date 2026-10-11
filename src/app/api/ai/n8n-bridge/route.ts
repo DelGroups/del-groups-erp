@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
   try {
     const n8nResponse = await fetch(runtime.url, {
       method: "POST",
-      // A redirect means the URL is wrong (ai.del-groups.com now redirects to
-      // DEL SOCIAL AI); following it would post to an unrelated app.
+      // A redirect means the URL is wrong (e.g. the host moved to another
+      // app); following it would post to an unrelated app.
       redirect: "manual",
       headers: {
         "Content-Type": "application/json",

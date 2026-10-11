@@ -5,6 +5,7 @@ import type { WarehouseSlip, WarehouseSlipType } from "@/types/database.types";
 import {
   getWarehouseSlipTypeLabel,
 } from "@/lib/warehouse/warehouseSlips";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 export interface WarehouseSlipPrintData {
   slip_number: string;
@@ -51,8 +52,10 @@ export function warehouseSlipToPrintData(slip: WarehouseSlip): WarehouseSlipPrin
 
 export default function WarehouseSlipPrintTemplate({
   slip,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: WarehouseSlipPrintTemplateProps) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const totalQty = slip.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (

@@ -22,20 +22,11 @@ function cleanEnv(value: string | undefined): string {
 }
 
 /**
- * Webhooks that used to live on ai.del-groups.com. That host now belongs to
- * DEL SOCIAL AI and redirects to its panel, so these URLs can only produce a
- * 404 page. A stored or env value equal to one of them counts as "not
- * configured" — there is deliberately no default webhook.
+ * There is deliberately no default webhook. A webhook that answers with a
+ * redirect is treated as misconfigured by the bridge (it is never followed).
  */
-const RETIRED_WEBHOOK_URLS = new Set([
-  "https://ai.del-groups.com/webhook/e6576363-eebf-461a-b93f-1240b0159593",
-  "https://ai.del-groups.com/webhook/del-erp-webhook",
-]);
-
 export function normalizeN8nWebhookUrl(url: string): string {
-  const cleaned = clampString(url, 500).replace(/\/$/, "");
-  if (!cleaned || RETIRED_WEBHOOK_URLS.has(cleaned)) return "";
-  return cleaned;
+  return clampString(url, 500).replace(/\/$/, "");
 }
 
 export function envN8nWebhookUrl(): string {

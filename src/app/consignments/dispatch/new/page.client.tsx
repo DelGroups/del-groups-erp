@@ -15,7 +15,6 @@ import ConsignmentDeliveryPrintTemplate from "@/components/consignment/Consignme
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
-import { supabase } from "@/lib/supabase";
 import {
   createConsignmentDispatchAtomicAction,
   fetchConsignmentLookupsAction,
@@ -27,6 +26,7 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { generateConsignmentDocNo, type ConsignmentDispatch } from "@/lib/consignment/types";
 import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface DispatchLine {
   id: string;
@@ -67,7 +67,7 @@ export default function ConsignmentDispatchNewPageClient() {
   const [lookups, setLookups] = useState<ConsignmentLookups | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const companyName = useCompanyProfile().displayName;
 
   const [docNo] = useState(() => generateConsignmentDocNo("CD"));
   const [partnerId, setPartnerId] = useState("");
@@ -79,13 +79,9 @@ export default function ConsignmentDispatchNewPageClient() {
 
   useEffect(() => {
     void (async () => {
-      const [look, settings] = await Promise.all([
-        fetchConsignmentLookupsAction(),
-        supabase.from("settings").select("company_name").limit(1).maybeSingle(),
-      ]);
+      const look = await fetchConsignmentLookupsAction();
       if (look.success) setLookups(look.data || null);
       else showError(look.error || t("common.error"));
-      if (settings.data?.company_name) setCompanyName(String(settings.data.company_name));
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

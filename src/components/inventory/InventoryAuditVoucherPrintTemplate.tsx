@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export interface InventoryAuditVoucherPrintItem {
   product_code: string;
@@ -38,7 +39,7 @@ export default function InventoryAuditVoucherPrintTemplate({
   return (
     <div className="mx-auto w-[210mm] bg-white p-8 text-black">
       <header className="mb-5 border-b-2 border-slate-800 pb-3">
-        <h1 className="text-xl font-bold">DEL GROUPS ERP</h1>
+        <h1 className="text-xl font-bold">{PRODUCT_NAME}</h1>
         <p className="text-sm text-slate-600">Inventory Adjustment Voucher / سند انبارگردانی</p>
       </header>
 

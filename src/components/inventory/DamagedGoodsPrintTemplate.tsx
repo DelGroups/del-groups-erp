@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { DamagedGoodsItem } from "@/types/database.types";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 export interface DamagedGoodsPrintData {
   document_number: string;
@@ -19,8 +20,10 @@ interface DamagedGoodsPrintTemplateProps {
 
 export default function DamagedGoodsPrintTemplate({
   writeoff,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: DamagedGoodsPrintTemplateProps) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const totalQty = writeoff.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
