@@ -65,11 +65,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_pkey' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_departments_pkey' and conrelid = 'public.employee_departments'::regclass) then
     execute $c$alter table only public.employee_departments add constraint employee_departments_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -152,11 +147,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'payments_pkey' and conrelid = 'public.payments'::regclass) then
     execute $c$alter table only public.payments add constraint payments_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_pkey' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -515,16 +505,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_amount_check' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_amount_check CHECK ((amount > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_status_check' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_status_check CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PAID'::character varying, 'DEDUCTED'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_departments_code_format' and conrelid = 'public.employee_departments'::regclass) then
     execute $c$alter table only public.employee_departments add constraint employee_departments_code_format CHECK ((code ~ '^[a-z0-9_]+$'::text));$c$;
   end if;
@@ -622,21 +602,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'payments_payment_type_check' and conrelid = 'public.payments'::regclass) then
     execute $c$alter table only public.payments add constraint payments_payment_type_check CHECK ((payment_type = ANY (ARRAY['in'::text, 'out'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_period_month_check' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_period_month_check CHECK (((period_month >= 1) AND (period_month <= 12)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_period_year_check' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_period_year_check CHECK (((period_year >= 2000) AND (period_year <= 2100)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_status_check' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_status_check CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'APPROVED'::character varying, 'PAID'::character varying])::text[])));$c$;
   end if;
 end $$;
 do $$ begin
@@ -945,21 +910,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_account_id_fkey' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_employee_id_fkey' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_advances_transaction_id_fkey' and conrelid = 'public.employee_advances'::regclass) then
-    execute $c$alter table only public.employee_advances add constraint employee_advances_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'erp_events_journal_entry_id_fkey' and conrelid = 'public.erp_events'::regclass) then
     execute $c$alter table only public.erp_events add constraint erp_events_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;$c$;
   end if;
@@ -1137,26 +1087,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'payments_transaction_id_fkey' and conrelid = 'public.payments'::regclass) then
     execute $c$alter table only public.payments add constraint payments_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_account_id_fkey' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_employee_id_fkey' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_salary_payment_id_fkey' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_salary_payment_id_fkey FOREIGN KEY (salary_payment_id) REFERENCES public.salary_payments(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'payrolls_transaction_id_fkey' and conrelid = 'public.payrolls'::regclass) then
-    execute $c$alter table only public.payrolls add constraint payrolls_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
   end if;
 end $$;
 do $$ begin

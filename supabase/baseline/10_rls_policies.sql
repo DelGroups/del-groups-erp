@@ -10,13 +10,11 @@ alter table public.categories enable row level security;
 alter table public.company_settings enable row level security;
 alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
-alter table public.employee_advances enable row level security;
 alter table public.employee_departments enable row level security;
 alter table public.employees enable row level security;
 alter table public.inventory_count_items enable row level security;
 alter table public.inventory_counts enable row level security;
 alter table public.inventory_writeoffs enable row level security;
-alter table public.payrolls enable row level security;
 alter table public.production_bom_items enable row level security;
 alter table public.production_boms enable row level security;
 alter table public.production_orders enable row level security;
@@ -159,14 +157,6 @@ create policy customers_update on public.customers as permissive for update to a
   using (public.require_permission('can_manage_customers'::text))
   with check (public.require_permission('can_manage_customers'::text));
 
-drop policy if exists manage_policy_employee_advances on public.employee_advances;
-create policy manage_policy_employee_advances on public.employee_advances as permissive for all to authenticated
-  using ((public.is_admin() OR (('can_manage_hr' IS NOT NULL) AND public.has_permission('can_manage_hr'::text))));
-
-drop policy if exists select_policy_employee_advances on public.employee_advances;
-create policy select_policy_employee_advances on public.employee_advances as permissive for select to authenticated
-  using ((public.is_admin() OR (('can_view_hr' IS NOT NULL) AND public.has_permission('can_view_hr'::text))));
-
 drop policy if exists employee_departments_delete on public.employee_departments;
 create policy employee_departments_delete on public.employee_departments as permissive for delete to authenticated
   using (public.require_permission('can_manage_hr'::text));
@@ -255,14 +245,6 @@ drop policy if exists inventory_writeoffs_update on public.inventory_writeoffs;
 create policy inventory_writeoffs_update on public.inventory_writeoffs as permissive for update to authenticated
   using (public.require_permission('can_writeoff_inventory'::text))
   with check (public.require_permission('can_writeoff_inventory'::text));
-
-drop policy if exists manage_policy_payrolls on public.payrolls;
-create policy manage_policy_payrolls on public.payrolls as permissive for all to authenticated
-  using ((public.is_admin() OR (('can_manage_hr' IS NOT NULL) AND public.has_permission('can_manage_hr'::text))));
-
-drop policy if exists select_policy_payrolls on public.payrolls;
-create policy select_policy_payrolls on public.payrolls as permissive for select to authenticated
-  using ((public.is_admin() OR (('can_view_hr' IS NOT NULL) AND public.has_permission('can_view_hr'::text))));
 
 drop policy if exists production_bom_items_delete on public.production_bom_items;
 create policy production_bom_items_delete on public.production_bom_items as permissive for delete to authenticated
