@@ -24,8 +24,8 @@ cp .env.example .env.local
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon key (RLS protects data) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes (runtime) | Supabase project URL; read at runtime, not needed at build |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes (runtime) | Public anon key (RLS protects data); read at runtime, not needed at build |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes (server) | User invites, backup — **never expose to browser** |
 | `NEXT_PUBLIC_SITE_URL` | Yes (prod) | Canonical URL, e.g. `https://erp.example.com` |
 
@@ -75,17 +75,18 @@ To ship the committed `HEAD`:
 powershell -ExecutionPolicy Bypass -File scripts/deploy-hetzner.ps1
 ```
 
-Manual build (pass public env at build time — required for Next.js):
+Manual build. The Supabase URL and keys are read from the **runtime** env
+(`src/lib/tenant/config.ts`), so one image works for any Supabase project and
+the Supabase build args are optional. If they are passed, they are baked in
+and used only as a fallback when the runtime env lacks a value.
 
 ```bash
 docker build \
-  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://YOUR_REF.supabase.co \
-  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key \
   --build-arg NEXT_PUBLIC_SITE_URL=https://erp.example.com \
   -t del-groups-erp .
 ```
 
-Run:
+Run (these values are what the app uses):
 
 ```bash
 docker run -d \

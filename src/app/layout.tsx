@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
@@ -8,6 +9,11 @@ import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { TableColumnResizer } from "@/components/ui/TableColumnResizer";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
+import {
+  getTenantConfig,
+  publicConfigScript,
+  toPublicTenantConfig,
+} from "@/lib/tenant/config";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -51,11 +57,17 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read per request (not at build), so the browser gets this tenant's
+  // Supabase config before any client code runs.
+  const supabaseConfigScript = publicConfigScript(
+    toPublicTenantConfig(getTenantConfig(await headers()))
+  );
+
   return (
     <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} suppressHydrationWarning>
       <head>
@@ -66,6 +78,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: supabaseConfigScript }} />
       </head>
       <body className={`${inter.variable} min-h-screen bg-app font-sans text-app antialiased`}>
         <ThemeProvider>

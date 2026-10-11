@@ -1,82 +1,78 @@
-﻿import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import {
-  getPublicSupabaseConfigStatus,
+  getTenantConfig,
+  parsePublicTenantConfig,
+  PUBLIC_CONFIG_GLOBAL,
+  supabaseClientCredentials,
+  toPublicTenantConfig,
+  type PublicTenantConfig,
   type SupabaseConfigIssue,
-} from "@/lib/env";
+} from "@/lib/tenant/config";
 
 let browserClient: SupabaseClient<Database> | null = null;
-let runtimeReady = false;
+let browserConfig: PublicTenantConfig | null = null;
+let loadPromise: Promise<boolean> | null = null;
 let runtimeIssue: SupabaseConfigIssue = null;
 let runtimeUrlPreview = "";
 
-function applyRuntimeConfig(url: string, anonKey: string) {
-  browserClient = createBrowserClient<Database>(url, anonKey);
-  runtimeReady = true;
+/**
+ * Config known without a network call, in priority order: what the root
+ * layout embedded for this tenant, then the NEXT_PUBLIC_* values a build may
+ * have inlined (fallback for builds made with them).
+ */
+function knownConfig(): PublicTenantConfig | null {
+  if (typeof window !== "undefined") {
+    const embedded = parsePublicTenantConfig(
+      (window as unknown as Record<string, unknown>)[PUBLIC_CONFIG_GLOBAL]
+    );
+    if (embedded) return embedded;
+  }
+  return toPublicTenantConfig(getTenantConfig());
+}
+
+function applyConfig(config: PublicTenantConfig) {
+  if (browserClient && browserConfig?.url === config.url && browserConfig.anonKey === config.anonKey) {
+    return;
+  }
+  browserClient = createBrowserClient<Database>(config.url, config.anonKey);
+  browserConfig = config;
   runtimeIssue = null;
-  runtimeUrlPreview = url.slice(0, 32);
+  runtimeUrlPreview = config.url.slice(0, 32);
 }
 
-function getBuildTimeStatus() {
-  return getPublicSupabaseConfigStatus();
-}
-
-function createClientFromStatus() {
-  const status = getBuildTimeStatus();
-  return createBrowserClient<Database>(status.url, status.anonKey);
-}
-
-/** Lazy browser client — avoids SSR/module-init crashes on Vercel. */
+/** Lazy browser client — avoids SSR/module-init crashes. */
 export function getSupabaseClient(): SupabaseClient<Database> {
   if (typeof window === "undefined") {
-    return createClientFromStatus();
+    const { url, anonKey } = supabaseClientCredentials(getTenantConfig());
+    return createBrowserClient<Database>(url, anonKey);
   }
   if (!browserClient) {
-    const status = getBuildTimeStatus();
-    if (status.isConfigured) {
-      applyRuntimeConfig(status.url, status.anonKey);
+    const config = knownConfig();
+    if (config) {
+      applyConfig(config);
     } else {
-      browserClient = createClientFromStatus();
+      const { url, anonKey } = supabaseClientCredentials(getTenantConfig());
+      browserClient = createBrowserClient<Database>(url, anonKey);
     }
   }
-  return browserClient;
+  return browserClient!;
 }
 
-/**
- * Loads Supabase public config from /api/public-config when build-time NEXT_PUBLIC_* vars
- * were not inlined into the client bundle (common on Vercel after env changes).
- */
-export async function ensureSupabaseReady(): Promise<boolean> {
-  const buildStatus = getBuildTimeStatus();
-  if (buildStatus.isConfigured) {
-    if (typeof window !== "undefined" && !runtimeReady) {
-      applyRuntimeConfig(buildStatus.url, buildStatus.anonKey);
-    }
-    return true;
-  }
-
-  if (typeof window === "undefined") {
-    return buildStatus.isConfigured;
-  }
-
-  if (runtimeReady) return true;
-
+async function fetchPublicConfig(): Promise<boolean> {
   try {
-    const response = await fetch("/api/public-config", { cache: "no-store" });
+    const response = await fetch("/api/public-config");
     const payload = (await response.json()) as {
       configured?: boolean;
-      url?: string;
-      anonKey?: string;
       issue?: SupabaseConfigIssue;
       urlPreview?: string;
     };
-
-    if (response.ok && payload.configured && payload.url && payload.anonKey) {
-      applyRuntimeConfig(payload.url, payload.anonKey);
+    const config = response.ok ? parsePublicTenantConfig(payload) : null;
+    if (config) {
+      applyConfig(config);
       return true;
     }
-
     runtimeIssue = payload.issue ?? "missing";
     runtimeUrlPreview = payload.urlPreview ?? "";
     return false;
@@ -85,6 +81,28 @@ export async function ensureSupabaseReady(): Promise<boolean> {
     runtimeIssue = "missing";
     return false;
   }
+}
+
+/**
+ * Resolves once the browser client points at the tenant's Supabase project.
+ * Normally immediate (config embedded in the page); otherwise loads it once
+ * from /api/public-config and caches the result for the page's lifetime.
+ */
+export async function ensureSupabaseReady(): Promise<boolean> {
+  if (typeof window === "undefined") return getTenantConfig().isConfigured;
+  if (browserConfig) return true;
+
+  const config = knownConfig();
+  if (config) {
+    applyConfig(config);
+    return true;
+  }
+
+  loadPromise ??= fetchPublicConfig().then((ok) => {
+    if (!ok) loadPromise = null; // allow a retry on the next call
+    return ok;
+  });
+  return loadPromise;
 }
 
 /** @deprecated use getSupabaseClient() — kept for existing imports */
@@ -97,24 +115,24 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
 });
 
 export function getSupabaseClientInfo() {
-  if (runtimeReady) {
+  if (browserConfig) {
     return {
-      url: runtimeUrlPreview || getBuildTimeStatus().url,
+      url: browserConfig.url,
       isConfigured: true,
       configIssue: null as SupabaseConfigIssue,
       rawUrlPreview: runtimeUrlPreview,
     };
   }
 
-  const status = getBuildTimeStatus();
+  const tenant = getTenantConfig();
   return {
-    url: status.url,
-    isConfigured: status.isConfigured,
-    configIssue: runtimeIssue ?? status.configIssue,
-    rawUrlPreview: runtimeUrlPreview || status.rawUrlPreview,
+    url: supabaseClientCredentials(tenant).url,
+    isConfigured: tenant.isConfigured,
+    configIssue: runtimeIssue ?? tenant.issue,
+    rawUrlPreview: runtimeUrlPreview || tenant.urlPreview,
   };
 }
 
-if (typeof window !== "undefined" && !getBuildTimeStatus().isConfigured) {
+if (typeof window !== "undefined" && !knownConfig()) {
   void ensureSupabaseReady();
 }

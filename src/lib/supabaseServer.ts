@@ -1,8 +1,8 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database.types";
 import { fetchUserProfile } from "@/lib/auth/profile";
-import { getPublicSupabaseAnonKey, getPublicSupabaseUrl } from "@/lib/env";
+import { getTenantConfig, supabaseClientCredentials } from "@/lib/tenant/config";
 
 /**
  * Request-scoped Supabase client for server components and route handlers.
@@ -10,10 +10,11 @@ import { getPublicSupabaseAnonKey, getPublicSupabaseUrl } from "@/lib/env";
  */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
+  const { url, anonKey } = supabaseClientCredentials(getTenantConfig(await headers()));
 
   return createServerClient<Database>(
-    getPublicSupabaseUrl(),
-    getPublicSupabaseAnonKey(),
+    url,
+    anonKey,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
