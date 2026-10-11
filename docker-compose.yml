@@ -14,3 +14,20 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     restart: unless-stopped
+
+  # Control panel (control-panel/). Off by default: docker compose --profile control-panel up
+  # Its own Supabase project: CP_SUPABASE_URL / CP_SUPABASE_ANON_KEY (see control-panel/.env.example).
+  control-panel:
+    profiles: [control-panel]
+    build:
+      context: .
+      dockerfile: control-panel/Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${CP_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${CP_SUPABASE_ANON_KEY}
+    ports:
+      - "3100:3100"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${CP_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${CP_SUPABASE_ANON_KEY}
+    restart: unless-stopped

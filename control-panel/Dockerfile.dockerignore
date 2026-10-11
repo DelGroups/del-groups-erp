@@ -1,0 +1,9 @@
+# Build context is the repo root; send only what control-panel/Dockerfile copies.
+*
+!control-panel
+!src/design-system
+control-panel/node_modules
+control-panel/.next
+control-panel/.env*
+!control-panel/.env.example
+control-panel/*.tsbuildinfo
