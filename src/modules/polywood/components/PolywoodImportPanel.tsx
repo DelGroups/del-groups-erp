@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import FileDropzone from "@/components/settings/FileDropzone";
-import { importPolywoodStockAction } from "@/lib/actions/polywood";
+import { importPolywoodStockAction } from "../actions/polywood";
 import { readSpreadsheetRows, downloadTextFile } from "@/lib/csv/csvUtils";
 import {
   buildPolywoodImportTemplateCsv,
@@ -12,7 +12,7 @@ import {
   parsePolywoodImportRows,
   validPolywoodImportRows,
   type PolywoodImportRow,
-} from "@/lib/polywood/import";
+} from "../lib/import";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Download, Upload } from "lucide-react";
 

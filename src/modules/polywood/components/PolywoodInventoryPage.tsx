@@ -3,9 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import Link from "next/link";
-import PolywoodImportPanel from "@/components/polywood/PolywoodImportPanel";
+import PolywoodImportPanel from "./PolywoodImportPanel";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
-import { deletePolywoodInventoryAction, ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
+import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
+import { deletePolywoodInventoryAction } from "../actions/polywood";
 import {
   fetchAllPolywoodInventory,
   type PolywoodProductInventoryRow,
@@ -24,7 +25,7 @@ import ThermalLabelPrintTemplate, {
 import type { BarcodeLabelConfig } from "@/lib/barcode/labelConfig";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 
-export default function PolywoodPageClient() {
+export default function PolywoodInventoryPage() {
   const { t } = useI18n();
   const barcodeModuleEnabled = isBarcodeModuleEnabled();
   const branding = useCompanyBranding();

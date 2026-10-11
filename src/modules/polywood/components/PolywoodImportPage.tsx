@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
-import PolywoodImportPanel from "@/components/polywood/PolywoodImportPanel";
+import PolywoodImportPanel from "./PolywoodImportPanel";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ArrowLeft } from "lucide-react";
 
-export default function PolywoodImportPageClient() {
+export default function PolywoodImportPage() {
   const { t } = useI18n();
 
   return (

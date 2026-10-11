@@ -1,0 +1,9 @@
+{
+  "why": "The Polywood stock import's per-product rows. Cut sheets themselves (polywood_pieces) and the mixed-dimensional sale RPCs stay in core: sales, purchases, stock transfers, inventory counts, initial balance and production use them.",
+  "tables": ["polywood_inventory_items"],
+  "functions": [],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}
