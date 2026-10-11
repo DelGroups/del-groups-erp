@@ -1,0 +1,83 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-one-time-code-otp/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-time code (OTP)</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen items-center justify-center bg-neutral-100 p-6">
+  <div class="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+    <h1 class="text-lg font-semibold text-neutral-900">Check your email</h1>
+    <p class="mt-1 text-sm text-neutral-500">We sent a 6-digit code to <a class="__cf_email__" data-cfemail="dba2b4ae9bbea3bab6abb7bef5b8b4b6" href="/cdn-cgi/l/email-protection">[email protected]</a></p>
+    <div id="otp" class="mt-6 flex justify-center gap-2">
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <input maxlength="1" class="size-12 rounded-xl border border-neutral-200 text-center text-lg font-semibold outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+    </div>
+    <button id="verify" disabled class="mt-6 w-full cursor-not-allowed rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white opacity-40 transition hover:bg-neutral-800">Verify</button>
+    <p id="resend" class="mt-4 text-xs text-neutral-400">Didn't get it? Resend in 0:30</p>
+  </div>
+</div>
+<script>
+var boxes = [].slice.call(document.querySelectorAll("#otp input"));
+var verify = document.getElementById("verify");
+var resend = document.getElementById("resend");
+
+function sync() {
+  var complete = boxes.every(function (b) { return b.value !== ""; });
+  verify.disabled = !complete;
+  verify.classList.toggle("opacity-40", !complete);
+  verify.classList.toggle("cursor-not-allowed", !complete);
+}
+
+boxes.forEach(function (box, i) {
+  box.setAttribute("inputmode", "numeric");
+  box.setAttribute("autocomplete", i === 0 ? "one-time-code" : "off");
+
+  box.addEventListener("input", function () {
+    box.value = box.value.replace(/\D/g, "").slice(0, 1);
+    if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    sync();
+  });
+
+  box.addEventListener("keydown", function (e) {
+    if (e.key === "Backspace" && !box.value && i > 0) boxes[i - 1].focus();
+    if (e.key === "ArrowLeft" && i > 0) boxes[i - 1].focus();
+    if (e.key === "ArrowRight" && i < boxes.length - 1) boxes[i + 1].focus();
+  });
+
+  // A pasted code should fill the whole row, not just the box under the cursor.
+  box.addEventListener("paste", function (e) {
+    e.preventDefault();
+    var digits = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+    if (!digits) return;
+    for (var k = 0; k < boxes.length; k++) boxes[k].value = digits.charAt(i + k) || boxes[k].value;
+    boxes[Math.min(i + digits.length, boxes.length - 1)].focus();
+    sync();
+  });
+});
+
+var left = 30;
+var tick = setInterval(function () {
+  left -= 1;
+  if (left > 0) {
+    resend.textContent = "Didn't get it? Resend in 0:" + (left < 10 ? "0" + left : left);
+    return;
+  }
+  clearInterval(tick);
+  resend.textContent = "Didn't get it? ";
+  var again = document.createElement("button");
+  again.className = "font-medium text-neutral-900 underline";
+  again.textContent = "Resend code";
+  again.addEventListener("click", function () {
+    boxes.forEach(function (b) { b.value = ""; });
+    boxes[0].focus();
+    sync();
+  });
+  resend.appendChild(again);
+}, 1000);
+
+sync();
+</script>
+</body></html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-offices-with-live-local-time/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offices with live local time</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-16">
+  <div class="max-w-xl">
+    <h2 class="text-3xl font-semibold text-neutral-900">Come and find us</h2>
+    <p class="mt-2 text-neutral-500">Four desks, one product. Reception will make you a coffee if you turn up unannounced.</p>
+  </div>
+
+  <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div data-office="london" class="rounded-2xl border border-neutral-200 bg-white p-6">
+      <p class="font-medium text-neutral-900">London</p>
+      <p class="text-xs text-neutral-400">United Kingdom</p>
+      <p class="mt-4 text-sm leading-relaxed text-neutral-500">40 Bastwick Street<br />Clerkenwell, EC1V 3PS</p>
+      <p class="mt-3 text-sm text-neutral-500">+44 20 7946 0112</p>
+      <a href="#" class="text-sm font-medium text-neutral-900 hover:underline"><a class="__cf_email__" data-cfemail="583437363c373618393b353d763c3d2e" href="/cdn-cgi/l/email-protection">[email protected]</a></a>
+      <div class="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
+        <span data-time class="font-mono text-sm text-neutral-700">—</span>
+        <span data-status class="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500">—</span>
+      </div>
+    </div>
+
+    <div data-office="berlin" class="rounded-2xl border border-neutral-200 bg-white p-6">
+      <p class="font-medium text-neutral-900">Berlin</p>
+      <p class="text-xs text-neutral-400">Germany</p>
+      <p class="mt-4 text-sm leading-relaxed text-neutral-500">Chausseestraße 19<br />Mitte, 10115</p>
+      <p class="mt-3 text-sm text-neutral-500">+49 30 5679 0044</p>
+      <a href="#" class="text-sm font-medium text-neutral-900 hover:underline"><a class="__cf_email__" data-cfemail="90f2f5e2fcf9fed0f1f3fdf5bef4f5e6" href="/cdn-cgi/l/email-protection">[email protected]</a></a>
+      <div class="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
+        <span data-time class="font-mono text-sm text-neutral-700">—</span>
+        <span data-status class="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500">—</span>
+      </div>
+    </div>
+
+    <div data-office="newyork" class="rounded-2xl border border-neutral-200 bg-white p-6">
+      <p class="font-medium text-neutral-900">New York</p>
+      <p class="text-xs text-neutral-400">United States</p>
+      <p class="mt-4 text-sm leading-relaxed text-neutral-500">115 Broadway, Floor 8<br />New York, NY 10006</p>
+      <p class="mt-3 text-sm text-neutral-500">+1 212 555 0181</p>
+      <a href="#" class="text-sm font-medium text-neutral-900 hover:underline"><a class="__cf_email__" data-cfemail="bbd5c2d8fbdad8d6de95dfdecd" href="/cdn-cgi/l/email-protection">[email protected]</a></a>
+      <div class="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
+        <span data-time class="font-mono text-sm text-neutral-700">—</span>
+        <span data-status class="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500">—</span>
+      </div>
+    </div>
+
+    <div data-office="singapore" class="rounded-2xl border border-neutral-200 bg-white p-6">
+      <p class="font-medium text-neutral-900">Singapore</p>
+      <p class="text-xs text-neutral-400">Singapore</p>
+      <p class="mt-4 text-sm leading-relaxed text-neutral-500">9 Straits View<br />Marina One, 018937</p>
+      <p class="mt-3 text-sm text-neutral-500">+65 6812 0904</p>
+      <a href="#" class="text-sm font-medium text-neutral-900 hover:underline"><a class="__cf_email__" data-cfemail="7a091d3a1b19171f541e1f0c" href="/cdn-cgi/l/email-protection">[email protected]</a></a>
+      <div class="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
+        <span data-time class="font-mono text-sm text-neutral-700">—</span>
+        <span data-status class="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500">—</span>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var OFFICES = {
+  london: { zone: "Europe/London", opens: 9, closes: 18 },
+  berlin: { zone: "Europe/Berlin", opens: 9, closes: 18 },
+  newyork: { zone: "America/New_York", opens: 9, closes: 17 },
+  singapore: { zone: "Asia/Singapore", opens: 10, closes: 19 }
+};
+
+var OPEN = "rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700";
+var CLOSED = "rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500";
+
+function pad(n) {
+  return n < 10 ? "0" + n : String(n);
+}
+
+// Read the wall-clock time in the office's own zone, not the visitor's.
+function localParts(zone) {
+  var parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: zone, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false
+  }).formatToParts(new Date());
+
+  var out = {};
+  parts.forEach(function (part) { out[part.type] = part.value; });
+  return { weekday: out.weekday, hour: Number(out.hour) % 24, minute: out.minute };
+}
+
+function render() {
+  Object.keys(OFFICES).forEach(function (id) {
+    var office = OFFICES[id];
+    var card = document.querySelector('[data-office="' + id + '"]');
+    var now = localParts(office.zone);
+
+    card.querySelector("[data-time]").textContent = pad(now.hour) + ":" + now.minute;
+
+    var weekday = now.weekday !== "Sat" && now.weekday !== "Sun";
+    var open = weekday && now.hour >= office.opens && now.hour < office.closes;
+
+    var pill = card.querySelector("[data-status]");
+    pill.className = open ? OPEN : CLOSED;
+    pill.textContent = open ? "Open now" : "Opens " + pad(office.opens) + ":00";
+  });
+}
+
+render();
+setInterval(render, 30000);
+</script>
+</body></html>

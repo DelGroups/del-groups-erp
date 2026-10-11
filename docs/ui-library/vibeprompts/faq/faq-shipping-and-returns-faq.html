@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-shipping-and-returns-faq/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shipping and returns FAQ</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-16">
+  <h1 class="text-3xl font-semibold tracking-tight text-neutral-900">Delivery and returns</h1>
+  <p class="mt-2 text-neutral-500">Orders placed before 15:00 on a working day leave the same afternoon.</p>
+
+  <div class="mt-8 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-neutral-200 bg-neutral-50 text-left text-[11px] uppercase tracking-widest text-neutral-400">
+          <th class="px-6 py-3 font-medium">Service</th>
+          <th class="px-6 py-3 font-medium">Estimate</th>
+          <th class="px-6 py-3 font-medium">Cost</th>
+          <th class="hidden px-6 py-3 font-medium sm:table-cell">Tracking</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        <tr>
+          <td class="px-6 py-4 font-medium text-neutral-900">Standard (NL/BE)</td>
+          <td class="px-6 py-4 text-neutral-600">1–2 working days</td>
+          <td class="px-6 py-4"><span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Free over €50</span></td>
+          <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">Yes</td>
+        </tr>
+        <tr class="bg-neutral-50/60">
+          <td class="px-6 py-4">
+            <span class="flex flex-wrap items-center gap-2 font-medium text-neutral-900">Express (EU) <span class="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Most chosen</span></span>
+          </td>
+          <td class="px-6 py-4 text-neutral-600">2–3 working days</td>
+          <td class="px-6 py-4 font-mono text-neutral-900">€9.95</td>
+          <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">Yes, with photo proof</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-4 font-medium text-neutral-900">Pickup point</td>
+          <td class="px-6 py-4 text-neutral-600">2–4 working days</td>
+          <td class="px-6 py-4"><span class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Free</span></td>
+          <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">Yes</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-4 font-medium text-neutral-900">Rest of world</td>
+          <td class="px-6 py-4 text-neutral-600">5–12 working days</td>
+          <td class="px-6 py-4 font-mono text-neutral-900">From €18</td>
+          <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">Yes, duties unpaid</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-10 grid gap-10 md:grid-cols-2">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Delivery</p>
+      <div class="mt-3 divide-y divide-neutral-200 border-y border-neutral-200">
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Can I change the address after ordering?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">Until the parcel is scanned by the carrier, yes — reply to the confirmation email. After that the carrier can usually redirect it for you.</p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Do you deliver on Saturdays?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">In the Netherlands and Belgium, yes, at no extra charge. Elsewhere it depends on the carrier and is never guaranteed.</p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">What about customs and duties?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">Outside the EU, duties are payable by you on arrival. We declare the true value; we will not mark an order as a gift.</p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">My parcel has not moved for a week</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">Write to us rather than the carrier. After seven days without a scan we send a replacement and chase the claim ourselves.</p>
+        </details>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Returns</p>
+      <div class="mt-3 divide-y divide-neutral-200 border-y border-neutral-200">
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">How do I send something back?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="mt-3 text-sm leading-relaxed text-neutral-500">
+            <ol class="ml-4 list-decimal space-y-1.5">
+              <li>Open the returns portal and enter your order number.</li>
+              <li>Print the label, or show the QR code at a pickup point.</li>
+              <li>We refund within three working days of it arriving.</li>
+            </ol>
+          </div>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Can I return something I have used?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">Yes. Knives can be sharpened, pans can be seasoned. If it is genuinely worn out rather than unwanted, talk to us about repair instead.</p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">What about a faulty item?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">Send a photo and we replace it the same day, no return needed for anything under €40. Our guarantee runs for ten years on steel.</p>
+        </details>
+        <details class="group py-4">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+            <span class="text-sm font-medium text-neutral-900">Do you refund the original delivery cost?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="mt-3 text-sm leading-relaxed text-neutral-500">On a full return, yes, at the standard rate. On a partial return we keep the delivery charge, since the parcel still travelled.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 px-7 py-6">
+    <p class="max-w-md text-sm leading-relaxed text-neutral-600">
+      Sixty days to change your mind, and we pay for the label within the EU. No restocking fee, and no need to explain yourself.
+    </p>
+    <a href="#" class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Open the returns portal</a>
+  </div>
+</section>
+</body></html>

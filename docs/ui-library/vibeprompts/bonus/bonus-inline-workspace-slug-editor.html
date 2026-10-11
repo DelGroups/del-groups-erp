@@ -1,0 +1,125 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-inline-workspace-slug-editor/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inline workspace slug editor</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-xl p-6">
+  <section class="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-sm font-semibold text-neutral-900">Workspace URL</h2>
+        <p class="mt-1 text-sm text-neutral-500">Use a short, memorable address for your team.</p>
+      </div>
+      <span id="slugStatus" class="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">Available</span>
+    </div>
+
+    <div id="slugRead" class="mt-5 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+      <code id="currentUrl" class="min-w-0 flex-1 truncate text-sm text-neutral-700">app.acme.com/northstar-labs</code>
+      <button id="slugEdit" class="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm ring-1 ring-neutral-200 transition hover:bg-neutral-50">Edit</button>
+    </div>
+
+    <div id="slugForm" class="mt-5 hidden">
+      <div id="slugControl" class="flex items-center rounded-xl border border-neutral-300 bg-white shadow-sm focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/10">
+        <span class="shrink-0 border-r border-neutral-200 px-3 py-2.5 text-sm text-neutral-400">app.acme.com/</span>
+        <input id="slugInput" maxlength="32" autocomplete="off" spellcheck="false" class="min-w-0 flex-1 bg-transparent px-3 py-2.5 font-mono text-sm text-neutral-900 outline-none" />
+        <span id="slugCount" class="pr-3 text-xs tabular-nums text-neutral-400">0/32</span>
+      </div>
+      <div class="mt-2 flex items-start justify-between gap-4">
+        <p id="slugHelp" class="text-xs text-neutral-500">Lowercase letters, numbers, and single hyphens.</p>
+        <div class="flex shrink-0 gap-2">
+          <button id="slugCancel" class="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-100">Cancel</button>
+          <button id="slugSave" class="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40">Save URL</button>
+        </div>
+      </div>
+      <p class="mt-4 border-t border-neutral-100 pt-3 text-xs text-neutral-400">Preview: <span id="slugPreview" class="font-mono text-neutral-600"></span></p>
+    </div>
+  </section>
+</div>
+<script>
+var DOMAIN = "app.acme.com/";
+var RESERVED = ["admin", "api", "billing", "help", "login", "settings", "support"];
+
+var readView = document.getElementById("slugRead");
+var formView = document.getElementById("slugForm");
+var currentUrl = document.getElementById("currentUrl");
+var input = document.getElementById("slugInput");
+var control = document.getElementById("slugControl");
+var count = document.getElementById("slugCount");
+var help = document.getElementById("slugHelp");
+var preview = document.getElementById("slugPreview");
+var status = document.getElementById("slugStatus");
+var save = document.getElementById("slugSave");
+
+var savedSlug = "northstar-labs";
+
+function normalize(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 32);
+}
+
+function problem(value) {
+  if (value.length < 3) return "Use at least 3 characters.";
+  if (/-$/.test(value)) return "The URL cannot end with a hyphen.";
+  if (RESERVED.indexOf(value) !== -1) return "That address is reserved. Try another.";
+  return "";
+}
+
+function sync() {
+  var value = input.value;
+  var error = problem(value);
+  count.textContent = value.length + "/32";
+  preview.textContent = DOMAIN + (value || "your-workspace");
+  save.disabled = Boolean(error);
+  help.textContent = error || "Lowercase letters, numbers, and single hyphens.";
+  help.className = error ? "text-xs text-red-600" : "text-xs text-neutral-500";
+  control.classList.toggle("border-red-400", Boolean(error));
+}
+
+function openEditor() {
+  input.value = savedSlug;
+  readView.classList.add("hidden");
+  formView.classList.remove("hidden");
+  status.classList.add("hidden");
+  sync();
+  input.focus();
+  input.select();
+}
+
+function closeEditor() {
+  formView.classList.add("hidden");
+  readView.classList.remove("hidden");
+  status.classList.remove("hidden");
+}
+
+input.addEventListener("input", function () {
+  var cursor = input.selectionStart;
+  input.value = normalize(input.value);
+  input.setSelectionRange(cursor, cursor);
+  sync();
+});
+
+save.addEventListener("click", function () {
+  if (problem(input.value)) return;
+  save.disabled = true;
+  save.textContent = "Saving…";
+  setTimeout(function () {
+    savedSlug = input.value;
+    currentUrl.textContent = DOMAIN + savedSlug;
+    save.textContent = "Save URL";
+    closeEditor();
+  }, 700);
+});
+
+input.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") closeEditor();
+  if (event.key === "Enter" && !save.disabled) save.click();
+});
+
+document.getElementById("slugEdit").addEventListener("click", openEditor);
+document.getElementById("slugCancel").addEventListener("click", closeEditor);
+</script>
+</body></html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-keyboard-shortcuts-sheet/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard shortcuts sheet</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="shortcutsModal" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/40 p-6 backdrop-blur-sm">
+  <div id="shortcutsCard" class="mt-10 w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div class="flex flex-wrap items-center gap-4 border-b border-neutral-200 px-6 py-4">
+      <div class="min-w-0 flex-1">
+        <h2 class="text-base font-semibold text-neutral-900">Keyboard shortcuts</h2>
+        <p class="text-xs text-neutral-500">Showing macOS keys · switch in settings</p>
+      </div>
+      <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+        <input id="scSearch" type="search" placeholder="Search actions…"
+          class="w-48 rounded-xl border border-neutral-200 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-900" />
+      </div>
+      <button id="scClose" class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+
+    <div class="grid gap-8 p-6 sm:grid-cols-2">
+      <div class="sc-group">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">General</p>
+        <div class="mt-3 space-y-1">
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Command palette</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">K</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Search everything</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">/</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Create new report</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">C</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Save</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">S</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">This dialog</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">?</kbd></span></div>
+        </div>
+      </div>
+
+      <div class="sc-group">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Navigation</p>
+        <div class="mt-3 space-y-1">
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Go to dashboards</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">G</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">D</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Go to sources</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">G</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">S</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Next item</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">J</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Previous item</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">K</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Back</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">[</kbd></span></div>
+        </div>
+      </div>
+
+      <div class="sc-group">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Editing</p>
+        <div class="mt-3 space-y-1">
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Undo</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">Z</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Duplicate block</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">D</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Delete block</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌫</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Run query</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⏎</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Format SQL</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⇧</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌥</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">F</kbd></span></div>
+        </div>
+      </div>
+
+      <div class="sc-group">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">View</p>
+        <div class="mt-3 space-y-1">
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Toggle sidebar</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">B</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Full screen chart</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">F</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Toggle dark theme</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⌘</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⇧</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">L</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Zoom to fit</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">⇧</kbd><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">1</kbd></span></div>
+          <div class="sc-row flex items-center justify-between gap-4 rounded-lg px-2 py-1.5"><span class="text-sm text-neutral-700">Show data table</span><span class="flex gap-1"><kbd class="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-600">T</kbd></span></div>
+        </div>
+      </div>
+    </div>
+
+    <p id="scEmpty" class="hidden px-6 pb-6 text-center text-sm text-neutral-500">No shortcut matches that.</p>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 bg-neutral-50 px-6 py-3.5 text-xs text-neutral-500">
+      <p>Press <kbd class="rounded border border-neutral-200 bg-white px-1.5 py-0.5 font-mono text-[11px]">?</kbd> anywhere to open this again.</p>
+      <a href="#" class="font-medium text-neutral-900 underline-offset-4 hover:underline">Full documentation <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+    </div>
+  </div>
+</div>
+<script>
+var modal = document.getElementById("shortcutsModal");
+var card = document.getElementById("shortcutsCard");
+var search = document.getElementById("scSearch");
+var rows = Array.prototype.slice.call(document.querySelectorAll(".sc-row"));
+var groups = Array.prototype.slice.call(document.querySelectorAll(".sc-group"));
+var empty = document.getElementById("scEmpty");
+
+function filter() {
+  var q = search.value.trim().toLowerCase();
+  var shown = 0;
+
+  rows.forEach(function (row) {
+    var ok = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+    row.classList.toggle("hidden", !ok);
+    if (ok) shown += 1;
+  });
+
+  groups.forEach(function (group) {
+    var any = Array.prototype.slice.call(group.querySelectorAll(".sc-row")).some(function (row) {
+      return !row.classList.contains("hidden");
+    });
+    group.classList.toggle("hidden", !any);
+  });
+
+  empty.classList.toggle("hidden", shown !== 0);
+}
+
+function open() {
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  search.value = "";
+  filter();
+  search.focus();
+}
+
+function close() {
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+search.addEventListener("input", filter);
+document.getElementById("scClose").addEventListener("click", close);
+
+modal.addEventListener("click", function (e) {
+  if (!card.contains(e.target)) close();
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") close();
+  // Ignore the shortcut while someone is typing into a field.
+  if (e.key === "?" && ["INPUT", "TEXTAREA"].indexOf(document.activeElement.tagName) === -1) {
+    e.preventDefault();
+    open();
+  }
+});
+</script>
+</body></html>

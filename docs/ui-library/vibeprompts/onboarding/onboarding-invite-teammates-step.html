@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-invite-teammates-step/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invite teammates step</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-xl px-6 py-16">
+  <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Step 3 of 4</p>
+  <div class="mt-2 h-1 w-full overflow-hidden rounded-full bg-neutral-200">
+    <div class="h-full w-3/4 rounded-full bg-neutral-900"></div>
+  </div>
+
+  <h1 class="mt-8 text-2xl font-semibold text-neutral-900">Bring your team in</h1>
+  <p class="mt-2 text-sm text-neutral-500">People you invite land straight in this workspace. Roles can change later.</p>
+
+  <form id="inviteForm" class="mt-6 flex gap-2">
+    <input id="inviteEmail" type="text" placeholder="<a class="__cf_email__" data-cfemail="5e303f333b1e3d31332e3f3027703d3133" href="/cdn-cgi/l/email-protection">[email protected]</a>"
+      class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+    <button class="shrink-0 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Add</button>
+  </form>
+  <p id="inviteError" class="mt-1.5 hidden text-xs text-red-600">That does not look like an email address.</p>
+  <p class="mt-1.5 text-xs text-neutral-400">Paste a whole list — commas, semicolons or spaces all work.</p>
+
+  <ul id="invites" class="mt-6 divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 empty:hidden"></ul>
+  <p id="inviteEmpty" class="mt-6 rounded-2xl border border-dashed border-neutral-300 px-6 py-8 text-center text-sm text-neutral-400">
+    Nobody added yet. A workspace of one is fine too.
+  </p>
+
+  <div class="mt-8 flex items-center justify-between">
+    <a href="#" class="text-sm text-neutral-500 hover:text-neutral-900">I'll do this later</a>
+    <button id="inviteContinue" class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Continue</button>
+  </div>
+</div>
+<script>
+var form = document.getElementById("inviteForm");
+var input = document.getElementById("inviteEmail");
+var error = document.getElementById("inviteError");
+var list = document.getElementById("invites");
+var empty = document.getElementById("inviteEmpty");
+var advance = document.getElementById("inviteContinue");
+
+var added = [];
+
+function valid(address) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(address);
+}
+
+function initials(address) {
+  var name = address.split("@")[0].replace(/[^a-z]+/gi, " ").trim().split(" ");
+  return ((name[0] || "?").charAt(0) + (name[1] || "").charAt(0)).toUpperCase();
+}
+
+function sync() {
+  empty.classList.toggle("hidden", added.length > 0);
+  advance.textContent = added.length
+    ? "Send " + added.length + (added.length === 1 ? " invite" : " invites")
+    : "Continue";
+}
+
+function add(address) {
+  // Silently skip anyone already on the list rather than showing an error for it.
+  if (added.indexOf(address) !== -1) return true;
+  if (!valid(address)) return false;
+
+  added.push(address);
+
+  var row = document.createElement("li");
+  row.className = "flex items-center gap-3 px-4 py-3";
+  row.innerHTML =
+    '<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-medium text-neutral-700">' + initials(address) + "</span>" +
+    '<span class="min-w-0 flex-1 truncate text-sm text-neutral-900">' + address + "</span>" +
+    '<select class="rounded-lg border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 outline-none"><option>Member</option><option>Admin</option><option>Viewer</option></select>' +
+    '<button type="button" aria-label="Remove" class="text-neutral-400 transition hover:text-neutral-900">✕</button>';
+
+  row.querySelector("button").addEventListener("click", function () {
+    added.splice(added.indexOf(address), 1);
+    row.remove();
+    sync();
+  });
+
+  list.appendChild(row);
+  return true;
+}
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  var entries = input.value.split(/[,;\s]+/).filter(Boolean);
+  var rejected = entries.filter(function (entry) { return !add(entry.toLowerCase()); });
+
+  error.classList.toggle("hidden", rejected.length === 0);
+  input.value = rejected.join(" ");
+  sync();
+});
+
+sync();
+</script>
+</body></html>

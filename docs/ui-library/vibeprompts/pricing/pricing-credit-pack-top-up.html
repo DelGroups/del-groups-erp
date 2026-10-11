@@ -1,0 +1,117 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/pricing/pricing-credit-pack-top-up/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credit pack top-up</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div class="mb-8 text-center">
+    <h2 class="text-3xl font-semibold text-neutral-900">Top up your credits</h2>
+    <p class="mt-2 text-neutral-500">Pay once, use them whenever. Bigger packs cost less per credit.</p>
+  </div>
+
+  <div id="packs" class="grid gap-4 sm:grid-cols-3">
+    <label class="cursor-pointer">
+      <input type="radio" name="pack" class="peer sr-only" data-credits="1000" data-price="20" checked />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Starter</p>
+        <p class="mt-3 text-3xl font-semibold text-neutral-900">1,000</p>
+        <p class="text-xs text-neutral-500">credits</p>
+        <p class="mt-4 text-sm font-medium text-neutral-900">$20</p>
+      </div>
+    </label>
+    <label class="cursor-pointer">
+      <input type="radio" name="pack" class="peer sr-only" data-credits="5000" data-price="90" />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Growth</p>
+        <p class="mt-3 text-3xl font-semibold text-neutral-900">5,000</p>
+        <p class="text-xs text-neutral-500">credits</p>
+        <p class="mt-4 text-sm font-medium text-neutral-900">$90 <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Save 10%</span></p>
+      </div>
+    </label>
+    <label class="cursor-pointer">
+      <input type="radio" name="pack" class="peer sr-only" data-credits="25000" data-price="400" />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6 text-center transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Scale</p>
+        <p class="mt-3 text-3xl font-semibold text-neutral-900">25,000</p>
+        <p class="text-xs text-neutral-500">credits</p>
+        <p class="mt-4 text-sm font-medium text-neutral-900">$400 <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Save 20%</span></p>
+      </div>
+    </label>
+  </div>
+
+  <div class="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium text-neutral-900">How many packs?</p>
+        <p class="text-xs text-neutral-500">Charged once — credits roll over month to month.</p>
+      </div>
+      <div class="flex items-center gap-1 rounded-xl border border-neutral-200 bg-white p-1">
+        <button id="minus" type="button" class="h-8 w-8 rounded-lg text-neutral-600 transition hover:bg-neutral-100">−</button>
+        <span id="qty" class="w-8 text-center text-sm font-medium text-neutral-900">1</span>
+        <button id="plus" type="button" class="h-8 w-8 rounded-lg text-neutral-600 transition hover:bg-neutral-100">+</button>
+      </div>
+    </div>
+
+    <dl class="mt-5 space-y-2.5 border-t border-neutral-200 pt-5 text-sm">
+      <div class="flex justify-between"><dt class="text-neutral-500">Credits</dt><dd id="sumCredits" class="text-neutral-900">1,000</dd></div>
+      <div class="flex justify-between"><dt class="text-neutral-500">Effective rate</dt><dd id="sumRate" class="text-neutral-900">$0.020 / credit</dd></div>
+      <div id="savingRow" class="flex justify-between text-green-700"><dt>Volume discount</dt><dd id="sumSaving">−$0</dd></div>
+    </dl>
+
+    <div class="mt-4 flex items-baseline justify-between border-t border-neutral-200 pt-4">
+      <span class="text-sm font-medium text-neutral-900">Total today</span>
+      <span id="sumTotal" class="text-2xl font-semibold text-neutral-900">$20</span>
+    </div>
+
+    <button class="mt-5 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Buy credits</button>
+    <p class="mt-3 text-center text-xs text-neutral-400">Credits never expire. VAT added at checkout where applicable.</p>
+  </div>
+</section>
+<script>
+// List rate the discounts are measured against.
+var LIST_RATE = 0.02;
+var MAX_PACKS = 20;
+
+var packs = [].slice.call(document.querySelectorAll("#packs input"));
+var minus = document.getElementById("minus");
+var plus = document.getElementById("plus");
+var qtyOut = document.getElementById("qty");
+var creditsOut = document.getElementById("sumCredits");
+var rateOut = document.getElementById("sumRate");
+var savingRow = document.getElementById("savingRow");
+var savingOut = document.getElementById("sumSaving");
+var totalOut = document.getElementById("sumTotal");
+
+var qty = 1;
+
+function money(n) {
+  return "$" + n.toLocaleString("en-US");
+}
+
+function render() {
+  var chosen = packs.filter(function (p) { return p.checked; })[0] || packs[0];
+  var credits = Number(chosen.getAttribute("data-credits")) * qty;
+  var total = Number(chosen.getAttribute("data-price")) * qty;
+  var saving = Math.round(credits * LIST_RATE - total);
+
+  qtyOut.textContent = qty;
+  creditsOut.textContent = credits.toLocaleString("en-US");
+  rateOut.textContent = "$" + (total / credits).toFixed(3) + " / credit";
+  totalOut.textContent = money(total);
+
+  // No discount on the smallest pack — hide the row rather than show a zero.
+  savingRow.classList.toggle("hidden", saving <= 0);
+  savingOut.textContent = "−" + money(saving);
+
+  minus.disabled = qty === 1;
+  plus.disabled = qty === MAX_PACKS;
+  [minus, plus].forEach(function (b) { b.classList.toggle("opacity-30", b.disabled); });
+}
+
+packs.forEach(function (p) { p.addEventListener("change", render); });
+minus.addEventListener("click", function () { qty = Math.max(1, qty - 1); render(); });
+plus.addEventListener("click", function () { qty = Math.min(MAX_PACKS, qty + 1); render(); });
+
+render();
+</script>
+</body></html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-faq-with-related-articles-rail/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ with related articles rail</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-16">
+  <div class="grid gap-10 lg:grid-cols-[1fr_300px]">
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight text-neutral-900">Common questions</h1>
+      <p class="mt-2 text-neutral-500">If the answer here does not fit your case, the docs go considerably deeper.</p>
+
+      <div class="mt-8 space-y-3">
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">How do I rotate an API key without downtime?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="pb-5 text-sm leading-relaxed text-neutral-500">
+            <p>Create the second key first, deploy it, then revoke the old one. Both work simultaneously, so there is no window where requests fail.</p>
+            <p class="mt-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg> <span>Revoking takes effect within five seconds across every region — there is no grace period.</span></p>
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">Why does my export have fewer rows than the dashboard?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="pb-5 text-sm leading-relaxed text-neutral-500">Exports apply your row-level access rules, dashboards apply the report owner rules. If they differ, the export is the one telling the truth about your permissions.</p>
+        </details>
+
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">Can I run two syncs against the same table?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="pb-5 text-sm leading-relaxed text-neutral-500">Yes, provided they use different cursors. Two syncs sharing a cursor will leapfrog each other and both will miss rows.</p>
+        </details>
+
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">What happens to scheduled reports when someone leaves?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="pb-5 text-sm leading-relaxed text-neutral-500">
+            <p>They keep running under the workspace service identity, and ownership transfers to the workspace admin. Recipients are untouched.</p>
+            <p class="mt-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg> <span>Reports scoped to that person row-level rules will return fewer rows after the transfer. Check them.</span></p>
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">Is there a sandbox I can break?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="pb-5 text-sm leading-relaxed text-neutral-500">Every workspace has a staging environment on the same plan with its own keys and its own data. Break it as often as you like.</p>
+        </details>
+
+        <details class="group rounded-xl border border-neutral-200 bg-white px-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4">
+            <span class="text-sm font-medium text-neutral-900">How long do you keep deleted data?</span>
+            <span class="text-neutral-400 transition-transform group-open:rotate-45"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <p class="pb-5 text-sm leading-relaxed text-neutral-500">Soft-deleted for 30 days so you can undo, then removed from backups within a further 30. After that we genuinely cannot get it back.</p>
+        </details>
+      </div>
+    </div>
+
+    <aside class="space-y-4 lg:sticky lg:top-24 lg:self-start">
+      <div class="rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Popular articles</p>
+        <div class="mt-3 space-y-1">
+          <a href="#" class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-neutral-600 transition hover:bg-white hover:text-neutral-900">Rotating credentials <span class="text-neutral-300">›</span></a>
+          <a href="#" class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-neutral-600 transition hover:bg-white hover:text-neutral-900">Row-level access rules <span class="text-neutral-300">›</span></a>
+          <a href="#" class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-neutral-600 transition hover:bg-white hover:text-neutral-900">Incremental syncs <span class="text-neutral-300">›</span></a>
+          <a href="#" class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-neutral-600 transition hover:bg-white hover:text-neutral-900">Scheduling exports <span class="text-neutral-300">›</span></a>
+          <a href="#" class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-neutral-600 transition hover:bg-white hover:text-neutral-900">Retention and deletion <span class="text-neutral-300">›</span></a>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-neutral-200 p-5">
+        <p class="text-sm font-medium text-neutral-900">Still stuck?</p>
+        <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Engineers answer support directly, 07:00–20:00 UTC on weekdays.</p>
+        <button class="mt-4 w-full rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Start a chat</button>
+        <a href="#" class="mt-2 block text-center text-xs text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline"><a class="__cf_email__" data-cfemail="ed9e989d9d829f99ad83829f99859a848389c389889b" href="/cdn-cgi/l/email-protection">[email protected]</a></a>
+        <p class="mt-3 text-center text-xs text-neutral-400">Median reply today: 34 minutes</p>
+      </div>
+
+      <div class="rounded-xl border border-neutral-200 p-5">
+        <p class="flex items-center gap-2 text-sm text-neutral-600"><span class="h-2 w-2 rounded-full bg-green-500"></span> All systems operational</p>
+        <a href="#" class="mt-2 block text-xs text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">status.northwind.dev <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+      </div>
+    </aside>
+  </div>
+</section>
+</body></html>

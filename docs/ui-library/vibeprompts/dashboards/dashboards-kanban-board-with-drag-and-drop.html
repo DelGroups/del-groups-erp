@@ -1,0 +1,175 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-kanban-board-with-drag-and-drop/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanban board with drag and drop</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="bg-white p-6">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-lg font-semibold text-neutral-900">Release 4.3</h1>
+      <p class="text-sm text-neutral-500">Ships in 9 days · 12 tasks</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex -space-x-2">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-neutral-200 text-[11px] font-medium text-neutral-700">SM</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-neutral-300 text-[11px] font-medium text-neutral-700">AR</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-neutral-900 text-[11px] font-medium text-white">+4</span>
+      </div>
+      <button class="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800">New task</button>
+    </div>
+  </div>
+
+  <div class="flex gap-4 overflow-x-auto pb-4">
+    <section class="flex w-72 shrink-0 flex-col rounded-2xl border border-neutral-200 bg-neutral-50">
+      <header class="flex items-center gap-2 px-4 py-3">
+        <span class="text-sm font-medium text-neutral-900">Backlog</span>
+        <span data-count class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">2</span>
+        <span class="ml-auto text-neutral-400">⋯</span>
+      </header>
+      <div data-column class="flex min-h-[140px] flex-1 flex-col gap-2 px-3 pb-2">
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">Infra</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Split the runner image into base and toolchain layers</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">JO</span>
+            <span>Sep 2</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 3</span>
+          </div>
+        </article>
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-purple-50 px-1.5 py-0.5 text-[11px] font-medium text-purple-700">Docs</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Rewrite the migration guide for v4</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">PK</span>
+            <span>Sep 5</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 1</span>
+          </div>
+        </article>
+      </div>
+      <button class="px-4 py-3 text-left text-sm text-neutral-400 transition hover:text-neutral-900">+ Add task</button>
+    </section>
+
+    <section class="flex w-72 shrink-0 flex-col rounded-2xl border border-neutral-200 bg-neutral-50">
+      <header class="flex items-center gap-2 px-4 py-3">
+        <span class="text-sm font-medium text-neutral-900">In progress</span>
+        <span data-count class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">2</span>
+        <span class="ml-auto text-neutral-400">⋯</span>
+      </header>
+      <div data-column class="flex min-h-[140px] flex-1 flex-col gap-2 px-3 pb-2">
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">Bug</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Cache key collides across monorepo packages</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">SM</span>
+            <span>Today</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 8</span>
+          </div>
+        </article>
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">Infra</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Move artifact storage to the eu-central bucket</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">AR</span>
+            <span>Aug 30</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 2</span>
+          </div>
+        </article>
+      </div>
+      <button class="px-4 py-3 text-left text-sm text-neutral-400 transition hover:text-neutral-900">+ Add task</button>
+    </section>
+
+    <section class="flex w-72 shrink-0 flex-col rounded-2xl border border-neutral-200 bg-neutral-50">
+      <header class="flex items-center gap-2 px-4 py-3">
+        <span class="text-sm font-medium text-neutral-900">In review</span>
+        <span data-count class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">1</span>
+        <span class="ml-auto text-neutral-400">⋯</span>
+      </header>
+      <div data-column class="flex min-h-[140px] flex-1 flex-col gap-2 px-3 pb-2">
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700">Feature</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Per-branch environment variables</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">MT</span>
+            <span>Aug 29</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 5</span>
+          </div>
+        </article>
+      </div>
+      <button class="px-4 py-3 text-left text-sm text-neutral-400 transition hover:text-neutral-900">+ Add task</button>
+    </section>
+
+    <section class="flex w-72 shrink-0 flex-col rounded-2xl border border-neutral-200 bg-neutral-50">
+      <header class="flex items-center gap-2 px-4 py-3">
+        <span class="text-sm font-medium text-neutral-900">Shipped</span>
+        <span data-count class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">1</span>
+        <span class="ml-auto text-neutral-400">⋯</span>
+      </header>
+      <div data-column class="flex min-h-[140px] flex-1 flex-col gap-2 px-3 pb-2">
+        <article data-card class="cursor-grab rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+          <span class="rounded-md bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700">Feature</span>
+          <p class="mt-2 text-sm font-medium leading-snug text-neutral-900">Retry failed steps without rerunning the job</p>
+          <div class="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[10px] text-neutral-700">SM</span>
+            <span>Aug 24</span><span class="ml-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z"/></svg> 12</span>
+          </div>
+        </article>
+      </div>
+      <button class="px-4 py-3 text-left text-sm text-neutral-400 transition hover:text-neutral-900">+ Add task</button>
+    </section>
+  </div>
+</div>
+<script>
+var columns = [].slice.call(document.querySelectorAll("[data-column]"));
+var dragging = null;
+
+function recount() {
+  columns.forEach(function (column) {
+    var badge = column.parentElement.querySelector("[data-count]");
+    badge.textContent = column.querySelectorAll("[data-card]").length;
+  });
+}
+
+function makeDraggable(card) {
+  card.setAttribute("draggable", "true");
+
+  card.addEventListener("dragstart", function (e) {
+    dragging = card;
+    e.dataTransfer.effectAllowed = "move";
+    // Give the browser a moment to snapshot the card before it changes.
+    setTimeout(function () { card.classList.add("opacity-40", "rotate-2"); }, 0);
+  });
+
+  card.addEventListener("dragend", function () {
+    card.classList.remove("opacity-40", "rotate-2");
+    dragging = null;
+    recount();
+  });
+}
+
+// The card the pointer sits above, so the drop lands between cards rather than always last.
+function cardBelow(column, y) {
+  var cards = [].slice.call(column.querySelectorAll("[data-card]:not(.opacity-40)"));
+  return cards.filter(function (card) {
+    var box = card.getBoundingClientRect();
+    return y < box.top + box.height / 2;
+  })[0];
+}
+
+columns.forEach(function (column) {
+  column.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    column.classList.add("rounded-xl", "bg-neutral-100", "ring-2", "ring-neutral-300");
+    if (!dragging) return;
+    var next = cardBelow(column, e.clientY);
+    if (next) column.insertBefore(dragging, next);
+    else column.appendChild(dragging);
+  });
+
+  ["dragleave", "drop"].forEach(function (type) {
+    column.addEventListener(type, function (e) {
+      if (type === "drop") e.preventDefault();
+      column.classList.remove("rounded-xl", "bg-neutral-100", "ring-2", "ring-neutral-300");
+      recount();
+    });
+  });
+});
+
+[].slice.call(document.querySelectorAll("[data-card]")).forEach(makeDraggable);
+recount();
+</script>
+</body></html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/pricing/pricing-reserved-capacity-planner/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reserved capacity planner</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-3xl p-6"><section class="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"><div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><h2 class="text-lg font-semibold text-neutral-900">Reserve compute capacity</h2><p class="mt-1 text-sm text-neutral-500">Commit predictable workloads and lower your effective rate.</p></div><select id="capacityRegion" class="rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-700"><option value="1">US East</option><option value="1.12">EU Central</option><option value="1.18">Asia Pacific</option></select></div><div class="mt-7"><div class="flex justify-between text-sm"><label for="capacitySlider" class="font-medium text-neutral-700">Reserved units</label><strong id="capacityUnits" class="tabular-nums text-neutral-900">40 units</strong></div><input id="capacitySlider" type="range" min="10" max="200" step="10" value="40" class="mt-3 w-full accent-neutral-900" /></div><div id="capacityTerms" class="mt-6 grid gap-3 sm:grid-cols-3"><button data-term="0" class="rounded-2xl border border-neutral-200 p-4 text-left"><span class="text-sm font-semibold text-neutral-800">Flexible</span><span class="mt-3 block text-2xl font-semibold" data-price></span><span class="text-xs text-neutral-400">per month</span></button><button data-term="0.22" class="rounded-2xl border border-neutral-900 bg-neutral-900 p-4 text-left text-white"><span class="text-sm font-semibold">1 year</span><span class="mt-3 block text-2xl font-semibold" data-price></span><span class="text-xs text-white/60">per month</span></button><button data-term="0.38" class="rounded-2xl border border-neutral-200 p-4 text-left"><span class="text-sm font-semibold text-neutral-800">3 years</span><span class="mt-3 block text-2xl font-semibold" data-price></span><span class="text-xs text-neutral-400">per month</span></button></div><div class="mt-6 grid grid-cols-2 gap-4 rounded-2xl bg-neutral-50 p-5 sm:grid-cols-4"><div><p class="text-xs text-neutral-400">Hourly rate</p><p id="hourlyRate" class="mt-1 font-semibold text-neutral-800"></p></div><div><p class="text-xs text-neutral-400">Savings</p><p id="capacitySavings" class="mt-1 font-semibold text-green-700"></p></div><div><p class="text-xs text-neutral-400">Annual value</p><p id="annualValue" class="mt-1 font-semibold text-neutral-800"></p></div><div><p class="text-xs text-neutral-400">Break-even</p><p id="breakEven" class="mt-1 font-semibold text-neutral-800"></p></div></div></section></div>
+<script>
+var slider = document.getElementById("capacitySlider");
+var region = document.getElementById("capacityRegion");
+var terms = [].slice.call(document.querySelectorAll("[data-term]"));
+var selected = terms[1];
+
+function money(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value); }
+function calculate() {
+  var units = Number(slider.value);
+  var multiplier = Number(region.value);
+  var flexible = units * 54 * multiplier;
+  document.getElementById("capacityUnits").textContent = units + " units";
+  terms.forEach(function (term) {
+    var discount = Number(term.getAttribute("data-term"));
+    term.querySelector("[data-price]").textContent = money(flexible * (1 - discount));
+  });
+  var discount = Number(selected.getAttribute("data-term"));
+  var monthly = flexible * (1 - discount);
+  document.getElementById("hourlyRate").textContent = "$" + (monthly / units / 730).toFixed(3);
+  document.getElementById("capacitySavings").textContent = discount ? Math.round(discount * 100) + "%" : "—";
+  document.getElementById("annualValue").textContent = money((flexible - monthly) * 12);
+  document.getElementById("breakEven").textContent = discount ? Math.round((1 - discount) * 100) + "% usage" : "Any usage";
+}
+terms.forEach(function (term) { term.addEventListener("click", function () { selected = term; terms.forEach(function (item) { var on = item === selected; item.className = on ? "rounded-2xl border border-neutral-900 bg-neutral-900 p-4 text-left text-white" : "rounded-2xl border border-neutral-200 p-4 text-left"; }); calculate(); }); });
+slider.addEventListener("input", calculate); region.addEventListener("change", calculate); calculate();
+</script>
+</body></html>

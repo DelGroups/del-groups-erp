@@ -1,0 +1,72 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-sticky-top-nav/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sticky top nav</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="sticky top-0 z-50 border-b border-neutral-200 bg-white/80 backdrop-blur">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+    <a href="#" class="flex items-center gap-2 font-semibold text-neutral-900">
+      <span class="h-6 w-6 rounded-md bg-neutral-900"></span> Nimbus
+    </a>
+    <div class="hidden items-center gap-8 text-sm text-neutral-600 md:flex">
+      <a href="#" class="hover:text-neutral-900">Product</a>
+      <a href="#" class="hover:text-neutral-900">Solutions</a>
+      <a href="#" class="hover:text-neutral-900">Pricing</a>
+      <a href="#" class="hover:text-neutral-900">Docs</a>
+    </div>
+    <div class="hidden items-center gap-3 md:flex">
+      <a href="#" class="text-sm font-medium text-neutral-600 hover:text-neutral-900">Sign in</a>
+      <a href="#" class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">Get started</a>
+    </div>
+    <button id="menuBtn" class="md:hidden" aria-label="Menu" aria-expanded="false" aria-controls="mobileMenu">
+      <svg id="menuIcon" class="h-6 w-6 text-neutral-900" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </nav>
+  <div id="mobileMenu" class="hidden border-t border-neutral-200 px-6 py-4 md:hidden">
+    <div class="flex flex-col gap-3 text-sm text-neutral-600">
+      <a href="#" class="hover:text-neutral-900">Product</a>
+      <a href="#" class="hover:text-neutral-900">Solutions</a>
+      <a href="#" class="hover:text-neutral-900">Pricing</a>
+      <a href="#" class="hover:text-neutral-900">Docs</a>
+    </div>
+    <div class="mt-4 flex items-center gap-3 border-t border-neutral-100 pt-4">
+      <a href="#" class="text-sm font-medium text-neutral-600 hover:text-neutral-900">Sign in</a>
+      <a href="#" class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">Get started</a>
+    </div>
+  </div>
+</header>
+<script>
+var BARS = "M4 6h16M4 12h16M4 18h16";
+var CROSS = "M6 6l12 12M18 6L6 18";
+
+var button = document.getElementById("menuBtn");
+var menu = document.getElementById("mobileMenu");
+var icon = document.getElementById("menuIcon").querySelector("path");
+
+function setOpen(open) {
+  menu.classList.toggle("hidden", !open);
+  button.setAttribute("aria-expanded", String(open));
+  button.setAttribute("aria-label", open ? "Close menu" : "Menu");
+  icon.setAttribute("d", open ? CROSS : BARS);
+}
+
+button.addEventListener("click", function () {
+  setOpen(menu.classList.contains("hidden"));
+});
+
+// Tapping a destination should close the sheet behind it.
+menu.addEventListener("click", function (e) {
+  if (e.target.closest("a")) setOpen(false);
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") setOpen(false);
+});
+
+// The panel is md:hidden, so a resize past the breakpoint hides it visually
+// while aria-expanded would still claim it is open.
+matchMedia("(min-width: 768px)").addEventListener("change", function (e) {
+  if (e.matches) setOpen(false);
+});
+</script>
+</body></html>

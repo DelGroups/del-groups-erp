@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-partnership-enquiry-form/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partnership enquiry form</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Work with us</h1>
+    <p class="mt-3 leading-relaxed text-neutral-500">
+      We run three kinds of partnership: technical integrations that show up in our directory, resellers with a margin agreement, and joint research or events. Anything else, tell us and we will improvise.
+    </p>
+
+    <div class="mt-7">
+      <p class="mb-2.5 text-xs font-medium text-neutral-700">What kind of partnership?</p>
+      <div class="grid gap-2 sm:grid-cols-3">
+        <button class="rounded-xl border-2 border-neutral-900 bg-neutral-50 p-4 text-left">
+          <span class="block text-lg text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg></span>
+          <span class="mt-2 block text-sm font-medium text-neutral-900">Integration</span>
+          <span class="mt-0.5 block text-xs text-neutral-500">Build on the API</span>
+        </button>
+        <button class="rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+          <span class="block text-lg text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="m12 7 5 5-5 5-5-5 5-5Z"/></svg></span>
+          <span class="mt-2 block text-sm font-medium text-neutral-900">Reseller</span>
+          <span class="mt-0.5 block text-xs text-neutral-500">Sell and support</span>
+        </button>
+        <button class="rounded-xl border border-neutral-200 p-4 text-left transition hover:bg-neutral-50">
+          <span class="block text-lg text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.47 3.45 5.47 3.45 9S14.3 18.53 12 21c-2.3-2.47-3.45-5.47-3.45-9S9.7 5.47 12 3Z"/></svg></span>
+          <span class="mt-2 block text-sm font-medium text-neutral-900">Co-marketing</span>
+          <span class="mt-0.5 block text-xs text-neutral-500">Research or events</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Company</label>
+        <input type="text" placeholder="Studioform" class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Website</label>
+        <input type="url" placeholder="studioform.io" class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Your name</label>
+        <input type="text" placeholder="Jules Park" class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Work email</label>
+        <input type="email" placeholder="<a class="__cf_email__" data-cfemail="5a302f363f291a292e2f3e33353c352837743335" href="/cdn-cgi/l/email-protection">[email protected]</a>" class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Deal size, roughly</label>
+        <select class="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900">
+          <option>Not sure yet</option>
+          <option>Under $10k a year</option>
+          <option>$10k – $50k</option>
+          <option>$50k – $250k</option>
+          <option>Above $250k</option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-xs font-medium text-neutral-700">Timeline</label>
+        <select class="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900">
+          <option>Exploring, no date</option>
+          <option>This quarter</option>
+          <option>Next quarter</option>
+          <option>This financial year</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">What do you have in mind?</label>
+      <textarea rows="4" placeholder="One specific outcome is more useful than a list of possibilities."
+        class="w-full resize-none rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10"></textarea>
+      <p class="mt-1.5 text-xs text-neutral-400">For example: "our customers ask for your export format, and we would like to build it natively".</p>
+    </div>
+
+    <label class="mt-5 flex items-start gap-2.5 text-sm text-neutral-600">
+      <input type="checkbox" class="mt-0.5 rounded border-neutral-300" />
+      <span>Happy for the partnerships team to contact me about this enquiry.</span>
+    </label>
+
+    <button class="mt-6 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Send enquiry</button>
+
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <p class="text-xs text-neutral-400">Enquiries that are not a fit still get a real answer, just a slower one.</p>
+      <p class="text-xs text-neutral-400">Currently replying in ~3 days</p>
+    </div>
+  </div>
+</section>
+</body></html>

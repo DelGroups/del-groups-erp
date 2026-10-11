@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-filterable-post-index/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filterable post index</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-16">
+  <div class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="text-3xl font-semibold text-neutral-900">Writing</h1>
+    <p id="postCount" class="text-sm text-neutral-400">3 posts</p>
+  </div>
+  <div id="topics" class="mt-6 flex flex-wrap gap-2 text-sm">
+    <button data-topic="all" class="rounded-full bg-neutral-900 px-3.5 py-1.5 font-medium text-white">All</button>
+    <button data-topic="Engineering" class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-neutral-600 hover:bg-neutral-50">Engineering</button>
+    <button data-topic="Design" class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-neutral-600 hover:bg-neutral-50">Design</button>
+    <button data-topic="Culture" class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-neutral-600 hover:bg-neutral-50">Culture</button>
+    <button data-topic="Research" class="rounded-full border border-neutral-200 px-3.5 py-1.5 text-neutral-600 hover:bg-neutral-50">Research</button>
+  </div>
+
+  <div id="posts" class="mt-8 divide-y divide-neutral-200 border-t border-neutral-200">
+    <p id="postsEmpty" class="hidden py-10 text-center text-sm text-neutral-500">Nothing filed under that topic yet.</p>
+    <a href="#" data-topic="Engineering" class="group flex items-start gap-6 py-6">
+      <time class="w-20 shrink-0 pt-0.5 text-sm text-neutral-400">Aug 14</time>
+      <div class="flex-1">
+        <h2 class="font-medium text-neutral-900 group-hover:underline">We deleted our staging environment</h2>
+        <p class="mt-1 text-sm text-neutral-500">Ephemeral previews replaced a machine nobody trusted.</p>
+      </div>
+      <span class="hidden shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 sm:block">Engineering</span>
+      <span class="pt-0.5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-neutral-900">→</span>
+    </a>
+    <a href="#" data-topic="Design" class="group flex items-start gap-6 py-6">
+      <time class="w-20 shrink-0 pt-0.5 text-sm text-neutral-400">Aug 07</time>
+      <div class="flex-1">
+        <h2 class="font-medium text-neutral-900 group-hover:underline">Why our design tokens live in the API</h2>
+        <p class="mt-1 text-sm text-neutral-500">One source of truth for every client, including the ones we do not own.</p>
+      </div>
+      <span class="hidden shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 sm:block">Design</span>
+      <span class="pt-0.5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-neutral-900">→</span>
+    </a>
+    <a href="#" data-topic="Culture" class="group flex items-start gap-6 py-6">
+      <time class="w-20 shrink-0 pt-0.5 text-sm text-neutral-400">Jul 29</time>
+      <div class="flex-1">
+        <h2 class="font-medium text-neutral-900 group-hover:underline">The interview question we stopped asking</h2>
+        <p class="mt-1 text-sm text-neutral-500">It predicted nothing, and it cost us good candidates.</p>
+      </div>
+      <span class="hidden shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 sm:block">Culture</span>
+      <span class="pt-0.5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-neutral-900">→</span>
+    </a>
+  </div>
+
+  <div id="loadMoreWrap" class="mt-10 text-center">
+    <button class="rounded-xl border border-neutral-200 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50">Load more</button>
+  </div>
+</section>
+<script>
+var pills = [].slice.call(document.querySelectorAll("#topics [data-topic]"));
+var posts = [].slice.call(document.querySelectorAll("#posts a[data-topic]"));
+var count = document.getElementById("postCount");
+var empty = document.getElementById("postsEmpty");
+var loadMore = document.getElementById("loadMoreWrap");
+
+var ACTIVE = "rounded-full bg-neutral-900 px-3.5 py-1.5 font-medium text-white";
+var IDLE = "rounded-full border border-neutral-200 px-3.5 py-1.5 text-neutral-600 hover:bg-neutral-50";
+
+function apply(topic, pushState) {
+  var shown = 0;
+
+  posts.forEach(function (post) {
+    var visible = topic === "all" || post.getAttribute("data-topic") === topic;
+    post.classList.toggle("hidden", !visible);
+    if (visible) shown += 1;
+  });
+
+  pills.forEach(function (pill) {
+    pill.className = pill.getAttribute("data-topic") === topic ? ACTIVE : IDLE;
+  });
+
+  count.textContent = shown + (shown === 1 ? " post" : " posts");
+  empty.classList.toggle("hidden", shown > 0);
+  // Paging only makes sense against the unfiltered list.
+  loadMore.classList.toggle("hidden", topic !== "all" || shown === 0);
+
+  // history throws in sandboxed/opaque-origin documents — the filter still works.
+  if (pushState) {
+    try {
+      var url = new URL(location.href);
+      if (topic === "all") url.searchParams.delete("topic");
+      else url.searchParams.set("topic", topic);
+      history.replaceState(null, "", url);
+    } catch (e) {}
+  }
+}
+
+pills.forEach(function (pill) {
+  pill.addEventListener("click", function () {
+    apply(pill.getAttribute("data-topic"), true);
+  });
+});
+
+// Restore the topic from the URL so a filtered view survives a reload or a share.
+var known = pills.map(function (p) { return p.getAttribute("data-topic"); });
+var initial = null;
+try { initial = new URL(location.href).searchParams.get("topic"); } catch (e) {}
+apply(known.indexOf(initial) !== -1 ? initial : "all", false);
+</script>
+</body></html>

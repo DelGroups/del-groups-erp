@@ -1,0 +1,120 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-csv-column-mapping-step/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV column mapping step</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-12">
+  <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Step 2 of 4</p>
+  <h1 class="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">Match your columns</h1>
+  <p class="mt-1.5 text-sm text-neutral-500">customers-august.csv · 4,812 rows · <a href="#" class="underline underline-offset-4 hover:text-neutral-900">Replace file</a></p>
+
+  <div id="mapBanner" class="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+    5 of 6 fields matched automatically. Check the rest before continuing.
+  </div>
+
+  <div class="mt-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-neutral-200 bg-neutral-50 text-left text-[11px] uppercase tracking-widest text-neutral-400">
+          <th class="px-5 py-3 font-medium">Expected field</th>
+          <th class="px-5 py-3 font-medium">Your column</th>
+          <th class="hidden px-5 py-3 font-medium md:table-cell">Preview</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Email</p><p class="text-xs text-red-600">Required</p></td>
+          <td class="px-5 py-4"><select data-required="true" class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option>email_address</option><option>customer_name</option><option>signup_date</option><option>plan_code</option><option>country</option><option>mrr_usd</option><option value="">Ignore this field</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell"><a class="__cf_email__" data-cfemail="582a393d1836372a2c302f31363c763b37" href="/cdn-cgi/l/email-protection">[email protected]</a><br /><a class="__cf_email__" data-cfemail="1379667f766053606766777a7c757c617e3d7a7c" href="/cdn-cgi/l/email-protection">[email protected]</a></td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Full name</p><p class="text-xs text-red-600">Required</p></td>
+          <td class="px-5 py-4"><select data-required="true" class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option>customer_name</option><option>email_address</option><option>signup_date</option><option>plan_code</option><option>country</option><option>mrr_usd</option><option value="">Ignore this field</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell">Rae Mensah<br />Jules Park</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Signed up</p><p class="text-xs text-neutral-400">Optional</p></td>
+          <td class="px-5 py-4"><select class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option>signup_date</option><option>email_address</option><option>customer_name</option><option>plan_code</option><option>country</option><option>mrr_usd</option><option value="">Ignore this field</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell">2026-03-14<br />2026-04-02</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Plan</p><p class="text-xs text-neutral-400">Optional</p></td>
+          <td class="px-5 py-4"><select class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option>plan_code</option><option>email_address</option><option>customer_name</option><option>signup_date</option><option>country</option><option>mrr_usd</option><option value="">Ignore this field</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell">team_monthly<br />scale_annual</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Country</p><p class="text-xs text-neutral-400">Optional</p></td>
+          <td class="px-5 py-4"><select class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option>country</option><option>email_address</option><option>customer_name</option><option>signup_date</option><option>plan_code</option><option>mrr_usd</option><option value="">Ignore this field</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell">NL<br />GB</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><p class="font-medium text-neutral-900">Monthly revenue</p><p class="text-xs text-red-600">Required</p></td>
+          <td class="px-5 py-4"><select data-required="true" class="map-select w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"><option value="">Ignore this field</option><option>mrr_usd</option><option>email_address</option><option>customer_name</option><option>signup_date</option><option>plan_code</option><option>country</option></select></td>
+          <td class="hidden px-5 py-4 font-mono text-xs text-neutral-400 md:table-cell">59.00<br />149.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p id="mapWarning" class="mt-3 text-xs text-red-600">1 required field is still unmapped.</p>
+
+  <div class="mt-8 flex items-center justify-between border-t border-neutral-200 pt-5">
+    <button class="rounded-xl px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Back</button>
+    <button id="mapContinue" disabled class="cursor-not-allowed rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white opacity-40 transition">Continue</button>
+  </div>
+</section>
+<script>
+var selects = Array.prototype.slice.call(document.querySelectorAll(".map-select"));
+var banner = document.getElementById("mapBanner");
+var warning = document.getElementById("mapWarning");
+var next = document.getElementById("mapContinue");
+
+function sync() {
+  var used = {};
+  var duplicates = {};
+
+  selects.forEach(function (s) {
+    if (!s.value) return;
+    if (used[s.value]) duplicates[s.value] = true;
+    used[s.value] = true;
+  });
+
+  var mapped = 0;
+  var missingRequired = 0;
+
+  selects.forEach(function (s) {
+    var dup = s.value && duplicates[s.value];
+    s.classList.toggle("border-red-400", Boolean(dup));
+    s.classList.toggle("border-neutral-200", !dup);
+
+    if (s.value) mapped += 1;
+    if (s.dataset.required === "true" && !s.value) missingRequired += 1;
+  });
+
+  banner.textContent = mapped + " of " + selects.length + " fields mapped.";
+  banner.className =
+    "mt-6 rounded-xl px-4 py-3 text-sm " +
+    (missingRequired === 0 && Object.keys(duplicates).length === 0
+      ? "border border-green-200 bg-green-50 text-green-800"
+      : "border border-amber-200 bg-amber-50 text-amber-800");
+
+  var problems = [];
+  if (missingRequired > 0) problems.push(missingRequired + " required field" + (missingRequired > 1 ? "s are" : " is") + " still unmapped");
+  if (Object.keys(duplicates).length > 0) problems.push("the same column is used twice");
+
+  warning.textContent = problems.join(" · ");
+  warning.classList.toggle("hidden", problems.length === 0);
+
+  var ok = problems.length === 0;
+  next.disabled = !ok;
+  next.classList.toggle("opacity-40", !ok);
+  next.classList.toggle("cursor-not-allowed", !ok);
+}
+
+selects.forEach(function (s) {
+  s.addEventListener("change", sync);
+});
+
+sync();
+</script>
+</body></html>

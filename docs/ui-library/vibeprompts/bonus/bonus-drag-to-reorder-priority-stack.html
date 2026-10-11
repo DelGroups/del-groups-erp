@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-drag-to-reorder-priority-stack/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drag-to-reorder priority stack</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-lg px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-semibold tracking-tight text-neutral-900">This week</h1>
+        <p class="mt-1 text-sm text-neutral-500">Five things, in the order we will actually do them.</p>
+      </div>
+      <button id="rankReset" class="rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg> Reset</button>
+    </div>
+
+    <ul id="rankList" class="mt-6 space-y-2">
+      <li data-item class="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition">
+        <button data-grip aria-label="Reorder: Migrate the billing cron" class="touch-none cursor-grab rounded-lg px-1 py-2 text-neutral-300 outline-none transition hover:text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 active:cursor-grabbing">⠿</button>
+        <span data-rank class="w-5 shrink-0 text-center font-mono text-lg font-semibold text-neutral-300">1</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span data-title class="truncate text-sm font-medium text-neutral-900">Migrate the billing cron</span>
+            <span data-now class="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Up next</span>
+          </span>
+          <span class="mt-0.5 block truncate text-xs text-neutral-500">Blocks the invoice backfill</span>
+        </span>
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-medium text-neutral-600">RS</span>
+      </li>
+      <li data-item class="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition">
+        <button data-grip aria-label="Reorder: Ship the webhook retry ladder" class="touch-none cursor-grab rounded-lg px-1 py-2 text-neutral-300 outline-none transition hover:text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 active:cursor-grabbing">⠿</button>
+        <span data-rank class="w-5 shrink-0 text-center font-mono text-lg font-semibold text-neutral-300">2</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span data-title class="truncate text-sm font-medium text-neutral-900">Ship the webhook retry ladder</span>
+            <span data-now class="hidden rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Up next</span>
+          </span>
+          <span class="mt-0.5 block truncate text-xs text-neutral-500">Two customers waiting on it</span>
+        </span>
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-medium text-neutral-600">AM</span>
+      </li>
+      <li data-item class="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition">
+        <button data-grip aria-label="Reorder: Rewrite the onboarding empty states" class="touch-none cursor-grab rounded-lg px-1 py-2 text-neutral-300 outline-none transition hover:text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 active:cursor-grabbing">⠿</button>
+        <span data-rank class="w-5 shrink-0 text-center font-mono text-lg font-semibold text-neutral-300">3</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span data-title class="truncate text-sm font-medium text-neutral-900">Rewrite the onboarding empty states</span>
+            <span data-now class="hidden rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Up next</span>
+          </span>
+          <span class="mt-0.5 block truncate text-xs text-neutral-500">Copy is drafted, needs build</span>
+        </span>
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-medium text-neutral-600">JD</span>
+      </li>
+      <li data-item class="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition">
+        <button data-grip aria-label="Reorder: Cut the p95 on search" class="touch-none cursor-grab rounded-lg px-1 py-2 text-neutral-300 outline-none transition hover:text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 active:cursor-grabbing">⠿</button>
+        <span data-rank class="w-5 shrink-0 text-center font-mono text-lg font-semibold text-neutral-300">4</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span data-title class="truncate text-sm font-medium text-neutral-900">Cut the p95 on search</span>
+            <span data-now class="hidden rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Up next</span>
+          </span>
+          <span class="mt-0.5 block truncate text-xs text-neutral-500">Index rebuild, then measure</span>
+        </span>
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-medium text-neutral-600">PK</span>
+      </li>
+      <li data-item class="group flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition">
+        <button data-grip aria-label="Reorder: Retire the legacy export job" class="touch-none cursor-grab rounded-lg px-1 py-2 text-neutral-300 outline-none transition hover:text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 active:cursor-grabbing">⠿</button>
+        <span data-rank class="w-5 shrink-0 text-center font-mono text-lg font-semibold text-neutral-300">5</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-2">
+            <span data-title class="truncate text-sm font-medium text-neutral-900">Retire the legacy export job</span>
+            <span data-now class="hidden rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-medium text-white">Up next</span>
+          </span>
+          <span class="mt-0.5 block truncate text-xs text-neutral-500">Nobody has run it since March</span>
+        </span>
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-medium text-neutral-600">RS</span>
+      </li>
+    </ul>
+
+    <p class="mt-5 border-t border-neutral-200 pt-4 text-xs leading-relaxed text-neutral-400">
+      Drag a handle to reorder, or focus one with the keyboard and use ↑ and ↓. Ranks renumber as you go.
+    </p>
+    <p id="rankStatus" role="status" aria-live="polite" class="sr-only"></p>
+  </div>
+</section>
+<script>
+var list = document.getElementById("rankList");
+var liveRegion = document.getElementById("rankStatus");
+var original = [].slice.call(list.children);
+var dragging = null;
+
+function renumber() {
+  [].slice.call(list.children).forEach(function (item, index) {
+    item.querySelector("[data-rank]").textContent = index + 1;
+    item.querySelector("[data-now]").classList.toggle("hidden", index !== 0);
+  });
+}
+
+function announce(item) {
+  var index = [].slice.call(list.children).indexOf(item);
+  liveRegion.textContent =
+    item.querySelector("[data-title]").textContent +
+    " moved to position " + (index + 1) + " of " + list.children.length;
+}
+
+// Insert before the first row whose midpoint is below the pointer. Comparing
+// midpoints keeps the order stable while the cursor sits between two rows,
+// which hit-testing the element under the pointer does not.
+function rowAfter(y) {
+  var rows = [].slice.call(list.querySelectorAll("[data-item]:not([data-dragging])"));
+  for (var i = 0; i < rows.length; i++) {
+    var box = rows[i].getBoundingClientRect();
+    if (y < box.top + box.height / 2) return rows[i];
+  }
+  return null;
+}
+
+list.addEventListener("pointerdown", function (e) {
+  var grip = e.target.closest("[data-grip]");
+  if (!grip) return;
+
+  dragging = grip.closest("[data-item]");
+  dragging.setAttribute("data-dragging", "");
+  dragging.classList.add("opacity-60", "ring-2", "ring-neutral-900", "shadow-lg");
+
+  // Capture on the handle so a fast drag that outruns the cursor keeps sending
+  // moves to this element instead of whatever is underneath it.
+  grip.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+
+list.addEventListener("pointermove", function (e) {
+  if (!dragging) return;
+  var after = rowAfter(e.clientY);
+  if (after) list.insertBefore(dragging, after);
+  else list.appendChild(dragging);
+  renumber();
+});
+
+function drop() {
+  if (!dragging) return;
+  dragging.classList.remove("opacity-60", "ring-2", "ring-neutral-900", "shadow-lg");
+  dragging.removeAttribute("data-dragging");
+  announce(dragging);
+  dragging = null;
+}
+
+list.addEventListener("pointerup", drop);
+list.addEventListener("pointercancel", drop);
+
+list.addEventListener("keydown", function (e) {
+  var grip = e.target.closest("[data-grip]");
+  if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+
+  var item = grip.closest("[data-item]");
+  e.preventDefault();
+
+  if (e.key === "ArrowUp" && item.previousElementSibling) {
+    list.insertBefore(item, item.previousElementSibling);
+  } else if (e.key === "ArrowDown" && item.nextElementSibling) {
+    list.insertBefore(item.nextElementSibling, item);
+  } else {
+    return;
+  }
+
+  renumber();
+  announce(item);
+  grip.focus();
+});
+
+document.getElementById("rankReset").addEventListener("click", function () {
+  original.forEach(function (item) { list.appendChild(item); });
+  renumber();
+  liveRegion.textContent = "Order reset";
+});
+
+renumber();
+</script>
+</body></html>

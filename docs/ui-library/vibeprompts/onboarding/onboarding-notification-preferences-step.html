@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-notification-preferences-step/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notification preferences step</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-12">
+  <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Step 4 of 5</p>
+  <h1 class="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">What should reach you?</h1>
+  <p class="mt-1.5 text-sm text-neutral-500">Everything starts off except security alerts. You can change all of it later in settings.</p>
+
+  <div class="mt-7 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-5 py-3 text-[11px] uppercase tracking-widest text-neutral-400">
+      <span>Category</span><span class="text-center">Email</span><span class="text-center">In-app</span><span class="text-center">Push</span>
+    </div>
+
+    <div class="divide-y divide-neutral-100">
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Product updates</p><p class="text-xs text-neutral-500">Monthly, written by the team</p></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Mentions</p><p class="text-xs text-neutral-500">When someone types your name</p></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Comment replies</p><p class="text-xs text-neutral-500">On threads you are part of</p></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Weekly digest</p><p class="text-xs text-neutral-500">Monday morning, one email</p></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Billing</p><p class="text-xs text-neutral-500">Invoices and failed payments</p></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" data-rec="1" /></div>
+        <div class="text-center"><input type="checkbox" class="pref h-4 w-4 rounded border-neutral-300" /></div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-2 bg-neutral-50 px-5 py-4">
+        <div><p class="text-sm font-medium text-neutral-900">Security alerts</p><p class="text-xs text-neutral-400">Required — new sign-ins and key changes</p></div>
+        <div class="text-center"><input type="checkbox" checked disabled class="h-4 w-4 rounded border-neutral-300" /></div>
+        <div class="text-center"><input type="checkbox" checked disabled class="h-4 w-4 rounded border-neutral-300" /></div>
+        <div class="text-center"><input type="checkbox" checked disabled class="h-4 w-4 rounded border-neutral-300" /></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
+    <label class="flex items-center justify-between">
+      <span>
+        <span class="block text-sm font-medium text-neutral-900">Quiet hours</span>
+        <span class="block text-xs text-neutral-500">Hold everything except security alerts overnight.</span>
+      </span>
+      <input id="quietToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+    </label>
+    <div id="quietControls" class="mt-4 flex flex-wrap items-center gap-3 opacity-40">
+      <select disabled class="quiet-input rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none"><option>22:00</option><option>23:00</option><option>00:00</option></select>
+      <span class="text-sm text-neutral-400">until</span>
+      <select disabled class="quiet-input rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none"><option>07:00</option><option>08:00</option><option>09:00</option></select>
+      <span class="text-xs text-neutral-400">in your local timezone</span>
+    </div>
+  </div>
+
+  <div class="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-5">
+    <p id="prefSummary" class="text-sm text-neutral-500">3 notifications enabled</p>
+    <div class="flex gap-2">
+      <button id="prefRecommend" class="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Use recommended</button>
+      <button class="rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Continue</button>
+    </div>
+  </div>
+</section>
+<script>
+var prefs = Array.prototype.slice.call(document.querySelectorAll(".pref"));
+var summary = document.getElementById("prefSummary");
+var quiet = document.getElementById("quietToggle");
+var controls = document.getElementById("quietControls");
+var quietInputs = Array.prototype.slice.call(document.querySelectorAll(".quiet-input"));
+
+function sync() {
+  // The three security switches are always on and are counted here too.
+  var count = prefs.filter(function (p) {
+    return p.checked;
+  }).length + 3;
+
+  summary.textContent = count + (count === 1 ? " notification enabled" : " notifications enabled");
+}
+
+prefs.forEach(function (p) {
+  p.addEventListener("change", sync);
+});
+
+document.getElementById("prefRecommend").addEventListener("click", function () {
+  prefs.forEach(function (p) {
+    p.checked = p.dataset.rec === "1";
+  });
+  sync();
+});
+
+quiet.addEventListener("change", function () {
+  controls.classList.toggle("opacity-40", !quiet.checked);
+  quietInputs.forEach(function (input) {
+    input.disabled = !quiet.checked;
+  });
+});
+
+sync();
+</script>
+</body></html>

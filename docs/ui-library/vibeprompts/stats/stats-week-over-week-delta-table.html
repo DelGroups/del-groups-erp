@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/stats/stats-week-over-week-delta-table/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week-over-week delta table</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex items-center justify-between px-6 py-5">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900">Week in review</h2>
+        <p class="text-sm text-neutral-500">11–17 Aug compared with 4–10 Aug</p>
+      </div>
+      <button class="rounded-xl border border-neutral-200 px-3.5 py-2 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Export</button>
+    </div>
+
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-y border-neutral-200 bg-neutral-50 text-left text-[11px] uppercase tracking-widest text-neutral-400">
+          <th class="px-6 py-3 font-medium">Metric</th>
+          <th class="px-6 py-3 text-right font-medium">This week</th>
+          <th class="px-6 py-3 text-right font-medium">Last week</th>
+          <th class="px-6 py-3 text-right font-medium">Change</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Signups</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">1,482</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">1,301</td>
+          <td class="px-6 py-3.5 text-right font-mono text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg> +13.9%</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Activation rate</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">38.2%</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">41.0%</td>
+          <td class="px-6 py-3.5 text-right font-mono text-red-600">↘ −2.8 pts</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Weekly active teams</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">3,914</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">3,802</td>
+          <td class="px-6 py-3.5 text-right font-mono text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg> +2.9%</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Net revenue</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">$284,110</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">$271,940</td>
+          <td class="px-6 py-3.5 text-right font-mono text-green-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg> +4.5%</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Support tickets</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">412</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">468</td>
+          <td class="px-6 py-3.5 text-right font-mono text-green-600">↘ −12.0%</td>
+        </tr>
+        <tr>
+          <td class="px-6 py-3.5 font-medium text-neutral-900">Median first response</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-900">41 min</td>
+          <td class="px-6 py-3.5 text-right font-mono text-neutral-400">36 min</td>
+          <td class="px-6 py-3.5 text-right font-mono text-red-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg> +13.9%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="border-t border-neutral-200 px-6 py-4 text-xs leading-relaxed text-neutral-400">
+      Revenue is normalised to constant currency. For tickets and response time, down is the good direction.
+    </p>
+  </div>
+</section>
+</body></html>

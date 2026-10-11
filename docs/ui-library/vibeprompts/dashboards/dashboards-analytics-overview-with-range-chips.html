@@ -1,0 +1,164 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-analytics-overview-with-range-chips/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics overview with range chips</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="bg-neutral-50 px-6 py-10">
+  <div class="mx-auto max-w-6xl">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Overview</h1>
+        <p id="rangeNote" class="mt-1 text-sm text-neutral-500">Last 7 days compared with the previous 7</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="rangeChips" class="flex gap-1 rounded-xl border border-neutral-200 bg-white p-1">
+          <button data-range="24h" class="range-chip rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 transition">24h</button>
+          <button data-range="7d" class="range-chip rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition">7d</button>
+          <button data-range="30d" class="range-chip rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 transition">30d</button>
+          <button data-range="90d" class="range-chip rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 transition">90d</button>
+        </div>
+        <button class="rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Export</button>
+      </div>
+    </div>
+
+    <div id="metricGrid" class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="metric rounded-xl border border-neutral-200 bg-white p-5" data-key="visits">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Visits</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <p class="value text-2xl font-semibold tracking-tight text-neutral-900">48,210</p>
+          <span class="delta rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">+8.4%</span>
+        </div>
+        <div class="spark mt-4 flex h-10 items-end gap-1"></div>
+      </div>
+      <div class="metric rounded-xl border border-neutral-200 bg-white p-5" data-key="signups">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Signups</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <p class="value text-2xl font-semibold tracking-tight text-neutral-900">1,482</p>
+          <span class="delta rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">+13.9%</span>
+        </div>
+        <div class="spark mt-4 flex h-10 items-end gap-1"></div>
+      </div>
+      <div class="metric rounded-xl border border-neutral-200 bg-white p-5" data-key="revenue">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Revenue</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <p class="value text-2xl font-semibold tracking-tight text-neutral-900">$64,110</p>
+          <span class="delta rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">+4.5%</span>
+        </div>
+        <div class="spark mt-4 flex h-10 items-end gap-1"></div>
+      </div>
+      <div class="metric rounded-xl border border-neutral-200 bg-white p-5" data-key="churn">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Churn</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <p class="value text-2xl font-semibold tracking-tight text-neutral-900">1.9%</p>
+          <span class="delta rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">+0.3 pts</span>
+        </div>
+        <div class="spark mt-4 flex h-10 items-end gap-1"></div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-xl border border-neutral-200 bg-white p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-neutral-900">Sessions and conversions</h2>
+        <div class="flex gap-4 text-xs text-neutral-500">
+          <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-neutral-900"></span> Sessions</span>
+          <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-neutral-300"></span> Conversions</span>
+        </div>
+      </div>
+
+      <svg viewBox="0 0 600 180" class="mt-6 h-48 w-full">
+        <line x1="0" y1="45" x2="600" y2="45" stroke="#f5f5f5" stroke-width="1" />
+        <line x1="0" y1="90" x2="600" y2="90" stroke="#f5f5f5" stroke-width="1" />
+        <line x1="0" y1="135" x2="600" y2="135" stroke="#f5f5f5" stroke-width="1" />
+        <polyline fill="none" stroke="#171717" stroke-width="2" stroke-linejoin="round" points="0,140 60,120 120,128 180,96 240,104 300,72 360,80 420,54 480,62 540,38 600,44" />
+        <polyline fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linejoin="round" points="0,164 60,158 120,160 180,148 240,150 300,138 360,142 420,128 480,132 540,120 600,124" />
+      </svg>
+
+      <div class="mt-2 flex justify-between font-mono text-[11px] text-neutral-400">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var DATA = {
+  "24h": {
+    note: "Last 24 hours compared with the previous 24",
+    visits: ["6,914", "+2.1%", true],
+    signups: ["214", "+5.0%", true],
+    revenue: ["$9,240", "−1.2%", false],
+    churn: ["1.7%", "−0.1 pts", true],
+  },
+  "7d": {
+    note: "Last 7 days compared with the previous 7",
+    visits: ["48,210", "+8.4%", true],
+    signups: ["1,482", "+13.9%", true],
+    revenue: ["$64,110", "+4.5%", true],
+    churn: ["1.9%", "+0.3 pts", false],
+  },
+  "30d": {
+    note: "Last 30 days compared with the previous 30",
+    visits: ["198,440", "+11.2%", true],
+    signups: ["6,201", "+9.4%", true],
+    revenue: ["$271,880", "+6.8%", true],
+    churn: ["2.1%", "+0.2 pts", false],
+  },
+  "90d": {
+    note: "Last 90 days compared with the previous 90",
+    visits: ["612,090", "+22.6%", true],
+    signups: ["18,744", "+17.1%", true],
+    revenue: ["$806,400", "+14.2%", true],
+    churn: ["2.4%", "−0.4 pts", true],
+  },
+};
+
+var chips = Array.prototype.slice.call(document.querySelectorAll(".range-chip"));
+var metrics = Array.prototype.slice.call(document.querySelectorAll(".metric"));
+var note = document.getElementById("rangeNote");
+
+function bars(host, seed) {
+  host.innerHTML = "";
+  for (var i = 0; i < 12; i++) {
+    var bar = document.createElement("span");
+    // Deterministic heights, so switching back to a range looks the same.
+    var h = 30 + ((seed * (i + 3) * 37) % 70);
+    bar.className = "flex-1 rounded-sm bg-neutral-200";
+    bar.style.height = h + "%";
+    if (i === 11) bar.className = "flex-1 rounded-sm bg-neutral-900";
+    host.appendChild(bar);
+  }
+}
+
+function render(range) {
+  var set = DATA[range];
+  note.textContent = set.note;
+
+  chips.forEach(function (chip) {
+    var on = chip.dataset.range === range;
+    chip.classList.toggle("bg-neutral-900", on);
+    chip.classList.toggle("text-white", on);
+    chip.classList.toggle("text-neutral-600", !on);
+  });
+
+  metrics.forEach(function (card, i) {
+    var entry = set[card.dataset.key];
+    card.querySelector(".value").textContent = entry[0];
+
+    var delta = card.querySelector(".delta");
+    delta.textContent = entry[1];
+    delta.className =
+      "delta rounded-full px-2 py-0.5 text-[11px] font-medium " +
+      (entry[2] ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700");
+
+    bars(card.querySelector(".spark"), range.length + i + 1);
+  });
+}
+
+chips.forEach(function (chip) {
+  chip.addEventListener("click", function () {
+    render(chip.dataset.range);
+  });
+});
+
+render("7d");
+</script>
+</body></html>

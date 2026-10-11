@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/features/features-tabbed-feature-switcher/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed feature switcher</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="group mx-auto max-w-5xl px-6 py-16">
+  <h2 class="mb-8 text-center text-3xl font-semibold text-neutral-900">One platform, three superpowers</h2>
+
+  <input type="radio" name="feat" id="feat-a" class="sr-only" checked />
+  <input type="radio" name="feat" id="feat-b" class="sr-only" />
+  <input type="radio" name="feat" id="feat-c" class="sr-only" />
+
+  <div class="mx-auto flex w-fit gap-1 rounded-full bg-neutral-100 p-1 text-sm">
+    <label for="feat-a" class="cursor-pointer rounded-full px-4 py-1.5 text-neutral-500 group-has-[#feat-a:checked]:bg-white group-has-[#feat-a:checked]:font-medium group-has-[#feat-a:checked]:text-neutral-900 group-has-[#feat-a:checked]:shadow-sm">Plan</label>
+    <label for="feat-b" class="cursor-pointer rounded-full px-4 py-1.5 text-neutral-500 group-has-[#feat-b:checked]:bg-white group-has-[#feat-b:checked]:font-medium group-has-[#feat-b:checked]:text-neutral-900 group-has-[#feat-b:checked]:shadow-sm">Build</label>
+    <label for="feat-c" class="cursor-pointer rounded-full px-4 py-1.5 text-neutral-500 group-has-[#feat-c:checked]:bg-white group-has-[#feat-c:checked]:font-medium group-has-[#feat-c:checked]:text-neutral-900 group-has-[#feat-c:checked]:shadow-sm">Ship</label>
+  </div>
+
+  <div class="mt-8 hidden gap-8 rounded-2xl border border-neutral-200 bg-white p-8 group-has-[#feat-a:checked]:grid md:grid-cols-2">
+    <div>
+      <h3 class="text-xl font-semibold text-neutral-900">Plan without the spreadsheets</h3>
+      <p class="mt-2 text-neutral-500">Roadmaps that stay honest because they update themselves from real work.</p>
+      <ul class="mt-4 space-y-2 text-sm text-neutral-600">
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> Capacity-aware sprints</li>
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> Dependency mapping</li>
+      </ul>
+    </div>
+    <div class="aspect-video rounded-xl bg-neutral-100"></div>
+  </div>
+  <div class="mt-8 hidden gap-8 rounded-2xl border border-neutral-200 bg-white p-8 group-has-[#feat-b:checked]:grid md:grid-cols-2">
+    <div>
+      <h3 class="text-xl font-semibold text-neutral-900">Build with fewer handoffs</h3>
+      <p class="mt-2 text-neutral-500">Design, spec, and code review live next to each other in one thread.</p>
+      <ul class="mt-4 space-y-2 text-sm text-neutral-600">
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> Inline design review</li>
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> Branch previews</li>
+      </ul>
+    </div>
+    <div class="aspect-video rounded-xl bg-neutral-100"></div>
+  </div>
+  <div class="mt-8 hidden gap-8 rounded-2xl border border-neutral-200 bg-white p-8 group-has-[#feat-c:checked]:grid md:grid-cols-2">
+    <div>
+      <h3 class="text-xl font-semibold text-neutral-900">Ship on a Friday, calmly</h3>
+      <p class="mt-2 text-neutral-500">Progressive rollouts with automatic rollback the moment metrics dip.</p>
+      <ul class="mt-4 space-y-2 text-sm text-neutral-600">
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> Feature flags built in</li>
+        <li class="flex gap-2"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> One-click rollback</li>
+      </ul>
+    </div>
+    <div class="aspect-video rounded-xl bg-neutral-100"></div>
+  </div>
+</section>
+</body></html>

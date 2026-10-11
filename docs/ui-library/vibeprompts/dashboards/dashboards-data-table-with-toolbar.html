@@ -1,0 +1,90 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-data-table-with-toolbar/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data table with toolbar</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-4xl p-6">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex items-center justify-between gap-3 border-b border-neutral-200 p-4">
+      <h2 class="font-semibold text-neutral-900">Customers <span id="rowCount" class="ml-1 text-sm font-normal text-neutral-400">3</span></h2>
+      <div class="flex items-center gap-2">
+        <input id="tableSearch" placeholder="Search…" class="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+        <button class="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800">Add</button>
+      </div>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-neutral-50 text-left text-neutral-500">
+        <tr>
+          <th data-sort="0" class="cursor-pointer select-none p-4 font-medium hover:text-neutral-900">Name <span data-arrow class="text-neutral-300"></span></th>
+          <th class="p-4 font-medium">Status</th>
+          <th data-sort="2" class="cursor-pointer select-none p-4 font-medium hover:text-neutral-900">Plan <span data-arrow class="text-neutral-300"></span></th>
+          <th data-sort="3" class="cursor-pointer select-none p-4 font-medium hover:text-neutral-900">Created <span data-arrow class="text-neutral-300"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody" class="divide-y divide-neutral-100 text-neutral-700">
+        <tr class="hover:bg-neutral-50"><td class="p-4">Ada Lovelace</td><td class="p-4"><span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span></td><td class="p-4">Pro</td><td class="p-4" data-date="2026-01-04">Jan 4</td></tr>
+        <tr class="hover:bg-neutral-50"><td class="p-4">Alan Turing</td><td class="p-4"><span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Trial</span></td><td class="p-4">Free</td><td class="p-4" data-date="2026-02-12">Feb 12</td></tr>
+        <tr class="hover:bg-neutral-50"><td class="p-4">Grace Hopper</td><td class="p-4"><span class="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">Churned</span></td><td class="p-4">Pro</td><td class="p-4" data-date="2026-03-01">Mar 1</td></tr>
+      </tbody>
+    </table>
+    <p id="tableEmpty" class="hidden p-8 text-center text-sm text-neutral-500">No customers match that search.</p>
+  </div>
+</div>
+<script>
+var body = document.getElementById("tableBody");
+var rows = [].slice.call(body.querySelectorAll("tr"));
+var search = document.getElementById("tableSearch");
+var counter = document.getElementById("rowCount");
+var empty = document.getElementById("tableEmpty");
+var headers = [].slice.call(document.querySelectorAll("[data-sort]"));
+
+var sortColumn = null;
+var ascending = true;
+
+function cellValue(row, index) {
+  var cell = row.children[index];
+  // Dates carry a sortable ISO value; everything else sorts on its text.
+  return cell.getAttribute("data-date") || cell.textContent.trim().toLowerCase();
+}
+
+function render() {
+  var query = search.value.trim().toLowerCase();
+  var visible = 0;
+
+  rows.forEach(function (row) {
+    var match = !query || row.textContent.toLowerCase().indexOf(query) !== -1;
+    row.classList.toggle("hidden", !match);
+    if (match) visible += 1;
+  });
+
+  counter.textContent = visible;
+  empty.classList.toggle("hidden", visible > 0);
+}
+
+headers.forEach(function (header) {
+  header.addEventListener("click", function () {
+    var index = Number(header.getAttribute("data-sort"));
+    ascending = sortColumn === index ? !ascending : true;
+    sortColumn = index;
+
+    headers.forEach(function (h) {
+      h.querySelector("[data-arrow]").textContent =
+        h === header ? (ascending ? "↑" : "↓") : "";
+    });
+
+    rows
+      .slice()
+      .sort(function (a, b) {
+        var x = cellValue(a, index);
+        var y = cellValue(b, index);
+        if (x === y) return 0;
+        return (x > y ? 1 : -1) * (ascending ? 1 : -1);
+      })
+      .forEach(function (row) { body.appendChild(row); });
+  });
+});
+
+search.addEventListener("input", render);
+render();
+</script>
+</body></html>

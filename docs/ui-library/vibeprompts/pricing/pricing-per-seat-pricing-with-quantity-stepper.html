@@ -1,0 +1,109 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/pricing/pricing-per-seat-pricing-with-quantity-stepper/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Per-seat pricing with quantity stepper</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="flex justify-center bg-neutral-50 px-6 py-16">
+  <div class="w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <span class="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">Team plan</span>
+    <div class="mt-4 flex items-baseline gap-2">
+      <span class="text-5xl font-semibold tracking-tight text-neutral-900">$12</span>
+      <span class="text-sm text-neutral-500">per seat / month</span>
+    </div>
+    <p class="mt-2 text-sm leading-relaxed text-neutral-500">Everything in Starter, plus shared workspaces, audit history and priority support.</p>
+
+    <div class="mt-7 flex items-center justify-between rounded-xl border border-neutral-200 p-4">
+      <div>
+        <p class="text-sm font-medium text-neutral-900">How many seats?</p>
+        <p class="text-xs text-neutral-500">Volume discount from 10 seats.</p>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="seatMinus" class="grid h-9 w-9 place-items-center rounded-lg border border-neutral-200 text-neutral-600 transition hover:bg-neutral-50 disabled:opacity-30">−</button>
+        <span id="seatCount" class="w-14 text-center font-mono text-lg font-semibold text-neutral-900">5</span>
+        <button id="seatPlus" class="grid h-9 w-9 place-items-center rounded-lg border border-neutral-200 text-neutral-600 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </div>
+
+    <div class="mt-5 space-y-2.5 text-sm">
+      <div class="flex items-center justify-between text-neutral-600">
+        <span id="seatLine">5 seats × $12</span>
+        <span id="seatSubtotal" class="font-mono text-neutral-900">$60</span>
+      </div>
+      <div id="discountRow" class="hidden items-center justify-between text-green-700">
+        <span id="discountLabel">Volume discount</span>
+        <span id="discountValue" class="font-mono">−$0</span>
+      </div>
+      <div class="flex items-center justify-between border-t border-neutral-200 pt-3 text-base font-semibold text-neutral-900">
+        <span>Total per month</span>
+        <span id="seatTotal" class="font-mono">$60</span>
+      </div>
+    </div>
+
+    <button class="mt-6 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Start 14-day trial</button>
+    <p class="mt-2 text-center text-xs text-neutral-400">Change seats whenever you like — we bill the difference pro rata.</p>
+
+    <ul class="mt-6 space-y-2 border-t border-neutral-200 pt-5 text-sm text-neutral-600">
+      <li class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> Unlimited projects and shared workspaces</li>
+      <li class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> SAML single sign-on and SCIM provisioning</li>
+      <li class="flex items-center gap-2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg> 12 months of audit history</li>
+    </ul>
+  </div>
+</section>
+<script>
+var UNIT = 12;
+var MIN = 2;
+var MAX = 250;
+var seats = 5;
+
+var countEl = document.getElementById("seatCount");
+var lineEl = document.getElementById("seatLine");
+var subtotalEl = document.getElementById("seatSubtotal");
+var totalEl = document.getElementById("seatTotal");
+var row = document.getElementById("discountRow");
+var label = document.getElementById("discountLabel");
+var value = document.getElementById("discountValue");
+var minus = document.getElementById("seatMinus");
+var plus = document.getElementById("seatPlus");
+
+function rate() {
+  if (seats >= 50) return 0.2;
+  if (seats >= 10) return 0.1;
+  return 0;
+}
+
+function money(n) {
+  return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
+function render() {
+  var subtotal = seats * UNIT;
+  var off = subtotal * rate();
+
+  countEl.textContent = seats;
+  lineEl.textContent = seats + (seats === 1 ? " seat × " : " seats × ") + money(UNIT);
+  subtotalEl.textContent = money(subtotal);
+  totalEl.textContent = money(subtotal - off);
+
+  // The discount line only earns its space once there is a discount.
+  row.classList.toggle("hidden", off === 0);
+  row.classList.toggle("flex", off > 0);
+  label.textContent = "Volume discount (" + Math.round(rate() * 100) + "%)";
+  value.textContent = "−" + money(off);
+
+  minus.disabled = seats <= MIN;
+  plus.disabled = seats >= MAX;
+}
+
+minus.addEventListener("click", function () {
+  seats = Math.max(MIN, seats - 1);
+  render();
+});
+
+plus.addEventListener("click", function () {
+  seats = Math.min(MAX, seats + 1);
+  render();
+});
+
+render();
+</script>
+</body></html>

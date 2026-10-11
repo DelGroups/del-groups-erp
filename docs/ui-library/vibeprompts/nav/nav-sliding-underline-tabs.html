@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-sliding-underline-tabs/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sliding underline tabs</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-14">
+  <div class="flex items-end justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Payments</h1>
+    <p class="text-sm text-neutral-500">1,284 records</p>
+  </div>
+
+  <div class="relative mt-6 flex gap-7 border-b border-neutral-200">
+    <button data-panel="all" class="tab-btn pb-3 text-sm font-medium text-neutral-900">All</button>
+    <button data-panel="succeeded" class="tab-btn pb-3 text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Succeeded</button>
+    <button data-panel="refunded" class="tab-btn pb-3 text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Refunded</button>
+    <button data-panel="disputed" class="tab-btn pb-3 text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Disputed</button>
+    <button data-panel="failed" class="tab-btn pb-3 text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Failed</button>
+    <button data-panel="payouts" class="tab-btn pb-3 text-sm font-medium text-neutral-500 transition hover:text-neutral-900">Payouts</button>
+
+    <span id="tabIndicator" class="absolute -bottom-px h-0.5 rounded-full bg-neutral-900 transition-all duration-300 ease-out" style="left:0;width:0"></span>
+  </div>
+
+  <div class="mt-7">
+    <p id="tabCopy" class="text-sm leading-relaxed text-neutral-500">Every payment captured in the last 30 days, newest first.</p>
+    <div class="mt-4 space-y-2">
+      <div class="h-14 rounded-xl border border-neutral-200 bg-neutral-50"></div>
+      <div class="h-14 rounded-xl border border-neutral-200 bg-neutral-50"></div>
+      <div class="h-14 rounded-xl border border-neutral-200 bg-neutral-50"></div>
+    </div>
+  </div>
+</section>
+<script>
+var COPY = {
+  all: "Every payment captured in the last 30 days, newest first.",
+  succeeded: "Payments that settled cleanly. Funds land in the next payout run.",
+  refunded: "Full and partial refunds, including the original charge reference.",
+  disputed: "Chargebacks awaiting evidence. The clock in each row is the bank deadline.",
+  failed: "Declines grouped by reason code so retries can be targeted.",
+  payouts: "Batches sent to your bank account, with the fee breakdown per batch.",
+};
+
+var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab-btn"));
+var indicator = document.getElementById("tabIndicator");
+var copy = document.getElementById("tabCopy");
+var index = 0;
+
+function activate(i) {
+  index = i;
+  var tab = tabs[i];
+
+  tabs.forEach(function (t) {
+    var on = t === tab;
+    t.classList.toggle("text-neutral-900", on);
+    t.classList.toggle("text-neutral-500", !on);
+  });
+
+  // Move and resize one element rather than repainting six borders.
+  indicator.style.left = tab.offsetLeft + "px";
+  indicator.style.width = tab.offsetWidth + "px";
+  copy.textContent = COPY[tab.dataset.panel];
+}
+
+tabs.forEach(function (tab, i) {
+  tab.addEventListener("click", function () {
+    activate(i);
+  });
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  if (tabs.indexOf(document.activeElement) === -1) return;
+  e.preventDefault();
+  var next = e.key === "ArrowRight" ? (index + 1) % tabs.length : (index - 1 + tabs.length) % tabs.length;
+  tabs[next].focus();
+  activate(next);
+});
+
+window.addEventListener("resize", function () {
+  activate(index);
+});
+
+activate(0);
+</script>
+</body></html>

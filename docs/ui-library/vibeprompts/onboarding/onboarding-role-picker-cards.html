@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-role-picker-cards/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Role picker cards</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-2xl px-6 py-16">
+  <div class="text-center">
+    <p class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Step 1 of 3</p>
+    <h1 class="mt-2 text-2xl font-semibold text-neutral-900">What best describes your role?</h1>
+    <p class="mt-1 text-sm text-neutral-500">We will preset your templates, dashboards, and notifications to match.</p>
+  </div>
+  <div class="mt-8 grid gap-3 sm:grid-cols-2">
+    <label class="relative cursor-pointer">
+      <input type="radio" name="role" class="peer sr-only" checked />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5 transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-lg"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/></svg></span>
+        <h3 class="mt-3 text-sm font-medium text-neutral-900">Engineering</h3>
+        <p class="mt-1 text-xs text-neutral-500">Ship code, review PRs, own services.</p>
+      </div>
+      <span class="absolute right-4 top-4 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] text-white peer-checked:flex"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+    </label>
+    <label class="relative cursor-pointer">
+      <input type="radio" name="role" class="peer sr-only" />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5 transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-lg"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="m12 7 5 5-5 5-5-5 5-5Z"/></svg></span>
+        <h3 class="mt-3 text-sm font-medium text-neutral-900">Design</h3>
+        <p class="mt-1 text-xs text-neutral-500">Specs, prototypes, and design review.</p>
+      </div>
+      <span class="absolute right-4 top-4 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] text-white peer-checked:flex"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+    </label>
+    <label class="relative cursor-pointer">
+      <input type="radio" name="role" class="peer sr-only" />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5 transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-lg"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 4 9 16H3l9-16Z"/></svg></span>
+        <h3 class="mt-3 text-sm font-medium text-neutral-900">Product</h3>
+        <p class="mt-1 text-xs text-neutral-500">Roadmaps, discovery, and launches.</p>
+      </div>
+      <span class="absolute right-4 top-4 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] text-white peer-checked:flex"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+    </label>
+    <label class="relative cursor-pointer">
+      <input type="radio" name="role" class="peer sr-only" />
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5 transition peer-checked:border-neutral-900 peer-checked:ring-4 peer-checked:ring-neutral-900/10 hover:bg-neutral-50">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-lg"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <h3 class="mt-3 text-sm font-medium text-neutral-900">Something else</h3>
+        <p class="mt-1 text-xs text-neutral-500">We will start you with the basics.</p>
+      </div>
+      <span class="absolute right-4 top-4 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] text-white peer-checked:flex"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+    </label>
+  </div>
+  <div class="mt-8 flex items-center justify-between">
+    <a href="#" class="text-sm text-neutral-500 hover:text-neutral-900">Skip for now</a>
+    <button class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800">Continue</button>
+  </div>
+</div>
+</body></html>

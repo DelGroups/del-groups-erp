@@ -1,0 +1,191 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-inbox-split-view/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inbox split view</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex h-[36rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+  <aside class="flex w-[22rem] shrink-0 flex-col border-r border-neutral-200">
+    <div class="flex items-center gap-2 px-4 pb-2 pt-4">
+      <h2 class="text-sm font-semibold text-neutral-900">Inbox</h2>
+      <span id="unreadCount" class="rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white">3</span>
+      <span class="ml-auto text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span>
+    </div>
+    <div class="px-4 pb-3">
+      <input placeholder="Search conversations…" class="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm outline-none focus:border-neutral-900 focus:bg-white" />
+    </div>
+
+    <div id="threads" class="flex-1 divide-y divide-neutral-100 overflow-y-auto">
+      <button data-thread="ops" class="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50">
+        <span data-unread class="mt-2 h-2 w-2 shrink-0 rounded-full bg-neutral-900"></span>
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">PK</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium text-neutral-900">Priya Kapoor</span>
+            <span class="shrink-0 text-[11px] text-neutral-400">09:12</span>
+          </span>
+          <span class="block truncate text-sm text-neutral-700">Runner capacity for the launch</span>
+          <span class="mt-0.5 block text-xs leading-snug text-neutral-400 line-clamp-1">We are at 78% on the shared pool and the marketing site rebuild lands Thursday…</span>
+        </span>
+      </button>
+
+      <button data-thread="billing" class="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50">
+        <span data-unread class="mt-2 h-2 w-2 shrink-0 rounded-full bg-neutral-900"></span>
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">FN</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium text-neutral-900">Finance</span>
+            <span class="shrink-0 text-[11px] text-neutral-400">08:40</span>
+          </span>
+          <span class="block truncate text-sm text-neutral-700">Annual invoice — PO number needed</span>
+          <span class="mt-0.5 block text-xs leading-snug text-neutral-400 line-clamp-1">Procurement will not release payment without the PO on the invoice header…</span>
+        </span>
+      </button>
+
+      <button data-thread="incident" class="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50">
+        <span data-unread class="mt-2 h-2 w-2 shrink-0 rounded-full bg-neutral-900"></span>
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">JO</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium text-neutral-900">Jonas Ohlsson</span>
+            <span class="shrink-0 text-[11px] text-neutral-400">Yesterday</span>
+          </span>
+          <span class="block truncate text-sm text-neutral-700">Postmortem draft: cache stampede</span>
+          <span class="mt-0.5 block text-xs leading-snug text-neutral-400 line-clamp-1">Draft is ready for review. Two action items are still unassigned…</span>
+        </span>
+      </button>
+
+      <button data-thread="design" class="flex w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50">
+        <span data-unread class="mt-2 hidden h-2 w-2 shrink-0 rounded-full bg-neutral-900"></span>
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">MT</span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium text-neutral-900">Mei Tanaka</span>
+            <span class="shrink-0 text-[11px] text-neutral-400">Mon</span>
+          </span>
+          <span class="block truncate text-sm text-neutral-700">New status colours in the design kit</span>
+          <span class="mt-0.5 block text-xs leading-snug text-neutral-400 line-clamp-1">Amber now means degraded rather than warning, so the legend changes too…</span>
+        </span>
+      </button>
+    </div>
+  </aside>
+
+  <section class="flex min-w-0 flex-1 flex-col">
+    <header class="flex items-start gap-4 border-b border-neutral-200 px-6 py-4">
+      <div class="min-w-0 flex-1">
+        <h3 id="threadSubject" class="truncate font-semibold text-neutral-900">Runner capacity for the launch</h3>
+        <p id="threadPeople" class="mt-0.5 truncate text-xs text-neutral-500">Priya Kapoor, you and 2 others</p>
+      </div>
+      <div class="flex shrink-0 gap-3 text-neutral-400">
+        <button aria-label="Archive" class="transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="3" y="5" width="18" height="4" rx="1"/><path d="M5 9v10h14V9M10 13h4"/></svg></button>
+        <button aria-label="Snooze" class="transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
+        <button aria-label="More" class="transition hover:text-neutral-900">⋯</button>
+      </div>
+    </header>
+
+    <div id="threadBody" class="flex-1 space-y-4 overflow-y-auto px-6 py-5"></div>
+
+    <div class="border-t border-neutral-200 p-4">
+      <div class="rounded-xl border border-neutral-200 focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/10">
+        <textarea rows="2" placeholder="Reply…" class="w-full resize-none rounded-t-xl px-3.5 py-2.5 text-sm outline-none"></textarea>
+        <div class="flex items-center justify-between px-3 pb-2">
+          <span class="text-xs text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 12 5.7-5.7a3 3 0 0 1 4.3 4.2l-7.8 7.8a5 5 0 0 1-7.1-7.1l7.4-7.4"/></svg> Attach</span>
+          <button class="rounded-lg bg-neutral-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-neutral-800">Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+var THREADS = {
+  ops: {
+    subject: "Runner capacity for the launch",
+    people: "Priya Kapoor, you and 2 others",
+    messages: [
+      { from: "Priya Kapoor", initials: "PK", time: "09:12", mine: false, text: "We are at 78% on the shared pool and the marketing site rebuild lands Thursday. Can we pin two dedicated runners for launch week?" },
+      { from: "You", initials: "SM", time: "09:20", mine: true, text: "Yes — I'll reserve two and set the pool to scale at 70% instead of 85%." },
+      { from: "Priya Kapoor", initials: "PK", time: "09:26", mine: false, text: "Perfect. I'll tell the web team they can stop staggering their deploys." }
+    ]
+  },
+  billing: {
+    subject: "Annual invoice — PO number needed",
+    people: "Finance and you",
+    messages: [
+      { from: "Finance", initials: "FN", time: "08:40", mine: false, text: "Procurement will not release payment without the PO on the invoice header. Can you have it reissued as PO-44192?" },
+      { from: "You", initials: "SM", time: "08:52", mine: true, text: "Requested — the reissued PDF should land in your inbox within the hour." }
+    ]
+  },
+  incident: {
+    subject: "Postmortem draft: cache stampede",
+    people: "Jonas Ohlsson, you and 5 others",
+    messages: [
+      { from: "Jonas Ohlsson", initials: "JO", time: "Yesterday", mine: false, text: "Draft is ready for review. Two action items are still unassigned: the jittered retry and the alert on cache hit rate." },
+      { from: "You", initials: "SM", time: "Yesterday", mine: true, text: "I'll take the retry work. Can Mei own the alert since she rebuilt that dashboard?" },
+      { from: "Jonas Ohlsson", initials: "JO", time: "Yesterday", mine: false, text: "Asked her — she is in. Publishing Friday unless anyone objects." }
+    ]
+  },
+  design: {
+    subject: "New status colours in the design kit",
+    people: "Mei Tanaka and you",
+    messages: [
+      { from: "Mei Tanaka", initials: "MT", time: "Mon", mine: false, text: "Amber now means degraded rather than warning, so the legend changes too. Tokens are published under status/*." }
+    ]
+  }
+};
+
+var rows = [].slice.call(document.querySelectorAll("[data-thread]"));
+var subject = document.getElementById("threadSubject");
+var people = document.getElementById("threadPeople");
+var body = document.getElementById("threadBody");
+var unreadCount = document.getElementById("unreadCount");
+
+var SELECTED = "flex w-full gap-3 bg-neutral-100 px-4 py-3 text-left";
+var IDLE = "flex w-full gap-3 px-4 py-3 text-left transition hover:bg-neutral-50";
+
+function bubble(message) {
+  var wrap = document.createElement("div");
+  wrap.className = "flex gap-3 " + (message.mine ? "flex-row-reverse" : "");
+
+  var avatar = document.createElement("span");
+  avatar.className = "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium " +
+    (message.mine ? "bg-neutral-900 text-white" : "bg-neutral-200 text-neutral-700");
+  avatar.textContent = message.initials;
+
+  var card = document.createElement("div");
+  card.className = "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed " +
+    (message.mine ? "bg-neutral-900 text-neutral-100" : "bg-neutral-50 text-neutral-700");
+  card.innerHTML = '<p class="mb-1 text-xs ' + (message.mine ? "text-neutral-500" : "text-neutral-400") + '">' +
+    message.from + " · " + message.time + "</p>";
+  card.appendChild(document.createTextNode(message.text));
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function open(row) {
+  var thread = THREADS[row.getAttribute("data-thread")];
+
+  rows.forEach(function (other) { other.className = other === row ? SELECTED : IDLE; });
+
+  // Opening a conversation is what marks it read.
+  var dot = row.querySelector("[data-unread]");
+  if (!dot.classList.contains("hidden")) {
+    dot.classList.add("hidden");
+    unreadCount.textContent = Math.max(0, Number(unreadCount.textContent) - 1);
+    unreadCount.classList.toggle("hidden", unreadCount.textContent === "0");
+  }
+
+  subject.textContent = thread.subject;
+  people.textContent = thread.people;
+  body.innerHTML = "";
+  thread.messages.forEach(function (message) { body.appendChild(bubble(message)); });
+  body.scrollTop = 0;
+}
+
+rows.forEach(function (row) {
+  row.addEventListener("click", function () { open(row); });
+});
+
+open(rows[0]);
+</script>
+</body></html>

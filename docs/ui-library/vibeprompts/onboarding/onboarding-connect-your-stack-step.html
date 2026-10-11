@@ -1,0 +1,120 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/onboarding/onboarding-connect-your-stack-step/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect your stack step</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-3xl px-6 py-16">
+  <div class="text-center">
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Step 2 of 4</p>
+    <h1 class="mt-3 text-2xl font-semibold text-neutral-900">Connect the tools you already use</h1>
+    <p class="mx-auto mt-2 max-w-md text-sm text-neutral-500">We pull in repositories, incidents and deploy targets. Nothing is written back without asking.</p>
+    <p id="connectedCount" class="mt-4 inline-block rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">0 of 6 connected</p>
+  </div>
+
+  <div class="mt-10 grid gap-4 sm:grid-cols-2">
+    <div data-tool="github" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9Z"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">GitHub</p>
+        <p class="text-xs text-neutral-500">Source control</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+
+    <div data-tool="slack" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.47 3.45 5.47 3.45 9S14.3 18.53 12 21c-2.3-2.47-3.45-5.47-3.45-9S9.7 5.47 12 3Z"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">Slack</p>
+        <p class="text-xs text-neutral-500">Alerts and deploy notices</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+
+    <div data-tool="linear" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 5c2.4-2.4 5.2-2.1 5.2-2.1s.3 2.8-2.1 5.2l-5.6 5.6-4.2-4.2L14 5Z"/><path d="m9 8-4.5.5L3 10l4 1m5 4 1 4 1.5-1.5.5-4.5M7 17c-1 1-3 1-3 1s0-2 1-3"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">Linear</p>
+        <p class="text-xs text-neutral-500">Issues and releases</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+
+    <div data-tool="aws" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="4" y="3" width="16" height="7" rx="2"/><rect x="4" y="14" width="16" height="7" rx="2"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h5M12 17.5h5"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">AWS</p>
+        <p class="text-xs text-neutral-500">Deploy targets</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+
+    <div data-tool="datadog" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 12h4l2.5-7 5 14 2.5-7h4"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">Datadog</p>
+        <p class="text-xs text-neutral-500">Metrics and monitors</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+
+    <div data-tool="pagerduty" class="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 font-mono text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 3 4.5 6v5.5c0 4.7 3.2 7.7 7.5 9.5 4.3-1.8 7.5-4.8 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-neutral-900">PagerDuty</p>
+        <p class="text-xs text-neutral-500">On-call rotations</p>
+      </div>
+      <button data-connect class="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Connect</button>
+    </div>
+  </div>
+
+  <p class="mt-6 text-center text-xs text-neutral-400">Every integration starts read-only. You approve write access the first time it is needed.</p>
+
+  <div class="mt-8 flex items-center justify-between">
+    <a href="#" class="text-sm text-neutral-500 hover:text-neutral-900">Skip for now</a>
+    <button id="connectContinue" disabled class="cursor-not-allowed rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white opacity-40 transition hover:bg-neutral-800">Continue</button>
+  </div>
+</div>
+<script>
+var cards = [].slice.call(document.querySelectorAll("[data-tool]"));
+var counter = document.getElementById("connectedCount");
+var advance = document.getElementById("connectContinue");
+
+var IDLE = "shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50";
+var DONE = "shrink-0 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition";
+
+var connected = [];
+
+function sync() {
+  counter.textContent = connected.length + " of " + cards.length + " connected";
+  advance.disabled = connected.length === 0;
+  advance.classList.toggle("opacity-40", advance.disabled);
+  advance.classList.toggle("cursor-not-allowed", advance.disabled);
+  advance.textContent = connected.length
+    ? "Continue with " + connected.length + (connected.length === 1 ? " tool" : " tools")
+    : "Continue";
+}
+
+cards.forEach(function (card) {
+  var button = card.querySelector("[data-connect]");
+  var tool = card.getAttribute("data-tool");
+
+  button.addEventListener("click", function () {
+    var index = connected.indexOf(tool);
+    var on = index === -1;
+
+    // Real flows open an OAuth window here and resolve on the callback.
+    if (on) connected.push(tool);
+    else connected.splice(index, 1);
+
+    button.className = on ? DONE : IDLE;
+    button.textContent = on ? "Connected ✓" : "Connect";
+    card.classList.toggle("ring-2", on);
+    card.classList.toggle("ring-neutral-900/10", on);
+    card.classList.toggle("border-neutral-900", on);
+    sync();
+  });
+});
+
+sync();
+</script>
+</body></html>

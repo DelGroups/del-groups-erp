@@ -1,0 +1,202 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-team-and-roles-admin/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team and roles admin</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-10">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Team</h1>
+      <p class="mt-1 text-sm text-neutral-500">6 of 25 seats in use · billed monthly</p>
+    </div>
+    <div class="flex gap-2">
+      <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+        <input type="search" placeholder="Search members" class="w-56 rounded-xl border border-neutral-200 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-900" />
+      </div>
+      <button class="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800">Invite people</button>
+    </div>
+  </div>
+
+  <div id="bulkBar" class="mt-5 hidden items-center justify-between rounded-xl border border-neutral-900 bg-neutral-900 px-5 py-3 text-white">
+    <p class="text-sm"><span id="bulkCount">0</span> selected</p>
+    <div class="flex gap-2">
+      <button class="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium transition hover:bg-neutral-800">Change role</button>
+      <button class="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-neutral-800">Remove</button>
+    </div>
+  </div>
+
+  <div class="mt-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-neutral-200 bg-neutral-50 text-left text-[11px] uppercase tracking-widest text-neutral-400">
+          <th class="w-10 px-5 py-3"><input id="selectAll" type="checkbox" class="rounded border-neutral-300" /></th>
+          <th class="px-5 py-3 font-medium">Member</th>
+          <th class="px-5 py-3 font-medium">Role</th>
+          <th class="hidden px-5 py-3 font-medium sm:table-cell">Last active</th>
+          <th class="px-5 py-3 font-medium">Status</th>
+          <th class="w-10 px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">RM</span>
+              <span><span class="block font-medium text-neutral-900">Rae Mensah</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="d6a4b7b396b8b9a4a2bea1bfb8b2f8b5b9" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option selected>Owner</option><option>Admin</option><option>Editor</option><option>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">2 minutes ago</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-medium text-green-700">Active</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-amber-500 text-[11px] font-medium text-white">JP</span>
+              <span><span class="block font-medium text-neutral-900">Jules Park</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="5339263f3620133d3c21273b243a3d377d303c" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option>Owner</option><option selected>Admin</option><option>Editor</option><option>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">1 hour ago</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-medium text-green-700">Active</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-green-600 text-[11px] font-medium text-white">DK</span>
+              <span><span class="block font-medium text-neutral-900">Dana Køhler</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="fb9f9a959abb9594898f938c92959fd59894" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option>Owner</option><option>Admin</option><option selected>Editor</option><option>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">Yesterday</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-medium text-green-700">Active</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-[11px] font-medium text-white">LR</span>
+              <span><span class="block font-medium text-neutral-900">Lena Rask</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="c0aca5aea180aeafb2b4a8b7a9aea4eea3af" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option>Owner</option><option>Admin</option><option>Editor</option><option selected>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">4 days ago</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600">Invited</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-neutral-500 text-[11px] font-medium text-white">TS</span>
+              <span><span class="block font-medium text-neutral-900">Tom Silva</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="1c6873715c7f7372686e7d7f68736e3278796a" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option>Owner</option><option>Admin</option><option selected>Editor</option><option>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">3 weeks ago</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700">Suspended</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-4"><input type="checkbox" class="row-check rounded border-neutral-300" /></td>
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">MO</span>
+              <span><span class="block font-medium text-neutral-900">Mira Osei</span><span class="block text-xs text-neutral-500"><a class="__cf_email__" data-cfemail="e68b8f9487a6888994928e918f8882c88589" href="/cdn-cgi/l/email-protection">[email protected]</a></span></span>
+            </div>
+          </td>
+          <td class="px-5 py-4">
+            <select class="role-select rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900">
+              <option>Owner</option><option selected>Admin</option><option>Editor</option><option>Viewer</option>
+            </select>
+          </td>
+          <td class="hidden px-5 py-4 text-neutral-500 sm:table-cell">Today</td>
+          <td class="px-5 py-4"><span class="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-medium text-green-700">Active</span></td>
+          <td class="px-5 py-4 text-right text-neutral-400">⋯</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p id="ownerWarning" class="hidden border-t border-neutral-200 bg-amber-50 px-5 py-3 text-xs text-amber-800">
+      A workspace needs at least one Owner. Promote someone else before changing this role.
+    </p>
+  </div>
+</section>
+<script>
+var selectAll = document.getElementById("selectAll");
+var checks = Array.prototype.slice.call(document.querySelectorAll(".row-check"));
+var bar = document.getElementById("bulkBar");
+var count = document.getElementById("bulkCount");
+var warning = document.getElementById("ownerWarning");
+var roles = Array.prototype.slice.call(document.querySelectorAll(".role-select"));
+
+function sync() {
+  var selected = checks.filter(function (c) {
+    return c.checked;
+  }).length;
+
+  count.textContent = selected;
+  bar.classList.toggle("hidden", selected === 0);
+  bar.classList.toggle("flex", selected > 0);
+
+  selectAll.checked = selected === checks.length && selected > 0;
+  selectAll.indeterminate = selected > 0 && selected < checks.length;
+}
+
+selectAll.addEventListener("change", function () {
+  checks.forEach(function (c) {
+    c.checked = selectAll.checked;
+  });
+  sync();
+});
+
+checks.forEach(function (c) {
+  c.addEventListener("change", sync);
+});
+
+roles.forEach(function (select) {
+  select.addEventListener("change", function () {
+    var owners = roles.filter(function (s) {
+      return s.value === "Owner";
+    }).length;
+
+    // Losing the last Owner would lock everyone out of billing and deletion.
+    if (owners === 0) {
+      warning.classList.remove("hidden");
+      select.value = "Owner";
+    } else {
+      warning.classList.add("hidden");
+    }
+  });
+});
+
+sync();
+</script>
+</body></html>

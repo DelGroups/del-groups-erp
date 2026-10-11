@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-activity-feed-panel/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity feed panel</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-md p-6">
+  <div class="rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex items-center justify-between border-b border-neutral-200 p-4">
+      <h2 class="font-semibold text-neutral-900">Activity</h2>
+      <button class="rounded-lg px-2.5 py-1 text-sm text-neutral-500 hover:bg-neutral-100">Filter</button>
+    </div>
+    <ol class="relative space-y-6 p-5 pl-11">
+      <span class="absolute bottom-6 left-6 top-6 w-px -translate-x-1/2 bg-neutral-200"></span>
+      <li class="relative">
+        <span class="absolute -left-7 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-[9px] text-green-700 ring-4 ring-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+        <p class="text-sm text-neutral-600"><span class="font-medium text-neutral-900">Priya Shah</span> merged <a href="#" class="font-medium text-neutral-900 hover:underline">#2481 Rate limiter</a></p>
+        <p class="mt-0.5 text-xs text-neutral-400">12 minutes ago</p>
+      </li>
+      <li class="relative">
+        <span class="absolute -left-7 top-1 h-4 w-4 rounded-full bg-neutral-200 ring-4 ring-white"></span>
+        <p class="text-sm text-neutral-600"><span class="font-medium text-neutral-900">Devon Okafor</span> commented on <a href="#" class="font-medium text-neutral-900 hover:underline">Billing migration</a></p>
+        <div class="mt-2 rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">Can we hold the cutover until after the invoice run on the 1st?</div>
+        <p class="mt-1 text-xs text-neutral-400">1 hour ago</p>
+      </li>
+      <li class="relative">
+        <span class="absolute -left-7 top-1 h-4 w-4 rounded-full bg-amber-200 ring-4 ring-white"></span>
+        <p class="text-sm text-neutral-600"><span class="font-medium text-neutral-900">Deploy bot</span> flagged <a href="#" class="font-medium text-neutral-900 hover:underline">staging-14f2</a> as degraded</p>
+        <p class="mt-0.5 text-xs text-neutral-400">3 hours ago</p>
+      </li>
+      <li class="relative">
+        <span class="absolute -left-7 top-1 h-4 w-4 rounded-full bg-neutral-200 ring-4 ring-white"></span>
+        <p class="text-sm text-neutral-600"><span class="font-medium text-neutral-900">Mara Lin</span> invited <span class="font-medium text-neutral-900">3 teammates</span></p>
+        <p class="mt-0.5 text-xs text-neutral-400">Yesterday</p>
+      </li>
+    </ol>
+    <a href="#" class="block border-t border-neutral-200 p-3 text-center text-sm font-medium text-neutral-900 hover:bg-neutral-50">View all activity</a>
+  </div>
+</div>
+</body></html>

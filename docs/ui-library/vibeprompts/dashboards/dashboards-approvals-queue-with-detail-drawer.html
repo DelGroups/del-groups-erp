@@ -1,0 +1,190 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-approvals-queue-with-detail-drawer/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approvals queue with detail drawer</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-10">
+  <div class="grid gap-4 lg:grid-cols-[360px_1fr]">
+    <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div class="border-b border-neutral-200 p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-neutral-900">Approvals</h2>
+          <span id="pendingCount" class="rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-white">6 pending</span>
+        </div>
+        <div class="mt-3 flex gap-1.5">
+          <button class="rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white">Pending</button>
+          <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Approved</button>
+          <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Rejected</button>
+        </div>
+      </div>
+
+      <div class="max-h-[520px] divide-y divide-neutral-100 overflow-y-auto">
+        <button data-id="1" class="req flex w-full items-start gap-3 border-l-2 border-neutral-900 bg-neutral-50 p-4 text-left">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">DK</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Production database access</span>
+            <span class="block text-xs text-neutral-500">4 hours · read-write · 2 days</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Access</span>
+        </button>
+
+        <button data-id="2" class="req flex w-full items-start gap-3 border-l-2 border-transparent p-4 text-left transition hover:bg-neutral-50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500 text-[11px] font-medium text-white">JP</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Annual tooling renewal</span>
+            <span class="block text-xs text-neutral-500">$4,200 · 1 day</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Spend</span>
+        </button>
+
+        <button data-id="3" class="req flex w-full items-start gap-3 border-l-2 border-transparent p-4 text-left transition hover:bg-neutral-50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-600 text-[11px] font-medium text-white">MO</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Contractor onboarding</span>
+            <span class="block text-xs text-neutral-500">3 months · 1 day</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">People</span>
+        </button>
+
+        <button data-id="4" class="req flex w-full items-start gap-3 border-l-2 border-transparent p-4 text-left transition hover:bg-neutral-50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-medium text-white">LR</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Data export to auditor</span>
+            <span class="block text-xs text-neutral-500">1.4 GB · 3 days</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Data</span>
+        </button>
+
+        <button data-id="5" class="req flex w-full items-start gap-3 border-l-2 border-transparent p-4 text-left transition hover:bg-neutral-50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-500 text-[11px] font-medium text-white">TS</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Region expansion to ap-south</span>
+            <span class="block text-xs text-neutral-500">$1,900/mo · 4 days</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Spend</span>
+        </button>
+
+        <button data-id="6" class="req flex w-full items-start gap-3 border-l-2 border-transparent p-4 text-left transition hover:bg-neutral-50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">RG</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-neutral-900">Publish the outage postmortem</span>
+            <span class="block text-xs text-neutral-500">public · 5 days</span>
+          </span>
+          <span class="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">Comms</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div id="reqDetail" class="flex-1 p-7"></div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 border-t border-neutral-200 bg-neutral-50 px-7 py-4">
+        <button id="reqReject" class="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-50">Reject</button>
+        <button class="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100">Ask a question</button>
+        <button id="reqApprove" class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Approve</button>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var DETAILS = {
+  "1": {
+    title: "Production database access",
+    status: "Pending",
+    fields: [["Requested by", "Dana Køhler"], ["Team", "Platform"], ["Scope", "read-write, analytics schema"], ["Duration", "4 hours"], ["Requested", "2 days ago"], ["Approver", "You"]],
+    why: "Investigating the duplicate rows reported by Fernbrook. Read-only will not let me test the dedupe migration on the affected table.",
+    file: "dedupe-plan.sql · 4 KB",
+  },
+  "2": {
+    title: "Annual tooling renewal",
+    status: "Pending",
+    fields: [["Requested by", "Jules Park"], ["Team", "Design"], ["Vendor", "Figma"], ["Amount", "$4,200"], ["Requested", "1 day ago"], ["Approver", "You"]],
+    why: "Same seat count as last year. Two seats were released in June, so this is $600 lower than the previous renewal.",
+    file: "figma-quote-2026.pdf · 118 KB",
+  },
+  "3": {
+    title: "Contractor onboarding",
+    status: "Pending",
+    fields: [["Requested by", "Mira Osei"], ["Team", "Platform"], ["Contractor", "T. Silva"], ["Duration", "3 months"], ["Requested", "1 day ago"], ["Approver", "You"]],
+    why: "Cover for parental leave on the storage rota. Already worked with us in 2024, so the security review is a re-check rather than a new one.",
+    file: "sow-silva.pdf · 92 KB",
+  },
+  "4": {
+    title: "Data export to auditor",
+    status: "Pending",
+    fields: [["Requested by", "Lena Rask"], ["Team", "Compliance"], ["Recipient", "Prescott LLP"], ["Size", "1.4 GB"], ["Requested", "3 days ago"], ["Approver", "You"]],
+    why: "SOC 2 evidence request covering March to June. Export is scoped to audit logs only, with customer identifiers hashed.",
+    file: "export-manifest.csv · 210 KB",
+  },
+  "5": {
+    title: "Region expansion to ap-south",
+    status: "Pending",
+    fields: [["Requested by", "Tom Silva"], ["Team", "Platform"], ["Region", "ap-south-1"], ["Cost", "$1,900 per month"], ["Requested", "4 days ago"], ["Approver", "You"]],
+    why: "Three customers in India are seeing 240ms p99. A local region takes that under 40ms and unblocks the Oakline renewal.",
+    file: "capacity-model.xlsx · 88 KB",
+  },
+  "6": {
+    title: "Publish the outage postmortem",
+    status: "Pending",
+    fields: [["Requested by", "Ravi Gopal"], ["Team", "Engineering"], ["Visibility", "Public"], ["Incident", "INC-4471"], ["Requested", "5 days ago"], ["Approver", "You"]],
+    why: "Full timeline of the 41-minute degradation, including the deploy that caused it. Legal has read it and asked for no changes.",
+    file: "postmortem-inc-4471.md · 16 KB",
+  },
+};
+
+var rows = Array.prototype.slice.call(document.querySelectorAll(".req"));
+var detail = document.getElementById("reqDetail");
+var count = document.getElementById("pendingCount");
+var pending = rows.length;
+
+function render(id) {
+  var d = DETAILS[id];
+
+  detail.innerHTML =
+    '<div class="flex flex-wrap items-center gap-3">' +
+    '<h2 class="text-xl font-semibold tracking-tight text-neutral-900">' + d.title + "</h2>" +
+    '<span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">' + d.status + "</span>" +
+    "</div>" +
+    '<dl class="mt-6 grid gap-4 sm:grid-cols-2">' +
+    d.fields
+      .map(function (f) {
+        return '<div><dt class="text-xs uppercase tracking-widest text-neutral-400">' + f[0] + '</dt><dd class="mt-1 text-sm font-medium text-neutral-900">' + f[1] + "</dd></div>";
+      })
+      .join("") +
+    "</dl>" +
+    '<p class="mt-7 text-xs font-semibold uppercase tracking-widest text-neutral-400">Justification</p>' +
+    '<blockquote class="mt-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm leading-relaxed text-neutral-600">' + d.why + "</blockquote>" +
+    '<div class="mt-4 flex items-center gap-3 rounded-xl border border-neutral-200 p-3">' +
+    '<span class="grid h-9 w-9 place-items-center rounded-lg bg-neutral-100 text-neutral-700">📄</span>' +
+    '<span class="text-sm text-neutral-700">' + d.file + "</span>" +
+    "</div>";
+}
+
+function select(row) {
+  rows.forEach(function (r) {
+    var on = r === row;
+    r.classList.toggle("bg-neutral-50", on);
+    r.classList.toggle("border-neutral-900", on);
+    r.classList.toggle("border-transparent", !on);
+  });
+  render(row.dataset.id);
+}
+
+rows.forEach(function (row) {
+  row.addEventListener("click", function () {
+    select(row);
+  });
+});
+
+function decide() {
+  if (pending === 0) return;
+  pending -= 1;
+  count.textContent = pending + " pending";
+}
+
+document.getElementById("reqApprove").addEventListener("click", decide);
+document.getElementById("reqReject").addEventListener("click", decide);
+
+select(rows[0]);
+</script>
+</body></html>

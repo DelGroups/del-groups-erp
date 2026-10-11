@@ -1,0 +1,101 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-workspace-sso-gate/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace SSO gate</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen items-center justify-center bg-neutral-100 p-6">
+  <div class="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <div class="mb-6 h-9 w-9 rounded-lg bg-neutral-900"></div>
+    <h1 class="text-xl font-semibold text-neutral-900">Sign in to Northwind</h1>
+    <p class="mt-1 text-sm text-neutral-500">Use your work email — we will send you to the right sign-in method.</p>
+
+    <form id="gate" class="mt-6 space-y-3">
+      <div id="emailRow">
+        <input id="email" type="email" placeholder="<a class="__cf_email__" data-cfemail="8df4e2f8cdeee2e0fdece3f4a3eee2e0" href="/cdn-cgi/l/email-protection">[email protected]</a>"
+          class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+        <p id="error" class="mt-1.5 hidden text-xs text-red-600">Enter a valid work email address.</p>
+      </div>
+
+      <div id="identity" class="hidden items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+        <span id="identityEmail" class="truncate text-sm text-neutral-700"><a class="__cf_email__" data-cfemail="c1b8aeb481a2aeacb1a0afb8efa2aeac" href="/cdn-cgi/l/email-protection">[email protected]</a></span>
+        <button type="button" id="change" class="shrink-0 text-xs font-medium text-neutral-900 hover:underline">Change</button>
+      </div>
+
+      <div id="passwordRow" class="hidden">
+        <input id="password" type="password" placeholder="Password"
+          class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      </div>
+
+      <button id="submit" type="submit" class="w-full rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Continue</button>
+      <p id="ssoNote" class="hidden text-center text-xs text-neutral-500">Your organisation requires single sign-on.</p>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-neutral-500">
+      New here? <a href="#" class="font-medium text-neutral-900 hover:underline">Create an account</a>
+    </p>
+  </div>
+</div>
+<script>
+// Domains that are wired to an identity provider. Everything else gets a password.
+var SSO = {
+  "northwind.co": "Okta",
+  "acme.com": "Microsoft Entra ID",
+  "globex.io": "Google Workspace"
+};
+
+var form = document.getElementById("gate");
+var emailRow = document.getElementById("emailRow");
+var email = document.getElementById("email");
+var error = document.getElementById("error");
+var identity = document.getElementById("identity");
+var identityEmail = document.getElementById("identityEmail");
+var change = document.getElementById("change");
+var passwordRow = document.getElementById("passwordRow");
+var password = document.getElementById("password");
+var submit = document.getElementById("submit");
+var ssoNote = document.getElementById("ssoNote");
+
+var step = "email";
+
+function reset() {
+  step = "email";
+  emailRow.classList.remove("hidden");
+  identity.classList.add("hidden");
+  identity.classList.remove("flex");
+  passwordRow.classList.add("hidden");
+  ssoNote.classList.add("hidden");
+  submit.textContent = "Continue";
+  email.focus();
+}
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  if (step === "method") return; // Real apps hand off to the provider here.
+
+  var value = email.value.trim().toLowerCase();
+  var valid = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(value);
+  error.classList.toggle("hidden", valid);
+  if (!valid) return;
+
+  step = "method";
+  emailRow.classList.add("hidden");
+  identityEmail.textContent = value;
+  identity.classList.remove("hidden");
+  identity.classList.add("flex");
+
+  var provider = SSO[value.split("@")[1]];
+  if (provider) {
+    submit.textContent = "Continue with " + provider;
+    ssoNote.classList.remove("hidden");
+    return;
+  }
+
+  passwordRow.classList.remove("hidden");
+  submit.textContent = "Sign in";
+  password.focus();
+});
+
+change.addEventListener("click", reset);
+</script>
+</body></html>

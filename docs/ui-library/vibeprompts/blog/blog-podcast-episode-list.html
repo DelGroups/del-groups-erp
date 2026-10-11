@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-podcast-episode-list/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Podcast episode list</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-14">
+  <div class="flex flex-col gap-6 sm:flex-row sm:items-start">
+    <div class="grid h-28 w-28 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-950 text-2xl text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 12h4l2.5-7 5 14 2.5-7h4"/></svg></div>
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight text-neutral-900">Ship It, Then Fix It</h1>
+      <p class="mt-2 max-w-lg leading-relaxed text-neutral-500">
+        Conversations with the people who keep large systems running — outages, migrations, and the decisions nobody writes conference talks about.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="#" class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Apple Podcasts</a>
+        <a href="#" class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Spotify</a>
+        <a href="#" class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Overcast</a>
+        <a href="#" class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">YouTube</a>
+      </div>
+      <p class="mt-3 text-xs text-neutral-400">Every other Tuesday · 45 to 60 minutes</p>
+    </div>
+  </div>
+
+  <div class="mt-10 divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex gap-4 bg-neutral-50 p-5">
+      <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-neutral-900 text-white" aria-label="Pause"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></button>
+      <div class="min-w-0 flex-1">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400">
+          Episode 84
+          <span class="flex items-end gap-0.5">
+            <span class="h-2 w-0.5 animate-pulse bg-green-500"></span>
+            <span class="h-3 w-0.5 animate-pulse bg-green-500" style="animation-delay:150ms"></span>
+            <span class="h-1.5 w-0.5 animate-pulse bg-green-500" style="animation-delay:300ms"></span>
+          </span>
+          <span class="text-green-600">Playing</span>
+        </p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Rewriting the scheduler while it was running</p>
+        <div class="mt-3 h-1 overflow-hidden rounded-full bg-neutral-200"><div class="h-full w-1/3 rounded-full bg-neutral-900"></div></div>
+        <div class="mt-1.5 flex justify-between font-mono text-[11px] text-neutral-400"><span>18:04</span><span>−36:12</span></div>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block">
+        <p class="font-mono text-xs text-neutral-500">54:16</p>
+        <p class="mt-1 text-xs text-neutral-400">12 Aug</p>
+      </div>
+    </div>
+
+    <div class="flex gap-4 p-5 transition hover:bg-neutral-50">
+      <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-700 transition hover:border-neutral-900" aria-label="Play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></button>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Episode 83</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">What a 41-minute outage actually costs</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Walking the timeline of a connection-pool failure, and why the health check made it worse.</p>
+        <p class="mt-2 text-xs text-neutral-400">With Dana Køhler</p>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block"><p class="font-mono text-xs text-neutral-500">48:02</p><p class="mt-1 text-xs text-neutral-400">29 Jul</p></div>
+    </div>
+
+    <div class="flex gap-4 p-5 transition hover:bg-neutral-50">
+      <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-700 transition hover:border-neutral-900" aria-label="Play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></button>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Episode 82</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Migrating 2.1 billion rows over a weekend</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Checkpoints, dual writes and the moment they nearly rolled it all back on Saturday night.</p>
+        <p class="mt-2 text-xs text-neutral-400">With Tom Silva and Priya Mahal</p>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block"><p class="font-mono text-xs text-neutral-500">61:44</p><p class="mt-1 text-xs text-neutral-400">15 Jul</p></div>
+    </div>
+
+    <div class="flex gap-4 p-5 transition hover:bg-neutral-50">
+      <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-700 transition hover:border-neutral-900" aria-label="Play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></button>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Episode 81</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">The team that deleted staging</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Ephemeral environments, the objections they expected, and the two that turned out to be right.</p>
+        <p class="mt-2 text-xs text-neutral-400">With Lena Rask</p>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block"><p class="font-mono text-xs text-neutral-500">44:20</p><p class="mt-1 text-xs text-neutral-400">01 Jul</p></div>
+    </div>
+
+    <div class="flex gap-4 p-5 transition hover:bg-neutral-50">
+      <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-700 transition hover:border-neutral-900" aria-label="Play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m9 7 9 5-9 5V7Z" fill="currentColor" stroke="none"/></svg></button>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs uppercase tracking-widest text-neutral-400">Episode 80</p>
+        <p class="mt-1 text-sm font-medium text-neutral-900">Pricing infrastructure without lying to yourself</p>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Unit economics, hidden egress, and the spreadsheet that finally made the margin legible.</p>
+        <p class="mt-2 text-xs text-neutral-400">With Aiko Tan</p>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block"><p class="font-mono text-xs text-neutral-500">52:11</p><p class="mt-1 text-xs text-neutral-400">17 Jun</p></div>
+    </div>
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+    <a href="#" class="text-sm font-medium text-neutral-900 underline-offset-4 hover:underline">Browse all 84 episodes <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+    <a href="#" class="rounded-full border border-neutral-200 px-3 py-1.5 font-mono text-xs text-neutral-500 transition hover:bg-neutral-50">RSS</a>
+  </div>
+</section>
+</body></html>

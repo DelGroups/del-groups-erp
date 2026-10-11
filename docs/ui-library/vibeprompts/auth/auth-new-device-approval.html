@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-new-device-approval/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New device approval</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-14">
+  <div class="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm">
+    <div class="flex items-start gap-3">
+      <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>
+      <div>
+        <h1 class="text-lg font-semibold text-neutral-900">Approve this sign-in?</h1>
+        <p class="mt-1 text-sm leading-relaxed text-neutral-500">Someone just tried to sign in to <span class="font-medium text-neutral-700"><a class="__cf_email__" data-cfemail="a7d5c6c2e7c9c8d5d3cfd0cec9c389c4c8" href="/cdn-cgi/l/email-protection">[email protected]</a></span>. If this was not you, block it and change your password.</p>
+      </div>
+    </div>
+
+    <dl class="mt-6 divide-y divide-neutral-200 rounded-xl border border-neutral-200 text-sm">
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Device</dt>
+        <dd class="font-medium text-neutral-900">Windows 11 desktop</dd>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Browser</dt>
+        <dd class="font-medium text-neutral-900">Chrome 128</dd>
+      </div>
+      <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+          <dt class="text-neutral-500">Location</dt>
+          <dd class="font-medium text-neutral-900">Rotterdam, NL</dd>
+        </div>
+        <p class="mt-1.5 text-xs text-amber-700">Not a place you have signed in from before.</p>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Requested</dt>
+        <dd class="font-medium text-neutral-900">Just now · 14:02 CET</dd>
+      </div>
+    </dl>
+
+    <div class="mt-6 grid grid-cols-2 gap-3">
+      <button class="rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">It was not me</button>
+      <button class="rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Yes, approve</button>
+    </div>
+
+    <div class="mt-6 rounded-xl bg-neutral-50 px-4 py-3 text-center">
+      <p class="text-xs text-neutral-500">Check this number matches the one on the other screen</p>
+      <p class="mt-1 font-mono text-2xl font-semibold tracking-[0.3em] text-neutral-900">47</p>
+    </div>
+    <p class="mt-4 text-center text-xs text-neutral-400">This request expires in 2 minutes.</p>
+  </div>
+</div>
+</body></html>

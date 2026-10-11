@@ -241,7 +241,8 @@ Odoo Community تحت LGPL و Odoo Enterprise تحت لایسنس اختصاصی
 سایت [vibeprompts.dev](https://vibeprompts.dev/) حدود ۲۸۶ پرامپت در ۱۵ دسته دارد. هر صفحه یک پرامپت متنی و کد آماده HTML + Tailwind (و در بعضی‌ها JavaScript ساده) دارد. روش استفاده:
 
 - **کد را مستقیم کپی نمی‌کنیم.** پرامپت و کد هر بخش مرجع ظاهر و رفتار است. Claude Code آن را به کامپوننت React + TypeScript در `src/design-system` تبدیل می‌کند، با tokenهای ما، Radix برای دسترس‌پذیری و `motion` برای انیمیشن. JavaScript ساده (مثل drag در Kanban) با معادل React جایگزین می‌شود.
-- قبل از استفاده، شرایط استفاده سایت چک می‌شود. در صفحه اصلی لایسنسی ذکر نشده و صفحه‌ها خودشان را «free prompt» معرفی می‌کنند.
+- استفاده از سایت رایگان است (تأیید Del، 2026-10-11).
+- **نسخه کامل محلی:** همه ۲۸۶ پرامپت و کد در `docs/ui-library/vibeprompts/` کپی شده است. برای هر کامپوننت یک فایل پیش‌نمایش `.html` هست و برای هر دسته یک `README.md` با متن پرامپت‌ها. Claude Code آن‌ها را بدون اینترنت می‌خواند. مسیر هر صفحه در جدول زیر همان مسیر فایل در این پوشه است، مثلاً `dashboards/dashboards-kanban-board-with-drag-and-drop` یعنی `docs/ui-library/vibeprompts/dashboards/dashboards-kanban-board-with-drag-and-drop.html`.
 
 نقشه بخش‌های سایت به نیاز ERP:
 

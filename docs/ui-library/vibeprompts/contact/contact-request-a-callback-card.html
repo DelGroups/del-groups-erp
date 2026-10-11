@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-request-a-callback-card/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Request a callback card</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-lg px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <span class="grid h-12 w-12 place-items-center rounded-xl bg-neutral-900 text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-3l-5-2-1.5 2a14 14 0 0 1-7.5-7.5L9 8 7 3Z"/></svg></span>
+    <h1 class="mt-5 text-2xl font-semibold tracking-tight text-neutral-900">We will call you</h1>
+    <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Most callbacks happen within the hour, weekdays 09:00–18:00 CET. Outside that, first thing the next working day.</p>
+
+    <div class="mt-7">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">Phone number</label>
+      <div class="flex items-center rounded-xl border border-neutral-200 transition focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/10">
+        <select class="shrink-0 rounded-l-xl border-r border-neutral-200 bg-neutral-50 py-2.5 pl-3 pr-2 text-sm text-neutral-600 outline-none">
+          <option>+31</option><option>+44</option><option>+1</option><option>+49</option><option>+61</option>
+        </select>
+        <input type="tel" placeholder="6 12 34 56 78" class="min-w-0 flex-1 rounded-r-xl px-3.5 py-2.5 text-sm outline-none" />
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">Your timezone</label>
+      <select class="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900">
+        <option selected>Europe/Amsterdam · CET (detected)</option>
+        <option>Europe/London · GMT</option>
+        <option>America/New_York · EST</option>
+        <option>Asia/Singapore · SGT</option>
+      </select>
+    </div>
+
+    <div class="mt-5">
+      <p class="mb-2.5 text-xs font-medium text-neutral-700">When suits you?</p>
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <button disabled class="cursor-not-allowed rounded-xl border border-neutral-200 px-3 py-2.5 text-xs text-neutral-300">This morning</button>
+        <button class="rounded-xl border border-neutral-900 bg-neutral-900 px-3 py-2.5 text-xs font-medium text-white">This afternoon</button>
+        <button class="rounded-xl border border-neutral-200 px-3 py-2.5 text-xs text-neutral-600 transition hover:bg-neutral-50">This evening</button>
+        <button class="rounded-xl border border-neutral-200 px-3 py-2.5 text-xs text-neutral-600 transition hover:bg-neutral-50">Tomorrow AM</button>
+        <button class="rounded-xl border border-neutral-200 px-3 py-2.5 text-xs text-neutral-600 transition hover:bg-neutral-50">Tomorrow PM</button>
+        <button class="rounded-xl border border-neutral-200 px-3 py-2.5 text-xs text-neutral-600 transition hover:bg-neutral-50">Any time</button>
+      </div>
+      <p class="mt-2 text-xs text-neutral-400">This morning has already passed in your timezone.</p>
+    </div>
+
+    <div class="mt-5">
+      <label class="mb-1.5 block text-xs font-medium text-neutral-700">What is it about? <span class="font-normal text-neutral-400">Optional</span></label>
+      <input type="text" placeholder="Migrating from another vendor, 40 seats"
+        class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+    </div>
+
+    <button class="mt-6 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Request the call</button>
+
+    <p class="mt-4 flex items-start gap-2 text-xs leading-relaxed text-neutral-400">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 3 4.5 6v5.5c0 4.7 3.2 7.7 7.5 9.5 4.3-1.8 7.5-4.8 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg> <span>Your number is used for this call and nothing else. It is never added to a marketing list, and we delete it once the conversation is closed.</span>
+    </p>
+  </div>
+</section>
+</body></html>

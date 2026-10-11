@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-timezone-overlap-planner/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timezone overlap planner</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-7">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-semibold text-neutral-900">Find an hour that works</h1>
+        <p class="mt-1 text-sm text-neutral-500">Shaded blocks are 09:00–18:00 locally. Click a column to compare.</p>
+      </div>
+      <select class="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-900">
+        <option>Anchor: Rotterdam</option>
+        <option>Anchor: London</option>
+        <option>Anchor: New York</option>
+        <option>Anchor: Singapore</option>
+      </select>
+    </div>
+
+    <div id="tzRows" class="mt-7 space-y-3">
+      <div class="tz-row grid grid-cols-[130px_1fr] items-center gap-4" data-offset="2" data-city="Rotterdam">
+        <div>
+          <p class="text-sm font-medium text-neutral-900">Rotterdam</p>
+          <p class="font-mono text-xs text-neutral-400">UTC+2 · <span class="tz-local">14:00</span></p>
+        </div>
+        <div class="tz-track flex gap-px overflow-hidden rounded-md"></div>
+      </div>
+      <div class="tz-row grid grid-cols-[130px_1fr] items-center gap-4" data-offset="1" data-city="London">
+        <div>
+          <p class="text-sm font-medium text-neutral-900">London</p>
+          <p class="font-mono text-xs text-neutral-400">UTC+1 · <span class="tz-local">13:00</span></p>
+        </div>
+        <div class="tz-track flex gap-px overflow-hidden rounded-md"></div>
+      </div>
+      <div class="tz-row grid grid-cols-[130px_1fr] items-center gap-4" data-offset="-4" data-city="New York">
+        <div>
+          <p class="text-sm font-medium text-neutral-900">New York</p>
+          <p class="font-mono text-xs text-neutral-400">UTC−4 · <span class="tz-local">08:00</span></p>
+        </div>
+        <div class="tz-track flex gap-px overflow-hidden rounded-md"></div>
+      </div>
+      <div class="tz-row grid grid-cols-[130px_1fr] items-center gap-4" data-offset="8" data-city="Singapore">
+        <div>
+          <p class="text-sm font-medium text-neutral-900">Singapore</p>
+          <p class="font-mono text-xs text-neutral-400">UTC+8 · <span class="tz-local">20:00</span></p>
+        </div>
+        <div class="tz-track flex gap-px overflow-hidden rounded-md"></div>
+      </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-[130px_1fr] gap-4">
+      <span></span>
+      <div class="flex justify-between font-mono text-[10px] text-neutral-400">
+        <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+      </div>
+    </div>
+
+    <p id="tzSummary" class="mt-6 rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600"></p>
+  </div>
+</section>
+<script>
+var rows = Array.prototype.slice.call(document.querySelectorAll(".tz-row"));
+var summary = document.getElementById("tzSummary");
+var selected = 12;
+var dragging = false;
+
+function localHour(utcHour, offset) {
+  return (((utcHour + offset) % 24) + 24) % 24;
+}
+
+function build() {
+  rows.forEach(function (row) {
+    var track = row.querySelector(".tz-track");
+    track.innerHTML = "";
+    for (var h = 0; h < 24; h++) {
+      var cell = document.createElement("button");
+      cell.className = "tz-cell h-8 flex-1";
+      cell.dataset.hour = h;
+      track.appendChild(cell);
+    }
+  });
+}
+
+function paint() {
+  var comfortable = 0;
+
+  rows.forEach(function (row) {
+    var offset = Number(row.dataset.offset);
+    var cells = Array.prototype.slice.call(row.querySelectorAll(".tz-cell"));
+
+    cells.forEach(function (cell) {
+      var local = localHour(Number(cell.dataset.hour), offset);
+      var working = local >= 9 && local < 18;
+      var active = Number(cell.dataset.hour) === selected;
+
+      cell.className =
+        "tz-cell h-8 flex-1 " +
+        (active ? "bg-neutral-900" : working ? "bg-neutral-300" : "bg-neutral-100");
+    });
+
+    var here = localHour(selected, offset);
+    row.querySelector(".tz-local").textContent = String(here).padStart(2, "0") + ":00";
+    if (here >= 9 && here < 18) comfortable += 1;
+  });
+
+  var label = String(selected).padStart(2, "0") + ":00 UTC";
+  summary.textContent =
+    comfortable === rows.length
+      ? label + " works for all " + rows.length + " cities."
+      : label + " suits " + comfortable + " of " + rows.length + " cities — 13:00 UTC is the widest overlap.";
+}
+
+document.getElementById("tzRows").addEventListener("mousedown", function (e) {
+  if (!e.target.classList.contains("tz-cell")) return;
+  dragging = true;
+  selected = Number(e.target.dataset.hour);
+  paint();
+});
+
+document.getElementById("tzRows").addEventListener("mouseover", function (e) {
+  if (!dragging || !e.target.classList.contains("tz-cell")) return;
+  selected = Number(e.target.dataset.hour);
+  paint();
+});
+
+document.addEventListener("mouseup", function () {
+  dragging = false;
+});
+
+build();
+paint();
+</script>
+</body></html>

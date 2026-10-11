@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/auth/auth-oauth-consent-screen/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OAuth consent screen</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-14">
+  <div class="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm">
+    <div class="flex items-center justify-center gap-3">
+      <span class="grid h-14 w-14 place-items-center rounded-2xl bg-amber-500 text-lg font-semibold text-white">SB</span>
+      <span class="text-neutral-300"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 7h12m0 0-3-3m3 3-3 3M17 17H5m0 0 3 3m-3-3 3-3"/></svg></span>
+      <span class="grid h-14 w-14 place-items-center rounded-2xl bg-neutral-900 text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m12 3 9 9-9 9-9-9 9-9Z"/><path d="m12 7 5 5-5 5-5-5 5-5Z"/></svg></span>
+    </div>
+
+    <h1 class="mt-6 text-center text-lg font-semibold tracking-tight text-neutral-900">Sunbeam wants to access your workspace</h1>
+    <p class="mt-1.5 text-center text-sm text-neutral-500">Signed in as <span class="font-medium text-neutral-700"><a class="__cf_email__" data-cfemail="d8aab9bd98b6b7aaacb0afb1b6bcf6bbb7" href="/cdn-cgi/l/email-protection">[email protected]</a></span> · Studioform</p>
+
+    <div class="mt-6 divide-y divide-neutral-100 rounded-xl border border-neutral-200">
+      <div class="flex items-start gap-3 p-4">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <div class="min-w-0 flex-1">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900">Your profile <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">Read only</span></p>
+          <p class="mt-0.5 text-xs leading-relaxed text-neutral-500">Name, email address and avatar. Not your password.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 p-4">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9Z"/></svg></span>
+        <div class="min-w-0 flex-1">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900">Projects <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">Read only</span></p>
+          <p class="mt-0.5 text-xs leading-relaxed text-neutral-500">List projects and read their settings and metadata.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 p-4">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/></svg></span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-neutral-900">Reports</p>
+          <p class="mt-0.5 text-xs leading-relaxed text-neutral-500">Create and update reports, and schedule their delivery.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 p-4">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-neutral-900">Notifications</p>
+          <p class="mt-0.5 text-xs leading-relaxed text-neutral-500">Send messages to channels you have already connected.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+      Sunbeam keeps this access until you revoke it. You can do that any time under Settings → Connected apps.
+    </p>
+
+    <button class="mt-6 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Allow access</button>
+    <button class="mt-2 w-full rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Cancel</button>
+
+    <p class="mt-5 text-center text-[11px] leading-relaxed text-neutral-400">
+      Built by Sunbeam Software Ltd · redirects to <span class="font-mono text-neutral-500">app.sunbeam.io/callback</span>
+    </p>
+  </div>
+</div>
+</body></html>

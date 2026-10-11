@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/cta/cta-exit-intent-offer-modal/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exit-intent offer modal</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="offer" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-6">
+  <div id="offerCard" class="relative w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
+    <button id="offerClose" aria-label="Close" class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+
+    <span class="inline-block rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white">20% off</span>
+    <h2 class="mt-5 text-2xl font-semibold leading-snug text-neutral-900">Before you go — keep the trial rate</h2>
+    <p class="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-neutral-500">
+      We will hold 20% off your first three months. The code lands in your inbox in a minute.
+    </p>
+
+    <form class="mt-6 space-y-3">
+      <input id="offerEmail" type="email" placeholder="<a class="__cf_email__" data-cfemail="c4bdabb184a7aba9b4a5aabdeaa7aba9" href="/cdn-cgi/l/email-protection">[email protected]</a>"
+        class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+      <button class="w-full rounded-xl bg-neutral-900 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Send me the code</button>
+    </form>
+
+    <div class="mt-5 flex justify-center gap-6 text-xs text-neutral-500">
+      <span class="flex items-center gap-1.5"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> No card needed</span>
+      <span class="flex items-center gap-1.5"><span class="text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> One email, then silence</span>
+    </div>
+
+    <button id="offerDecline" class="mt-5 text-xs text-neutral-400 underline underline-offset-2 hover:text-neutral-600">No thanks, I'll pay full price</button>
+  </div>
+</div>
+<script>
+var STORAGE_KEY = "exit-offer-seen";
+var ARM_DELAY = 4000;
+var SCROLL_TRIGGER = 0.6;
+
+var offer = document.getElementById("offer");
+var card = document.getElementById("offerCard");
+var email = document.getElementById("offerEmail");
+var armed = false;
+
+function alreadySeen() {
+  try { return sessionStorage.getItem(STORAGE_KEY) === "1"; } catch (e) { return false; }
+}
+
+function open() {
+  if (!armed || alreadySeen()) return;
+  armed = false;
+  try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch (e) {}
+  offer.classList.remove("hidden");
+  offer.classList.add("flex");
+  email.focus();
+}
+
+function close() {
+  offer.classList.add("hidden");
+  offer.classList.remove("flex");
+}
+
+// Give people a moment to actually read the page before offering anything.
+if (!alreadySeen()) setTimeout(function () { armed = true; }, ARM_DELAY);
+
+document.addEventListener("mouseout", function (e) {
+  // Leaving through the top edge, not just crossing into an iframe or child node.
+  if (!e.relatedTarget && e.clientY <= 0) open();
+});
+
+window.addEventListener("scroll", function () {
+  var depth = (window.scrollY + window.innerHeight) / document.body.scrollHeight;
+  if (depth > SCROLL_TRIGGER) open();
+});
+
+document.getElementById("offerClose").addEventListener("click", close);
+document.getElementById("offerDecline").addEventListener("click", close);
+offer.addEventListener("click", function (e) { if (!card.contains(e.target)) close(); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+</script>
+</body></html>

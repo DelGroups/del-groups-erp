@@ -1,0 +1,184 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-release-notes-composer/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release notes composer</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-14">
+  <div class="grid gap-6 rounded-2xl border border-neutral-200 bg-white p-7 lg:grid-cols-2">
+    <div>
+      <h1 class="text-lg font-semibold tracking-tight text-neutral-900">Release notes</h1>
+      <p class="mt-1 text-sm text-neutral-500">Paste the commits since your last tag.</p>
+
+      <textarea id="relInput" rows="12" spellcheck="false"
+        class="mt-5 w-full resize-none rounded-xl border border-neutral-200 px-4 py-3 font-mono text-xs leading-relaxed text-neutral-800 outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10">feat(checkout): one-tap payment for saved cards
+fix(billing): stop rounding tax down on split invoices
+feat(api): expose delivery attempts on the webhook endpoint
+fix: keep the sidebar scroll position between routes
+refactor(core): move the rate limiter behind an interface
+feat(auth)!: sessions now expire after 14 days
+docs: rewrite the self-hosting guide</textarea>
+
+      <p class="mt-3 text-xs leading-relaxed text-neutral-400">
+        One commit per line as <span class="font-mono text-neutral-500">type(scope): subject</span>. A trailing
+        <span class="font-mono text-neutral-500">!</span> or a <span class="font-mono text-neutral-500">BREAKING CHANGE:</span>
+        line forces a major bump. Lines that do not parse are skipped.
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-neutral-200 bg-neutral-50 p-6">
+      <div class="flex items-center justify-between gap-3">
+        <p class="font-mono text-sm text-neutral-400">v2.4.1 <span class="text-neutral-300">→</span> <span id="relNext" class="text-lg font-semibold text-neutral-900">v2.5.0</span></p>
+        <span id="relBump" class="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">minor</span>
+      </div>
+
+      <div class="mt-5 grid grid-cols-3 divide-x divide-neutral-200 rounded-xl border border-neutral-200 bg-white py-3 text-center">
+        <div><p id="relFeats" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="text-[10px] uppercase tracking-widest text-neutral-400">Features</p></div>
+        <div><p id="relFixes" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="text-[10px] uppercase tracking-widest text-neutral-400">Fixes</p></div>
+        <div><p id="relBreaks" class="font-mono text-lg font-semibold text-neutral-900">0</p><p class="text-[10px] uppercase tracking-widest text-neutral-400">Breaking</p></div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-between">
+        <p class="text-[10px] uppercase tracking-widest text-neutral-400">Changelog</p>
+        <button id="relCopy" class="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg> Copy markdown</button>
+      </div>
+
+      <div id="relOutput" class="mt-3 space-y-4 text-sm"></div>
+    </div>
+  </div>
+</section>
+<script>
+var CURRENT = [2, 4, 1];
+var COMMIT = /^([a-z]+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/i;
+
+var GROUPS = [
+  { key: "breaking", label: "Breaking changes" },
+  { key: "feat", label: "Features" },
+  { key: "fix", label: "Fixes" }
+];
+
+var input = document.getElementById("relInput");
+var nextEl = document.getElementById("relNext");
+var bumpEl = document.getElementById("relBump");
+var output = document.getElementById("relOutput");
+var copy = document.getElementById("relCopy");
+var timer;
+var markdown = "";
+
+var BUMP_STYLES = {
+  major: "bg-red-50 text-red-700 ring-red-200",
+  minor: "bg-blue-50 text-blue-700 ring-blue-200",
+  patch: "bg-neutral-100 text-neutral-600 ring-neutral-200"
+};
+
+function parse(text) {
+  var commits = [];
+  text.split("\n").forEach(function (line) {
+    var trimmed = line.trim();
+    // A footer belongs to the commit above it, not to a line of its own.
+    if (/^BREAKING[ -]CHANGE:/i.test(trimmed)) {
+      if (commits.length) commits[commits.length - 1].breaking = true;
+      return;
+    }
+    var match = COMMIT.exec(trimmed);
+    if (!match) return;
+    commits.push({
+      type: match[1].toLowerCase(),
+      scope: match[2] || "",
+      breaking: Boolean(match[3]),
+      subject: match[4]
+    });
+  });
+  return commits;
+}
+
+function escape(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function render() {
+  var commits = parse(input.value);
+
+  var buckets = { breaking: [], feat: [], fix: [] };
+  commits.forEach(function (commit) {
+    if (commit.breaking) buckets.breaking.push(commit);
+    else if (commit.type === "feat") buckets.feat.push(commit);
+    else if (commit.type === "fix") buckets.fix.push(commit);
+  });
+
+  var bump = buckets.breaking.length ? "major" : buckets.feat.length ? "minor" : commits.length ? "patch" : "none";
+
+  var next = CURRENT.slice();
+  if (bump === "major") next = [next[0] + 1, 0, 0];
+  if (bump === "minor") next = [next[0], next[1] + 1, 0];
+  if (bump === "patch") next = [next[0], next[1], next[2] + 1];
+
+  nextEl.textContent = "v" + next.join(".");
+  bumpEl.textContent = bump === "none" ? "no release" : bump;
+  bumpEl.className =
+    "rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset " +
+    (BUMP_STYLES[bump] || BUMP_STYLES.patch);
+
+  document.getElementById("relFeats").textContent = buckets.feat.length;
+  document.getElementById("relFixes").textContent = buckets.fix.length;
+  document.getElementById("relBreaks").textContent = buckets.breaking.length;
+
+  var html = "";
+  markdown = "## v" + next.join(".") + "\n";
+
+  GROUPS.forEach(function (group) {
+    var items = buckets[group.key];
+    if (!items.length) return;
+
+    markdown += "\n### " + group.label + "\n";
+    html += '<div><p class="text-[10px] uppercase tracking-widest text-neutral-400">' + group.label + "</p><ul class='mt-2 space-y-1.5'>";
+
+    items.forEach(function (commit) {
+      var scope = commit.scope ? "**" + commit.scope + "**: " : "";
+      markdown += "- " + scope + commit.subject + "\n";
+      html +=
+        '<li class="flex gap-2 text-neutral-700">' +
+          '<span class="text-neutral-300">•</span>' +
+          "<span>" +
+            (commit.scope ? '<span class="font-mono text-xs text-neutral-900">' + escape(commit.scope) + "</span>: " : "") +
+            escape(commit.subject) +
+          "</span>" +
+        "</li>";
+    });
+
+    html += "</ul></div>";
+  });
+
+  output.innerHTML = html || '<p class="text-sm text-neutral-400">Nothing releasable in these commits.</p>';
+}
+
+input.addEventListener("input", function () {
+  clearTimeout(timer);
+  timer = setTimeout(render, 120);
+});
+
+copy.addEventListener("click", function () {
+  var done = function () {
+    copy.textContent = "✓ Copied";
+    setTimeout(function () { copy.textContent = "⧉ Copy markdown"; }, 2000);
+  };
+
+  // Clipboard access needs a secure context; keep the old path for the rest.
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(markdown).then(done);
+    return;
+  }
+
+  var scratch = document.createElement("textarea");
+  scratch.value = markdown;
+  scratch.setAttribute("readonly", "");
+  scratch.className = "fixed -top-96 opacity-0";
+  document.body.appendChild(scratch);
+  scratch.select();
+  document.execCommand("copy");
+  scratch.remove();
+  done();
+});
+
+render();
+</script>
+</body></html>

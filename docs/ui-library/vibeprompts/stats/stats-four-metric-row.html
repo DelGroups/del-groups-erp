@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/stats/stats-four-metric-row/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four-metric row</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-5xl px-6 py-16">
+  <dl id="stats" class="grid grid-cols-2 gap-8 md:grid-cols-4 md:divide-x md:divide-neutral-200">
+    <div class="text-center md:px-4">
+      <dt class="text-4xl font-semibold text-neutral-900" data-to="99.99" data-decimals="2" data-suffix="%">99.99%</dt>
+      <dd class="mt-1 text-sm text-neutral-500">Uptime</dd>
+    </div>
+    <div class="text-center md:px-4">
+      <dt class="text-4xl font-semibold text-neutral-900" data-to="2.4" data-decimals="1" data-suffix="M">2.4M</dt>
+      <dd class="mt-1 text-sm text-neutral-500">Requests / day</dd>
+    </div>
+    <div class="text-center md:px-4">
+      <dt class="text-4xl font-semibold text-neutral-900" data-to="150" data-decimals="0" data-suffix="+">150+</dt>
+      <dd class="mt-1 text-sm text-neutral-500">Countries</dd>
+    </div>
+    <div class="text-center md:px-4">
+      <dt class="text-4xl font-semibold text-neutral-900" data-to="4.9" data-decimals="1" data-suffix="/5">4.9/5</dt>
+      <dd class="mt-1 text-sm text-neutral-500">Avg. rating</dd>
+    </div>
+  </dl>
+</section>
+<script>
+var DURATION = 1400;
+
+var row = document.getElementById("stats");
+var numbers = [].slice.call(row.querySelectorAll("[data-to]"));
+var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function format(el, value) {
+  var decimals = Number(el.getAttribute("data-decimals") || 0);
+  var prefix = el.getAttribute("data-prefix") || "";
+  var suffix = el.getAttribute("data-suffix") || "";
+  return prefix + value.toFixed(decimals) + suffix;
+}
+
+function run() {
+  numbers.forEach(function (el) {
+    var target = Number(el.getAttribute("data-to"));
+    if (reduced) {
+      el.textContent = format(el, target);
+      return;
+    }
+    var start = 0;
+    var step = function (now) {
+      if (!start) start = now;
+      var t = Math.min(1, (now - start) / DURATION);
+      var eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      el.textContent = format(el, target * eased);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+// Count up once, the first time the row is actually on screen.
+var seen = false;
+var observer = new IntersectionObserver(
+  function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting || seen) return;
+      seen = true;
+      observer.disconnect();
+      run();
+    });
+  },
+  { threshold: 0.4 }
+);
+
+observer.observe(row);
+</script>
+</body></html>

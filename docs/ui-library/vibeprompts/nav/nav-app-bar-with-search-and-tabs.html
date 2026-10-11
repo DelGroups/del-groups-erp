@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-app-bar-with-search-and-tabs/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App bar with search and tabs</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="border-b border-neutral-200 bg-white">
+  <div class="mx-auto flex max-w-7xl items-center gap-4 px-6 py-3">
+    <button class="flex shrink-0 items-center gap-2 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm hover:bg-neutral-50">
+      <span class="h-5 w-5 rounded bg-neutral-900"></span>
+      <span class="font-medium text-neutral-900">Northwind</span>
+      <span class="text-xs text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+    </button>
+    <div class="relative mx-auto w-full max-w-md">
+      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+      <input id="search" placeholder="Search projects, people, docs…"
+        class="w-full rounded-lg border border-neutral-200 bg-neutral-50 py-1.5 pl-9 pr-14 text-sm outline-none focus:border-neutral-900 focus:bg-white focus:ring-4 focus:ring-neutral-900/10" />
+      <kbd id="searchHint" class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-neutral-400">⌘K</kbd>
+    </div>
+    <button class="relative shrink-0 text-neutral-500 hover:text-neutral-900" aria-label="Notifications">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg><span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+    </button>
+    <span class="h-8 w-8 shrink-0 rounded-full bg-neutral-200"></span>
+  </div>
+  <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-x-auto px-6">
+    <nav id="tabs" class="flex gap-6 text-sm">
+      <a href="#" data-tab class="whitespace-nowrap border-b-2 border-neutral-900 pb-3 font-medium text-neutral-900">Projects</a>
+      <a href="#" data-tab class="whitespace-nowrap border-b-2 border-transparent pb-3 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900">Deployments</a>
+      <a href="#" data-tab class="whitespace-nowrap border-b-2 border-transparent pb-3 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900">Usage</a>
+      <a href="#" data-tab class="whitespace-nowrap border-b-2 border-transparent pb-3 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900">Members</a>
+    </nav>
+    <a href="#" class="whitespace-nowrap pb-3 text-sm text-neutral-500 hover:text-neutral-900">Settings</a>
+  </div>
+</header>
+<script>
+var search = document.getElementById("search");
+var hint = document.getElementById("searchHint");
+var tabs = [].slice.call(document.querySelectorAll("#tabs [data-tab]"));
+
+var ACTIVE = "whitespace-nowrap border-b-2 border-neutral-900 pb-3 font-medium text-neutral-900";
+var IDLE = "whitespace-nowrap border-b-2 border-transparent pb-3 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900";
+
+// Show the shortcut the visitor's keyboard actually has.
+var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+hint.textContent = isMac ? "⌘K" : "Ctrl K";
+
+document.addEventListener("keydown", function (e) {
+  if (e.key.toLowerCase() === "k" && (isMac ? e.metaKey : e.ctrlKey)) {
+    e.preventDefault();
+    search.focus();
+    search.select();
+    return;
+  }
+  if (e.key === "Escape" && document.activeElement === search) search.blur();
+});
+
+tabs.forEach(function (tab) {
+  tab.addEventListener("click", function (e) {
+    e.preventDefault();
+    tabs.forEach(function (t) { t.className = t === tab ? ACTIVE : IDLE; });
+    tab.setAttribute("aria-current", "page");
+    tabs.forEach(function (t) { if (t !== tab) t.removeAttribute("aria-current"); });
+  });
+});
+</script>
+</body></html>

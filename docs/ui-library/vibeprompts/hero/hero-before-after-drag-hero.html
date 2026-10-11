@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/hero/hero-before-after-drag-hero/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Before/after drag hero</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-2">
+  <div>
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">Design handoff</p>
+    <h1 class="mt-3 text-5xl font-semibold leading-[1.05] tracking-tight text-neutral-900">
+      From screenshot to shipped in one review
+    </h1>
+    <p class="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">
+      Drop in the dashboard you already have. Acme rebuilds it against your design tokens and opens the pull request.
+    </p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a href="#" class="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800">Try it on your repo</a>
+      <a href="#" class="rounded-xl border border-neutral-200 px-5 py-3 text-sm font-medium text-neutral-900 transition hover:bg-neutral-50">Watch the 2-min tour</a>
+    </div>
+    <p class="mt-6 text-sm text-neutral-400">Drag the handle — same data, same page, six weeks apart.</p>
+  </div>
+
+  <div id="compare" class="relative aspect-[4/3] w-full select-none overflow-hidden rounded-2xl border border-neutral-200 shadow-sm">
+    <!-- After: the base layer -->
+    <div class="absolute inset-0 bg-neutral-900 p-6">
+      <div class="flex items-center justify-between">
+        <div class="h-2.5 w-24 rounded-full bg-white/70"></div>
+        <div class="h-6 w-16 rounded-lg bg-white/10"></div>
+      </div>
+      <div class="mt-5 h-28 rounded-xl bg-gradient-to-t from-white/5 to-white/20"></div>
+      <div class="mt-4 grid grid-cols-3 gap-3">
+        <div class="rounded-xl bg-white/10 p-3"><div class="h-2 w-8 rounded-full bg-white/40"></div><div class="mt-2 h-3 w-12 rounded-full bg-white/70"></div></div>
+        <div class="rounded-xl bg-white/10 p-3"><div class="h-2 w-8 rounded-full bg-white/40"></div><div class="mt-2 h-3 w-10 rounded-full bg-white/70"></div></div>
+        <div class="rounded-xl bg-white/10 p-3"><div class="h-2 w-8 rounded-full bg-white/40"></div><div class="mt-2 h-3 w-14 rounded-full bg-white/70"></div></div>
+      </div>
+      <span class="absolute bottom-4 right-4 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white">After</span>
+    </div>
+
+    <!-- Before: clipped by its own width -->
+    <div id="beforeLayer" class="absolute inset-y-0 left-0 overflow-hidden" style="width: 50%">
+      <div id="beforeInner" class="absolute inset-y-0 left-0 bg-neutral-100 p-6">
+        <div class="flex items-center justify-between">
+          <div class="h-2.5 w-20 rounded bg-neutral-400"></div>
+          <div class="h-6 w-14 rounded bg-neutral-300"></div>
+        </div>
+        <div class="mt-5 h-28 rounded bg-neutral-200"></div>
+        <div class="mt-4 grid grid-cols-3 gap-2">
+          <div class="rounded bg-neutral-200 p-3"><div class="h-2 w-8 rounded bg-neutral-400"></div><div class="mt-2 h-3 w-10 rounded bg-neutral-500"></div></div>
+          <div class="rounded bg-neutral-200 p-3"><div class="h-2 w-8 rounded bg-neutral-400"></div><div class="mt-2 h-3 w-8 rounded bg-neutral-500"></div></div>
+          <div class="rounded bg-neutral-200 p-3"><div class="h-2 w-8 rounded bg-neutral-400"></div><div class="mt-2 h-3 w-12 rounded bg-neutral-500"></div></div>
+        </div>
+        <span class="absolute bottom-4 left-4 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-neutral-600 shadow-sm">Before</span>
+      </div>
+    </div>
+
+    <button id="handle" aria-label="Move the comparison divider" class="absolute inset-y-0 z-10 -ml-5 flex w-10 cursor-ew-resize items-center justify-center outline-none" style="left: 50%">
+      <span class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/80"></span>
+      <span class="relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm text-neutral-900 shadow-lg ring-neutral-900/10 transition group-focus:ring-4"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 7h12m0 0-3-3m3 3-3 3M17 17H5m0 0 3 3m-3-3 3-3"/></svg></span>
+    </button>
+  </div>
+</section>
+<script>
+var panel = document.getElementById("compare");
+var beforeLayer = document.getElementById("beforeLayer");
+var beforeInner = document.getElementById("beforeInner");
+var handle = document.getElementById("handle");
+
+var position = 50;
+
+function render() {
+  beforeLayer.style.width = position + "%";
+  handle.style.left = position + "%";
+}
+
+// The clipped mock must keep the panel's full width, or its contents reflow as it narrows.
+function measure() {
+  beforeInner.style.width = panel.clientWidth + "px";
+  render();
+}
+
+function moveTo(clientX) {
+  var box = panel.getBoundingClientRect();
+  position = Math.min(100, Math.max(0, ((clientX - box.left) / box.width) * 100));
+  render();
+}
+
+panel.addEventListener("pointerdown", function (e) {
+  panel.setPointerCapture(e.pointerId);
+  moveTo(e.clientX);
+});
+
+panel.addEventListener("pointermove", function (e) {
+  // Buttons is a bitmask — 1 means the primary button is still held.
+  if (e.buttons & 1) moveTo(e.clientX);
+});
+
+handle.addEventListener("keydown", function (e) {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault();
+  position = Math.min(100, Math.max(0, position + (e.key === "ArrowRight" ? 5 : -5)));
+  render();
+});
+
+window.addEventListener("resize", measure);
+measure();
+</script>
+</body></html>

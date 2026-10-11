@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-cookie-consent/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookie consent</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="cookieBar" class="fixed inset-x-0 bottom-0 translate-y-0 p-4 transition-transform duration-300">
+  <div class="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg sm:flex-row">
+    <p class="text-sm text-neutral-600">
+      We use cookies to improve your experience. Read our <a href="#" class="font-medium text-neutral-900 underline">privacy policy</a>.
+    </p>
+    <div class="flex shrink-0 gap-2">
+      <button data-consent="rejected" class="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50">Reject</button>
+      <button data-consent="accepted" class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">Accept all</button>
+    </div>
+  </div>
+</div>
+<script>
+var STORAGE_KEY = "cookie-consent";
+
+var bar = document.getElementById("cookieBar");
+
+// Storage access throws in private mode and in sandboxed frames — never let a
+// consent banner take the page down with it.
+function read(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function write(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
+function decide(choice) {
+  write(STORAGE_KEY, JSON.stringify({ choice: choice, at: new Date().toISOString() }));
+
+  // Let the rest of the page react instead of wiring analytics in here.
+  document.dispatchEvent(new CustomEvent("cookie-consent", { detail: { choice: choice } }));
+
+  bar.classList.add("translate-y-full");
+  setTimeout(function () { bar.remove(); }, 300);
+}
+
+if (read(STORAGE_KEY)) {
+  bar.remove();
+} else {
+  [].slice.call(bar.querySelectorAll("[data-consent]")).forEach(function (button) {
+    button.addEventListener("click", function () {
+      decide(button.getAttribute("data-consent"));
+    });
+  });
+}
+
+// Example subscriber — replace with your own loader.
+document.addEventListener("cookie-consent", function (e) {
+  if (e.detail.choice === "accepted") console.log("Analytics may load now.");
+});
+</script>
+</body></html>

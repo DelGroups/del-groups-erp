@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/features/features-sticky-visual-with-scrolling-steps/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sticky visual with scrolling steps</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-20">
+  <div class="mb-14 max-w-xl">
+    <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">How it works</p>
+    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">From first request to signed audit trail</h2>
+  </div>
+
+  <div class="grid gap-12 lg:grid-cols-2 lg:gap-16">
+    <div class="lg:sticky lg:top-24 lg:self-start">
+      <div class="rounded-2xl bg-neutral-900 p-6 shadow-xl">
+        <div class="flex gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-full bg-neutral-700"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-neutral-700"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-neutral-700"></span>
+        </div>
+        <div class="mt-6 space-y-3">
+          <div class="h-2.5 w-3/4 rounded-full bg-neutral-800"></div>
+          <div class="h-2.5 w-1/2 rounded-full bg-neutral-800"></div>
+          <div class="rounded-lg border border-neutral-700 bg-neutral-800/60 p-3 font-mono text-xs text-neutral-300">
+            <span class="text-green-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span> policy.check passed · 41ms · signed
+          </div>
+          <div class="h-2.5 w-2/3 rounded-full bg-neutral-800"></div>
+          <div class="h-2.5 w-5/6 rounded-full bg-neutral-800"></div>
+          <div class="h-2.5 w-1/3 rounded-full bg-neutral-800"></div>
+        </div>
+        <div class="mt-6 flex items-center justify-between border-t border-neutral-800 pt-4 text-xs text-neutral-500">
+          <span class="font-mono">run 4f21c9</span>
+          <span>2.4s total</span>
+        </div>
+      </div>
+    </div>
+
+    <ol class="space-y-12">
+      <li class="border-l-2 border-neutral-900 pl-6">
+        <span class="grid h-8 w-8 place-items-center rounded-full border border-neutral-900 text-sm font-medium text-neutral-900">1</span>
+        <h3 class="mt-4 text-lg font-medium text-neutral-900">Point us at your endpoint</h3>
+        <p class="mt-2 leading-relaxed text-neutral-500">One URL and a signing secret. No agent to install, nothing to run inside your VPC.</p>
+        <p class="mt-3 font-mono text-xs text-neutral-400">POST /v1/sources</p>
+      </li>
+      <li class="border-l-2 border-neutral-200 pl-6">
+        <span class="grid h-8 w-8 place-items-center rounded-full border border-neutral-300 text-sm font-medium text-neutral-500">2</span>
+        <h3 class="mt-4 text-lg font-medium text-neutral-900">Write the policy once</h3>
+        <p class="mt-2 leading-relaxed text-neutral-500">Rules are plain expressions with autocomplete, versioned in the same repo as your code.</p>
+        <p class="mt-3 font-mono text-xs text-neutral-400">allow if actor.role in ["admin"]</p>
+      </li>
+      <li class="border-l-2 border-neutral-200 pl-6">
+        <span class="grid h-8 w-8 place-items-center rounded-full border border-neutral-300 text-sm font-medium text-neutral-500">3</span>
+        <h3 class="mt-4 text-lg font-medium text-neutral-900">Dry-run against real traffic</h3>
+        <p class="mt-2 leading-relaxed text-neutral-500">Shadow mode replays yesterday so you see exactly what would have been blocked before anything is.</p>
+        <p class="mt-3 font-mono text-xs text-neutral-400">mode: shadow · 1.2M decisions</p>
+      </li>
+      <li class="border-l-2 border-neutral-200 pl-6">
+        <span class="grid h-8 w-8 place-items-center rounded-full border border-neutral-300 text-sm font-medium text-neutral-500">4</span>
+        <h3 class="mt-4 text-lg font-medium text-neutral-900">Ship it, keep the receipts</h3>
+        <p class="mt-2 leading-relaxed text-neutral-500">Every decision is signed and exportable, which is the part your auditor actually asks for.</p>
+        <p class="mt-3 font-mono text-xs text-neutral-400">GET /v1/audit?from=2026-01-01</p>
+        <a href="#" class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-neutral-900 underline-offset-4 hover:underline">Read the integration guide <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+      </li>
+    </ol>
+  </div>
+</section>
+</body></html>

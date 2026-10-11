@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/contact/contact-store-locator-with-results/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Store locator with results</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-12">
+  <div class="grid gap-4 lg:grid-cols-[380px_1fr]">
+    <div>
+      <div class="flex gap-2">
+        <div class="relative min-w-0 flex-1">
+          <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+          <input type="text" value="3024 CE"
+            class="w-full rounded-xl border border-neutral-200 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10" />
+        </div>
+        <button class="shrink-0 rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">Use my location</button>
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button class="rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white">Open now</button>
+        <button class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Click and collect</button>
+        <button class="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Repairs</button>
+      </div>
+
+      <div class="mt-4 max-h-[520px] space-y-2.5 overflow-y-auto pr-1">
+        <button data-store="1" class="store w-full rounded-xl border border-neutral-200 bg-white p-4 text-left ring-2 ring-neutral-900 transition">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm font-medium text-neutral-900">Rotterdam · Kralingen</p>
+            <p class="shrink-0 font-mono text-xs text-neutral-500">0.8 km</p>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed text-neutral-500">Voorschoterlaan 42<br />3062 KR Rotterdam</p>
+          <p class="mt-2 flex items-center gap-2 text-xs"><span class="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Open</span><span class="text-neutral-500">until 18:00</span></p>
+          <p class="mt-2.5 flex gap-4 text-xs font-medium text-neutral-900"><span class="underline underline-offset-4">Directions</span><span class="underline underline-offset-4">Call</span></p>
+        </button>
+
+        <button data-store="2" class="store w-full rounded-xl border border-neutral-200 bg-white p-4 text-left transition hover:border-neutral-300">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm font-medium text-neutral-900">Rotterdam · Centrum</p>
+            <p class="shrink-0 font-mono text-xs text-neutral-500">2.4 km</p>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed text-neutral-500">Meent 118<br />3011 JR Rotterdam</p>
+          <p class="mt-2 flex items-center gap-2 text-xs"><span class="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Open</span><span class="text-neutral-500">until 20:00</span></p>
+          <p class="mt-2.5 flex gap-4 text-xs font-medium text-neutral-900"><span class="underline underline-offset-4">Directions</span><span class="underline underline-offset-4">Call</span></p>
+        </button>
+
+        <button data-store="3" class="store w-full rounded-xl border border-neutral-200 bg-white p-4 text-left transition hover:border-neutral-300">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm font-medium text-neutral-900">Schiedam</p>
+            <p class="shrink-0 font-mono text-xs text-neutral-500">6.1 km</p>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed text-neutral-500">Hoogstraat 22<br />3111 HB Schiedam</p>
+          <p class="mt-2 flex items-center gap-2 text-xs"><span class="rounded-full bg-neutral-100 px-2 py-0.5 font-medium text-neutral-600">Closed</span><span class="text-neutral-500">opens 09:30</span></p>
+          <p class="mt-2.5 flex gap-4 text-xs font-medium text-neutral-900"><span class="underline underline-offset-4">Directions</span><span class="underline underline-offset-4">Call</span></p>
+        </button>
+
+        <button data-store="4" class="store w-full rounded-xl border border-neutral-200 bg-white p-4 text-left transition hover:border-neutral-300">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm font-medium text-neutral-900">Delft</p>
+            <p class="shrink-0 font-mono text-xs text-neutral-500">11.7 km</p>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed text-neutral-500">Brabantse Turfmarkt 8<br />2611 CL Delft</p>
+          <p class="mt-2 flex items-center gap-2 text-xs"><span class="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Open</span><span class="text-neutral-500">until 17:30</span></p>
+          <p class="mt-2.5 flex gap-4 text-xs font-medium text-neutral-900"><span class="underline underline-offset-4">Directions</span><span class="underline underline-offset-4">Call</span></p>
+        </button>
+
+        <button data-store="5" class="store w-full rounded-xl border border-neutral-200 bg-white p-4 text-left transition hover:border-neutral-300">
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-sm font-medium text-neutral-900">Den Haag</p>
+            <p class="shrink-0 font-mono text-xs text-neutral-500">24.2 km</p>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed text-neutral-500">Prinsestraat 44<br />2513 CD Den Haag</p>
+          <p class="mt-2 flex items-center gap-2 text-xs"><span class="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Open</span><span class="text-neutral-500">until 18:00</span></p>
+          <p class="mt-2.5 flex gap-4 text-xs font-medium text-neutral-900"><span class="underline underline-offset-4">Directions</span><span class="underline underline-offset-4">Call</span></p>
+        </button>
+      </div>
+    </div>
+
+    <div class="relative min-h-[420px] overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
+      <div class="grid h-full w-full grid-cols-12 gap-px p-3 opacity-70">
+        <span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span>
+        <span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span>
+        <span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span><span class="rounded bg-neutral-200"></span><span class="rounded bg-neutral-200"></span><span></span>
+      </div>
+
+      <span data-store="1" class="map-pin absolute grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white shadow-lg transition-all" style="left:38%;top:44%">1</span>
+      <span data-store="2" class="map-pin absolute grid h-7 w-7 place-items-center rounded-full bg-white text-[11px] font-medium text-neutral-900 ring-1 ring-neutral-300 transition-all" style="left:52%;top:32%">2</span>
+      <span data-store="3" class="map-pin absolute grid h-7 w-7 place-items-center rounded-full bg-white text-[11px] font-medium text-neutral-900 ring-1 ring-neutral-300 transition-all" style="left:24%;top:60%">3</span>
+      <span data-store="4" class="map-pin absolute grid h-7 w-7 place-items-center rounded-full bg-white text-[11px] font-medium text-neutral-900 ring-1 ring-neutral-300 transition-all" style="left:66%;top:70%">4</span>
+      <span data-store="5" class="map-pin absolute grid h-7 w-7 place-items-center rounded-full bg-white text-[11px] font-medium text-neutral-900 ring-1 ring-neutral-300 transition-all" style="left:78%;top:22%">5</span>
+    </div>
+  </div>
+
+  <div class="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <span class="shrink-0 text-amber-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg></span>
+    <p class="text-sm leading-relaxed text-amber-900">
+      Our Utrecht shop is closed for refurbishment until 14 September. Orders for collection there have been moved to Delft — we have emailed everyone affected.
+    </p>
+  </div>
+</section>
+<script>
+var cards = Array.prototype.slice.call(document.querySelectorAll(".store"));
+var pins = Array.prototype.slice.call(document.querySelectorAll(".map-pin"));
+
+function pinFor(id) {
+  return pins.filter(function (pin) {
+    return pin.dataset.store === id;
+  })[0];
+}
+
+function select(id) {
+  cards.forEach(function (card) {
+    var on = card.dataset.store === id;
+    card.classList.toggle("ring-2", on);
+    card.classList.toggle("ring-neutral-900", on);
+  });
+
+  pins.forEach(function (pin) {
+    var on = pin.dataset.store === id;
+    pin.className =
+      "map-pin absolute grid place-items-center rounded-full text-[11px] font-medium shadow-lg transition-all " +
+      (on ? "h-8 w-8 bg-neutral-900 text-white" : "h-7 w-7 bg-white text-neutral-900 ring-1 ring-neutral-300");
+  });
+}
+
+cards.forEach(function (card) {
+  card.addEventListener("mouseenter", function () {
+    var pin = pinFor(card.dataset.store);
+    if (pin) pin.classList.add("scale-125");
+  });
+
+  card.addEventListener("mouseleave", function () {
+    var pin = pinFor(card.dataset.store);
+    if (pin) pin.classList.remove("scale-125");
+  });
+
+  card.addEventListener("click", function () {
+    select(card.dataset.store);
+  });
+});
+
+select("1");
+</script>
+</body></html>

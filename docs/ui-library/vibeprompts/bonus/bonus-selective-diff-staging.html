@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-selective-diff-staging/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Selective diff staging</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-3xl p-6">
+  <section class="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+    <header class="flex flex-col gap-3 border-b border-neutral-200 px-5 py-4 sm:flex-row sm:items-center">
+      <label class="flex min-w-0 flex-1 items-center gap-3">
+        <input id="diffAll" type="checkbox" class="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+        <span class="min-w-0">
+          <span class="block truncate font-mono text-sm font-medium text-neutral-900">src/lib/formatInvoice.ts</span>
+          <span class="block text-xs text-neutral-400">feature/tax-rounding → main</span>
+        </span>
+      </label>
+      <div class="flex gap-2 text-xs font-medium tabular-nums">
+        <span id="diffAdds" class="rounded-full bg-green-50 px-2.5 py-1 text-green-700">+6</span>
+        <span id="diffDeletes" class="rounded-full bg-red-50 px-2.5 py-1 text-red-700">−3</span>
+      </div>
+    </header>
+
+    <div id="diffHunks" class="space-y-3 bg-neutral-50 p-3">
+      <article data-hunk data-adds="3" data-deletes="1" class="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <label class="flex cursor-pointer items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-3 py-2">
+          <input data-hunk-check type="checkbox" class="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+          <span class="font-mono text-[11px] text-neutral-500">@@ calculateTotal · apply regional precision</span>
+        </label>
+        <div class="overflow-x-auto font-mono text-xs leading-6">
+          <div class="flex min-w-max text-neutral-500"><span class="w-10 select-none border-r border-neutral-100 px-2 text-right text-neutral-300">42</span><span class="w-10 select-none border-r border-neutral-100 px-2 text-right text-neutral-300">42</span><code class="px-3">const subtotal = sum(items);</code></div>
+          <div class="flex min-w-max bg-red-50 text-red-800"><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300">43</span><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300"></span><code class="px-3">- return subtotal * (1 + taxRate);</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">43</span><code class="px-3">+ const total = subtotal * (1 + taxRate);</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">44</span><code class="px-3">+ const precision = currency === "JPY" ? 0 : 2;</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">45</span><code class="px-3">+ return Number(total.toFixed(precision));</code></div>
+        </div>
+      </article>
+
+      <article data-hunk data-adds="3" data-deletes="2" class="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <label class="flex cursor-pointer items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-3 py-2">
+          <input data-hunk-check type="checkbox" class="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+          <span class="font-mono text-[11px] text-neutral-500">@@ formatMoney · make locale explicit</span>
+        </label>
+        <div class="overflow-x-auto font-mono text-xs leading-6">
+          <div class="flex min-w-max bg-red-50 text-red-800"><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300">61</span><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300"></span><code class="px-3">- export function formatMoney(value, currency) {</code></div>
+          <div class="flex min-w-max bg-red-50 text-red-800"><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300">62</span><span class="w-10 select-none border-r border-red-100 px-2 text-right text-red-300"></span><code class="px-3">-   return value.toLocaleString(undefined, { currency });</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">61</span><code class="px-3">+ export function formatMoney(value, currency, locale) {</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">62</span><code class="px-3">+   return value.toLocaleString(locale, {</code></div>
+          <div class="flex min-w-max bg-green-50 text-green-800"><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300"></span><span class="w-10 select-none border-r border-green-100 px-2 text-right text-green-300">63</span><code class="px-3">+     style: "currency", currency: currency });</code></div>
+        </div>
+      </article>
+    </div>
+
+    <footer class="flex items-center justify-between gap-4 border-t border-neutral-200 bg-white px-5 py-4">
+      <p id="diffStatus" aria-live="polite" class="text-sm text-neutral-500">0 of 2 hunks selected</p>
+      <button id="stageHunks" disabled class="cursor-not-allowed rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white opacity-40 transition hover:bg-neutral-800">Stage selected</button>
+    </footer>
+  </section>
+</div>
+<script>
+var all = document.getElementById("diffAll");
+var container = document.getElementById("diffHunks");
+var status = document.getElementById("diffStatus");
+var stage = document.getElementById("stageHunks");
+var adds = document.getElementById("diffAdds");
+var deletes = document.getElementById("diffDeletes");
+
+function hunks() {
+  return [].slice.call(container.querySelectorAll("[data-hunk]"));
+}
+
+function sync() {
+  var remaining = hunks();
+  var checked = remaining.filter(function (hunk) {
+    return hunk.querySelector("[data-hunk-check]").checked;
+  });
+  all.checked = remaining.length > 0 && checked.length === remaining.length;
+  all.indeterminate = checked.length > 0 && checked.length < remaining.length;
+  all.disabled = remaining.length === 0;
+  stage.disabled = checked.length === 0;
+  stage.classList.toggle("opacity-40", checked.length === 0);
+  stage.classList.toggle("cursor-not-allowed", checked.length === 0);
+  stage.textContent = checked.length ? "Stage " + checked.length + " selected" : "Stage selected";
+  status.textContent = checked.length + " of " + remaining.length + " hunks selected";
+
+  var addTotal = remaining.reduce(function (sum, hunk) { return sum + Number(hunk.getAttribute("data-adds")); }, 0);
+  var deleteTotal = remaining.reduce(function (sum, hunk) { return sum + Number(hunk.getAttribute("data-deletes")); }, 0);
+  adds.textContent = "+" + addTotal;
+  deletes.textContent = "−" + deleteTotal;
+}
+
+all.addEventListener("change", function () {
+  hunks().forEach(function (hunk) {
+    hunk.querySelector("[data-hunk-check]").checked = all.checked;
+  });
+  sync();
+});
+
+container.addEventListener("change", function (event) {
+  if (event.target.matches("[data-hunk-check]")) sync();
+});
+
+stage.addEventListener("click", function () {
+  var selected = hunks().filter(function (hunk) {
+    return hunk.querySelector("[data-hunk-check]").checked;
+  });
+  selected.forEach(function (hunk) {
+    var message = document.createElement("div");
+    message.className = "rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700";
+    message.textContent = "✓ Hunk staged successfully";
+    hunk.replaceWith(message);
+    setTimeout(function () { message.remove(); }, 1600);
+  });
+  sync();
+  status.textContent = selected.length + (selected.length === 1 ? " hunk staged" : " hunks staged");
+});
+
+sync();
+</script>
+</body></html>

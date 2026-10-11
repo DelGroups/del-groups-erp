@@ -37,8 +37,10 @@ and open a PR for it on a new branch:
 7. Before opening a PR run: npm run lint, npm test, npm run build. All must pass. Add tests for new logic.
 8. Every UI string goes through src/i18n (az, en, ru).
 9. Odoo is a reference for concepts and workflows only. Never copy Odoo code, icons, texts or branding.
-10. vibeprompts.dev pages are design references: rebuild them as typed React components using our
-    design tokens, Radix and the motion library; never paste their vanilla JS.
+10. UI references from vibeprompts.dev are copied locally in docs/ui-library/vibeprompts/
+    (<category>/<slug>.html preview + <category>/README.md with the prompt). A reference written as
+    "dashboards/dashboards-kanban-board-with-drag-and-drop" means that file. Rebuild them as typed React
+    components using our design tokens, Radix and the motion library; never paste their vanilla JS.
 11. PR description: what changed in plain words, how it was tested, and any manual step Del must do.
 12. Keep each PR focused on its task. If you find unrelated problems, list them in the PR, don't fix them.
 ```

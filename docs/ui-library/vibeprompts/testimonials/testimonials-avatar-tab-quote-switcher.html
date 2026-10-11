@@ -1,0 +1,156 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/testimonials/testimonials-avatar-tab-quote-switcher/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar tab quote switcher</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div id="quoteAvatars" class="flex items-center justify-center gap-3">
+    <button data-i="0" class="qa grid h-14 w-14 place-items-center rounded-full bg-neutral-900 text-sm font-medium text-white transition-all">AT</button>
+    <button data-i="1" class="qa grid h-14 w-14 place-items-center rounded-full bg-amber-500 text-sm font-medium text-white transition-all">PM</button>
+    <button data-i="2" class="qa grid h-14 w-14 place-items-center rounded-full bg-green-600 text-sm font-medium text-white transition-all">MO</button>
+    <button data-i="3" class="qa grid h-14 w-14 place-items-center rounded-full bg-blue-600 text-sm font-medium text-white transition-all">LR</button>
+    <button data-i="4" class="qa grid h-14 w-14 place-items-center rounded-full bg-neutral-500 text-sm font-medium text-white transition-all">TS</button>
+  </div>
+
+  <div id="quotePanel" class="mt-9 rounded-2xl border border-neutral-200 bg-white p-9 text-center">
+    <p id="quoteCompany" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Fernbrook Health</p>
+    <blockquote id="quoteText" class="mt-5 text-xl leading-relaxed text-neutral-800">
+      Three days of finance work turned into a scheduled job that nobody has touched since March.
+    </blockquote>
+    <p id="quoteName" class="mt-6 text-sm font-medium text-neutral-900">Aiko Tan</p>
+    <p id="quoteRole" class="text-xs text-neutral-500">Financial Controller</p>
+
+    <div id="quoteChips" class="mt-7 flex flex-wrap justify-center gap-2">
+      <span class="rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600">Close time −94%</span>
+    </div>
+  </div>
+
+  <div class="mt-6 flex items-center justify-between">
+    <div class="flex gap-2">
+      <button id="quotePrev" class="grid h-9 w-9 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50" aria-label="Previous">‹</button>
+      <button id="quoteNext" class="grid h-9 w-9 place-items-center rounded-lg border border-neutral-200 text-neutral-500 transition hover:bg-neutral-50" aria-label="Next">›</button>
+    </div>
+    <div id="quoteDots" class="flex gap-1.5">
+      <span class="h-1 w-8 rounded-full bg-neutral-900"></span>
+      <span class="h-1 w-8 rounded-full bg-neutral-200"></span>
+      <span class="h-1 w-8 rounded-full bg-neutral-200"></span>
+      <span class="h-1 w-8 rounded-full bg-neutral-200"></span>
+      <span class="h-1 w-8 rounded-full bg-neutral-200"></span>
+    </div>
+  </div>
+</section>
+<script>
+var QUOTES = [
+  {
+    company: "Fernbrook Health",
+    text: "Three days of finance work turned into a scheduled job that nobody has touched since March.",
+    name: "Aiko Tan",
+    role: "Financial Controller",
+    chips: ["Close time −94%", "3 days saved monthly", "2× audit coverage"],
+  },
+  {
+    company: "Kestrel Logistics",
+    text: "Depot managers were building their own reports by week two, which is not how these projects usually go.",
+    name: "Priya Mahal",
+    role: "Head of Operations",
+    chips: ["Live in 14 days", "On-time drops +41%", "62 depots"],
+  },
+  {
+    company: "Northwind",
+    text: "Support answered on a Sunday with an actual query plan, then fixed the documentation that caused the confusion.",
+    name: "Mira Osei",
+    role: "Staff Engineer",
+    chips: ["41 min median reply", "0 escalations", "99.98% uptime"],
+  },
+  {
+    company: "Oakline Group",
+    text: "Our auditor asked for evidence and I sent one link. That was the entire meeting.",
+    name: "Lena Rask",
+    role: "Compliance Lead",
+    chips: ["SOC 2 in 6 weeks", "1 link, 0 spreadsheets", "210 seats"],
+  },
+  {
+    company: "Corvid Studio",
+    text: "We migrated 2.1 billion rows over a weekend with zero incidents and a runbook that matched reality.",
+    name: "Tom Silva",
+    role: "Principal Data Engineer",
+    chips: ["2.1B rows", "0 incidents", "48h cutover"],
+  },
+];
+
+var avatars = Array.prototype.slice.call(document.querySelectorAll(".qa"));
+var dots = Array.prototype.slice.call(document.getElementById("quoteDots").children);
+var panel = document.getElementById("quotePanel");
+var company = document.getElementById("quoteCompany");
+var text = document.getElementById("quoteText");
+var name = document.getElementById("quoteName");
+var role = document.getElementById("quoteRole");
+var chips = document.getElementById("quoteChips");
+var index = 0;
+var timer;
+
+function show(i) {
+  index = (i + QUOTES.length) % QUOTES.length;
+  var q = QUOTES[index];
+
+  company.textContent = q.company;
+  text.textContent = q.text;
+  name.textContent = q.name;
+  role.textContent = q.role;
+  chips.innerHTML = q.chips
+    .map(function (c) {
+      return '<span class="rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600">' + c + "</span>";
+    })
+    .join("");
+
+  avatars.forEach(function (a, n) {
+    var on = n === index;
+    a.classList.toggle("ring-2", on);
+    a.classList.toggle("ring-neutral-900", on);
+    a.classList.toggle("ring-offset-2", on);
+    a.classList.toggle("opacity-40", !on);
+    a.classList.toggle("scale-90", !on);
+  });
+
+  dots.forEach(function (d, n) {
+    d.classList.toggle("bg-neutral-900", n === index);
+    d.classList.toggle("bg-neutral-200", n !== index);
+  });
+}
+
+function start() {
+  stop();
+  timer = setInterval(function () {
+    show(index + 1);
+  }, 7000);
+}
+
+function stop() {
+  clearInterval(timer);
+}
+
+avatars.forEach(function (a) {
+  a.addEventListener("click", function () {
+    show(Number(a.dataset.i));
+    start();
+  });
+});
+
+document.getElementById("quotePrev").addEventListener("click", function () {
+  show(index - 1);
+  start();
+});
+
+document.getElementById("quoteNext").addEventListener("click", function () {
+  show(index + 1);
+  start();
+});
+
+// Reading should not be interrupted by the carousel moving on.
+panel.addEventListener("mouseenter", stop);
+panel.addEventListener("mouseleave", start);
+
+show(0);
+start();
+</script>
+</body></html>

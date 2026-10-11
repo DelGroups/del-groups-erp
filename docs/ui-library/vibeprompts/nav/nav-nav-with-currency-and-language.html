@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/nav/nav-nav-with-currency-and-language/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nav with currency and language</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<header class="relative border-b border-neutral-200 bg-white">
+  <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
+    <a href="#" class="text-lg font-semibold tracking-tight text-neutral-900">Fernbrook</a>
+
+    <nav class="hidden gap-7 text-sm text-neutral-600 lg:flex">
+      <a href="#" class="transition hover:text-neutral-900">Shop</a>
+      <a href="#" class="transition hover:text-neutral-900">Workshop</a>
+      <a href="#" class="transition hover:text-neutral-900">Care</a>
+      <a href="#" class="transition hover:text-neutral-900">Stockists</a>
+      <a href="#" class="transition hover:text-neutral-900">Journal</a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button id="localeLang" class="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.47 3.45 5.47 3.45 9S14.3 18.53 12 21c-2.3-2.47-3.45-5.47-3.45-9S9.7 5.47 12 3Z"/></svg> <span id="langLabel">EN</span> <span class="text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+      </button>
+      <button id="localeCur" class="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50">
+        <span id="curLabel">EUR €</span> <span class="text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m7 10 5 5 5-5"/></svg></span>
+      </button>
+      <span class="mx-1 hidden h-5 w-px bg-neutral-200 sm:block"></span>
+      <a href="#" class="hidden text-sm text-neutral-600 transition hover:text-neutral-900 sm:block">Sign in</a>
+      <a href="#" class="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800">Basket</a>
+    </div>
+  </div>
+
+  <div id="localePanel" class="hidden border-t border-neutral-200 bg-neutral-50">
+    <div class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[1.4fr_1fr]">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Language</p>
+        <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <button data-lang="EN" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">English</span> <span class="text-xs text-neutral-400">EN</span></button>
+          <button data-lang="NL" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Nederlands</span> <span class="text-xs text-neutral-400">NL</span></button>
+          <button data-lang="DE" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Deutsch</span> <span class="text-xs text-neutral-400">DE</span></button>
+          <button data-lang="FR" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Français</span> <span class="text-xs text-neutral-400">FR</span></button>
+          <button data-lang="ES" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Español</span> <span class="text-xs text-neutral-400">ES</span></button>
+          <button data-lang="IT" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Italiano</span> <span class="text-xs text-neutral-400">IT</span></button>
+          <button data-lang="DA" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Dansk</span> <span class="text-xs text-neutral-400">DA</span></button>
+          <button data-lang="SV" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Svenska</span> <span class="text-xs text-neutral-400">SV</span></button>
+          <button data-lang="PL" class="lang rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">Polski</span> <span class="text-xs text-neutral-400">PL</span></button>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400">Currency</p>
+        <div class="mt-3 space-y-1.5">
+          <button data-cur="EUR €" data-region="the European Union" class="cur flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">EUR</span><span class="text-xs text-neutral-500">Euro €</span></button>
+          <button data-cur="GBP £" data-region="the United Kingdom" class="cur flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">GBP</span><span class="text-xs text-neutral-500">Pound £</span></button>
+          <button data-cur="USD $" data-region="the United States" class="cur flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">USD</span><span class="text-xs text-neutral-500">Dollar $</span></button>
+          <button data-cur="DKK kr" data-region="Denmark" class="cur flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">DKK</span><span class="text-xs text-neutral-500">Krone kr</span></button>
+          <button data-cur="SEK kr" data-region="Sweden" class="cur flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm transition hover:border-neutral-400"><span class="font-medium text-neutral-900">SEK</span><span class="text-xs text-neutral-500">Krona kr</span></button>
+        </div>
+        <p id="localeNote" class="mt-3 text-xs text-neutral-500">Shipping to the European Union · prices include VAT.</p>
+      </div>
+    </div>
+  </div>
+</header>
+<script>
+var panel = document.getElementById("localePanel");
+var langBtn = document.getElementById("localeLang");
+var curBtn = document.getElementById("localeCur");
+var langLabel = document.getElementById("langLabel");
+var curLabel = document.getElementById("curLabel");
+var note = document.getElementById("localeNote");
+
+var langs = Array.prototype.slice.call(document.querySelectorAll(".lang"));
+var curs = Array.prototype.slice.call(document.querySelectorAll(".cur"));
+
+function toggle(e) {
+  e.stopPropagation();
+  panel.classList.toggle("hidden");
+}
+
+function mark(list, chosen) {
+  list.forEach(function (item) {
+    var on = item === chosen;
+    item.classList.toggle("border-neutral-900", on);
+    item.classList.toggle("ring-1", on);
+    item.classList.toggle("ring-neutral-900", on);
+    item.classList.toggle("border-neutral-200", !on);
+  });
+}
+
+langBtn.addEventListener("click", toggle);
+curBtn.addEventListener("click", toggle);
+panel.addEventListener("click", function (e) {
+  e.stopPropagation();
+});
+
+langs.forEach(function (item) {
+  item.addEventListener("click", function () {
+    langLabel.textContent = item.dataset.lang;
+    mark(langs, item);
+  });
+});
+
+curs.forEach(function (item) {
+  item.addEventListener("click", function () {
+    curLabel.textContent = item.dataset.cur;
+    mark(curs, item);
+    // Currency implies where we ship from and whether VAT is shown.
+    note.textContent = "Shipping to " + item.dataset.region + " · prices include VAT.";
+  });
+});
+
+document.addEventListener("click", function () {
+  panel.classList.add("hidden");
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") panel.classList.add("hidden");
+});
+
+mark(langs, langs[0]);
+mark(curs, curs[0]);
+</script>
+</body></html>

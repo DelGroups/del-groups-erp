@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/cta/cta-in-app-upgrade-nudge/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>In-app upgrade nudge</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-16">
+  <div class="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <span class="absolute inset-y-0 left-0 w-1 bg-amber-400"></span>
+
+    <div class="flex items-start gap-3.5 pl-2">
+      <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 14 4-4"/><path d="M8 18h8"/></svg></span>
+      <div class="min-w-0 flex-1">
+        <h3 class="text-base font-semibold text-neutral-900">You have used 84% of your API quota</h3>
+        <p class="mt-0.5 text-sm text-neutral-500">Starter plan · resets in 6 days</p>
+      </div>
+      <button class="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700" aria-label="Dismiss"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+
+    <div class="mt-5 pl-2">
+      <div class="h-2 overflow-hidden rounded-full bg-neutral-100">
+        <div class="h-full w-[84%] rounded-full bg-amber-400"></div>
+      </div>
+      <div class="mt-2 flex items-center justify-between text-xs">
+        <span class="font-mono text-neutral-700">842,113 / 1,000,000 requests</span>
+        <span class="text-neutral-400">Resets 1 September</span>
+      </div>
+    </div>
+
+    <p class="mt-5 pl-2 text-sm leading-relaxed text-neutral-600">
+      At the limit we start returning <span class="font-mono text-xs text-neutral-900">429</span> instead of dropping requests quietly. Scale raises the ceiling to 25M and adds burst capacity for launch days.
+    </p>
+
+    <div class="mt-6 flex flex-wrap items-center gap-3 pl-2">
+      <button class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Upgrade to Scale</button>
+      <button class="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">Compare plans</button>
+      <a href="#" class="text-sm text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">Change alert threshold</a>
+    </div>
+  </div>
+</section>
+</body></html>

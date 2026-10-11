@@ -1,0 +1,123 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-json-tree-viewer/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSON tree viewer</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-14">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-5 py-3">
+      <div>
+        <p class="text-sm font-semibold text-neutral-900">response.json</p>
+        <p id="jsonCount" class="text-xs text-neutral-400"></p>
+      </div>
+      <div class="flex gap-2">
+        <button id="jsonExpand" class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Expand all</button>
+        <button id="jsonCollapse" class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">Collapse all</button>
+        <button id="jsonCopy" class="rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800">Copy</button>
+      </div>
+    </div>
+
+    <div id="jsonTree" class="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed"></div>
+  </div>
+</section>
+<script>
+var DATA = {
+  id: "rep_8f21c94a",
+  name: "Monthly revenue",
+  published: true,
+  version: 4,
+  owner: { id: "usr_4471", name: "Mira Osei", email: "<a class="__cf_email__" data-cfemail="b8d5d1cad9f8d6d7caccd0cfd1d6dc96dcddce" href="/cdn-cgi/l/email-protection">[email protected]</a>", admin: true },
+  schedule: { cron: "0 9 1 * *", timezone: "Europe/Amsterdam", recipients: ["<a class="__cf_email__" data-cfemail="56303f383738353316383924223e213f383278323320" href="/cdn-cgi/l/email-protection">[email protected]</a>", "<a class="__cf_email__" data-cfemail="61030e001305210f0e13150916080f054f050417" href="/cdn-cgi/l/email-protection">[email protected]</a>"] },
+  filters: [
+    { field: "region", op: "in", value: ["EU", "UK"] },
+    { field: "plan", op: "eq", value: "scale" },
+  ],
+  lastRun: null,
+};
+
+var tree = document.getElementById("jsonTree");
+var countEl = document.getElementById("jsonCount");
+var nodes = 0;
+
+function valueHtml(value) {
+  if (value === null) return '<span class="text-neutral-400">null</span>';
+  if (typeof value === "string") return '<span class="text-green-600">"' + value + '"</span>';
+  if (typeof value === "number") return '<span class="text-blue-600">' + value + "</span>";
+  if (typeof value === "boolean") return '<span class="text-purple-600">' + value + "</span>";
+  return "";
+}
+
+function render(value, key, depth) {
+  nodes += 1;
+  var pad = depth * 16;
+
+  if (value !== null && typeof value === "object") {
+    var isArray = Array.isArray(value);
+    var keys = isArray ? value.map(function (_, i) { return i; }) : Object.keys(value);
+
+    var wrap = document.createElement("div");
+    wrap.style.paddingLeft = pad + "px";
+    if (depth > 0) wrap.className = "border-l border-neutral-100";
+
+    var head = document.createElement("button");
+    head.className = "json-node flex items-center gap-2 py-0.5 text-left";
+    head.innerHTML =
+      '<span class="chev text-neutral-400 transition-transform">▾</span>' +
+      (key === null ? "" : '<span class="font-medium text-neutral-900">' + key + "</span><span class=\"text-neutral-400\">:</span>") +
+      '<span class="text-neutral-400">' + (isArray ? "array" : "object") + "</span>" +
+      '<span class="text-neutral-300">[' + keys.length + "]</span>";
+
+    var children = document.createElement("div");
+    keys.forEach(function (k) {
+      children.appendChild(render(value[k], String(k), depth + 1));
+    });
+
+    head.addEventListener("click", function () {
+      var hidden = children.classList.toggle("hidden");
+      head.querySelector(".chev").classList.toggle("-rotate-90", hidden);
+    });
+
+    wrap.appendChild(head);
+    wrap.appendChild(children);
+    return wrap;
+  }
+
+  var leaf = document.createElement("div");
+  leaf.style.paddingLeft = pad + "px";
+  leaf.className = "py-0.5" + (depth > 0 ? " border-l border-neutral-100" : "");
+  leaf.innerHTML =
+    '<span class="pl-5"><span class="font-medium text-neutral-900">' + key + '</span><span class="text-neutral-400">: </span>' + valueHtml(value) + "</span>";
+  return leaf;
+}
+
+tree.appendChild(render(DATA, null, 0));
+countEl.textContent = nodes + " nodes";
+
+function setAll(open) {
+  Array.prototype.slice.call(tree.querySelectorAll(".json-node")).forEach(function (head) {
+    var children = head.nextElementSibling;
+    if (!children) return;
+    children.classList.toggle("hidden", !open);
+    head.querySelector(".chev").classList.toggle("-rotate-90", !open);
+  });
+}
+
+document.getElementById("jsonExpand").addEventListener("click", function () {
+  setAll(true);
+});
+
+document.getElementById("jsonCollapse").addEventListener("click", function () {
+  setAll(false);
+});
+
+document.getElementById("jsonCopy").addEventListener("click", function () {
+  var button = document.getElementById("jsonCopy");
+  navigator.clipboard.writeText(JSON.stringify(DATA, null, 2)).then(function () {
+    button.textContent = "Copied";
+    setTimeout(function () {
+      button.textContent = "Copy";
+    }, 1500);
+  });
+});
+</script>
+</body></html>

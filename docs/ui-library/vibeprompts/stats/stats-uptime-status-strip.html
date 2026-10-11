@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/stats/stats-uptime-status-strip/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uptime status strip</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-16">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+    <div class="flex items-center justify-between gap-4">
+      <h2 class="font-semibold text-neutral-900">System status</h2>
+      <span id="statusPill" class="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+        <span class="relative flex h-2 w-2">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+          <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+        </span>
+        All systems operational
+      </span>
+    </div>
+
+    <div class="mt-6 space-y-5">
+      <div>
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="font-medium text-neutral-900">API</span>
+          <span class="font-mono text-xs text-neutral-500" data-uptime-value="api">—</span>
+        </div>
+        <div class="mt-2 flex h-8 items-stretch gap-[3px]" data-uptime="api"></div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="font-medium text-neutral-900">Dashboard</span>
+          <span class="font-mono text-xs text-neutral-500" data-uptime-value="dashboard">—</span>
+        </div>
+        <div class="mt-2 flex h-8 items-stretch gap-[3px]" data-uptime="dashboard"></div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="font-medium text-neutral-900">Webhooks</span>
+          <span class="font-mono text-xs text-neutral-500" data-uptime-value="webhooks">—</span>
+        </div>
+        <div class="mt-2 flex h-8 items-stretch gap-[3px]" data-uptime="webhooks"></div>
+      </div>
+      <div>
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="font-medium text-neutral-900">Email delivery</span>
+          <span class="font-mono text-xs text-neutral-500" data-uptime-value="email">—</span>
+        </div>
+        <div class="mt-2 flex h-8 items-stretch gap-[3px]" data-uptime="email"></div>
+      </div>
+    </div>
+
+    <div class="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4 text-xs text-neutral-400">
+      <span>60 days ago</span>
+      <span class="flex items-center gap-3">
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-green-500"></span> Operational</span>
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-amber-400"></span> Degraded</span>
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-red-500"></span> Outage</span>
+      </span>
+      <span>Today</span>
+    </div>
+  </div>
+</section>
+<script>
+var DAYS = 60;
+var SERVICES = { api: 11, dashboard: 29, webhooks: 5, email: 47 }; // name -> seed
+
+// Seeded generator: the same history renders on every load, which is what a
+// status page should do. Swap this for your real incident data.
+function generator(seed) {
+  var state = seed;
+  return function () {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+}
+
+var COLORS = { up: "bg-green-500", degraded: "bg-amber-400", down: "bg-red-500" };
+var WEIGHT = { up: 0, degraded: 0.3, down: 1 };
+var allGreen = true;
+
+Object.keys(SERVICES).forEach(function (name) {
+  var strip = document.querySelector('[data-uptime="' + name + '"]');
+  var value = document.querySelector('[data-uptime-value="' + name + '"]');
+  var random = generator(SERVICES[name]);
+  var lost = 0;
+
+  for (var i = 0; i < DAYS; i++) {
+    var roll = random();
+    var state = roll < 0.02 ? "down" : roll < 0.06 ? "degraded" : "up";
+    lost += WEIGHT[state];
+    if (state !== "up") allGreen = false;
+
+    var day = new Date(Date.now() - (DAYS - 1 - i) * 86400000);
+    var bar = document.createElement("span");
+    bar.className = "flex-1 rounded-sm transition hover:opacity-70 " + COLORS[state];
+    bar.title = day.toDateString() + " — " + state;
+    strip.appendChild(bar);
+  }
+
+  value.textContent = ((1 - lost / DAYS) * 100).toFixed(2) + "% uptime";
+});
+
+if (!allGreen) {
+  var pill = document.getElementById("statusPill");
+  pill.className = "inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700";
+  pill.innerHTML = '<span class="h-2 w-2 rounded-full bg-amber-500"></span> Incidents in the last 60 days';
+}
+</script>
+</body></html>

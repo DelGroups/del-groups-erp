@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/hero/hero-search-first-hero/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search-first hero</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="relative overflow-hidden bg-white px-6 py-24">
+  <div class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-neutral-100 to-transparent"></div>
+
+  <div class="relative mx-auto max-w-3xl text-center">
+    <span class="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-600">
+      <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span> 2026 filings are now indexed
+    </span>
+
+    <h1 class="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight text-neutral-900 sm:text-6xl">
+      Every public filing,<br class="hidden sm:block" /> one search box
+    </h1>
+    <p class="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-neutral-500">
+      Full-text search across company registries in 14 jurisdictions, updated nightly.
+    </p>
+
+    <div class="mx-auto mt-9 flex max-w-2xl items-center gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm transition focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/10">
+      <span class="pl-3 text-neutral-400"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+      <input type="search" placeholder="Search 24,000 companies, officers and filings…"
+        class="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-sm outline-none placeholder:text-neutral-400" />
+      <kbd class="hidden rounded-md border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[11px] text-neutral-400 sm:block">/</kbd>
+      <button class="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Search</button>
+    </div>
+
+    <div class="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs">
+      <span class="text-neutral-400">Try</span>
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-neutral-600 transition hover:bg-neutral-50">directors of Northwind Ltd</button>
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-neutral-600 transition hover:bg-neutral-50">filings after 2024-06</button>
+      <button class="rounded-full border border-neutral-200 px-3 py-1 text-neutral-600 transition hover:bg-neutral-50">sic:6201 in Rotterdam</button>
+    </div>
+
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-neutral-400">
+      <span>24,118 records indexed</span><span>·</span><span>14 official sources</span><span>·</span><span>Refreshed every night at 02:00 UTC</span>
+    </div>
+  </div>
+</section>
+</body></html>

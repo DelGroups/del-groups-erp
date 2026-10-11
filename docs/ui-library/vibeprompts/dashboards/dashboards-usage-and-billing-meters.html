@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/dashboards/dashboards-usage-and-billing-meters/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage and billing meters</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-3xl px-6 py-12">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-7 py-6">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900">Usage this period</h2>
+        <p class="mt-1 text-sm text-neutral-500">1–31 August · 13 days remaining</p>
+      </div>
+      <button class="rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800">Manage plan</button>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4 border-y border-neutral-200 bg-neutral-50 px-7 py-5">
+      <div>
+        <p class="text-3xl font-semibold tracking-tight text-neutral-900">$412.60</p>
+        <p class="mt-1 text-xs uppercase tracking-widest text-neutral-400">Estimated for August</p>
+      </div>
+      <p class="max-w-xs text-xs leading-relaxed text-neutral-500">Includes the $59 platform fee. The invoice is issued on 1 September and charged to Visa ·· 4411.</p>
+    </div>
+
+    <div class="divide-y divide-neutral-100">
+      <div class="px-7 py-5">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m8 9-3 3 3 3m8-6 3 3-3 3m-2-9-4 12"/></svg> API requests</p>
+          <p class="font-mono text-xs text-neutral-500">842,113 / 1,000,000</p>
+        </div>
+        <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div class="h-full rounded-full bg-amber-400" style="width:84%"></div></div>
+      </div>
+
+      <div class="px-7 py-5">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> Seats</p>
+          <p class="font-mono text-xs text-neutral-500">12 / 25</p>
+        </div>
+        <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div class="h-full rounded-full bg-neutral-900" style="width:48%"></div></div>
+      </div>
+
+      <div class="px-7 py-5">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="4" y="3" width="16" height="7" rx="2"/><rect x="4" y="14" width="16" height="7" rx="2"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h5M12 17.5h5"/></svg> Storage</p>
+          <p class="font-mono text-xs text-neutral-500">612 GB / 500 GB</p>
+        </div>
+        <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div class="h-full rounded-full bg-red-500" style="width:100%"></div></div>
+        <p class="mt-2 text-xs text-red-600">112 GB over · billed at $0.09/GB → $10.08</p>
+      </div>
+
+      <div class="px-7 py-5">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg> Exports</p>
+          <p class="font-mono text-xs text-neutral-500">38 / 100</p>
+        </div>
+        <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div class="h-full rounded-full bg-neutral-900" style="width:38%"></div></div>
+      </div>
+
+      <div class="px-7 py-5">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg> Webhook deliveries</p>
+          <p class="font-mono text-xs text-neutral-500">2.4M / 2M</p>
+        </div>
+        <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div class="h-full rounded-full bg-red-500" style="width:100%"></div></div>
+        <p class="mt-2 text-xs text-red-600">400k over · billed at $0.20 per 10k → $8.00</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-7 py-4 text-sm">
+      <a href="#" class="font-medium text-neutral-900 underline-offset-4 hover:underline">Detailed usage by day <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+      <a href="#" class="text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline">How metering works</a>
+    </div>
+  </div>
+</section>
+</body></html>

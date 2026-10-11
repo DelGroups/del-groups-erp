@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/cta/cta-countdown-launch-banner/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown launch banner</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="px-6 py-16">
+  <div class="mx-auto max-w-4xl rounded-3xl bg-neutral-900 px-8 py-14 text-center">
+    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
+      <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Early access closes soon
+    </span>
+    <h2 class="mx-auto mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-tight text-white">
+      Founding accounts close when the timer runs out
+    </h2>
+
+    <div id="timer" class="mx-auto mt-8 grid max-w-md grid-cols-4 gap-3">
+      <div class="rounded-2xl bg-white/5 py-4">
+        <p id="days" class="font-mono text-3xl font-semibold text-white">00</p>
+        <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-500">Days</p>
+      </div>
+      <div class="rounded-2xl bg-white/5 py-4">
+        <p id="hours" class="font-mono text-3xl font-semibold text-white">00</p>
+        <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-500">Hours</p>
+      </div>
+      <div class="rounded-2xl bg-white/5 py-4">
+        <p id="minutes" class="font-mono text-3xl font-semibold text-white">00</p>
+        <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-500">Minutes</p>
+      </div>
+      <div class="rounded-2xl bg-white/5 py-4">
+        <p id="seconds" class="font-mono text-3xl font-semibold text-white">00</p>
+        <p class="mt-1 text-[10px] uppercase tracking-widest text-neutral-500">Seconds</p>
+      </div>
+    </div>
+
+    <form class="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
+      <input type="email" placeholder="<a class="__cf_email__" data-cfemail="c5bcaab085a6aaa8b5a4abbceba6aaa8" href="/cdn-cgi/l/email-protection">[email protected]</a>"
+        class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none focus:border-white/30" />
+      <button id="claim" class="shrink-0 rounded-xl bg-white px-5 py-3 text-sm font-medium text-neutral-900 transition hover:bg-neutral-200">Claim a seat</button>
+    </form>
+    <p class="mt-4 text-xs text-neutral-500"><span id="seats">142</span> of 500 founding seats left · No card required</p>
+  </div>
+</section>
+<script>
+// Swap for your real launch moment, e.g. new Date("2026-09-01T09:00:00Z").
+var LAUNCH = new Date(Date.now() + 3 * 86400000 + 4 * 3600000 + 90000);
+
+var timer = document.getElementById("timer");
+var claim = document.getElementById("claim");
+var seats = document.getElementById("seats");
+var units = {
+  days: document.getElementById("days"),
+  hours: document.getElementById("hours"),
+  minutes: document.getElementById("minutes"),
+  seconds: document.getElementById("seconds")
+};
+
+function pad(n) {
+  return n < 10 ? "0" + n : String(n);
+}
+
+function tick() {
+  var left = LAUNCH - Date.now();
+
+  if (left <= 0) {
+    clearInterval(clock);
+    timer.className = "mx-auto mt-8 max-w-md rounded-2xl bg-white/5 px-6 py-6";
+    timer.innerHTML = '<p class="text-2xl font-semibold text-white">We are live</p>' +
+      '<p class="mt-1 text-sm text-neutral-400">Founding pricing is locked for anyone who joins today.</p>';
+    claim.textContent = "Create your account";
+    return;
+  }
+
+  var total = Math.floor(left / 1000);
+  units.days.textContent = pad(Math.floor(total / 86400));
+  units.hours.textContent = pad(Math.floor(total / 3600) % 24);
+  units.minutes.textContent = pad(Math.floor(total / 60) % 60);
+  units.seconds.textContent = pad(total % 60);
+}
+
+var clock = setInterval(tick, 1000);
+tick();
+
+// Scarcity should track something real — here, one seat every 45 seconds.
+setInterval(function () {
+  var left = Number(seats.textContent);
+  if (left > 1) seats.textContent = left - 1;
+}, 45000);
+</script>
+</body></html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-toast-notification/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toast notification</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="toastStack" class="fixed bottom-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3"></div>
+
+<template id="toastTemplate">
+  <div class="translate-x-4 overflow-hidden rounded-xl border border-neutral-200 bg-white opacity-0 shadow-lg transition duration-300">
+    <div class="flex items-start gap-3 p-4">
+      <span data-icon class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+      <div class="flex-1">
+        <p data-title class="text-sm font-medium text-neutral-900">Changes saved</p>
+        <p data-message class="mt-0.5 text-sm text-neutral-500">Your settings were updated successfully.</p>
+      </div>
+      <button data-close class="text-neutral-400 hover:text-neutral-700" aria-label="Dismiss"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="h-0.5 w-full bg-neutral-100">
+      <div data-timer class="h-full w-full bg-neutral-900"></div>
+    </div>
+  </div>
+</template>
+
+<!-- Demo trigger — remove in real use and call toast() from your own code. -->
+<div class="p-6">
+  <button id="demoToast" class="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">Save changes</button>
+</div>
+<script>
+var LIFETIME = 5000;
+
+var stack = document.getElementById("toastStack");
+var template = document.getElementById("toastTemplate");
+
+var VARIANTS = {
+  success: { className: "bg-green-100 text-green-700", glyph: "✓" },
+  error: { className: "bg-red-100 text-red-700", glyph: "!" }
+};
+
+function toast(title, message, variant) {
+  var node = template.content.firstElementChild.cloneNode(true);
+  var style = VARIANTS[variant] || VARIANTS.success;
+
+  node.querySelector("[data-title]").textContent = title;
+  node.querySelector("[data-message]").textContent = message;
+  node.querySelector("[data-icon]").className =
+    "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs " + style.className;
+  node.querySelector("[data-icon]").textContent = style.glyph;
+
+  var timer = node.querySelector("[data-timer]");
+  stack.appendChild(node);
+
+  // Next frame, so the browser has a start value to transition from.
+  requestAnimationFrame(function () {
+    node.classList.remove("translate-x-4", "opacity-0");
+    timer.style.transition = "width " + LIFETIME + "ms linear";
+    timer.style.width = "0%";
+  });
+
+  var remove = function () {
+    node.classList.add("translate-x-4", "opacity-0");
+    setTimeout(function () { node.remove(); }, 300);
+  };
+
+  var countdown = setTimeout(remove, LIFETIME);
+
+  // Reading a toast should not race its own timer.
+  var remaining = 1; // fraction of LIFETIME still to run
+
+  node.addEventListener("mouseenter", function () {
+    clearTimeout(countdown);
+    var track = timer.parentElement.getBoundingClientRect().width;
+    remaining = track ? timer.getBoundingClientRect().width / track : 0;
+    timer.style.transition = "none";
+    timer.style.width = remaining * 100 + "%";
+  });
+
+  node.addEventListener("mouseleave", function () {
+    var ms = remaining * LIFETIME;
+    timer.style.transition = "width " + ms + "ms linear";
+    timer.style.width = "0%";
+    countdown = setTimeout(remove, ms);
+  });
+
+  node.querySelector("[data-close]").addEventListener("click", function () {
+    clearTimeout(countdown);
+    remove();
+  });
+
+  return node;
+}
+
+document.getElementById("demoToast").addEventListener("click", function () {
+  toast("Changes saved", "Your settings were updated successfully.", "success");
+});
+
+toast("Changes saved", "Your settings were updated successfully.", "success");
+</script>
+</body></html>

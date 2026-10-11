@@ -1,0 +1,109 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-one-time-api-key-reveal/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-time API key reveal</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-lg px-6 py-14">
+  <div class="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <div class="flex items-start gap-4">
+      <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-neutral-900 text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 3 4.5 6v5.5c0 4.7 3.2 7.7 7.5 9.5 4.3-1.8 7.5-4.8 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-neutral-900">Your new API key</h1>
+        <p class="mt-1 text-sm text-neutral-500">This is the only time it will be shown. We store a hash, not the key.</p>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-xl bg-neutral-900 p-4">
+      <div class="flex items-center gap-3">
+        <code id="keyValue" class="min-w-0 flex-1 truncate font-mono text-sm text-white">••••••••••••••••••••••••••••••••</code>
+        <button id="keyReveal" class="shrink-0 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:bg-neutral-800">Reveal</button>
+        <button id="keyCopy" class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 transition hover:bg-neutral-200">Copy</button>
+      </div>
+      <p id="keyTimer" class="mt-2 hidden font-mono text-[11px] text-neutral-500">Hides again in 30s</p>
+    </div>
+
+    <p class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+      This key has full write access to the workspace. Put it straight into your secret manager — never into a repository, a ticket or a chat message.
+    </p>
+
+    <dl class="mt-5 divide-y divide-neutral-100 rounded-xl border border-neutral-200 text-sm">
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Name</dt>
+        <dd class="font-medium text-neutral-900">production-ingest</dd>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Scopes</dt>
+        <dd class="flex gap-1.5">
+          <span class="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-700">events:write</span>
+          <span class="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-700">reports:read</span>
+        </dd>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3">
+        <dt class="text-neutral-500">Created</dt>
+        <dd class="font-medium text-neutral-900">18 Aug 2026, 14:02 CET</dd>
+      </div>
+    </dl>
+
+    <label class="mt-6 flex items-start gap-2.5 text-sm text-neutral-600">
+      <input id="keyAck" type="checkbox" class="mt-0.5 rounded border-neutral-300" />
+      <span>I have copied this key and stored it somewhere safe.</span>
+    </label>
+
+    <button id="keyDone" disabled class="mt-4 w-full cursor-not-allowed rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white opacity-40 transition">Done</button>
+  </div>
+</section>
+<script>
+var KEY = "nw_live_8f21c94a77b3410dbe62a015cc4f9d02";
+var MASK = "••••••••••••••••••••••••••••••••";
+
+var value = document.getElementById("keyValue");
+var reveal = document.getElementById("keyReveal");
+var copy = document.getElementById("keyCopy");
+var timer = document.getElementById("keyTimer");
+var ack = document.getElementById("keyAck");
+var done = document.getElementById("keyDone");
+var countdown;
+
+function hide() {
+  clearInterval(countdown);
+  value.textContent = MASK;
+  reveal.textContent = "Reveal";
+  timer.classList.add("hidden");
+}
+
+function show() {
+  value.textContent = KEY;
+  reveal.textContent = "Hide";
+  timer.classList.remove("hidden");
+
+  var left = 30;
+  timer.textContent = "Hides again in " + left + "s";
+  clearInterval(countdown);
+  countdown = setInterval(function () {
+    left -= 1;
+    timer.textContent = "Hides again in " + left + "s";
+    if (left <= 0) hide();
+  }, 1000);
+}
+
+reveal.addEventListener("click", function () {
+  if (value.textContent === MASK) show();
+  else hide();
+});
+
+copy.addEventListener("click", function () {
+  navigator.clipboard.writeText(KEY).then(function () {
+    copy.textContent = "Copied";
+    setTimeout(function () {
+      copy.textContent = "Copy";
+    }, 1500);
+  });
+});
+
+ack.addEventListener("change", function () {
+  done.disabled = !ack.checked;
+  done.classList.toggle("opacity-40", !ack.checked);
+  done.classList.toggle("cursor-not-allowed", !ack.checked);
+});
+</script>
+</body></html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/faq/faq-faq-with-category-rail/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ with category rail</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-6xl px-6 py-16">
+  <div class="mb-12 max-w-2xl">
+    <h2 class="text-3xl font-semibold text-neutral-900">Help centre</h2>
+    <p class="mt-2 text-neutral-500">The answers people ask support for most often, grouped by where they live in the product.</p>
+  </div>
+
+  <div class="grid gap-12 lg:grid-cols-[240px_1fr]">
+    <aside class="lg:sticky lg:top-24 lg:self-start">
+      <p class="px-3 text-xs font-medium uppercase tracking-widest text-neutral-400">Browse by topic</p>
+      <nav class="mt-3 space-y-1 text-sm">
+        <a href="#billing" class="flex items-center justify-between rounded-lg bg-neutral-100 px-3 py-2 font-medium text-neutral-900">Billing <span class="text-xs text-neutral-400">6</span></a>
+        <a href="#accounts" class="flex items-center justify-between rounded-lg px-3 py-2 text-neutral-600 transition hover:bg-neutral-50">Accounts <span class="text-xs text-neutral-400">4</span></a>
+        <a href="#security" class="flex items-center justify-between rounded-lg px-3 py-2 text-neutral-600 transition hover:bg-neutral-50">Security <span class="text-xs text-neutral-400">7</span></a>
+        <a href="#data" class="flex items-center justify-between rounded-lg px-3 py-2 text-neutral-600 transition hover:bg-neutral-50">Data <span class="text-xs text-neutral-400">3</span></a>
+      </nav>
+
+      <div class="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
+        <p class="text-sm font-medium text-neutral-900">Still stuck?</p>
+        <p class="mt-1 text-xs leading-relaxed text-neutral-500">Send us the workspace name and we will look at the logs with you.</p>
+        <a href="#" class="mt-4 block rounded-xl bg-neutral-900 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-neutral-800">Contact support</a>
+      </div>
+    </aside>
+
+    <div class="space-y-14">
+      <section id="billing">
+        <h3 class="border-b border-neutral-200 pb-3 text-sm font-medium uppercase tracking-widest text-neutral-400">Billing</h3>
+        <div class="mt-6 space-y-7">
+          <div>
+            <p class="font-medium text-neutral-900">When does the trial actually start?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">On your first successful build, not on signup — so a workspace you set up and forget about does not burn the fortnight.</p>
+          </div>
+          <div>
+            <p class="font-medium text-neutral-900">Can I switch from monthly to annual mid-term?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Yes. We credit the unused part of the month against the annual invoice, and the new term starts the day you switch.</p>
+          </div>
+          <div>
+            <p class="font-medium text-neutral-900">Who can see invoices?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Owners and anyone with the Billing role. Add a finance contact under <a href="#" class="font-medium text-neutral-900 underline">Settings → Billing</a> and they will get the PDF without a seat.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="accounts">
+        <h3 class="border-b border-neutral-200 pb-3 text-sm font-medium uppercase tracking-widest text-neutral-400">Accounts</h3>
+        <div class="mt-6 space-y-7">
+          <div>
+            <p class="font-medium text-neutral-900">How do I transfer ownership?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">The current owner promotes another admin and confirms by email. Transfers are logged and reversible for 24 hours.</p>
+          </div>
+          <div>
+            <p class="font-medium text-neutral-900">Do inactive members still count as seats?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Only if they signed in during the billing period. Everyone else drops off the invoice automatically.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="security">
+        <h3 class="border-b border-neutral-200 pb-3 text-sm font-medium uppercase tracking-widest text-neutral-400">Security</h3>
+        <div class="mt-6 space-y-7">
+          <div>
+            <p class="font-medium text-neutral-900">Where are secrets stored?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Encrypted per workspace and decrypted inside the runner at build time. They never appear in logs, and the UI shows only the last four characters.</p>
+          </div>
+          <div>
+            <p class="font-medium text-neutral-900">Can I require SSO for everyone?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Yes — enforce it per domain, and existing password sessions are ended the next time they refresh a token.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="data">
+        <h3 class="border-b border-neutral-200 pb-3 text-sm font-medium uppercase tracking-widest text-neutral-400">Data</h3>
+        <div class="mt-6 space-y-7">
+          <div>
+            <p class="font-medium text-neutral-900">How long are build logs kept?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">30 days on Team, 12 months on Business, and you can stream them to your own bucket from day one.</p>
+          </div>
+          <div>
+            <p class="font-medium text-neutral-900">Is there an export API?</p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-500">Everything the dashboard shows is available as JSON. See the <a href="#" class="font-medium text-neutral-900 underline">export endpoints</a> in the API reference.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+</body></html>

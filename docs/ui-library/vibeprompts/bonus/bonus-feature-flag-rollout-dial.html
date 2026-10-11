@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-feature-flag-rollout-dial/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature flag rollout dial</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-xl px-6 py-14">
+  <div id="flagCard" class="rounded-2xl border border-neutral-200 bg-white p-7">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-lg font-semibold tracking-tight text-neutral-900">Instant checkout</h1>
+        <p class="mt-1 font-mono text-xs text-neutral-400">checkout.instant_v2</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="flagState" class="text-xs font-medium text-neutral-900">Live</span>
+        <button id="flagSwitch" role="switch" aria-checked="true" class="relative h-6 w-11 shrink-0 rounded-full bg-neutral-900 transition">
+          <span id="flagKnob" class="absolute left-0.5 top-0.5 h-5 w-5 translate-x-5 rounded-full bg-white shadow transition"></span>
+        </button>
+      </div>
+    </div>
+
+    <div id="flagEnvs" class="mt-6 grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1">
+      <button data-env="dev" class="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-500 transition">Development</button>
+      <button data-env="staging" class="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-500 transition">Staging</button>
+      <button data-env="prod" class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 shadow-sm transition">Production</button>
+    </div>
+
+    <div class="mt-7 flex items-end justify-between">
+      <div>
+        <p id="flagPercent" class="font-mono text-5xl font-semibold tracking-tight text-neutral-900">25<span class="text-2xl text-neutral-300">%</span></p>
+        <p id="flagAudience" class="mt-1 text-sm text-neutral-500">≈ 3,200 of 12,800 users</p>
+      </div>
+      <p class="text-right text-[10px] uppercase tracking-widest text-neutral-400">Traffic<br>share</p>
+    </div>
+
+    <input id="flagRange" type="range" min="0" max="100" step="1" value="25"
+      class="mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-neutral-900">
+
+    <div id="flagGrid" class="mt-6 grid grid-cols-[repeat(20,minmax(0,1fr))] gap-1"></div>
+
+    <p id="flagWarning" class="mt-4 hidden rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-inset ring-amber-200">
+      Past half of production traffic. Make sure the kill switch reaches users without waiting on a deploy.
+    </p>
+
+    <div class="mt-6 space-y-2 border-t border-neutral-200 pt-5">
+      <p class="text-[10px] uppercase tracking-widest text-neutral-400">Overrides</p>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-600">Internal team</span>
+        <span class="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 ring-1 ring-inset ring-green-200">Always on</span>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-600">Enterprise plan</span>
+        <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">Held back</span>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var ENVS = { dev: 42, staging: 1250, prod: 12800 };
+
+var card = document.getElementById("flagCard");
+var range = document.getElementById("flagRange");
+var percentEl = document.getElementById("flagPercent");
+var audienceEl = document.getElementById("flagAudience");
+var grid = document.getElementById("flagGrid");
+var warning = document.getElementById("flagWarning");
+var stateEl = document.getElementById("flagState");
+var toggle = document.getElementById("flagSwitch");
+var knob = document.getElementById("flagKnob");
+
+var env = "prod";
+var armed = true;
+
+// 100 squares, one per percentage bucket. Buckets are assigned by a stable
+// hash in real life, so the same user keeps the same answer between reloads.
+var cells = [];
+for (var i = 0; i < 100; i++) {
+  var cell = document.createElement("span");
+  cell.className = "aspect-square rounded-[3px] bg-neutral-100 transition-colors";
+  grid.appendChild(cell);
+  cells.push(cell);
+}
+
+function render() {
+  var percent = Number(range.value);
+  var live = armed ? percent : 0;
+
+  percentEl.innerHTML = live + '<span class="text-2xl text-neutral-300">%</span>';
+  audienceEl.textContent =
+    "≈ " + Math.round((ENVS[env] * live) / 100).toLocaleString("en-US") +
+    " of " + ENVS[env].toLocaleString("en-US") + " users";
+
+  cells.forEach(function (cell, index) {
+    cell.className =
+      "aspect-square rounded-[3px] transition-colors " +
+      (index < live ? (armed ? "bg-neutral-900" : "bg-neutral-300") : "bg-neutral-100");
+  });
+
+  warning.classList.toggle("hidden", !(armed && env === "prod" && percent > 50));
+  card.classList.toggle("opacity-60", !armed);
+  range.disabled = !armed;
+  stateEl.textContent = armed ? "Live" : "Off";
+}
+
+range.addEventListener("input", render);
+
+document.getElementById("flagEnvs").addEventListener("click", function (e) {
+  var button = e.target.closest("[data-env]");
+  if (!button) return;
+  env = button.getAttribute("data-env");
+  [].slice.call(this.children).forEach(function (tab) {
+    var on = tab === button;
+    tab.className =
+      "rounded-lg px-3 py-1.5 text-sm font-medium transition " +
+      (on ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500");
+  });
+  render();
+});
+
+toggle.addEventListener("click", function () {
+  armed = !armed;
+  toggle.setAttribute("aria-checked", String(armed));
+  toggle.className =
+    "relative h-6 w-11 shrink-0 rounded-full transition " + (armed ? "bg-neutral-900" : "bg-neutral-200");
+  knob.className =
+    "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition " +
+    (armed ? "translate-x-5" : "translate-x-0");
+  render();
+});
+
+render();
+</script>
+</body></html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-series-navigation-for-a-post/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Series navigation for a post</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<aside class="mx-auto my-10 max-w-2xl rounded-2xl border border-neutral-200 bg-white">
+  <div class="flex flex-wrap items-center gap-3 border-b border-neutral-200 px-6 py-4">
+    <span class="rounded-full bg-neutral-900 px-2.5 py-1 text-[11px] font-medium text-white">Part 3 of 5</span>
+    <p class="text-sm font-medium text-neutral-900">Migrating a billion rows</p>
+    <p class="ml-auto text-xs text-neutral-400">54 minutes in total</p>
+  </div>
+
+  <div class="divide-y divide-neutral-100">
+    <a href="#" class="flex items-center gap-4 px-6 py-3.5 transition hover:bg-neutral-50">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium text-neutral-700">Why we stopped waiting for a maintenance window</span>
+        <span class="block truncate text-xs text-neutral-500">The cost of downtime, priced honestly.</span>
+      </span>
+      <span class="shrink-0 text-xs text-neutral-400">8 min</span>
+    </a>
+
+    <a href="#" class="flex items-center gap-4 px-6 py-3.5 transition hover:bg-neutral-50">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] text-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="m5 12.5 4.25 4.25L19 7"/></svg></span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium text-neutral-700">Designing the dual-write path</span>
+        <span class="block truncate text-xs text-neutral-500">Two shapes of truth, and reconciling them.</span>
+      </span>
+      <span class="shrink-0 text-xs text-neutral-400">11 min</span>
+    </a>
+
+    <div class="flex items-center gap-4 bg-neutral-50 px-6 py-3.5">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 border-neutral-900 text-[11px] font-medium text-neutral-900">3</span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-semibold text-neutral-900">Backfilling without melting production</span>
+        <span class="block truncate text-xs text-neutral-500">Checkpoints, rate limits and knowing when to wait.</span>
+      </span>
+      <span class="shrink-0 text-xs text-neutral-500">14 min</span>
+    </div>
+
+    <a href="#" class="flex items-center gap-4 px-6 py-3.5 transition hover:bg-neutral-50">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-neutral-200 text-[11px] text-neutral-400">4</span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium text-neutral-900">The cutover weekend, hour by hour</span>
+        <span class="block truncate text-xs text-neutral-500">Including the ninety minutes we nearly rolled back.</span>
+      </span>
+      <span class="shrink-0 text-xs text-neutral-400">13 min</span>
+    </a>
+
+    <a href="#" class="flex items-center gap-4 px-6 py-3.5 transition hover:bg-neutral-50">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-neutral-200 text-[11px] text-neutral-400">5</span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium text-neutral-900">What we would do differently</span>
+        <span class="block truncate text-xs text-neutral-500">Two decisions we would reverse, one we would keep.</span>
+      </span>
+      <span class="shrink-0 text-xs text-neutral-400">8 min</span>
+    </a>
+  </div>
+
+  <div class="grid gap-px border-t border-neutral-200 bg-neutral-200 sm:grid-cols-2">
+    <a href="#" class="group flex items-center gap-2 bg-white px-6 py-4 text-sm transition hover:bg-neutral-50">
+      <span class="text-neutral-400 transition group-hover:-translate-x-0.5">←</span>
+      <span><span class="block text-[11px] uppercase tracking-widest text-neutral-400">Previous</span><span class="block font-medium text-neutral-900">Designing the dual-write path</span></span>
+    </a>
+    <a href="#" class="group flex items-center justify-end gap-2 bg-white px-6 py-4 text-right text-sm transition hover:bg-neutral-50">
+      <span><span class="block text-[11px] uppercase tracking-widest text-neutral-400">Next</span><span class="block font-medium text-neutral-900">The cutover weekend</span></span>
+      <span class="text-neutral-400 transition group-hover:translate-x-0.5">→</span>
+    </a>
+  </div>
+
+  <p class="border-t border-neutral-200 px-6 py-3 text-xs text-neutral-400">Each part stands alone, but they were written to be read in order.</p>
+</aside>
+</body></html>

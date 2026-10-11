@@ -1,0 +1,169 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-keyboard-shortcut-recorder/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard shortcut recorder</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-xl p-6">
+  <section class="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+    <header class="border-b border-neutral-100 px-5 py-4">
+      <h2 class="text-sm font-semibold text-neutral-900">Keyboard shortcuts</h2>
+      <p class="mt-1 text-sm text-neutral-500">Personalize the commands you use most.</p>
+    </header>
+
+    <div id="shortcutRows" class="divide-y divide-neutral-100">
+      <div data-shortcut data-action="Quick search" data-binding="Meta+K" class="px-5 py-4">
+        <div data-summary class="flex items-center gap-4">
+          <span class="flex-1 text-sm font-medium text-neutral-700">Quick search</span>
+          <span data-keys class="flex gap-1"></span>
+          <button data-change class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900">Change</button>
+        </div>
+        <div data-recorder class="hidden">
+          <button data-capture class="flex w-full items-center justify-between rounded-xl border border-neutral-900 bg-neutral-50 px-4 py-3 text-left ring-4 ring-neutral-900/10">
+            <span class="text-sm font-medium text-neutral-700">Press a key combination</span>
+            <span class="animate-pulse text-xs text-neutral-400">Recording…</span>
+          </button>
+          <div class="mt-2 flex items-center justify-between">
+            <p data-warning class="text-xs text-neutral-400">Esc cancels · Backspace clears</p>
+            <button data-cancel class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div data-shortcut data-action="Create document" data-binding="Meta+Shift+D" class="px-5 py-4">
+        <div data-summary class="flex items-center gap-4">
+          <span class="flex-1 text-sm font-medium text-neutral-700">Create document</span>
+          <span data-keys class="flex gap-1"></span>
+          <button data-change class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900">Change</button>
+        </div>
+        <div data-recorder class="hidden">
+          <button data-capture class="flex w-full items-center justify-between rounded-xl border border-neutral-900 bg-neutral-50 px-4 py-3 text-left ring-4 ring-neutral-900/10">
+            <span class="text-sm font-medium text-neutral-700">Press a key combination</span>
+            <span class="animate-pulse text-xs text-neutral-400">Recording…</span>
+          </button>
+          <div class="mt-2 flex items-center justify-between"><p data-warning class="text-xs text-neutral-400">Esc cancels · Backspace clears</p><button data-cancel class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Cancel</button></div>
+        </div>
+      </div>
+
+      <div data-shortcut data-action="Toggle sidebar" data-binding="Alt+B" class="px-5 py-4">
+        <div data-summary class="flex items-center gap-4">
+          <span class="flex-1 text-sm font-medium text-neutral-700">Toggle sidebar</span>
+          <span data-keys class="flex gap-1"></span>
+          <button data-change class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900">Change</button>
+        </div>
+        <div data-recorder class="hidden">
+          <button data-capture class="flex w-full items-center justify-between rounded-xl border border-neutral-900 bg-neutral-50 px-4 py-3 text-left ring-4 ring-neutral-900/10">
+            <span class="text-sm font-medium text-neutral-700">Press a key combination</span>
+            <span class="animate-pulse text-xs text-neutral-400">Recording…</span>
+          </button>
+          <div class="mt-2 flex items-center justify-between"><p data-warning class="text-xs text-neutral-400">Esc cancels · Backspace clears</p><button data-cancel class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Cancel</button></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-neutral-100 bg-neutral-50 px-5 py-3 text-xs text-neutral-400">Letter and number shortcuts require at least one modifier key.</footer>
+  </section>
+</div>
+<script>
+var rows = [].slice.call(document.querySelectorAll("[data-shortcut]"));
+var activeRow = null;
+var isApple = /Mac|iPhone|iPad/.test(navigator.platform);
+var RESERVED = ["Meta+R", "Meta+T", "Meta+W", "Ctrl+R", "Ctrl+T", "Ctrl+W"];
+
+function label(part) {
+  if (part === "Meta") return isApple ? "⌘" : "Win";
+  if (part === "Ctrl") return isApple ? "⌃" : "Ctrl";
+  if (part === "Alt") return isApple ? "⌥" : "Alt";
+  if (part === "Shift") return isApple ? "⇧" : "Shift";
+  return part;
+}
+
+function render(row) {
+  var holder = row.querySelector("[data-keys]");
+  var binding = row.getAttribute("data-binding");
+  holder.innerHTML = "";
+  if (!binding) {
+    holder.textContent = "Not set";
+    holder.className = "text-xs text-neutral-400";
+    return;
+  }
+  holder.className = "flex gap-1";
+  binding.split("+").forEach(function (part) {
+    var key = document.createElement("kbd");
+    key.className = "min-w-7 rounded-md border border-neutral-200 bg-neutral-50 px-1.5 py-1 text-center text-[11px] font-medium text-neutral-600 shadow-sm";
+    key.textContent = label(part);
+    holder.appendChild(key);
+  });
+}
+
+function close(row) {
+  row.querySelector("[data-summary]").classList.remove("hidden");
+  row.querySelector("[data-recorder]").classList.add("hidden");
+  row.querySelector("[data-warning]").className = "text-xs text-neutral-400";
+  row.querySelector("[data-warning]").textContent = "Esc cancels · Backspace clears";
+  if (activeRow === row) activeRow = null;
+}
+
+function open(row) {
+  if (activeRow) close(activeRow);
+  activeRow = row;
+  row.querySelector("[data-summary]").classList.add("hidden");
+  row.querySelector("[data-recorder]").classList.remove("hidden");
+  row.querySelector("[data-capture]").focus();
+}
+
+function combination(event) {
+  var parts = [];
+  if (event.metaKey) parts.push("Meta");
+  if (event.ctrlKey) parts.push("Ctrl");
+  if (event.altKey) parts.push("Alt");
+  if (event.shiftKey) parts.push("Shift");
+  var key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  if (["Meta", "Control", "Alt", "Shift"].indexOf(key) === -1) parts.push(key);
+  return parts.join("+");
+}
+
+document.addEventListener("keydown", function (event) {
+  if (!activeRow) return;
+  event.preventDefault();
+  if (event.key === "Escape") return close(activeRow);
+  if (event.key === "Backspace") {
+    activeRow.setAttribute("data-binding", "");
+    render(activeRow);
+    return close(activeRow);
+  }
+  if (["Meta", "Control", "Alt", "Shift"].indexOf(event.key) !== -1) return;
+
+  var binding = combination(event);
+  var warning = activeRow.querySelector("[data-warning]");
+  var hasModifier = event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+  if (!hasModifier && /^[A-Z0-9]$/.test(event.key.toUpperCase())) {
+    warning.textContent = "Add Ctrl, Alt, Shift, or Meta.";
+    warning.className = "text-xs text-red-600";
+    return;
+  }
+  if (RESERVED.indexOf(binding) !== -1) {
+    warning.textContent = "That shortcut is reserved by your browser.";
+    warning.className = "text-xs text-red-600";
+    return;
+  }
+  var conflict = rows.filter(function (row) {
+    return row !== activeRow && row.getAttribute("data-binding") === binding;
+  })[0];
+  if (conflict) {
+    warning.textContent = "Already used by “" + conflict.getAttribute("data-action") + "”.";
+    warning.className = "text-xs text-red-600";
+    return;
+  }
+
+  activeRow.setAttribute("data-binding", binding);
+  render(activeRow);
+  close(activeRow);
+});
+
+rows.forEach(function (row) {
+  render(row);
+  row.querySelector("[data-change]").addEventListener("click", function () { open(row); });
+  row.querySelector("[data-cancel]").addEventListener("click", function () { close(row); });
+});
+</script>
+</body></html>

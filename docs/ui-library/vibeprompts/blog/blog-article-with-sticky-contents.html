@@ -1,0 +1,117 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-article-with-sticky-contents/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article with sticky contents</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div id="progress" class="fixed inset-x-0 top-0 z-50 h-0.5 bg-neutral-900 transition-[width] duration-150" style="width: 0%"></div>
+
+<div class="mx-auto max-w-6xl px-6 py-16">
+  <header class="mx-auto max-w-2xl">
+    <span class="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">Engineering</span>
+    <h1 class="mt-5 text-4xl font-semibold leading-tight tracking-tight text-neutral-900">
+      What we learned running our own build cache for two years
+    </h1>
+    <div class="mt-6 flex items-center gap-3 border-b border-neutral-200 pb-6">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-200 text-xs font-medium text-neutral-700">SM</span>
+      <div class="text-sm">
+        <p class="font-medium text-neutral-900">Sam Mercer</p>
+        <p class="text-neutral-400">17 August 2026 · 9 min read</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="mt-12 grid gap-12 lg:grid-cols-[1fr_220px]">
+    <article id="article" class="mx-auto max-w-2xl">
+      <p class="text-lg leading-relaxed text-neutral-500">
+        We built the cache because the alternative cost more than an engineer. Two years on, it has paid for itself twice — and taught us three things we would rather have known on day one.
+      </p>
+
+      <h2 id="cold-start" class="mt-12 scroll-mt-24 text-xl font-semibold text-neutral-900">The cold start problem is a people problem</h2>
+      <p class="mt-4 leading-relaxed text-neutral-600">
+        A cold cache is not slow because of the network. It is slow because nobody agrees on what a cache key should contain, so every team quietly adds one more variable until the hit rate collapses.
+      </p>
+      <p class="mt-4 leading-relaxed text-neutral-600">
+        We fixed it by making the key a reviewed artefact: one file, one owner, and a test that fails when the key changes without a note explaining why.
+      </p>
+
+      <blockquote class="my-8 border-l-2 border-neutral-900 pl-5 text-lg italic leading-relaxed text-neutral-700">
+        A cache with a 40% hit rate is not a cache. It is a tax with extra steps.
+      </blockquote>
+
+      <h2 id="eviction" class="mt-12 scroll-mt-24 text-xl font-semibold text-neutral-900">Eviction beats capacity</h2>
+      <p class="mt-4 leading-relaxed text-neutral-600">
+        For a year we answered every slowdown by adding storage. The fix was the opposite: evict aggressively, keep the index small enough to stay in memory, and accept a few extra misses on old branches.
+      </p>
+      <div class="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 p-4 font-mono text-sm leading-relaxed text-neutral-600">
+        cache.evict({ olderThan: "14d", keep: "main,release/*" })
+      </div>
+
+      <h2 id="observability" class="mt-12 scroll-mt-24 text-xl font-semibold text-neutral-900">Measure misses, not hits</h2>
+      <p class="mt-4 leading-relaxed text-neutral-600">
+        Hit rate is a vanity metric — it goes up when builds repeat, which is exactly when nobody is waiting. What matters is the time a miss costs on the critical path, per branch, at the moment somebody is watching the pipeline.
+      </p>
+
+      <h2 id="worth-it" class="mt-12 scroll-mt-24 text-xl font-semibold text-neutral-900">Was it worth building?</h2>
+      <p class="mt-4 leading-relaxed text-neutral-600">
+        For us, yes — but only because the cache is boring now. If you are still tuning yours every month, the honest answer is that you are running a small distributed systems project on the side of your actual work.
+      </p>
+    </article>
+
+    <aside class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400">On this page</p>
+      <nav id="toc" class="mt-3 space-y-1 border-l border-neutral-200 text-sm"></nav>
+
+      <div class="mt-8 rounded-2xl border border-neutral-200 p-4">
+        <p class="text-xs font-medium text-neutral-900">Share this</p>
+        <div class="mt-3 flex gap-2 text-neutral-400">
+          <button aria-label="Share on X" class="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          <button aria-label="Share on LinkedIn" class="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 transition hover:text-neutral-900">in</button>
+          <button aria-label="Copy link" class="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+var article = document.getElementById("article");
+var toc = document.getElementById("toc");
+var progress = document.getElementById("progress");
+var headings = [].slice.call(article.querySelectorAll("h2"));
+
+var ACTIVE = "-ml-px block border-l-2 border-neutral-900 py-1 pl-3 font-medium text-neutral-900";
+var IDLE = "-ml-px block border-l-2 border-transparent py-1 pl-3 text-neutral-500 transition hover:text-neutral-900";
+
+var links = headings.map(function (heading) {
+  var link = document.createElement("a");
+  link.href = "#" + heading.id;
+  link.className = IDLE;
+  link.textContent = heading.textContent;
+  link.addEventListener("click", function (e) {
+    e.preventDefault();
+    heading.scrollIntoView({ behavior: "smooth" });
+  });
+  toc.appendChild(link);
+  return link;
+});
+
+function onScroll() {
+  // Progress across the article, not the page — the footer should not count as reading.
+  var box = article.getBoundingClientRect();
+  var scrolled = -box.top;
+  var readable = box.height - window.innerHeight;
+  var ratio = readable > 0 ? scrolled / readable : 1;
+  progress.style.width = Math.min(100, Math.max(0, ratio * 100)) + "%";
+
+  // The last heading that has passed the top quarter of the viewport wins.
+  var current = 0;
+  headings.forEach(function (heading, i) {
+    if (heading.getBoundingClientRect().top < window.innerHeight * 0.25) current = i;
+  });
+  links.forEach(function (link, i) { link.className = i === current ? ACTIVE : IDLE; });
+}
+
+window.addEventListener("scroll", onScroll, { passive: true });
+window.addEventListener("resize", onScroll);
+onScroll();
+</script>
+</body></html>

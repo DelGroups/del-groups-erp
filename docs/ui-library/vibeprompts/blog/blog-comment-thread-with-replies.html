@@ -1,0 +1,195 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/blog/blog-comment-thread-with-replies/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comment thread with replies</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-2xl px-6 py-14">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-neutral-900">6 comments</h2>
+    <select class="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-900">
+      <option>Newest first</option><option>Oldest first</option><option>Most upvoted</option>
+    </select>
+  </div>
+
+  <div class="mt-6 flex gap-3">
+    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">RM</span>
+    <div class="min-w-0 flex-1">
+      <textarea id="commentBox" rows="3" placeholder="Add to the discussion — disagreement welcome, rudeness less so."
+        class="w-full resize-none rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/10"></textarea>
+      <div class="mt-2 flex items-center justify-between">
+        <p class="text-xs text-neutral-400">Markdown works. Links are nofollow.</p>
+        <button id="commentPost" disabled class="cursor-not-allowed rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white opacity-40 transition">Post</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-10 space-y-8">
+    <div class="comment">
+      <div class="flex gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500 text-[11px] font-medium text-white">TS</span>
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-medium text-neutral-900">Tom Silva</span>
+            <span class="text-xs text-neutral-400">4 hours ago</span>
+          </p>
+          <p class="mt-2 leading-relaxed text-neutral-600">
+            The nineteen-month figure matches what I have seen, though ours skewed longer because nobody owned the analytics mirror. Owning the mirror turned out to be the whole fix.
+          </p>
+          <div class="mt-2.5 flex items-center gap-4 text-xs">
+            <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">14</span></button>
+            <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+            <button class="text-neutral-400 transition hover:text-neutral-700">Report</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-12 mt-5 border-l border-neutral-200 pl-5">
+        <div class="flex gap-3">
+          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">MO</span>
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="font-medium text-neutral-900">Mira Osei</span>
+              <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">Author</span>
+              <span class="text-xs text-neutral-400">3 hours ago</span>
+            </p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-600">That matches our experience exactly. The register in footnote two exists because of a mirror nobody owned.</p>
+            <div class="mt-2 flex items-center gap-4 text-xs">
+              <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">9</span></button>
+              <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comment">
+      <div class="flex gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-green-600 text-[11px] font-medium text-white">DK</span>
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-medium text-neutral-900">Dana Køhler</span>
+            <span class="text-xs text-neutral-400">6 hours ago</span>
+          </p>
+          <p class="mt-2 leading-relaxed text-neutral-600">
+            Worth adding that on MySQL 8 the online DDL path makes the add cheap but the drop expensive, which is the opposite of what most people assume.
+          </p>
+          <div class="mt-2.5 flex items-center gap-4 text-xs">
+            <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">22</span></button>
+            <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+            <button class="text-neutral-400 transition hover:text-neutral-700">Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comment">
+      <div class="flex gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-medium text-white">LR</span>
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-medium text-neutral-900">Lena Rask</span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Moderator</span>
+            <span class="text-xs text-neutral-400">Yesterday</span>
+          </p>
+          <p class="mt-2 leading-relaxed text-neutral-600">
+            Pinning this thread — the register template linked in the footnotes has been asked about four times this week.
+          </p>
+          <div class="mt-2.5 flex items-center gap-4 text-xs">
+            <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">31</span></button>
+            <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ml-12 mt-5 border-l border-neutral-200 pl-5">
+        <div class="flex gap-3">
+          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-500 text-[10px] font-medium text-white">RG</span>
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="font-medium text-neutral-900">Ravi Gopal</span>
+              <span class="text-xs text-neutral-400">22 hours ago</span>
+            </p>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-600">Is there a version of the template for event schemas rather than tables? Same problem, different shape.</p>
+            <div class="mt-2 flex items-center gap-4 text-xs">
+              <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">5</span></button>
+              <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comment">
+      <div class="flex gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] font-medium text-white">HB</span>
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-medium text-neutral-900">Hana Brandt</span>
+            <span class="text-xs text-neutral-400">2 days ago</span>
+          </p>
+          <p class="mt-2 leading-relaxed text-neutral-600">
+            We now require a removal plan in the migration PR template. Half the columns never get added, which I think is the real win.
+          </p>
+          <div class="mt-2.5 flex items-center gap-4 text-xs">
+            <button class="vote flex items-center gap-1.5 text-neutral-500 transition hover:text-neutral-900"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M7 10v11H3V10h4Zm0 9h10.2a2 2 0 0 0 1.9-1.4l1.7-5A2 2 0 0 0 18.9 10H15l.7-3.1A3.2 3.2 0 0 0 12.5 3L7 10Z"/></svg> <span class="count">47</span></button>
+            <button class="reply text-neutral-500 transition hover:text-neutral-900">Reply</button>
+            <button class="text-neutral-400 transition hover:text-neutral-700">Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="mt-10 border-t border-neutral-200 pt-5 text-xs text-neutral-400">
+    Comments are moderated against a short <a href="#" class="underline underline-offset-2 hover:text-neutral-700">code of conduct</a>. Disagree as much as you like; do it kindly.
+  </p>
+</section>
+<script>
+var box = document.getElementById("commentBox");
+var post = document.getElementById("commentPost");
+
+box.addEventListener("input", function () {
+  var ready = box.value.trim().length > 0;
+  post.disabled = !ready;
+  post.classList.toggle("opacity-40", !ready);
+  post.classList.toggle("cursor-not-allowed", !ready);
+});
+
+Array.prototype.slice.call(document.querySelectorAll(".vote")).forEach(function (button) {
+  var count = button.querySelector(".count");
+
+  button.addEventListener("click", function () {
+    var voted = button.dataset.voted === "true";
+    button.dataset.voted = voted ? "false" : "true";
+    count.textContent = Number(count.textContent) + (voted ? -1 : 1);
+    button.classList.toggle("text-neutral-900", !voted);
+    button.classList.toggle("font-medium", !voted);
+  });
+});
+
+Array.prototype.slice.call(document.querySelectorAll(".reply")).forEach(function (link) {
+  link.addEventListener("click", function () {
+    var actions = link.parentElement;
+    if (actions.nextElementSibling && actions.nextElementSibling.classList.contains("reply-box")) {
+      actions.nextElementSibling.remove();
+      return;
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "reply-box mt-3";
+    wrap.innerHTML =
+      '<textarea rows="2" placeholder="Write a reply…" class="w-full resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-neutral-900"></textarea>' +
+      '<div class="mt-2 flex justify-end gap-2">' +
+      '<button class="cancel rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-500">Cancel</button>' +
+      '<button class="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white">Reply</button>' +
+      "</div>";
+
+    actions.insertAdjacentElement("afterend", wrap);
+    wrap.querySelector("textarea").focus();
+    wrap.querySelector(".cancel").addEventListener("click", function () {
+      wrap.remove();
+    });
+  });
+});
+</script>
+</body></html>

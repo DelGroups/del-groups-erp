@@ -1,0 +1,163 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-file-upload-dropzone/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File upload dropzone</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<div class="mx-auto max-w-lg p-6">
+  <label id="dropzone" class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50 px-6 py-12 text-center transition hover:border-neutral-400 hover:bg-neutral-100">
+    <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-xl shadow-sm"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></span>
+    <span class="mt-4 text-sm font-medium text-neutral-900">Drag files here</span>
+    <span class="mt-1 text-sm text-neutral-500">or <span class="font-medium text-neutral-900 underline">browse from your computer</span></span>
+    <span class="mt-3 text-xs text-neutral-400">PDF, PNG, or CSV · up to 25 MB each</span>
+    <input id="fileInput" type="file" multiple class="hidden" />
+  </label>
+
+  <ul id="fileList" class="mt-4 space-y-2"></ul>
+</div>
+
+<template id="fileRow">
+  <li class="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3">
+    <span data-badge class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-[10px] font-semibold text-neutral-500">CSV</span>
+    <div class="min-w-0 flex-1">
+      <p data-name class="truncate text-sm font-medium text-neutral-900">file.csv</p>
+      <div data-progress class="mt-1.5 flex items-center gap-2">
+        <span class="h-1 flex-1 overflow-hidden rounded-full bg-neutral-100"><span data-bar class="block h-full w-0 rounded-full bg-neutral-900 transition-all duration-200"></span></span>
+        <span data-percent class="text-xs text-neutral-400">0%</span>
+      </div>
+      <p data-status class="mt-0.5 hidden text-xs text-neutral-400"></p>
+    </div>
+    <button data-remove class="shrink-0 text-neutral-400 hover:text-neutral-700" aria-label="Remove"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </li>
+</template>
+<script>
+var MAX_BYTES = 25 * 1024 * 1024;
+
+var zone = document.getElementById("dropzone");
+var input = document.getElementById("fileInput");
+var list = document.getElementById("fileList");
+var template = document.getElementById("fileRow");
+
+var IDLE_ZONE = "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50 px-6 py-12 text-center transition hover:border-neutral-400 hover:bg-neutral-100";
+var OVER_ZONE = "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-900 bg-neutral-100 px-6 py-12 text-center transition";
+
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
+function extension(name) {
+  var dot = name.lastIndexOf(".");
+  return dot === -1 ? "FILE" : name.slice(dot + 1).toUpperCase().slice(0, 4);
+}
+
+// Swap this for a real XHR/fetch upload — onProgress(0..100), then onDone().
+function upload(file, onProgress, onDone) {
+  var percent = 0;
+  var timer = setInterval(function () {
+    percent = Math.min(100, percent + Math.random() * 18);
+    onProgress(percent);
+    if (percent >= 100) {
+      clearInterval(timer);
+      onDone();
+    }
+  }, 220);
+  return function cancel() { clearInterval(timer); };
+}
+
+function addFile(file) {
+  var row = template.content.firstElementChild.cloneNode(true);
+  var progress = row.querySelector("[data-progress]");
+  var status = row.querySelector("[data-status]");
+  var bar = row.querySelector("[data-bar]");
+  var percentOut = row.querySelector("[data-percent]");
+
+  row.querySelector("[data-badge]").textContent = extension(file.name);
+  row.querySelector("[data-name]").textContent = file.name;
+  list.appendChild(row);
+
+  var cancel = null;
+
+  function fail(message) {
+    row.className = "flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/50 p-3";
+    progress.classList.add("hidden");
+    status.classList.remove("hidden");
+    status.className = "mt-0.5 text-xs text-red-600";
+    status.textContent = message + " · ";
+    var retry = document.createElement("a");
+    retry.href = "#";
+    retry.className = "font-medium underline";
+    retry.textContent = "Retry";
+    retry.addEventListener("click", function (e) {
+      e.preventDefault();
+      row.remove();
+      addFile(file);
+    });
+    status.appendChild(retry);
+  }
+
+  row.querySelector("[data-remove]").addEventListener("click", function () {
+    if (cancel) cancel();
+    row.remove();
+  });
+
+  if (file.size > MAX_BYTES) {
+    fail("File exceeds " + humanSize(MAX_BYTES));
+    return;
+  }
+
+  cancel = upload(
+    file,
+    function (percent) {
+      bar.style.width = percent + "%";
+      percentOut.textContent = Math.round(percent) + "%";
+    },
+    function () {
+      cancel = null;
+      progress.classList.add("hidden");
+      status.classList.remove("hidden");
+      status.className = "mt-0.5 text-xs text-neutral-400";
+      status.innerHTML = "";
+      var ok = document.createElement("span");
+      ok.className = "text-green-600";
+      ok.textContent = "✓ Uploaded";
+      status.appendChild(ok);
+      status.appendChild(document.createTextNode(" · " + humanSize(file.size)));
+    }
+  );
+}
+
+function accept(files) {
+  [].slice.call(files).forEach(addFile);
+}
+
+input.addEventListener("change", function () {
+  accept(input.files);
+  input.value = ""; // so re-picking the same file fires change again
+});
+
+["dragenter", "dragover"].forEach(function (type) {
+  zone.addEventListener(type, function (e) {
+    e.preventDefault();
+    zone.className = OVER_ZONE;
+  });
+});
+
+["dragleave", "drop"].forEach(function (type) {
+  zone.addEventListener(type, function (e) {
+    e.preventDefault();
+    zone.className = IDLE_ZONE;
+  });
+});
+
+zone.addEventListener("drop", function (e) {
+  if (e.dataTransfer && e.dataTransfer.files) accept(e.dataTransfer.files);
+});
+
+// Demo rows so the component shows its uploading / done / rejected states
+// without waiting for a real file. Delete these two lines in production —
+// addFile only reads .name and .size, so plain objects stand in for File.
+addFile({ name: "customer-export-2026.csv", size: 2.1 * 1024 * 1024 });
+addFile({ name: "architecture-diagram.png", size: 31 * 1024 * 1024 });
+</script>
+</body></html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<!-- Source: https://vibeprompts.dev/bonus/bonus-webhook-delivery-inspector/ (free prompt library). Reference only: rebuild as a React component with our design tokens. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webhook delivery inspector</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-neutral-50 antialiased">
+<section class="mx-auto max-w-4xl px-6 py-14">
+  <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+    <div class="border-b border-neutral-200 px-6 py-5">
+      <h1 class="text-lg font-semibold tracking-tight text-neutral-900">Webhook deliveries</h1>
+      <p class="mt-1 text-sm text-neutral-500">Every call we made to your endpoint in the last hour.</p>
+    </div>
+
+    <div class="grid md:grid-cols-[260px_1fr]">
+      <ul id="hookList" class="divide-y divide-neutral-100 border-b border-neutral-200 md:border-b-0 md:border-r"></ul>
+
+      <div class="p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <h2 id="hookTitle" class="font-mono text-sm font-medium text-neutral-900">invoice.payment_failed</h2>
+            <span id="hookPill" class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-inset ring-red-200">Failed</span>
+          </div>
+          <button id="hookRetry" class="rounded-xl bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50">Retry delivery</button>
+        </div>
+
+        <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-neutral-100 py-4 text-sm sm:grid-cols-4">
+          <div><dt class="text-[10px] uppercase tracking-widest text-neutral-400">Endpoint</dt><dd class="mt-0.5 truncate font-mono text-xs text-neutral-700">/hooks/stripe</dd></div>
+          <div><dt class="text-[10px] uppercase tracking-widest text-neutral-400">Attempts</dt><dd id="hookAttempts" class="mt-0.5 font-mono text-xs text-neutral-700">1</dd></div>
+          <div><dt class="text-[10px] uppercase tracking-widest text-neutral-400">Signature</dt><dd class="mt-0.5 font-mono text-xs text-green-700"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em] transition-transform"><path d="M12 3 4.5 6v5.5c0 4.7 3.2 7.7 7.5 9.5 4.3-1.8 7.5-4.8 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg> verified</dd></div>
+          <div><dt class="text-[10px] uppercase tracking-widest text-neutral-400">Duration</dt><dd id="hookDuration" class="mt-0.5 font-mono text-xs text-neutral-700">30,012 ms</dd></div>
+        </dl>
+
+        <p class="mt-5 text-[10px] uppercase tracking-widest text-neutral-400">Request</p>
+        <pre id="hookRequest" class="mt-2 overflow-x-auto rounded-xl bg-neutral-900 p-4 font-mono text-xs leading-relaxed text-neutral-200"></pre>
+
+        <p class="mt-4 text-[10px] uppercase tracking-widest text-neutral-400">Response</p>
+        <pre id="hookResponse" class="mt-2 overflow-x-auto rounded-xl bg-neutral-900 p-4 font-mono text-xs leading-relaxed text-neutral-200"></pre>
+
+        <div class="mt-5 flex flex-wrap items-center gap-2">
+          <span class="text-[10px] uppercase tracking-widest text-neutral-400">Trail</span>
+          <div id="hookTrail" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+var DELIVERIES = [
+  {
+    event: "invoice.payment_failed", code: 504, at: "2 min ago", ok: false, duration: "30,012 ms",
+    request: '{\n  "id": "evt_1P4kq2",\n  "type": "invoice.payment_failed",\n  "amount_due": 1840,\n  "customer": "cus_Nf83a"\n}',
+    response: "Gateway timeout — no response within 30s."
+  },
+  {
+    event: "customer.subscription.updated", code: 200, at: "9 min ago", ok: true, duration: "142 ms",
+    request: '{\n  "id": "evt_1P4jd8",\n  "type": "customer.subscription.updated",\n  "plan": "team_annual"\n}',
+    response: '{ "received": true }'
+  },
+  {
+    event: "checkout.session.completed", code: 200, at: "24 min ago", ok: true, duration: "98 ms",
+    request: '{\n  "id": "evt_1P4h11",\n  "type": "checkout.session.completed",\n  "total": 4900\n}',
+    response: '{ "received": true }'
+  },
+  {
+    event: "customer.created", code: 422, at: "51 min ago", ok: false, duration: "211 ms",
+    request: '{\n  "id": "evt_1P4f02",\n  "type": "customer.created",\n  "email": "<a class="__cf_email__" data-cfemail="ea859a99aa8485989e829d83848ec49e8f999e" href="/cdn-cgi/l/email-protection">[email protected]</a>"\n}',
+    response: '{ "error": "email domain not allowlisted" }'
+  }
+];
+
+// Doubling waits, capped — the same ladder a real delivery queue walks.
+var BACKOFF = [2, 4, 8];
+
+var list = document.getElementById("hookList");
+var title = document.getElementById("hookTitle");
+var pill = document.getElementById("hookPill");
+var retry = document.getElementById("hookRetry");
+var attemptsEl = document.getElementById("hookAttempts");
+var durationEl = document.getElementById("hookDuration");
+var requestEl = document.getElementById("hookRequest");
+var responseEl = document.getElementById("hookResponse");
+var trail = document.getElementById("hookTrail");
+
+var active = 0;
+var attempts = [];
+var ticking = null;
+
+DELIVERIES.forEach(function (delivery, index) {
+  var item = document.createElement("li");
+  item.innerHTML =
+    '<button data-index="' + index + '" class="w-full px-4 py-3 text-left transition hover:bg-neutral-50">' +
+      '<span class="flex items-center gap-2">' +
+        '<span data-dot class="h-1.5 w-1.5 shrink-0 rounded-full"></span>' +
+        '<span class="truncate font-mono text-xs text-neutral-900">' + delivery.event + '</span>' +
+      '</span>' +
+      '<span class="mt-1 block pl-3.5 text-xs text-neutral-400"><span data-code></span> · ' + delivery.at + '</span>' +
+    '</button>';
+  list.appendChild(item);
+});
+
+function paintList() {
+  [].slice.call(list.querySelectorAll("button")).forEach(function (button, index) {
+    var delivery = DELIVERIES[index];
+    button.className =
+      "w-full px-4 py-3 text-left transition hover:bg-neutral-50 " + (index === active ? "bg-neutral-50" : "");
+    button.querySelector("[data-dot]").className =
+      "h-1.5 w-1.5 shrink-0 rounded-full " + (delivery.ok ? "bg-green-500" : "bg-red-500");
+    button.querySelector("[data-code]").textContent = delivery.code;
+  });
+}
+
+function paintTrail() {
+  trail.innerHTML = "";
+  attempts.forEach(function (attempt, index) {
+    var chip = document.createElement("span");
+    chip.className =
+      "rounded-md px-2 py-0.5 font-mono text-[11px] " +
+      (attempt.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700");
+    chip.textContent = "#" + (index + 1) + " · " + attempt.code;
+    trail.appendChild(chip);
+  });
+}
+
+// keepTrail repaints the panel after a retry without wiping the attempts
+// already recorded — switching deliveries starts a fresh trail instead.
+function select(index, keepTrail) {
+  clearInterval(ticking);
+  active = index;
+  var delivery = DELIVERIES[index];
+
+  title.textContent = delivery.event;
+  requestEl.textContent = delivery.request;
+  responseEl.textContent = delivery.response;
+  durationEl.textContent = delivery.duration;
+  if (!keepTrail) attempts = [{ code: delivery.code, ok: delivery.ok }];
+  attemptsEl.textContent = attempts.length;
+
+  pill.className =
+    "rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset " +
+    (delivery.ok ? "bg-green-50 text-green-700 ring-green-200" : "bg-red-50 text-red-700 ring-red-200");
+  pill.textContent = delivery.ok ? "Succeeded" : "Failed";
+
+  retry.disabled = delivery.ok;
+  retry.textContent = delivery.ok ? "Delivered" : "Retry delivery";
+
+  paintList();
+  paintTrail();
+}
+
+list.addEventListener("click", function (e) {
+  var button = e.target.closest("[data-index]");
+  if (button) select(Number(button.getAttribute("data-index")));
+});
+
+retry.addEventListener("click", function () {
+  var delivery = DELIVERIES[active];
+  var wait = BACKOFF[Math.min(attempts.length - 1, BACKOFF.length - 1)];
+  var left = wait;
+
+  retry.disabled = true;
+  retry.textContent = "Retrying in " + left + "s";
+
+  ticking = setInterval(function () {
+    left -= 1;
+    if (left > 0) {
+      retry.textContent = "Retrying in " + left + "s";
+      return;
+    }
+
+    clearInterval(ticking);
+
+    // Third time lucky — enough to show the ladder without a fake backend.
+    var ok = attempts.length >= 2;
+    attempts.push({ code: ok ? 200 : delivery.code, ok: ok });
+    attemptsEl.textContent = attempts.length;
+    paintTrail();
+
+    if (ok) {
+      delivery.ok = true;
+      delivery.code = 200;
+      delivery.duration = "126 ms";
+      delivery.response = '{ "received": true }';
+      select(active, true);
+    } else {
+      retry.disabled = false;
+      retry.textContent = "Retry delivery";
+    }
+  }, 1000);
+});
+
+select(0);
+</script>
+</body></html>
