@@ -174,19 +174,6 @@ create table if not exists public.employee_departments (
   updated_at timestamp with time zone not null
 );
 
-create table if not exists public.employee_leaves (
-  id uuid not null,
-  employee_id uuid not null,
-  leave_type character varying(20) not null,
-  start_date date not null,
-  end_date date not null,
-  days_count integer not null,
-  status character varying(20) not null,
-  notes text,
-  created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
-);
-
 create table if not exists public.employees (
   id uuid not null,
   code text not null,

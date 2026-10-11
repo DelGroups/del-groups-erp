@@ -4515,51 +4515,6 @@ AS $function$
   );
 $function$;
 
-CREATE OR REPLACE FUNCTION public.hr_leave_days_in_month(p_start date, p_end date, p_month integer, p_year integer)
- RETURNS integer
- LANGUAGE sql
- IMMUTABLE
-AS $function$
-  SELECT GREATEST(
-    0,
-    (
-      LEAST(
-        p_end,
-        (date_trunc('month', make_date(p_year, p_month, 1)) + INTERVAL '1 month' - INTERVAL '1 day')::date
-      )
-      - GREATEST(p_start, make_date(p_year, p_month, 1))
-      + 1
-    )::INT
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.hr_unpaid_leave_deduction(p_employee_id uuid, p_month integer, p_year integer, p_base_salary numeric)
- RETURNS numeric
- LANGUAGE plpgsql
- STABLE
-AS $function$
-DECLARE
-  v_days INT := 0;
-  v_daily_rate NUMERIC;
-BEGIN
-  SELECT COALESCE(SUM(public.hr_leave_days_in_month(l.start_date, l.end_date, p_month, p_year)), 0)
-    INTO v_days
-    FROM public.employee_leaves l
-   WHERE l.employee_id = p_employee_id
-     AND l.status = 'APPROVED'
-     AND l.leave_type = 'UNPAID'
-     AND l.start_date <= (date_trunc('month', make_date(p_year, p_month, 1)) + INTERVAL '1 month' - INTERVAL '1 day')::date
-     AND l.end_date >= make_date(p_year, p_month, 1);
-
-  IF v_days <= 0 OR COALESCE(p_base_salary, 0) <= 0 THEN
-    RETURN 0;
-  END IF;
-
-  v_daily_rate := p_base_salary / 22.0;
-  RETURN ROUND(v_daily_rate * v_days, 2);
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.inventory_count_book_qty(p_product_id uuid, p_warehouse_id uuid)
  RETURNS numeric
  LANGUAGE plpgsql

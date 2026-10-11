@@ -12,7 +12,7 @@ the manifests, checks them and generates:
 
 ## Code layout
 
-Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**). A moved module looks like:
+Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**, **hr**). A moved module looks like:
 
 ```
 src/modules/crm/

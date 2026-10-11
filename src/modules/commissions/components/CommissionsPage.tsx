@@ -6,7 +6,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import PendingCommissionsView from "./PendingCommissionsView";
 import { fetchPendingCommissions } from "../lib/api";
-import { fetchEmployees } from "@/lib/hr/employees";
+import { fetchEmployees } from "@/modules/hr";
 import type { Employee, SalesCommission } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Percent, Settings } from "lucide-react";

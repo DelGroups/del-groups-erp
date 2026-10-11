@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { Employee, EmployeeInsert } from "@/types/database.types";
 import { EMPLOYEE_DEPARTMENTS, generateEmployeeCode } from "@/types/database.types";
-import type { EmployeeDepartmentRow } from "@/lib/hr/employeeDepartments";
+import type { EmployeeDepartmentRow } from "../lib/employeeDepartments";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
 

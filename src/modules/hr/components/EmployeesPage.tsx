@@ -4,32 +4,31 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
-import EmployeeFormModal, { type EmployeeFormValues } from "@/components/hr/EmployeeFormModal";
-import EmployeeDetailModal from "@/components/hr/EmployeeDetailModal";
-import AdvanceFormModal from "@/components/hr/AdvanceFormModal";
-import LeaveFormModal from "@/components/hr/LeaveFormModal";
-import PayPayrollModal from "@/components/hr/PayPayrollModal";
-import { fetchAccounts, fetchEmployees } from "@/lib/hr/employees";
+import EmployeeFormModal, { type EmployeeFormValues } from "./EmployeeFormModal";
+import EmployeeDetailModal from "./EmployeeDetailModal";
+import AdvanceFormModal from "@/components/payroll/AdvanceFormModal";
+import LeaveFormModal from "./LeaveFormModal";
+import PayPayrollModal from "@/components/payroll/PayPayrollModal";
+import { fetchAccounts, fetchEmployees } from "../lib/employees";
 import {
   fetchEmployeeDepartments,
   type EmployeeDepartmentRow,
-} from "@/lib/hr/employeeDepartments";
+} from "../lib/employeeDepartments";
+import { fetchEmployeeLeaves } from "../lib/leaves";
+import { fetchEmployeeAdvances, fetchPayrollRuns } from "@/lib/payroll/payrollRuns";
 import {
-  fetchEmployeeAdvances,
-  fetchEmployeeLeaves,
-  fetchPayrollRuns,
-} from "@/lib/hr/payroll";
-import {
-  calculateMonthlyPayrollAction,
   createEmployeeAction,
   createEmployeeLeaveAction,
   deleteEmployeeAction,
-  payEmployeeAdvanceAction,
-  payPayrollRunAction,
   updateEmployeeAction,
   updateEmployeeLeaveStatusAction,
-} from "@/lib/actions/hr";
-import EmployeeDepartmentManagerModal from "@/components/hr/EmployeeDepartmentManagerModal";
+} from "../actions/hr";
+import {
+  calculateMonthlyPayrollAction,
+  payEmployeeAdvanceAction,
+  payPayrollRunAction,
+} from "@/lib/payroll/payrollActions";
+import EmployeeDepartmentManagerModal from "./EmployeeDepartmentManagerModal";
 import type {
   Employee,
   EmployeeAdvance,

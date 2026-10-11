@@ -4,7 +4,7 @@ import React from "react";
 import { X } from "lucide-react";
 import type { Employee } from "@/types/database.types";
 import { getDepartmentLabel, getEmployeeStatusLabel } from "@/types/database.types";
-import type { EmployeeDepartmentRow } from "@/lib/hr/employeeDepartments";
+import type { EmployeeDepartmentRow } from "../lib/employeeDepartments";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface EmployeeDetailModalProps {

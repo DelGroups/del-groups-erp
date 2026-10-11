@@ -47,3 +47,6 @@ core and modules again.
   files go through the service role), the expense RPCs (`record_`, `submit_`, `approve_`, `reject_`,
   `post_`, `reimburse_`, `cancel_expense_atomic()`) and their helpers, and the foreign key
   `production_expenses.finance_expense_id`. `expense_categories` and `document_expenses` stay in core.
+- `hr`: `employee_leaves` and the leave helpers `hr_leave_days_in_month()` / `hr_unpaid_leave_deduction()`.
+  `employees` and `employee_departments` stay in core: profiles, sales, production orders and modules
+  that do not depend on hr (consignment, expenses) point to them.
