@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { DEFAULT_CONTRACTOR_COMMISSION } from "@/lib/production/types";
+import { DEFAULT_CONTRACTOR_COMMISSION } from "@/modules/production";
 import type {
   CashFlowDayPoint,
   ExecutiveDashboardData,

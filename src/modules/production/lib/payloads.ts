@@ -1,5 +1,5 @@
-import { resolveProductionExpenseCategoryStorage } from "@/lib/production/expenseSupport";
-import { missingColumnFromError } from "@/lib/production/safeQuery";
+import { resolveProductionExpenseCategoryStorage } from "./expenseSupport";
+import { missingColumnFromError } from "./safeQuery";
 
 /** Live production_materials columns — price pair + workflow fields used by RPC and UI. */
 export const PRODUCTION_MATERIAL_LIVE_COLUMNS = [

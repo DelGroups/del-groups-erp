@@ -2,7 +2,7 @@ import {
   fetchActiveExpenseCategoryOptions,
   type ExpenseCategoryOption,
 } from "@/lib/finance/financialCategories";
-import { PRODUCTION_EXPENSE_CATEGORIES } from "@/lib/production/types";
+import { PRODUCTION_EXPENSE_CATEGORIES } from "./types";
 
 type DbClient = ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>;
 

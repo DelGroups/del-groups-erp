@@ -106,8 +106,10 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'deals_production_order_id_fkey' and conrelid = 'public.deals'::regclass) then
-    execute $c$alter table only public.deals add constraint deals_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+  if to_regclass('public.deals') is not null and to_regclass('public.production_orders') is not null then
+    if not exists (select 1 from pg_constraint where conname = 'deals_production_order_id_fkey' and conrelid = to_regclass('public.deals')) then
+      execute $c$alter table only public.deals add constraint deals_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+    end if;
   end if;
 end $$;
 do $$ begin
@@ -121,8 +123,10 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_production_order_id_fkey' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+  if to_regclass('public.quotations') is not null and to_regclass('public.production_orders') is not null then
+    if not exists (select 1 from pg_constraint where conname = 'quotations_production_order_id_fkey' and conrelid = to_regclass('public.quotations')) then
+      execute $c$alter table only public.quotations add constraint quotations_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
+    end if;
   end if;
 end $$;
 

@@ -12,14 +12,14 @@ import {
 import { fetchUserProfile } from "@/lib/auth/profile";
 import { createSupabaseServerClient, getServerAuthContext } from "@/lib/supabaseServer";
 import { POLYWOOD_INVENTORY_MODE, POLYWOOD_WAREHOUSE_TYPE } from "@/lib/polywood/constants";
-import { defaultContractTermsAz } from "@/lib/production/constants";
+import { defaultContractTermsAz } from "../lib/constants";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { companyDisplayName } from "@/lib/company/profile";
 import { getServerCompanyProfile } from "@/lib/company/server";
 import {
   buildSyntheticProductionContract,
   withPrintableProductionContract,
-} from "@/lib/production/contracts";
+} from "../lib/contracts";
 import {
   buildContractMappingSourceFromOrder,
   buildContractPayloadFromOrder,
@@ -40,12 +40,12 @@ import {
   resolveContractRemainingBalance,
   resolveContractTotalAmount,
   selectProductionContractRow,
-} from "@/app/production/contractInsert";
+} from "../lib/contractInsert";
 import {
   allocateProductionMaterialPolywood,
-} from "@/lib/production/inventory";
-import { completeProductionDelivery } from "@/lib/production/delivery";
-import { recordProductionAdvancePayment, productionAdvanceIdempotencyKey } from "@/lib/production/advancePayment";
+} from "../lib/inventory";
+import { completeProductionDelivery } from "../lib/delivery";
+import { recordProductionAdvancePayment, productionAdvanceIdempotencyKey } from "../lib/advancePayment";
 import {
   DEFAULT_CONTRACTOR_COMMISSION,
   pickText,
@@ -67,7 +67,7 @@ import {
   type ProductionStatus,
   type PurchaseRequest,
   type PurchaseRequestStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 import {
   legacyFromProductionModel,
   normalizeProductionModel,
@@ -75,7 +75,7 @@ import {
   productionModelToCreationType,
   type ProductionCreationType,
   type ProductionModel,
-} from "@/lib/production/models";
+} from "../lib/models";
 import {
   isMissingTableError,
   missingColumnFromError,
@@ -85,27 +85,27 @@ import {
   PRODUCTION_ORDER_CORE_COLUMNS,
   PRODUCTION_ORDER_OPTIONAL_COLUMNS,
   selectProductionOrders,
-} from "@/lib/production/safeQuery";
-import { insertProductionOrders, normalizeStatus, normalizeType, updateProductionOrders } from "@/lib/production/ordersClient";
+} from "../lib/safeQuery";
+import { insertProductionOrders, normalizeStatus, normalizeType, updateProductionOrders } from "../lib/ordersClient";
 import {
   buildStrictMaterialInsertPayload,
   insertSanitizedMaterialRow,
   sanitizeAddProductionMaterialInput,
   sanitizeMaterialPayload,
   type AddProductionMaterialInput,
-} from "@/app/production/materialInsert";
+} from "../lib/materialInsert";
 import {
   computeMaterialWorkflow,
-} from "@/lib/production/orderStock";
-import { resolveProductionProduct } from "@/lib/production/resolveProductId";
+} from "../lib/orderStock";
+import { resolveProductionProduct } from "../lib/resolveProductId";
 import {
   getWarehouseProductAvailableStock,
-} from "@/lib/production/warehouseStock";
+} from "../lib/warehouseStock";
 import {
   fetchPolywoodWarehouseCatalog,
   fetchStandardWarehouseCatalog,
   type WarehouseCatalogItem,
-} from "@/lib/production/warehouseProductCatalog";
+} from "../lib/warehouseProductCatalog";
 import { generatePurchaseInvoiceNumber } from "@/lib/purchases/helpers";
 import {
   buildProductionOutsourcingInsertPayload,
@@ -118,7 +118,7 @@ import {
   selectProductionExpensesForOrders,
   selectProductionExpensesWithFallback,
   selectProductionMaterialsWithFallback,
-} from "@/lib/production/payloads";
+} from "../lib/payloads";
 import {
   buildProductionExpenseNotes,
   fetchActiveExpenseCategories,
@@ -129,7 +129,7 @@ import {
   resolveProductionExpenseCategoryStorage,
   type ExpenseCategoryOption,
   type ProductionPartyOption,
-} from "@/lib/production/expenseSupport";
+} from "../lib/expenseSupport";
 import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
@@ -913,7 +913,7 @@ async function recastContractorFee(
     .eq("production_order_id", orderId);
 }
 
-export type { ExpenseCategoryOption, ProductionPartyOption } from "@/lib/production/expenseSupport";
+export type { ExpenseCategoryOption, ProductionPartyOption } from "../lib/expenseSupport";
 
 export interface ProductionLookups {
   customers: Customer[];
@@ -1981,7 +1981,7 @@ export async function syncProductionDeliveryAction(
   }
 }
 
-export type { AddProductionMaterialInput } from "@/app/production/materialInsert";
+export type { AddProductionMaterialInput } from "../lib/materialInsert";
 
 export async function addProductionMaterialAction(
   orderId: string,

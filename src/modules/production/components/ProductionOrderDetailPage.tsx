@@ -4,23 +4,23 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import ProductionContractPrintTemplate from "@/components/production/ProductionContractPrintTemplate";
-import ProductionJobCardPrintTemplate from "@/components/production/ProductionJobCardPrintTemplate";
+import ProductionContractPrintTemplate from "./ProductionContractPrintTemplate";
+import ProductionJobCardPrintTemplate from "./ProductionJobCardPrintTemplate";
 import ProductionProfitabilityCard, {
   ProductionStatusChip,
-} from "@/components/production/ProductionProfitabilityCard";
+} from "./ProductionProfitabilityCard";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
-import { mergeContractDetailFormState } from "@/app/production/contractInsert";
-import { sanitizeAddProductionMaterialInput } from "@/app/production/materialInsert";
+import { mergeContractDetailFormState } from "../lib/contractInsert";
+import { sanitizeAddProductionMaterialInput } from "../lib/materialInsert";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
-import { formatProductionDbError } from "@/lib/production/payloads";
-import { formatDeliveryActionError, validateCustomDeliveryPreflight, validateSeriesDeliveryPreflight } from "@/lib/production/delivery";
-import { withPrintableProductionContract } from "@/lib/production/contracts";
+import { formatProductionDbError } from "../lib/payloads";
+import { formatDeliveryActionError, validateCustomDeliveryPreflight, validateSeriesDeliveryPreflight } from "../lib/delivery";
+import { withPrintableProductionContract } from "../lib/contracts";
 import {
   addProductionMaterialAction,
   addProductionExpenseAction,
@@ -38,8 +38,8 @@ import {
   updateProductionOrderAction,
   updateProductionStatusAction,
   type ProductionLookups,
-} from "@/lib/actions/production";
-import { productionModelLabel } from "@/lib/production/models";
+} from "../actions/production";
+import { productionModelLabel } from "../lib/models";
 import {
   PRODUCTION_EXPENSE_CATEGORIES,
   PRODUCTION_STATUS_NEXT,
@@ -53,7 +53,7 @@ import {
   type ProductionMaterial,
   type ProductionOrder,
   type ProductionStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 import { Boxes, CircleDollarSign, Factory, LayoutDashboard, Printer, Save, ScanBarcode } from "lucide-react";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 

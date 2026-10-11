@@ -165,51 +165,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_bom_items_pkey' and conrelid = 'public.production_bom_items'::regclass) then
-    execute $c$alter table only public.production_bom_items add constraint production_bom_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_boms_pkey' and conrelid = 'public.production_boms'::regclass) then
-    execute $c$alter table only public.production_boms add constraint production_boms_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_contractors_pkey' and conrelid = 'public.production_contractors'::regclass) then
-    execute $c$alter table only public.production_contractors add constraint production_contractors_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_contracts_pkey' and conrelid = 'public.production_contracts'::regclass) then
-    execute $c$alter table only public.production_contracts add constraint production_contracts_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_expenses_pkey' and conrelid = 'public.production_expenses'::regclass) then
-    execute $c$alter table only public.production_expenses add constraint production_expenses_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_materials_pkey' and conrelid = 'public.production_materials'::regclass) then
-    execute $c$alter table only public.production_materials add constraint production_materials_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_pkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_outsourcing_pkey' and conrelid = 'public.production_outsourcing'::regclass) then
-    execute $c$alter table only public.production_outsourcing add constraint production_outsourcing_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_pkey' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'products_pkey' and conrelid = 'public.products'::regclass) then
     execute $c$alter table only public.products add constraint products_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -377,11 +332,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'product_bom_parent_product_id_component_product_id_key' and conrelid = 'public.product_bom'::regclass) then
     execute $c$alter table only public.product_bom add constraint product_bom_parent_product_id_component_product_id_key UNIQUE (parent_product_id, component_product_id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_material_key' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_material_key UNIQUE (production_material_id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -637,36 +587,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'product_bom_quantity_check' and conrelid = 'public.product_bom'::regclass) then
     execute $c$alter table only public.product_bom add constraint product_bom_quantity_check CHECK ((quantity > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_bom_items_quantity_check' and conrelid = 'public.production_bom_items'::regclass) then
-    execute $c$alter table only public.production_bom_items add constraint production_bom_items_quantity_check CHECK ((quantity > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_custom_fields_object' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_custom_fields_object CHECK ((jsonb_typeof(custom_fields) = 'object'::text));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_production_model_check' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_production_model_check CHECK ((production_model = ANY (ARRAY['series'::text, 'in_house_custom'::text, 'subcontractor_custom'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_production_type_check' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_production_type_check CHECK (((production_type)::text = ANY ((ARRAY['bom_series'::character varying, 'internal_custom'::character varying, 'contractor_outsource'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_quantity_check' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_quantity_check CHECK ((quantity > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_status_check' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_status_check CHECK ((status = ANY (ARRAY['reserved'::text, 'consumed'::text, 'released'::text])));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1120,166 +1040,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_bom_items_bom_id_fkey' and conrelid = 'public.production_bom_items'::regclass) then
-    execute $c$alter table only public.production_bom_items add constraint production_bom_items_bom_id_fkey FOREIGN KEY (bom_id) REFERENCES public.production_boms(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_bom_items_product_id_fkey' and conrelid = 'public.production_bom_items'::regclass) then
-    execute $c$alter table only public.production_bom_items add constraint production_bom_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_bom_items_warehouse_id_fkey' and conrelid = 'public.production_bom_items'::regclass) then
-    execute $c$alter table only public.production_bom_items add constraint production_bom_items_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_boms_finished_product_id_fkey' and conrelid = 'public.production_boms'::regclass) then
-    execute $c$alter table only public.production_boms add constraint production_boms_finished_product_id_fkey FOREIGN KEY (finished_product_id) REFERENCES public.products(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_contractors_production_order_id_fkey' and conrelid = 'public.production_contractors'::regclass) then
-    execute $c$alter table only public.production_contractors add constraint production_contractors_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_contracts_production_order_id_fkey' and conrelid = 'public.production_contracts'::regclass) then
-    execute $c$alter table only public.production_contracts add constraint production_contracts_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_expenses_account_id_fkey' and conrelid = 'public.production_expenses'::regclass) then
-    execute $c$alter table only public.production_expenses add constraint production_expenses_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_expenses_production_order_id_fkey' and conrelid = 'public.production_expenses'::regclass) then
-    execute $c$alter table only public.production_expenses add constraint production_expenses_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_materials_created_by_fkey' and conrelid = 'public.production_materials'::regclass) then
-    execute $c$alter table only public.production_materials add constraint production_materials_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_materials_product_id_fkey' and conrelid = 'public.production_materials'::regclass) then
-    execute $c$alter table only public.production_materials add constraint production_materials_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_materials_production_order_id_fkey' and conrelid = 'public.production_materials'::regclass) then
-    execute $c$alter table only public.production_materials add constraint production_materials_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_materials_warehouse_id_fkey' and conrelid = 'public.production_materials'::regclass) then
-    execute $c$alter table only public.production_materials add constraint production_materials_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_advance_account_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_advance_account_id_fkey FOREIGN KEY (advance_account_id) REFERENCES public.accounts(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_advance_transaction_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_advance_transaction_id_fkey FOREIGN KEY (advance_transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_created_by_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_custom_product_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_custom_product_id_fkey FOREIGN KEY (custom_product_id) REFERENCES public.products(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_customer_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_finished_product_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_finished_product_id_fkey FOREIGN KEY (finished_product_id) REFERENCES public.products(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_furniture_warehouse_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_furniture_warehouse_id_fkey FOREIGN KEY (furniture_warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_installer_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_installer_id_fkey FOREIGN KEY (installer_id) REFERENCES public.employees(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_ousta_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_ousta_id_fkey FOREIGN KEY (ousta_id) REFERENCES public.employees(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_raw_material_warehouse_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_raw_material_warehouse_id_fkey FOREIGN KEY (raw_material_warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_sale_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_subcontractor_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_subcontractor_id_fkey FOREIGN KEY (subcontractor_id) REFERENCES public.suppliers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_supplier_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_orders_warehouse_id_fkey' and conrelid = 'public.production_orders'::regclass) then
-    execute $c$alter table only public.production_orders add constraint production_orders_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_outsourcing_production_order_id_fkey' and conrelid = 'public.production_outsourcing'::regclass) then
-    execute $c$alter table only public.production_outsourcing add constraint production_outsourcing_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_outsourcing_supplier_id_fkey' and conrelid = 'public.production_outsourcing'::regclass) then
-    execute $c$alter table only public.production_outsourcing add constraint production_outsourcing_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_product_id_fkey' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_production_material_id_fkey' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_production_material_id_fkey FOREIGN KEY (production_material_id) REFERENCES public.production_materials(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_production_order_id_fkey' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'production_stock_reservations_warehouse_id_fkey' and conrelid = 'public.production_stock_reservations'::regclass) then
-    execute $c$alter table only public.production_stock_reservations add constraint production_stock_reservations_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'products_category_id_fkey' and conrelid = 'public.products'::regclass) then
     execute $c$alter table only public.products add constraint products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id);$c$;
   end if;
@@ -1327,11 +1087,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchase_requests_product_id_fkey' and conrelid = 'public.purchase_requests'::regclass) then
     execute $c$alter table only public.purchase_requests add constraint purchase_requests_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchase_requests_production_order_id_fkey' and conrelid = 'public.purchase_requests'::regclass) then
-    execute $c$alter table only public.purchase_requests add constraint purchase_requests_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin
@@ -1407,11 +1162,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sales_partner_id_fkey' and conrelid = 'public.sales'::regclass) then
     execute $c$alter table only public.sales add constraint sales_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_production_order_id_fkey' and conrelid = 'public.sales'::regclass) then
-    execute $c$alter table only public.sales add constraint sales_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -1502,11 +1252,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'transactions_journal_entry_id_fkey' and conrelid = 'public.transactions'::regclass) then
     execute $c$alter table only public.transactions add constraint transactions_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'transactions_production_order_id_fkey' and conrelid = 'public.transactions'::regclass) then
-    execute $c$alter table only public.transactions add constraint transactions_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
   end if;
 end $$;
 do $$ begin

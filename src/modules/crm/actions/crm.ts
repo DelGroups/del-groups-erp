@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth/serverActionAuth";
 import { userHasPermission } from "@/lib/auth/routePermissions";
 import { clampString, isValidUuid } from "@/lib/auth/validate";
-import { createProductionOrderAction } from "@/lib/actions/production";
+import { createProductionOrderAction } from "@/modules/production";
 import {
   CRM_CONFIG_KEY,
   defaultDealStageId,

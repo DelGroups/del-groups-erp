@@ -6,15 +6,15 @@ export {
   PRODUCTION_MATERIAL_LIVE_COLUMNS as PRODUCTION_MATERIAL_INSERT_SELECT_COLUMNS,
   PRODUCTION_MATERIAL_LIVE_COLUMNS as PRODUCTION_MATERIAL_LIVE_SELECT_COLUMNS,
   type ProductionMaterialInsertPayload as ProductionMaterialDbInsert,
-} from "@/lib/production/payloads";
+} from "./payloads";
 
 import {
   formatProductionDbError,
   PRODUCTION_MATERIAL_INSERT_KEYS,
   productionSchemaColumnFromError,
   type ProductionMaterialInsertPayload,
-} from "@/lib/production/payloads";
-import { missingColumnFromError } from "@/lib/production/safeQuery";
+} from "./payloads";
+import { missingColumnFromError } from "./safeQuery";
 
 /** Allowed columns on production_materials INSERT (live Supabase schema). */
 export const PRODUCTION_MATERIAL_DB_INSERT_COLUMNS = PRODUCTION_MATERIAL_INSERT_KEYS;

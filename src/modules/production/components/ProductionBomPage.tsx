@@ -10,8 +10,8 @@ import {
   fetchProductionLookupsAction,
   saveProductionBomAction,
   type ProductionLookups,
-} from "@/lib/actions/production";
-import type { ProductionBom } from "@/lib/production/types";
+} from "../actions/production";
+import type { ProductionBom } from "../lib/types";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";

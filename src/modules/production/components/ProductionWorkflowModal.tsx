@@ -7,15 +7,15 @@ import {
   updateProductionLogisticsAction,
   updateProductionOrderAction,
   type ProductionLookups,
-} from "@/lib/actions/production";
+} from "../actions/production";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
-import ProductionInProgressPhase from "@/components/production/ProductionInProgressPhase";
+import ProductionInProgressPhase from "./ProductionInProgressPhase";
 import {
   calcProductionCosting,
   remainingBalanceFromOrder,
   type ProductionOrder,
   type ProductionStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 
 interface Props {
   open: boolean;

@@ -6,14 +6,14 @@ import {
   resolveContractDeliveryDate,
   resolveContractContent,
   resolveContractNumber,
-} from "@/app/production/contractInsert";
+} from "./contractInsert";
 import {
   remainingBalanceFromOrder,
   resolveContractTerms,
   resolveProjectScope,
   type ProductionContract,
   type ProductionOrder,
-} from "@/lib/production/types";
+} from "./types";
 
 /** Build printable contract metadata from order fields when DB row/table is unavailable. */
 export function buildSyntheticProductionContract(

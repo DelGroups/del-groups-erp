@@ -14,9 +14,11 @@ import {
   type BackupTableName,
   type SystemBackupPayload,
 } from "@/lib/backup/manifest";
-import { insertProductionOrders } from "@/lib/production/ordersClient";
-import { insertProductionMaterials } from "@/lib/production/materialsClient";
-import { PRODUCTION_MATERIAL_LIVE_COLUMNS } from "@/lib/production/payloads";
+import {
+  insertProductionMaterials,
+  insertProductionOrders,
+  PRODUCTION_MATERIAL_LIVE_COLUMNS,
+} from "@/modules/production";
 import { PRODUCT_SLUG } from "@/lib/brand";
 
 export type BackupActionResult<T = void> =

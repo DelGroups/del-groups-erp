@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import MaterialShortageConfirmModal from "@/components/production/MaterialShortageConfirmModal";
+import MaterialShortageConfirmModal from "./MaterialShortageConfirmModal";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import CameraBarcodeScanner from "@/components/inventory/CameraBarcodeScanner";
 import {
@@ -16,7 +16,7 @@ import {
   removeProductionMaterialAction,
   type ProductionLookups,
   type WarehouseProductOption,
-} from "@/lib/actions/production";
+} from "../actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
@@ -27,12 +27,12 @@ import {
   remainingBalanceFromOrder,
   type ProductionOrder,
   type PurchaseRequest,
-} from "@/lib/production/types";
-import { adjustWarehouseProductsForOrderAllocations } from "@/lib/production/orderStock";
+} from "../lib/types";
+import { adjustWarehouseProductsForOrderAllocations } from "../lib/orderStock";
 import {
   parseProductionExpenseNotes,
   resolveExpenseCategoryName,
-} from "@/lib/production/expenseSupport";
+} from "../lib/expenseSupport";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import {
   buildMaterialLineSelection,
@@ -42,12 +42,12 @@ import {
   resolveProductRealStock,
   resolveProductUnitCost,
   type MaterialLineSelection,
-} from "@/lib/production/materialSelection";
+} from "../lib/materialSelection";
 import { isValidUuid } from "@/lib/auth/validate";
 import {
   hasWarehouseStockShortage,
   warehouseStockShortageDelta,
-} from "@/lib/production/warehouseStock";
+} from "../lib/warehouseStock";
 
 type WorkflowTab = "materials" | "services" | "payments";
 

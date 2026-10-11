@@ -1,4 +1,4 @@
-import { normalizeProductionType, type ProductionOrder } from "@/lib/production/types";
+import { normalizeProductionType, type ProductionOrder } from "./types";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
 /** Untyped admin client — production RPC may not be in generated Database types yet. */

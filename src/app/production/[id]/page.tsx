@@ -1,7 +1,7 @@
-import ProductionOrderDetailPage from "./page.client";
+import { ProductionOrderDetailPage } from "@/modules/production/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function ProductionOrderPage() {
+export default function Page() {
   return <ProductionOrderDetailPage />;
 }

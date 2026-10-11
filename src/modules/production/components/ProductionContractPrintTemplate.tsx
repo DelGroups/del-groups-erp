@@ -8,13 +8,13 @@ import {
   resolveContractDate,
   resolveContractDeliveryDate,
   resolveContractNumber,
-} from "@/app/production/contractInsert";
+} from "../lib/contractInsert";
 import {
   remainingBalanceFromOrder,
   resolveContractTerms,
   resolveProjectScope,
   type ProductionOrder,
-} from "@/lib/production/types";
+} from "../lib/types";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export interface ProductionContractPrintData {

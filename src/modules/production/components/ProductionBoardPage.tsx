@@ -5,14 +5,14 @@ import Link from "next/link";
 import { Factory, LayoutGrid, List, RefreshCw } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import ProductionOrderModal from "@/components/production/ProductionOrderModal";
-import ProductionKanbanCard from "@/components/production/ProductionKanbanCard";
-import ProductionWorkflowModal from "@/components/production/ProductionWorkflowModal";
-import ProductionJobCardPrintTemplate from "@/components/production/ProductionJobCardPrintTemplate";
+import ProductionOrderModal from "./ProductionOrderModal";
+import ProductionKanbanCard from "./ProductionKanbanCard";
+import ProductionWorkflowModal from "./ProductionWorkflowModal";
+import ProductionJobCardPrintTemplate from "./ProductionJobCardPrintTemplate";
 import ProductionProfitabilityCard, {
   ProductionHealthChip,
   ProductionStatusChip,
-} from "@/components/production/ProductionProfitabilityCard";
+} from "./ProductionProfitabilityCard";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -25,9 +25,9 @@ import {
   listProductionOrdersAction,
   updateProductionStatusAction,
   type ProductionLookups,
-} from "@/lib/actions/production";
-import { withPrintableProductionContract } from "@/lib/production/contracts";
-import { productionModelLabel } from "@/lib/production/models";
+} from "../actions/production";
+import { withPrintableProductionContract } from "../lib/contracts";
+import { productionModelLabel } from "../lib/models";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
   PRODUCTION_STATUSES,
@@ -36,7 +36,7 @@ import {
   normalizeProductionStatus,
   type ProductionOrder,
   type ProductionStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 
 const STATUSES: ProductionStatus[] = [...PRODUCTION_STATUSES];
 

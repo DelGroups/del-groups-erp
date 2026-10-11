@@ -3,14 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { Eye, Pencil, Printer, Trash2 } from "lucide-react";
-import ProductionProfitabilityCard from "@/components/production/ProductionProfitabilityCard";
+import ProductionProfitabilityCard from "./ProductionProfitabilityCard";
 import {
   PRODUCTION_STATUS_NEXT,
   calcProductionCosting,
   type ProductionCosting,
   type ProductionOrder,
   type ProductionStatus,
-} from "@/lib/production/types";
+} from "../lib/types";
 
 interface ProductionKanbanCardProps {
   order: ProductionOrder;
