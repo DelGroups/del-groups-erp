@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import {
   recordSalePaymentWithClient,
   type RecordSalePaymentInput,
-} from "@/lib/sales/recordSalePayment";
+} from "../lib/recordSalePayment";
 
 export async function recordSalePaymentAction(
   input: RecordSalePaymentInput

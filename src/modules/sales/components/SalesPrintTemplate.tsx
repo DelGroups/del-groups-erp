@@ -2,9 +2,9 @@
 
 import React from "react";
 import InvoicePrintLayout from "@/components/print/InvoicePrintLayout";
-import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
+import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
-import type { SaleRecord } from "@/lib/sales/fetchSales";
+import type { SaleRecord } from "../lib/fetchSales";
 
 interface SalesPrintTemplateProps {
   sale: SaleRecord;

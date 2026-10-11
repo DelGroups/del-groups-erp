@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Banknote, Printer, X } from "lucide-react";
-import type { SaleRecord } from "@/lib/sales/fetchSales";
+import type { SaleRecord } from "../lib/fetchSales";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";

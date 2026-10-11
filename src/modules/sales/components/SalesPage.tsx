@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useSalesList, useInvalidateSalesList, useUpdateSalesListCache } from "@/hooks/useSalesList";
+import { useSalesList, useInvalidateSalesList, useUpdateSalesListCache } from "../hooks/useSalesList";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
 import { useRouter } from "next/navigation";
-import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
+import SalesDocumentStatusBadge from "./SalesDocumentStatusBadge";
 import {
   isSalesDraft,
   normalizeSalesDocumentStatus,
@@ -33,12 +33,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
-import SalesViewModal from "@/components/sales/SalesViewModal";
+import SalesViewModal from "./SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
-import { fetchSaleById, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "@/lib/sales/fetchSales";
-import { recordSalePaymentAction } from "@/lib/actions/payments";
+import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { fetchSaleById, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "../lib/fetchSales";
+import { recordSalePaymentAction } from "../actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -69,7 +69,7 @@ const STATUS_FILTERS: Array<{ id: SalesStatusFilter; labelKey: string }> = [
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
-export default function SalesListPage() {
+export default function SalesPage() {
   const router = useRouter();
   const { data: sales = [], isLoading, isFetching, error: queryError, refetch } = useSalesList();
   const invalidateSalesList = useInvalidateSalesList();

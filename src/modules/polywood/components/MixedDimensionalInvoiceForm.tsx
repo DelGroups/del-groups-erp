@@ -19,7 +19,7 @@ import {
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
-import { submitSale } from "@/lib/sales/submitSale";
+import { submitSale } from "@/modules/sales";
 import {
   calcLineTotal,
   calcSaleTotals,
@@ -60,7 +60,7 @@ import {
 } from "@/lib/customers/entityType";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
-import { resolveIssuedByProfileId } from "@/lib/sales/invoiceIssuer";
+import { resolveIssuedByProfileId } from "@/modules/sales";
 
 export const ADHOC_SERVICE_PRODUCT_ID = "__custom_service__";
 

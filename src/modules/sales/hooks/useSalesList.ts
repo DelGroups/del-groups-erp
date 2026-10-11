@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
-import { fetchSalesListWithMeta, type SaleRecord } from "@/lib/sales/fetchSales";
+import { fetchSalesListWithMeta, type SaleRecord } from "../lib/fetchSales";
 
 export function useSalesList() {
   return useQuery({

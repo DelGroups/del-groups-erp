@@ -1,0 +1,26 @@
+{
+  "why": "The sales invoice workflow: draft save/post, the invoice event, GL and COGS posting, FIFO cost of sold items, stock restore on cancel, cancel/void and document numbers. The sales and sale_items tables stay in core: customer and partner receivables, reconciliation, payments and partner merge read sales (some from SQL functions that need the table when they are created), and inventory costing (inventory_batch_consumptions), cut sheets (polywood_pieces) and customer AR use sale_items. The sales table's triggers and the stock functions they call stay in core with it.",
+  "tables": [],
+  "functions": [
+    "cancel_sales_invoice_atomic",
+    "create_sale_atomic",
+    "fifo_deplete_sale_item",
+    "next_sales_doc_no",
+    "peek_next_sales_doc_no",
+    "post_sale",
+    "post_sale_cogs_journal",
+    "post_sale_invoice_gl_journal",
+    "post_sales_invoice_draft",
+    "process_sale_fifo_cogs",
+    "process_sales_invoice_event",
+    "restore_sale_stock",
+    "sales_doc_serial",
+    "save_sales_invoice_draft",
+    "void_sale_atomic",
+    "void_sale_invoice"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

@@ -12,7 +12,7 @@ the manifests, checks them and generates:
 
 ## Code layout
 
-Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**, **hr**, **payroll**, **production**, **polywood**, **purchases**). A moved module looks like:
+Modules move here one at a time (moved so far: **crm**, **contracts**, **consignment**, **commissions**, **expenses**, **hr**, **payroll**, **production**, **polywood**, **purchases**, **sales**). A moved module looks like:
 
 ```
 src/modules/crm/
@@ -33,6 +33,11 @@ imports and never reach into another module's folders; call its public API or em
 host offers a slot, without the host importing it. HR's employees screen takes `EmployeesPageTab`s
 (`@/modules/hr`); payroll exports its tabs from `@/modules/payroll/pages`, and the route file
 `src/app/employees/page.client.tsx` passes them in when payroll is enabled.
+
+**Hooks:** the same idea for work after an action. Sales runs `SaleSavedHook`s after a sale is saved
+(`@/modules/sales`); commissions exports `recordCommissionsAfterSale` from its `pages.ts`, and
+`src/app/sales/new/page.client.tsx` passes it when commissions is enabled. `tests/moduleImports.test.mjs`
+checks that a module imports only the modules it depends on.
 
 ## Adding to a manifest
 

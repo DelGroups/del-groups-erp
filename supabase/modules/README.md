@@ -70,3 +70,7 @@ core and modules again.
   receipt, cancel/void, document numbers). `purchases` itself stays in core with `suppliers`: partner payables,
   reconciliation, payments, the GL views and supplier AP read it, some from SQL functions that need the table
   when they are created. Its own triggers (`purchases_default_posted_when_blank`, partner sync) stay in core.
+- `sales`: the sales invoice workflow RPCs (draft save/post, invoice event, GL and COGS posting, FIFO cost of
+  sold items, stock restore, cancel/void, document numbers). No tables: `sales` and `sale_items` stay in core
+  (receivables, reconciliation, payments, partner merge, inventory costing and cut sheets use them), with the
+  `sales` triggers and the stock functions they call.

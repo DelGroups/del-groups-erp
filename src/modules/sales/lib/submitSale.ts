@@ -11,7 +11,6 @@ import {
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
 import { supabase } from "@/lib/supabase";
-import { recordSaleCommissions } from "@/modules/commissions";
 import { DEFAULT_FULL_SHEET_LENGTH_M } from "@/lib/polywood/constants";
 import {
   processMixedDimensionalSaleRpc,
@@ -23,6 +22,21 @@ import { persistSaleOfficialFields } from "@/lib/finance/officialTransaction";
 import type { SaleInsert, SaleItem, SalePayment } from "@/types/database.types";
 import { toSalePaymentsJson } from "@/types/database.types";
 import type { SalesCurrency, SalesPaymentType } from "@/lib/invoices/invoiceStatus";
+
+/** A saved (not draft) sale, as handed to SubmitSalePayload.afterSave. */
+export interface SavedSale {
+  saleId: string;
+  docNo: string;
+  sellerId: string | null | undefined;
+  sellerName: string | null | undefined;
+  items: SaleItem[];
+}
+
+/**
+ * Runs after a sale is saved. Modules that build on sales add their work here without
+ * sales knowing them: the route file passes commissions' hook when commissions is enabled.
+ */
+export type SaleSavedHook = (sale: SavedSale) => Promise<void>;
 
 export interface SubmitSalePayload {
   header: SaleInsert;
@@ -39,6 +53,7 @@ export interface SubmitSalePayload {
   currency?: SalesCurrency;
   exchangeRate?: number;
   currencyBreakdown?: Record<string, number>;
+  afterSave?: SaleSavedHook;
 }
 
 export interface SubmitSaleResult {
@@ -325,16 +340,16 @@ async function persistOfficialAndCommissions(
   saleId: string,
   docNo: string,
   validItems: SaleItem[],
-  recordCommissions: boolean
+  runAfterSave: boolean
 ): Promise<SubmitSaleResult | null> {
-  if (recordCommissions) {
-    await recordSaleCommissions(
+  if (runAfterSave && payload.afterSave) {
+    await payload.afterSave({
       saleId,
       docNo,
-      payload.header.seller_id,
-      payload.header.seller_name,
-      validItems
-    );
+      sellerId: payload.header.seller_id,
+      sellerName: payload.header.seller_name,
+      items: validItems,
+    });
   }
 
   if (payload.officialFields) {
