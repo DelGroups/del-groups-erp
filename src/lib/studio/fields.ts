@@ -1,5 +1,5 @@
 /**
- * Del Groups Studio — custom field definitions and value validation.
+ * Studio — custom field definitions and value validation.
  *
  * Admins define extra fields per business model in public.studio_fields; the
  * values live in each record's `custom_fields` JSONB column, keyed by the

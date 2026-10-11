@@ -52,8 +52,9 @@ export interface CompanyBranding {
   iban: string | null;
 }
 
+/** Empty branding; the real values come from useCompanyBranding (Settings → Company). */
 export const DEFAULT_COMPANY_BRANDING: CompanyBranding = {
-  companyName: "DEL GROUPS MMC",
+  companyName: "",
   logoUrl: null,
   voen: null,
   address: null,

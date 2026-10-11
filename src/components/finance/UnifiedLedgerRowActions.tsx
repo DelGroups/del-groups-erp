@@ -16,6 +16,7 @@ import {
   canEditLedgerTransaction,
 } from "@/lib/finance/ledgerTransactionRules";
 import { printLedgerReceipt } from "@/lib/finance/printLedgerReceipt";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
   formatReferenceTypeLabel,
   type UnifiedLedgerTransaction,
@@ -52,6 +53,7 @@ export default function UnifiedLedgerRowActions({
   onSuccess,
 }: Props) {
   const { t } = useI18n();
+  const companyName = useCompanyProfile().displayName;
   const [viewOpen, setViewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -179,7 +181,7 @@ export default function UnifiedLedgerRowActions({
             label: t("finance.actionPrint"),
             icon: <Printer className="h-4 w-4" />,
             onClick: () =>
-              printLedgerReceipt(transaction, { title: t("finance.receiptTitle") }),
+              printLedgerReceipt(transaction, { title: t("finance.receiptTitle"), companyName }),
           },
           {
             key: "delete",

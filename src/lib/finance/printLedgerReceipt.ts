@@ -11,7 +11,7 @@ export function printLedgerReceipt(
   tx: UnifiedLedgerTransaction,
   options?: { companyName?: string; title?: string }
 ): void {
-  const companyName = options?.companyName || "DEL GROUPS MMC";
+  const companyName = options?.companyName || "";
   const title = options?.title || "Maliyyə Qəbzi";
   const dateText = (tx.transaction_date || tx.created_at).slice(0, 16).replace("T", " ");
   const amountPrefix = tx.type === "INCOME" ? "+" : "-";

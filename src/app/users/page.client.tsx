@@ -24,6 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchAllProfiles, fetchRoles } from "@/lib/auth/profile";
 import type { Role, UserProfile } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "-";
@@ -40,6 +41,7 @@ function InviteUserModal({
   onInvited: (message: string) => void;
 }) {
   const { t } = useI18n();
+  const companyEmailPlaceholder = useCompanyProfile().emailPlaceholder;
   const defaultRoleId = useMemo(
     () => roles.find((role) => role.name === "User")?.id || roles[0]?.id || "",
     [roles]
@@ -114,7 +116,7 @@ function InviteUserModal({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ad@delgroups.az"
+              placeholder={companyEmailPlaceholder}
               className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
             />
           </div>
@@ -184,6 +186,7 @@ function EditUserModal({
   onSaved: (message: string) => void;
 }) {
   const { t } = useI18n();
+  const companyEmailPlaceholder = useCompanyProfile().emailPlaceholder;
   const [fullName, setFullName] = useState(profile.full_name ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
   const [roleId, setRoleId] = useState(profile.role_id ?? "");
@@ -274,7 +277,7 @@ function EditUserModal({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ad@delgroups.az"
+              placeholder={companyEmailPlaceholder}
               className="w-full rounded-lg border border-app py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent-ring)]"
             />
           </div>

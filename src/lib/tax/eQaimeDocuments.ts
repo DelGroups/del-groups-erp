@@ -1,4 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import type { CompanyBranding } from "@/lib/print/types";
 import type { SaleRecord } from "@/lib/sales/fetchSales";
 import type { PurchaseRecord } from "@/types/database.types";
@@ -29,22 +31,17 @@ async function fetchPartyVoen(table: "customers" | "suppliers", id: string | nul
 
 async function resolveBranding(branding: CompanyBranding): Promise<CompanyBranding> {
   if (branding.voen && branding.companyName) return branding;
-  const [{ data: settings }, { data: company }, { data: taxRow }] = await Promise.all([
-    supabase.from("settings").select("company_name, voen, address, phone").limit(1).maybeSingle(),
-    supabase.from("company_settings").select("company_name, voen, address, phone").limit(1).maybeSingle(),
+  const [{ profile }, { data: taxRow }] = await Promise.all([
+    loadCompanyProfile(supabase as unknown as SupabaseClient),
     supabase.from("system_settings").select("value").eq("key", TAX_PAYROLL_CONFIG_KEY).maybeSingle(),
   ]);
   const taxConfig = parseTaxPayrollConfig(taxRow?.value);
   return {
     ...branding,
-    companyName:
-      branding.companyName ||
-      company?.company_name ||
-      settings?.company_name ||
-      branding.companyName,
-    voen: branding.voen || taxConfig.company_voen || company?.voen || settings?.voen || null,
-    address: branding.address || company?.address || settings?.address || null,
-    phone: branding.phone || company?.phone || settings?.phone || null,
+    companyName: branding.companyName || profile.legalName || profile.displayName,
+    voen: branding.voen || taxConfig.company_voen || profile.voen || null,
+    address: branding.address || profile.address || null,
+    phone: branding.phone || profile.phone || null,
   };
 }
 

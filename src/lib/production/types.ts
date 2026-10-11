@@ -1,4 +1,4 @@
-import { DEFAULT_CONTRACT_TERMS_AZ } from "@/lib/production/constants";
+import { defaultContractTermsAz } from "@/lib/production/constants";
 import {
   normalizeProductionModel,
   type ProductionModel,
@@ -403,14 +403,18 @@ export function resolveProjectScope(source: {
   );
 }
 
-export function resolveContractTerms(source: {
-  terms?: string | null;
-  contract?: { terms?: string | null } | null;
-}): string {
+/** Saved terms, else the default terms naming `companyName` (empty when no name is given). */
+export function resolveContractTerms(
+  source: {
+    terms?: string | null;
+    contract?: { terms?: string | null } | null;
+  },
+  companyName = ""
+): string {
   return (
     source.terms?.trim() ||
     source.contract?.terms?.trim() ||
-    DEFAULT_CONTRACT_TERMS_AZ
+    (companyName ? defaultContractTermsAz(companyName) : "")
   );
 }
 

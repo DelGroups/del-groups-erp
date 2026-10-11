@@ -14,6 +14,9 @@ import {
   publicConfigScript,
   toPublicTenantConfig,
 } from "@/lib/tenant/config";
+import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/brand";
+import { getPublicCompanyInfo } from "@/lib/company/server";
+import { CompanyInfoProvider } from "@/hooks/useCompanyProfile";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -25,14 +28,14 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STO
 
 export const metadata: Metadata = {
   title: {
-    default: "DEL GROUPS ERP",
-    template: "%s | DEL GROUPS ERP",
+    default: PRODUCT_NAME,
+    template: `%s | ${PRODUCT_NAME}`,
   },
-  description: "DEL GROUPS ERP — İdarəetmə və biznes prosesləri sistemi",
-  applicationName: "DEL GROUPS ERP",
+  description: PRODUCT_DESCRIPTION,
+  applicationName: PRODUCT_NAME,
   appleWebApp: {
     capable: true,
-    title: "DEL GROUPS ERP",
+    title: PRODUCT_NAME,
     statusBarStyle: "black-translucent",
   },
   icons: {
@@ -64,9 +67,12 @@ export default async function RootLayout({
 }) {
   // Read per request (not at build), so the browser gets this tenant's
   // Supabase config before any client code runs.
+  const requestHeaders = await headers();
   const supabaseConfigScript = publicConfigScript(
-    toPublicTenantConfig(getTenantConfig(await headers()))
+    toPublicTenantConfig(getTenantConfig(requestHeaders))
   );
+  // Company name for the first paint and the login page (cached per tenant).
+  const companyInfo = await getPublicCompanyInfo(requestHeaders);
 
   return (
     <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} suppressHydrationWarning>
@@ -82,15 +88,17 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.variable} min-h-screen bg-app font-sans text-app antialiased`}>
         <ThemeProvider>
-          <AuthProvider>
-            <QueryProvider>
-              <I18nProvider>
-                {children}
-                <SonnerProvider />
-                <TableColumnResizer />
-              </I18nProvider>
-            </QueryProvider>
-          </AuthProvider>
+          <CompanyInfoProvider value={companyInfo}>
+            <AuthProvider>
+              <QueryProvider>
+                <I18nProvider>
+                  {children}
+                  <SonnerProvider />
+                  <TableColumnResizer />
+                </I18nProvider>
+              </QueryProvider>
+            </AuthProvider>
+          </CompanyInfoProvider>
         </ThemeProvider>
       </body>
     </html>

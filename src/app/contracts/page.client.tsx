@@ -39,7 +39,8 @@ import {
   type ContractType,
 } from "@/lib/contracts/api";
 import { filterLegalCustomers, filterLegalSuppliers } from "@/lib/customers/entityType";
-import { DEFAULT_COMPANY_BRANDING, type CompanyBranding } from "@/lib/print/types";
+import type { CompanyBranding } from "@/lib/print/types";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { supabase } from "@/lib/supabase";
 import type { Customer, Supplier } from "@/types/database.types";
 
@@ -61,7 +62,20 @@ export default function ContractsPageClient() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [branding, setBranding] = useState<CompanyBranding>(DEFAULT_COMPANY_BRANDING);
+  const company = useCompanyProfile();
+  const branding = useMemo<CompanyBranding>(
+    () => ({
+      companyName: company.legalName,
+      logoUrl: null,
+      voen: company.profile.voen || null,
+      address: company.profile.address || null,
+      phone: company.profile.phone || null,
+      email: company.profile.email || null,
+      bankName: company.profile.bankName || null,
+      iban: company.profile.iban || null,
+    }),
+    [company.legalName, company.profile]
+  );
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | ContractType>("all");
@@ -90,30 +104,16 @@ export default function ContractsPageClient() {
 
   const loadData = async () => {
     setLoading(true);
-    const [contractRows, customerRes, supplierRes, companyRes] = await Promise.all([
+    const [contractRows, customerRes, supplierRes] = await Promise.all([
       fetchContracts(),
       supabase.from("customers").select("*").order("full_name"),
       supabase.from("suppliers").select("*").order("full_name"),
-      supabase.from("company_settings").select("*").limit(1).maybeSingle(),
     ]);
 
     setContracts(contractRows);
     setCustomers((customerRes.data as Customer[]) || []);
     setSuppliers((supplierRes.data as Supplier[]) || []);
 
-    if (companyRes.data) {
-      const row = companyRes.data;
-      setBranding({
-        companyName: String(row.company_name || DEFAULT_COMPANY_BRANDING.companyName),
-        logoUrl: row.logo_url != null ? String(row.logo_url) : null,
-        voen: row.voen != null ? String(row.voen) : null,
-        address: row.address != null ? String(row.address) : null,
-        phone: row.phone != null ? String(row.phone) : null,
-        email: row.email != null ? String(row.email) : null,
-        bankName: row.bank_name != null ? String(row.bank_name) : null,
-        iban: row.iban != null ? String(row.iban) : null,
-      });
-    }
 
     setLoading(false);
   };

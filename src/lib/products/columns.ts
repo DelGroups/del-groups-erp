@@ -1,4 +1,5 @@
 import type { ProductColumnKey } from "@/types/database.types";
+import { PRODUCT_SLUG } from "@/lib/brand";
 
 export type { ProductColumnKey };
 
@@ -22,7 +23,7 @@ export const PRODUCT_COLUMNS: ProductColumnDef[] = [
   { key: "extra_info", label: "Əlavə məlumat", defaultVisible: false },
 ];
 
-export const COLUMN_VISIBILITY_STORAGE_KEY = "del-groups-products-columns";
+export const COLUMN_VISIBILITY_STORAGE_KEY = `${PRODUCT_SLUG}-products-columns`;
 
 export function getDefaultColumnVisibility(): Record<ProductColumnKey, boolean> {
   return PRODUCT_COLUMNS.reduce(

@@ -5,6 +5,7 @@ import type { CompanyBranding } from "@/lib/print/types";
 import type { CrmConfig } from "@/lib/crm/config";
 import type { CrmDeal, CrmQuotation } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 export interface QuotationPrintData {
   quotation: CrmQuotation;
@@ -25,7 +26,9 @@ export default function QuotationPrintTemplate({ data }: { data: QuotationPrintD
   const subtotal = quotation.items_json.reduce((sum, item) => sum + item.line_total, 0);
   const terms = crmConfig?.terms_and_conditions?.trim() || "";
   const showBank = Boolean(crmConfig?.show_bank_details_on_quote);
-  const sealUrl = crmConfig?.company_seal_signature_url || null;
+  // The CRM seal wins (as before); the company seal from Settings → Company is the fallback.
+  const companySeal = useCompanyProfile().profile.sealUrl;
+  const sealUrl = crmConfig?.company_seal_signature_url || companySeal || null;
 
   return (
     <div className="mx-auto w-[210mm] bg-white p-10 font-sans text-black">

@@ -1,8 +1,12 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { catchActionError, type ActionResult } from "@/lib/supabase/actionResult";
+import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
+import { invalidatePublicCompanyInfo } from "@/lib/company/server";
+import { COMPANY_PROFILE_TABLE } from "@/lib/company/profile";
 import {
   TAX_PAYROLL_CONFIG_KEY,
   parseTaxPayrollConfig,
@@ -14,17 +18,17 @@ export async function getTaxPayrollConfigAction(): Promise<ActionResult<TaxPayro
   try {
     await requirePermissionAction("can_manage_settings");
     const admin = createSupabaseAdminClient();
-    const [{ data, error }, { data: company }] = await Promise.all([
+    const [{ data, error }, { profile }] = await Promise.all([
       admin.from("system_settings").select("value").eq("key", TAX_PAYROLL_CONFIG_KEY).maybeSingle(),
-      admin.from("company_settings").select("voen, vat_rate").limit(1).maybeSingle(),
+      loadCompanyProfile(admin as unknown as SupabaseClient),
     ]);
     if (error) return { success: false, error: error.message };
     const config = parseTaxPayrollConfig(data?.value);
-    if (!config.company_voen && company?.voen) {
-      config.company_voen = String(company.voen).replace(/\D/g, "").slice(0, 10);
+    if (!config.company_voen && profile.voen) {
+      config.company_voen = profile.voen.replace(/\D/g, "").slice(0, 10);
     }
-    if (!data?.value && company?.vat_rate != null) {
-      const vat = Number(company.vat_rate);
+    if (!data?.value) {
+      const vat = profile.defaultVatRate;
       if (vat >= 17.5) config.default_vat_rate = "18";
       else if (vat <= 0) config.default_vat_rate = "0";
     }
@@ -51,15 +55,24 @@ export async function saveTaxPayrollConfigAction(
     );
     if (error) return { success: false, error: error.message };
 
-    const { data: company } = await admin.from("company_settings").select("id").limit(1).maybeSingle();
-    if (company?.id) {
-      await admin
-        .from("company_settings")
-        .update({
-          voen: config.company_voen || null,
-          vat_rate: vatRateToNumber(config.default_vat_rate),
-        })
-        .eq("id", company.id);
+    // Keep the company profile's VÖEN and default VAT in step with this page.
+    const companyPatch = {
+      voen: config.company_voen || "",
+      default_vat_rate: vatRateToNumber(config.default_vat_rate),
+    };
+    const untyped = admin as unknown as SupabaseClient;
+    const { source } = await loadCompanyProfile(untyped);
+    if (source === "profile") {
+      await untyped.from(COMPANY_PROFILE_TABLE).update(companyPatch).eq("id", true);
+      invalidatePublicCompanyInfo();
+    } else {
+      const { data: company } = await admin.from("company_settings").select("id").limit(1).maybeSingle();
+      if (company?.id) {
+        await admin
+          .from("company_settings")
+          .update({ voen: config.company_voen || null, vat_rate: companyPatch.default_vat_rate })
+          .eq("id", company.id);
+      }
     }
 
     return { success: true, data: config };

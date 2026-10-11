@@ -8,6 +8,9 @@ import { nativeAssistantAccess } from "@/lib/ai/native/config";
 import { resolveTierModels, routeRequest } from "@/lib/ai/native/router";
 import { runNativeAgent, type AgentResult } from "@/lib/ai/native/agent";
 import { ensureConversation, loadHistory, saveTurn } from "@/lib/ai/native/store";
+import { PRODUCT_NAME } from "@/lib/brand";
+import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
+import { companyDisplayName, EMPTY_COMPANY_PROFILE } from "@/lib/company/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +31,10 @@ const REFUSED: Record<string, string> = {
   ru: "Я не могу ответить на этот запрос. Переформулируйте вопрос.",
 };
 
-function systemPrompt(language: string): string {
-  // Kept byte-stable per language so the prompt cache is reused across users.
+function systemPrompt(language: string, company: { name: string; currency: string }): string {
+  // Kept byte-stable per language and company so the prompt cache is reused across users.
   return [
-    "You are the Del Groups ERP assistant for staff of Del Groups (Azerbaijan, currency AZN).",
+    `You are the ${PRODUCT_NAME} assistant for staff of ${company.name} (Azerbaijan, currency ${company.currency}).`,
     "Answer from the ERP tools only. Call a tool whenever the answer depends on ERP data; never invent numbers, IDs, balances, stock or documents.",
     "The tools are read-only and run with the current user's permissions. If a tool is missing or returns a permission error, say the user has no access to that data.",
     "You cannot create, change or delete records yet. If asked to, explain which ERP page does it and link it.",
@@ -100,6 +103,11 @@ export async function POST(request: NextRequest) {
   const route = routeRequest(message);
   const models = resolveTierModels();
   const conversationId = await ensureConversation(client, auth.user.id, requestedConversation, message);
+  const { profile } = await loadCompanyProfile(client).catch(() => ({ profile: EMPTY_COMPANY_PROFILE }));
+  const company = {
+    name: companyDisplayName(profile, PRODUCT_NAME),
+    currency: profile.defaultCurrency,
+  };
   const started = Date.now();
 
   let result: AgentResult | null = null;
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
       apiKey: access.apiKey,
       model: models[route.tier],
       tier: route.tier,
-      system: systemPrompt(language),
+      system: systemPrompt(language, company),
       history,
       userMessage: message,
       today: new Date().toISOString().slice(0, 10),

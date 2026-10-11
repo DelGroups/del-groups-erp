@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { StockTransferPrintData } from "@/lib/inventory/stockTransfer";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface StockTransferPrintTemplateProps {
   transfer: StockTransferPrintData;
@@ -10,8 +11,10 @@ interface StockTransferPrintTemplateProps {
 
 export default function StockTransferPrintTemplate({
   transfer,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: StockTransferPrintTemplateProps) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   return (
     <div className="mx-auto w-[210mm] bg-white p-8 font-sans text-black print:p-6">
       <div className="mb-6 flex items-start justify-between border-b-2 border-[color:var(--erp-border-default)] pb-4">

@@ -267,7 +267,7 @@ function InfoField({ label, value, valueColor = INK }: { label: string; value: s
 export default function InvoicePrintLayout({ data, mode, branding }: InvoicePrintLayoutProps) {
   const { t } = useI18n();
   const isOfficial = data.isOfficial === true || mode === "official";
-  const companyName = branding.companyName || "DEL GROUPS MMC";
+  const companyName = branding.companyName;
   const title = t("print.invoiceTitle");
 
   return (

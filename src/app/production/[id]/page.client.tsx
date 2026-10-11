@@ -13,7 +13,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-import { supabase } from "@/lib/supabase";
 import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import { mergeContractDetailFormState } from "@/app/production/contractInsert";
 import { sanitizeAddProductionMaterialInput } from "@/app/production/materialInsert";
@@ -56,6 +55,7 @@ import {
   type ProductionStatus,
 } from "@/lib/production/types";
 import { Boxes, CircleDollarSign, Factory, LayoutDashboard, Printer, Save, ScanBarcode } from "lucide-react";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 type ProjectTab = "overview" | "materials" | "expenses";
 const PROJECT_TABS: ProjectTab[] = ["overview", "materials", "expenses"];
@@ -70,7 +70,7 @@ export default function ProductionOrderDetailPage() {
     canManage || can("can_writeoff_inventory") || can("can_manage_warehouses");
   const [order, setOrder] = useState<ProductionOrder | null>(null);
   const [lookups, setLookups] = useState<ProductionLookups | null>(null);
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const companyName = useCompanyProfile().displayName;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,10 +186,7 @@ export default function ProductionOrderDetailPage() {
 
     void (async () => {
       try {
-        const [orderRes, settingsRes] = await Promise.all([
-          getProductionOrderAction(id),
-          supabase.from("settings").select("company_name").limit(1).maybeSingle(),
-        ]);
+        const orderRes = await getProductionOrderAction(id);
         if (!active) return;
 
         if (!orderRes.success) {
@@ -202,9 +199,6 @@ export default function ProductionOrderDetailPage() {
           applyOrderRef.current(orderRes.data, { syncHeader: true });
         }
 
-        if (settingsRes.data?.company_name) {
-          setCompanyName(settingsRes.data.company_name as string);
-        }
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : loadErrorLabelRef.current);
@@ -648,7 +642,7 @@ export default function ProductionOrderDetailPage() {
     if (draftOrder) {
       setPrintData({
         mode: "contract",
-        order: withPrintableProductionContract(draftOrder),
+        order: withPrintableProductionContract(draftOrder, companyName),
       });
       if (
         result.error &&

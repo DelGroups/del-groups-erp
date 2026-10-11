@@ -3,6 +3,7 @@
 import React from "react";
 import type { Product } from "@/types/database.types";
 import BarcodeDisplay from "@/components/products/BarcodeDisplay";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface ProductBarcodePrintTemplateProps {
   products: Product[];
@@ -11,8 +12,10 @@ interface ProductBarcodePrintTemplateProps {
 
 export default function ProductBarcodePrintTemplate({
   products,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: ProductBarcodePrintTemplateProps) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const withBarcodes = products.filter((p) => (p.barcode || "").trim());
 
   return (

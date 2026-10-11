@@ -1,4 +1,3 @@
-import { DEFAULT_CONTRACT_TERMS_AZ } from "@/lib/production/constants";
 import {
   resolveContractAdvancePayment,
   resolveContractCustomerId,
@@ -19,13 +18,14 @@ import {
 /** Build printable contract metadata from order fields when DB row/table is unavailable. */
 export function buildSyntheticProductionContract(
   order: ProductionOrder,
-  overrides?: Partial<Pick<ProductionContract, "contract_no" | "contract_date" | "terms" | "project_scope">>
+  overrides?: Partial<Pick<ProductionContract, "contract_no" | "contract_date" | "terms" | "project_scope">>,
+  companyName = ""
 ): ProductionContract {
   const terms =
     overrides?.terms?.trim() ||
-    resolveContractTerms(order) ||
+    resolveContractTerms(order, companyName) ||
     resolveContractContent(order) ||
-    DEFAULT_CONTRACT_TERMS_AZ;
+    "";
 
   return {
     id: order.contract?.id || `local-${order.id}`,
@@ -60,8 +60,8 @@ export function buildSyntheticProductionContract(
 }
 
 /** Ensure order has contract fields populated for print preview. */
-export function withPrintableProductionContract(order: ProductionOrder): ProductionOrder {
-  const contract = order.contract ?? buildSyntheticProductionContract(order);
+export function withPrintableProductionContract(order: ProductionOrder, companyName = ""): ProductionOrder {
+  const contract = order.contract ?? buildSyntheticProductionContract(order, undefined, companyName);
   return {
     ...order,
     project_scope: order.project_scope || contract.project_scope,

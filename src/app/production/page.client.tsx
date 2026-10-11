@@ -28,6 +28,7 @@ import {
 } from "@/lib/actions/production";
 import { withPrintableProductionContract } from "@/lib/production/contracts";
 import { productionModelLabel } from "@/lib/production/models";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import {
   PRODUCTION_STATUSES,
   calcProductionCosting,
@@ -55,7 +56,7 @@ export default function ProductionBoardPage() {
   const [workflowOrder, setWorkflowOrder] = useState<ProductionOrder | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProductionOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
+  const companyName = useCompanyProfile().displayName;
   const { printData, setPrintData } = useDocumentPrint<{
     order: ProductionOrder;
     companyName: string;
@@ -114,7 +115,7 @@ export default function ProductionBoardPage() {
     const full = await getProductionOrderAction(order.id);
     if (!full.success || !full.data) return;
     setPrintData({
-      order: withPrintableProductionContract(full.data),
+      order: withPrintableProductionContract(full.data, companyName),
       companyName,
     });
   }, [companyName, setPrintData]);

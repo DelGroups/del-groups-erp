@@ -3,6 +3,7 @@
 import type { PartnerReconciliationReport } from "@/lib/reports/partnerReconciliation";
 import { formatReportMoney } from "@/lib/reports/formatMoney";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 type PartnerReconciliationDocumentProps = {
   data: PartnerReconciliationReport;
@@ -29,6 +30,7 @@ export default function PartnerReconciliationDocument({
   loading,
 }: PartnerReconciliationDocumentProps) {
   const { t } = useI18n();
+  const companyName = useCompanyProfile().displayName;
 
   return (
     <div className="reconciliation-print mx-auto max-w-4xl rounded-2xl border border-app bg-white p-8 text-slate-900 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
@@ -42,7 +44,7 @@ export default function PartnerReconciliationDocument({
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-slate-200 p-4">
           <p className="text-[10px] font-bold uppercase text-slate-500">{t("reconciliation.ourCompany")}</p>
-          <p className="mt-1 font-semibold">DEL GROUPS MMC</p>
+          <p className="mt-1 font-semibold">{companyName}</p>
           <div className="mt-8 h-16 border-t border-dashed border-slate-300 pt-2 text-[10px] text-slate-500">
             {t("reconciliation.signatureStamp")}
           </div>
@@ -105,7 +107,7 @@ export default function PartnerReconciliationDocument({
       <footer className="mt-10 grid gap-8 sm:grid-cols-2 print:mt-16">
         <div>
           <p className="text-xs font-bold uppercase text-slate-500">{t("reconciliation.partyA")}</p>
-          <p className="mt-1 text-sm">DEL GROUPS MMC</p>
+          <p className="mt-1 text-sm">{companyName}</p>
           <div className="mt-12 border-t border-slate-400 pt-1 text-[10px] text-slate-500">
             {t("reconciliation.signLine")}
           </div>

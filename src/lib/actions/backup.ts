@@ -17,6 +17,7 @@ import {
 import { insertProductionOrders } from "@/lib/production/ordersClient";
 import { insertProductionMaterials } from "@/lib/production/materialsClient";
 import { PRODUCTION_MATERIAL_LIVE_COLUMNS } from "@/lib/production/payloads";
+import { PRODUCT_SLUG } from "@/lib/brand";
 
 export type BackupActionResult<T = void> =
   | { success: true; data: T }
@@ -54,7 +55,7 @@ export async function createFullBackupAction(): Promise<
     const payload: SystemBackupPayload = {
       version: BACKUP_VERSION,
       createdAt: new Date().toISOString(),
-      app: "del-groups-erp",
+      app: PRODUCT_SLUG,
       tables,
     };
 
@@ -78,7 +79,7 @@ export async function restoreFullBackupAction(
   try {
     await requirePermissionAction("can_manage_settings");
 
-    if (!payload || payload.app !== "del-groups-erp") {
+    if (!payload || payload.app !== PRODUCT_SLUG) {
       return { success: false, error: "Invalid backup file" };
     }
     if (!payload.tables || typeof payload.tables !== "object") {

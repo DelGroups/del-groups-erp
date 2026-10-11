@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { DEFAULT_CONSIGNMENT_TERMS_AZ, type ConsignmentDispatch } from "@/lib/consignment/types";
+import { defaultConsignmentTermsAz, type ConsignmentDispatch } from "@/lib/consignment/types";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface Props {
   data: ConsignmentDispatch;
@@ -11,8 +12,10 @@ interface Props {
 
 export default function ConsignmentDeliveryPrintTemplate({
   data,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: Props) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const { t, formatDate } = useI18n();
   const totalQty = data.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalValue = data.items.reduce(
@@ -83,7 +86,7 @@ export default function ConsignmentDeliveryPrintTemplate({
         <h2 className="mb-2 border-b border-slate-300 pb-1 text-sm font-bold uppercase">
           {t("consignments.print.terms")}
         </h2>
-        <p className="whitespace-pre-wrap leading-6">{data.notes || DEFAULT_CONSIGNMENT_TERMS_AZ}</p>
+        <p className="whitespace-pre-wrap leading-6">{data.notes || defaultConsignmentTermsAz(companyName)}</p>
       </section>
 
       <section className="grid grid-cols-2 gap-10 text-sm">

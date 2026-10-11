@@ -28,7 +28,8 @@ export const DEFAULT_BARCODE_LABEL_CONFIG: BarcodeLabelConfig = {
   show_price: false,
   show_dimensions: true,
   show_warehouse_location: true,
-  header_title: "DEL GROUPS MMC",
+  // Empty: the label falls back to the company name from Settings → Company.
+  header_title: "",
   margin_padding_mm: 2,
   custom_width_mm: 80,
   custom_height_mm: 50,

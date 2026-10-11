@@ -11,6 +11,7 @@ import {
   type AssistantLink,
 } from "@/lib/ai/context";
 import { completeAssistantChat, getAiProviderConfig, type ChatTurn } from "@/lib/ai/complete";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     locale === "ru" ? "Russian" : locale === "en" ? "English" : "Azerbaijani";
 
   const system = [
-    "You are the Del Groups ERP copilot. Read-only. Never invent IDs, balances, or stock.",
+    `You are the ${PRODUCT_NAME} copilot. Read-only. Never invent IDs, balances, or stock.`,
     "Use only the JSON snapshot. If a field is missing, say you cannot see it with current permissions.",
     `Reply in ${language}. Be concise. Use markdown.`,
     "Link ERP records with markdown, for example [PR-12](/production/uuid) or [Products](/products).",

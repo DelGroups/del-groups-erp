@@ -17,6 +17,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { DashboardData } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -55,8 +56,7 @@ export default function ManagementDashboardPage() {
   const { can } = useAuth();
   const canReconcileAr =
     can("can_manage_finance") || can("can_edit_sales") || can("can_manage_settings");
-  const [companyName, setCompanyName] = useState("DEL GROUPS MMC");
-  const [logoUrl, setLogoUrl] = useState("");
+  const companyName = useCompanyProfile().displayName;
   const [loading, setLoading] = useState(true);
   const [reconcilingAr, setReconcilingAr] = useState(false);
   const [data, setData] = useState<DashboardData>(emptyDashboard);
@@ -64,13 +64,7 @@ export default function ManagementDashboardPage() {
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    const [{ data: settings }, dashboard] = await Promise.all([
-      supabase.from("settings").select("company_name, logo_url").limit(1).single(),
-      fetchDashboardData(),
-    ]);
-
-    if (settings?.company_name) setCompanyName(settings.company_name);
-    if (settings?.logo_url) setLogoUrl(settings.logo_url);
+    const dashboard = await fetchDashboardData();
     setData(dashboard);
     setLoading(false);
   }, []);

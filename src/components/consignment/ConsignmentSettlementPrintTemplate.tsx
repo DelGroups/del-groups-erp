@@ -3,6 +3,7 @@
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { ConsignmentMonthlyReport } from "@/lib/consignment/types";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface Props {
   data: ConsignmentMonthlyReport;
@@ -11,8 +12,10 @@ interface Props {
 
 export default function ConsignmentSettlementPrintTemplate({
   data,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: Props) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const { t, formatDate } = useI18n();
 
   return (
@@ -72,7 +75,7 @@ export default function ConsignmentSettlementPrintTemplate({
       <section className="mt-12 grid grid-cols-2 gap-10 text-sm">
         <div className="text-center">
           <div className="mb-10 h-16 border-b border-slate-400" />
-          <p className="font-bold">{t("consignments.print.company")}</p>
+          <p className="font-bold">{companyName}</p>
         </div>
         <div className="text-center">
           <div className="mb-10 h-16 border-b border-slate-400" />

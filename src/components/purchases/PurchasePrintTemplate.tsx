@@ -3,6 +3,7 @@
 import React from "react";
 import type { PurchaseRecord } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface PurchasePrintTemplateProps {
   purchase: PurchaseRecord;
@@ -11,8 +12,10 @@ interface PurchasePrintTemplateProps {
 
 export default function PurchasePrintTemplate({
   purchase,
-  companyName = "DEL GROUPS MMC",
+  companyName: companyNameProp,
 }: PurchasePrintTemplateProps) {
+  const fallbackCompanyName = useCompanyProfile().displayName;
+  const companyName = companyNameProp || fallbackCompanyName;
   const { t } = useI18n();
 
   return (
