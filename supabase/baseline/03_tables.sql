@@ -420,15 +420,6 @@ create table if not exists public.payments (
   created_at timestamp with time zone not null
 );
 
-create table if not exists public.polywood_inventory_items (
-  id uuid not null,
-  product_id uuid not null,
-  length_m numeric not null,
-  quantity integer not null,
-  is_full_sheet boolean not null,
-  created_at timestamp with time zone not null
-);
-
 create table if not exists public.polywood_pieces (
   id uuid not null,
   product_id uuid not null,

@@ -147,11 +147,6 @@ grant insert, select, update, delete, truncate, references, trigger on table pub
 do $$ begin if current_setting('server_version_num')::int >= 170000 then execute 'grant maintain on table public.payments to authenticated'; end if; end $$;
 grant insert, select, update, delete, truncate, references, trigger on table public.payments to service_role;
 do $$ begin if current_setting('server_version_num')::int >= 170000 then execute 'grant maintain on table public.payments to service_role'; end if; end $$;
-revoke all on table public.polywood_inventory_items from public, anon, authenticated, service_role;
-grant insert, select, update, delete, truncate, references, trigger on table public.polywood_inventory_items to authenticated;
-do $$ begin if current_setting('server_version_num')::int >= 170000 then execute 'grant maintain on table public.polywood_inventory_items to authenticated'; end if; end $$;
-grant insert, select, update, delete, truncate, references, trigger on table public.polywood_inventory_items to service_role;
-do $$ begin if current_setting('server_version_num')::int >= 170000 then execute 'grant maintain on table public.polywood_inventory_items to service_role'; end if; end $$;
 revoke all on table public.polywood_pieces from public, anon, authenticated, service_role;
 grant insert, select, update, delete, truncate, references, trigger on table public.polywood_pieces to authenticated;
 do $$ begin if current_setting('server_version_num')::int >= 170000 then execute 'grant maintain on table public.polywood_pieces to authenticated'; end if; end $$;

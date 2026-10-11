@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import MixedDimensionalInvoiceForm from "@/components/polywood/MixedDimensionalInvoiceForm";
+import MixedDimensionalInvoiceForm from "./MixedDimensionalInvoiceForm";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { fetchSaleById } from "@/lib/sales/fetchSales";
 import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
 
-export default function PolywoodSalePageClient() {
+export default function PolywoodSaleNewPage() {
   const router = useRouter();
   const invoicePrint = useInvoicePrintSystem();
   const returnAfterPrintRef = useRef(false);

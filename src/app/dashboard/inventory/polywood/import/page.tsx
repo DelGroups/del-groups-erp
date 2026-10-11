@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { PolywoodImportPage } from "@/modules/polywood/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function PolywoodImportPage() {
-  return <PageClient />;
+export default function Page() {
+  return <PolywoodImportPage />;
 }

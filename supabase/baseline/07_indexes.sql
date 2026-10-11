@@ -48,7 +48,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_partners_supplier_unique ON public.partner
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_idempotency ON public.payments USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_payments_partner_id ON public.payments USING btree (partner_id, payment_date DESC);
 CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON public.payments USING btree (payment_date DESC);
-CREATE INDEX IF NOT EXISTS idx_polywood_inventory_items_product ON public.polywood_inventory_items USING btree (product_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_polywood_pieces_barcode_unique ON public.polywood_pieces USING btree (barcode) WHERE ((barcode IS NOT NULL) AND (btrim(barcode) <> ''::text));
 CREATE INDEX IF NOT EXISTS idx_polywood_pieces_product_available ON public.polywood_pieces USING btree (product_id, warehouse_id) WHERE (status = 'available'::text);
 CREATE INDEX IF NOT EXISTS idx_polywood_pieces_qr_code ON public.polywood_pieces USING btree (qr_code) WHERE (qr_code IS NOT NULL);

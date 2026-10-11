@@ -150,11 +150,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'polywood_inventory_items_pkey' and conrelid = 'public.polywood_inventory_items'::regclass) then
-    execute $c$alter table only public.polywood_inventory_items add constraint polywood_inventory_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'polywood_pieces_pkey' and conrelid = 'public.polywood_pieces'::regclass) then
     execute $c$alter table only public.polywood_pieces add constraint polywood_pieces_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -552,16 +547,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'payments_payment_type_check' and conrelid = 'public.payments'::regclass) then
     execute $c$alter table only public.payments add constraint payments_payment_type_check CHECK ((payment_type = ANY (ARRAY['in'::text, 'out'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'polywood_inventory_items_length_m_check' and conrelid = 'public.polywood_inventory_items'::regclass) then
-    execute $c$alter table only public.polywood_inventory_items add constraint polywood_inventory_items_length_m_check CHECK ((length_m > (0)::numeric));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'polywood_inventory_items_quantity_check' and conrelid = 'public.polywood_inventory_items'::regclass) then
-    execute $c$alter table only public.polywood_inventory_items add constraint polywood_inventory_items_quantity_check CHECK ((quantity > 0));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1007,11 +992,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'payments_transaction_id_fkey' and conrelid = 'public.payments'::regclass) then
     execute $c$alter table only public.payments add constraint payments_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'polywood_inventory_items_product_id_fkey' and conrelid = 'public.polywood_inventory_items'::regclass) then
-    execute $c$alter table only public.polywood_inventory_items add constraint polywood_inventory_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin

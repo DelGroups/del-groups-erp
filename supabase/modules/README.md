@@ -63,3 +63,6 @@ core and modules again.
   with `create_product_with_bom_atomic()`) and `purchase_requests` (shared with purchasing) stay in core.
   The foreign keys from core tables (`sales`, `transactions`, `purchase_requests`) to `production_orders`
   install with production; those with crm (`deals`, `quotations`) and expenses are links (see above).
+- `polywood`: `polywood_inventory_items` (rows of the Polywood stock import). Cut sheets (`polywood_pieces`) and
+  the mixed-dimensional sale RPCs stay in core: sales, purchases, stock transfers, inventory counts, initial
+  balance and production use them.
