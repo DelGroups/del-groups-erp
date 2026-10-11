@@ -85,12 +85,6 @@ alter table only public.consignment_returns alter column created_at set default 
 alter table only public.consignments alter column id set default gen_random_uuid();
 alter table only public.consignments alter column status set default 'Aktiv'::text;
 alter table only public.consignments alter column created_at set default now();
-alter table only public.contracts alter column id set default gen_random_uuid();
-alter table only public.contracts alter column status set default 'active'::character varying;
-alter table only public.contracts alter column created_at set default now();
-alter table only public.contracts alter column advance_percentage set default 0;
-alter table only public.contracts alter column payment_stages set default 1;
-alter table only public.contracts alter column contract_date set default CURRENT_DATE;
 alter table only public.customers alter column id set default gen_random_uuid();
 alter table only public.customers alter column balance set default 0.00;
 alter table only public.customers alter column created_at set default now();

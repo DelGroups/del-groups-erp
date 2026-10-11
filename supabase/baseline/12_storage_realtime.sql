@@ -4,10 +4,6 @@ values ('ai-assistant', 'ai-assistant', false, 8388608, array['application/pdf',
 on conflict (id) do update set name = excluded.name, public = excluded.public,
   file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('contract-attachments', 'contract-attachments', false, 20971520, array['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']::text[])
-on conflict (id) do update set name = excluded.name, public = excluded.public,
-  file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('crm-assets', 'crm-assets', true, 5242880, array['image/png', 'image/jpeg', 'image/jpg', 'image/webp']::text[])
 on conflict (id) do update set name = excluded.name, public = excluded.public,
   file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;

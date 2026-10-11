@@ -1,0 +1,14 @@
+{
+  "why": "Sales and purchase contracts with their attachments. The foreign keys sales.contract_id and purchases.contract_id point here, so they are installed with this module.",
+  "tables": ["contracts"],
+  "functions": ["validate_contract_legal_party"],
+  "sequences": [],
+  "views": [],
+  "buckets": ["contract-attachments"],
+  "storage_policies": [
+    "contract_attachments_delete",
+    "contract_attachments_insert",
+    "contract_attachments_select",
+    "contract_attachments_update"
+  ]
+}

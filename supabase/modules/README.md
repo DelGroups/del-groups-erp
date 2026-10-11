@@ -32,3 +32,5 @@ core and modules again.
 
 - `crm`: `deals`, `quotations`, `next_quotation_number()`, `quotation_number_seq`.
   The `crm-assets` storage bucket stays in core (the company profile stores the logo and seal there).
+- `contracts`: `contracts`, `validate_contract_legal_party()` (+ its trigger), the `contract-attachments`
+  bucket and its storage policies, and the foreign keys `sales.contract_id` / `purchases.contract_id`.

@@ -17,7 +17,6 @@ alter table public.consignment_orders enable row level security;
 alter table public.consignment_partners enable row level security;
 alter table public.consignment_returns enable row level security;
 alter table public.consignments enable row level security;
-alter table public.contracts enable row level security;
 alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_advances enable row level security;
@@ -281,22 +280,6 @@ drop policy if exists consignment_returns_update on public.consignment_returns;
 create policy consignment_returns_update on public.consignment_returns as permissive for update to authenticated
   using (public.require_permission('can_manage_consignments'::text))
   with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists contracts_delete on public.contracts;
-create policy contracts_delete on public.contracts as permissive for delete to public
-  using (public.user_has_permission('can_manage_settings'::text));
-
-drop policy if exists contracts_insert on public.contracts;
-create policy contracts_insert on public.contracts as permissive for insert to public
-  with check ((public.user_has_permission('can_create_invoice'::text) OR public.user_has_permission('can_view_purchases'::text)));
-
-drop policy if exists contracts_select on public.contracts;
-create policy contracts_select on public.contracts as permissive for select to public
-  using ((public.user_has_permission('can_view_sales'::text) OR public.user_has_permission('can_view_purchases'::text)));
-
-drop policy if exists contracts_update on public.contracts;
-create policy contracts_update on public.contracts as permissive for update to public
-  using ((public.user_has_permission('can_create_invoice'::text) OR public.user_has_permission('can_view_purchases'::text)));
 
 drop policy if exists customers_delete on public.customers;
 create policy customers_delete on public.customers as permissive for delete to authenticated
@@ -849,22 +832,6 @@ drop policy if exists warehouses_update on public.warehouses;
 create policy warehouses_update on public.warehouses as permissive for update to authenticated
   using (public.require_permission('can_manage_warehouses'::text))
   with check (public.require_permission('can_manage_warehouses'::text));
-
-drop policy if exists contract_attachments_delete on storage.objects;
-create policy contract_attachments_delete on storage.objects as permissive for delete to authenticated
-  using ((bucket_id = 'contract-attachments'::text));
-
-drop policy if exists contract_attachments_insert on storage.objects;
-create policy contract_attachments_insert on storage.objects as permissive for insert to authenticated
-  with check ((bucket_id = 'contract-attachments'::text));
-
-drop policy if exists contract_attachments_select on storage.objects;
-create policy contract_attachments_select on storage.objects as permissive for select to authenticated
-  using ((bucket_id = 'contract-attachments'::text));
-
-drop policy if exists contract_attachments_update on storage.objects;
-create policy contract_attachments_update on storage.objects as permissive for update to authenticated
-  using ((bucket_id = 'contract-attachments'::text));
 
 drop policy if exists crm_assets_delete on storage.objects;
 create policy crm_assets_delete on storage.objects as permissive for delete to authenticated

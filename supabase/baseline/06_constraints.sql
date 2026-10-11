@@ -95,11 +95,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'contracts_pkey' and conrelid = 'public.contracts'::regclass) then
-    execute $c$alter table only public.contracts add constraint contracts_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'customers_pkey' and conrelid = 'public.customers'::regclass) then
     execute $c$alter table only public.customers add constraint customers_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -460,11 +455,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'contracts_contract_number_key' and conrelid = 'public.contracts'::regclass) then
-    execute $c$alter table only public.contracts add constraint contracts_contract_number_key UNIQUE (contract_number);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'customers_code_key' and conrelid = 'public.customers'::regclass) then
     execute $c$alter table only public.customers add constraint customers_code_key UNIQUE (code);$c$;
   end if;
@@ -627,16 +617,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_status_check' and conrelid = 'public.consignment_dispatches'::regclass) then
     execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'returned'::text, 'initial_balance'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'contracts_status_check' and conrelid = 'public.contracts'::regclass) then
-    execute $c$alter table only public.contracts add constraint contracts_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying, 'cancelled'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'contracts_type_check' and conrelid = 'public.contracts'::regclass) then
-    execute $c$alter table only public.contracts add constraint contracts_type_check CHECK (((type)::text = ANY ((ARRAY['sale'::character varying, 'purchase'::character varying, 'service'::character varying])::text[])));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1780,11 +1760,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchases_contract_id_fkey' and conrelid = 'public.purchases'::regclass) then
-    execute $c$alter table only public.purchases add constraint purchases_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES public.contracts(id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchases_partner_id_fkey' and conrelid = 'public.purchases'::regclass) then
     execute $c$alter table only public.purchases add constraint purchases_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id);$c$;
   end if;
@@ -1827,11 +1802,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sales_cogs_journal_entry_id_fkey' and conrelid = 'public.sales'::regclass) then
     execute $c$alter table only public.sales add constraint sales_cogs_journal_entry_id_fkey FOREIGN KEY (cogs_journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'sales_contract_id_fkey' and conrelid = 'public.sales'::regclass) then
-    execute $c$alter table only public.sales add constraint sales_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES public.contracts(id);$c$;
   end if;
 end $$;
 do $$ begin

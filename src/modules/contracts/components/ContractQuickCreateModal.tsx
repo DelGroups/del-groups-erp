@@ -9,7 +9,7 @@ import {
   generateContractNumber,
   type Contract,
   type ContractType,
-} from "@/lib/contracts/api";
+} from "../lib/api";
 
 interface ContractQuickCreateModalProps {
   transactionType: "sale" | "purchase";

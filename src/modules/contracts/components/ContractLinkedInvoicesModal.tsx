@@ -7,7 +7,7 @@ import {
   fetchLinkedDocuments,
   type Contract,
   type LinkedDocument,
-} from "@/lib/contracts/api";
+} from "../lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Props {

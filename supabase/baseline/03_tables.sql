@@ -233,26 +233,6 @@ create table if not exists public.consignments (
   created_at timestamp with time zone
 );
 
-create table if not exists public.contracts (
-  id uuid not null,
-  contract_number character varying not null,
-  party_id uuid not null,
-  party_name text,
-  type character varying not null,
-  title character varying not null,
-  total_amount numeric,
-  status character varying not null,
-  voen text,
-  created_at timestamp with time zone not null,
-  advance_percentage numeric(5,2),
-  payment_stages integer,
-  payment_terms_notes text,
-  end_date date,
-  contract_date date,
-  expiry_date date,
-  attachment_path text
-);
-
 create table if not exists public.customers (
   id uuid not null,
   code text,
