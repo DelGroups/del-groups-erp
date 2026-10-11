@@ -13,12 +13,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_table_name ON public.audit_logs USING 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs USING btree (user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug_unique ON public.categories USING btree (slug) WHERE ((slug IS NOT NULL) AND (TRIM(BOTH FROM slug) <> ''::text));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON public.chart_of_accounts USING btree (code);
-CREATE INDEX IF NOT EXISTS idx_consignment_dispatches_partner ON public.consignment_dispatches USING btree (partner_id);
-CREATE INDEX IF NOT EXISTS idx_consignment_dispatches_sales_rep ON public.consignment_dispatches USING btree (sales_rep_id);
-CREATE INDEX IF NOT EXISTS idx_consignment_inventory_partner ON public.consignment_inventory USING btree (partner_id);
-CREATE INDEX IF NOT EXISTS idx_consignment_monthly_reports_partner ON public.consignment_monthly_reports USING btree (partner_id);
-CREATE INDEX IF NOT EXISTS idx_consignment_monthly_reports_sales_rep ON public.consignment_monthly_reports USING btree (sales_rep_id);
-CREATE INDEX IF NOT EXISTS idx_consignment_returns_partner ON public.consignment_returns USING btree (partner_id);
 CREATE INDEX IF NOT EXISTS idx_doc_expenses_doc ON public.document_expenses USING btree (document_type, document_id);
 CREATE INDEX IF NOT EXISTS idx_employee_advances_employee ON public.employee_advances USING btree (employee_id, status, request_date DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_commission_rules_employee_category ON public.employee_commission_rules USING btree (employee_id, lower(category_name));

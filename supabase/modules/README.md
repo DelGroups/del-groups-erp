@@ -34,3 +34,8 @@ core and modules again.
   The `crm-assets` storage bucket stays in core (the company profile stores the logo and seal there).
 - `contracts`: `contracts`, `validate_contract_legal_party()` (+ its trigger), the `contract-attachments`
   bucket and its storage policies, and the foreign keys `sales.contract_id` / `purchases.contract_id`.
+- `consignment`: `consignment_partners`, `consignment_dispatches`, `consignment_inventory`,
+  `consignment_monthly_reports`, `consignment_returns`, the older `consignments` / `consignment_items` /
+  `consignment_orders`, and the RPCs `consignment_adjust_warehouse_stock()`,
+  `create_consignment_dispatch_atomic()`, `set_consignment_initial_balance_atomic()`,
+  `settle_consignment_partner_atomic()`.

@@ -55,46 +55,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_pkey' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_inventory_pkey' and conrelid = 'public.consignment_inventory'::regclass) then
-    execute $c$alter table only public.consignment_inventory add constraint consignment_inventory_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_items_pkey' and conrelid = 'public.consignment_items'::regclass) then
-    execute $c$alter table only public.consignment_items add constraint consignment_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_pkey' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_orders_pkey' and conrelid = 'public.consignment_orders'::regclass) then
-    execute $c$alter table only public.consignment_orders add constraint consignment_orders_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_partners_pkey' and conrelid = 'public.consignment_partners'::regclass) then
-    execute $c$alter table only public.consignment_partners add constraint consignment_partners_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_returns_pkey' and conrelid = 'public.consignment_returns'::regclass) then
-    execute $c$alter table only public.consignment_returns add constraint consignment_returns_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignments_pkey' and conrelid = 'public.consignments'::regclass) then
-    execute $c$alter table only public.consignments add constraint consignments_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'customers_pkey' and conrelid = 'public.customers'::regclass) then
     execute $c$alter table only public.customers add constraint customers_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -425,36 +385,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_dispatch_no_key' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_dispatch_no_key UNIQUE (dispatch_no);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_inventory_partner_id_product_id_key' and conrelid = 'public.consignment_inventory'::regclass) then
-    execute $c$alter table only public.consignment_inventory add constraint consignment_inventory_partner_id_product_id_key UNIQUE (partner_id, product_id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_partner_id_report_period_key' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_partner_id_report_period_key UNIQUE (partner_id, report_period);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_report_no_key' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_report_no_key UNIQUE (report_no);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_returns_return_no_key' and conrelid = 'public.consignment_returns'::regclass) then
-    execute $c$alter table only public.consignment_returns add constraint consignment_returns_return_no_key UNIQUE (return_no);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignments_code_key' and conrelid = 'public.consignments'::regclass) then
-    execute $c$alter table only public.consignments add constraint consignments_code_key UNIQUE (code);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'customers_code_key' and conrelid = 'public.customers'::regclass) then
     execute $c$alter table only public.customers add constraint customers_code_key UNIQUE (code);$c$;
   end if;
@@ -612,11 +542,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'chart_of_accounts_account_type_check' and conrelid = 'public.chart_of_accounts'::regclass) then
     execute $c$alter table only public.chart_of_accounts add constraint chart_of_accounts_account_type_check CHECK ((account_type = ANY (ARRAY['asset'::text, 'liability'::text, 'equity'::text, 'income'::text, 'revenue'::text, 'expense'::text, 'contra'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_status_check' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'returned'::text, 'initial_balance'::text])));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1107,91 +1032,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'chart_of_accounts_parent_id_fkey' and conrelid = 'public.chart_of_accounts'::regclass) then
     execute $c$alter table only public.chart_of_accounts add constraint chart_of_accounts_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.chart_of_accounts(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_created_by_fkey' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_partner_id_fkey' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.consignment_partners(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_sales_rep_id_fkey' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_sales_rep_id_fkey FOREIGN KEY (sales_rep_id) REFERENCES public.employees(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_dispatches_warehouse_id_fkey' and conrelid = 'public.consignment_dispatches'::regclass) then
-    execute $c$alter table only public.consignment_dispatches add constraint consignment_dispatches_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_inventory_partner_id_fkey' and conrelid = 'public.consignment_inventory'::regclass) then
-    execute $c$alter table only public.consignment_inventory add constraint consignment_inventory_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.consignment_partners(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_inventory_product_id_fkey' and conrelid = 'public.consignment_inventory'::regclass) then
-    execute $c$alter table only public.consignment_inventory add constraint consignment_inventory_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_items_consignment_id_fkey' and conrelid = 'public.consignment_items'::regclass) then
-    execute $c$alter table only public.consignment_items add constraint consignment_items_consignment_id_fkey FOREIGN KEY (consignment_id) REFERENCES public.consignments(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_items_product_id_fkey' and conrelid = 'public.consignment_items'::regclass) then
-    execute $c$alter table only public.consignment_items add constraint consignment_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_created_by_fkey' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_invoice_id_fkey' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES public.sales(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_partner_id_fkey' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.consignment_partners(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_monthly_reports_sales_rep_id_fkey' and conrelid = 'public.consignment_monthly_reports'::regclass) then
-    execute $c$alter table only public.consignment_monthly_reports add constraint consignment_monthly_reports_sales_rep_id_fkey FOREIGN KEY (sales_rep_id) REFERENCES public.employees(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_partners_customer_id_fkey' and conrelid = 'public.consignment_partners'::regclass) then
-    execute $c$alter table only public.consignment_partners add constraint consignment_partners_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_returns_created_by_fkey' and conrelid = 'public.consignment_returns'::regclass) then
-    execute $c$alter table only public.consignment_returns add constraint consignment_returns_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_returns_partner_id_fkey' and conrelid = 'public.consignment_returns'::regclass) then
-    execute $c$alter table only public.consignment_returns add constraint consignment_returns_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.consignment_partners(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignment_returns_warehouse_id_fkey' and conrelid = 'public.consignment_returns'::regclass) then
-    execute $c$alter table only public.consignment_returns add constraint consignment_returns_warehouse_id_fkey FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'consignments_customer_id_fkey' and conrelid = 'public.consignments'::regclass) then
-    execute $c$alter table only public.consignments add constraint consignments_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);$c$;
   end if;
 end $$;
 do $$ begin

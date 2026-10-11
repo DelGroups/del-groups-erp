@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { ConsignmentMonthlyReport } from "@/lib/consignment/types";
+import type { ConsignmentMonthlyReport } from "../lib/types";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface Props {

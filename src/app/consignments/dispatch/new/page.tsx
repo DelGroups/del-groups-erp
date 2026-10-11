@@ -1,5 +1,5 @@
-import ConsignmentDispatchNewPageClient from "./page.client";
+import { ConsignmentDispatchNewPage } from "@/modules/consignment/pages";
 
-export default function ConsignmentDispatchNewPage() {
-  return <ConsignmentDispatchNewPageClient />;
+export default function Page() {
+  return <ConsignmentDispatchNewPage />;
 }

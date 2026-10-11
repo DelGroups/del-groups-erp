@@ -1,4 +1,4 @@
-import type { ConsignmentMonthlyReport } from "@/lib/consignment/types";
+import type { ConsignmentMonthlyReport } from "./types";
 import type { InvoicePrintData } from "@/lib/print/types";
 
 export function mapConsignmentReportToInvoicePrint(

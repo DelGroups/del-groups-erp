@@ -1,5 +1,5 @@
-import ConsignmentInitialBalanceNewPageClient from "./page.client";
+import { ConsignmentInitialBalanceNewPage } from "@/modules/consignment/pages";
 
-export default function ConsignmentInitialBalanceNewPage() {
-  return <ConsignmentInitialBalanceNewPageClient />;
+export default function Page() {
+  return <ConsignmentInitialBalanceNewPage />;
 }

@@ -15,7 +15,7 @@ import {
   type ConsignmentReturn,
   type ConsignmentReturnedItem,
   type ConsignmentSoldItem,
-} from "@/lib/consignment/types";
+} from "../lib/types";
 import type { Customer, Employee, Product, Warehouse } from "@/types/database.types";
 
 export type ConsignmentActionResult<T = void> =

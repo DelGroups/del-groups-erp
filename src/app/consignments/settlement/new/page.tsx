@@ -1,5 +1,5 @@
-import ConsignmentSettlementNewPageClient from "./page.client";
+import { ConsignmentSettlementNewPage } from "@/modules/consignment/pages";
 
-export default function ConsignmentSettlementNewPage() {
-  return <ConsignmentSettlementNewPageClient />;
+export default function Page() {
+  return <ConsignmentSettlementNewPage />;
 }

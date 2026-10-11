@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { defaultConsignmentTermsAz, type ConsignmentDispatch } from "@/lib/consignment/types";
+import { defaultConsignmentTermsAz, type ConsignmentDispatch } from "../lib/types";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 
 interface Props {

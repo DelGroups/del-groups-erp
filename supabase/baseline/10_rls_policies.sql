@@ -9,14 +9,6 @@ alter table public.audit_logs enable row level security;
 alter table public.categories enable row level security;
 alter table public.commission_rules enable row level security;
 alter table public.company_settings enable row level security;
-alter table public.consignment_dispatches enable row level security;
-alter table public.consignment_inventory enable row level security;
-alter table public.consignment_items enable row level security;
-alter table public.consignment_monthly_reports enable row level security;
-alter table public.consignment_orders enable row level security;
-alter table public.consignment_partners enable row level security;
-alter table public.consignment_returns enable row level security;
-alter table public.consignments enable row level security;
 alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_advances enable row level security;
@@ -178,108 +170,6 @@ drop policy if exists company_settings_update on public.company_settings;
 create policy company_settings_update on public.company_settings as permissive for update to authenticated
   using (public.require_permission('can_manage_settings'::text))
   with check (public.require_permission('can_manage_settings'::text));
-
-drop policy if exists consignment_dispatches_delete on public.consignment_dispatches;
-create policy consignment_dispatches_delete on public.consignment_dispatches as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_dispatches_insert on public.consignment_dispatches;
-create policy consignment_dispatches_insert on public.consignment_dispatches as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_dispatches_select on public.consignment_dispatches;
-create policy consignment_dispatches_select on public.consignment_dispatches as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_dispatches_update on public.consignment_dispatches;
-create policy consignment_dispatches_update on public.consignment_dispatches as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_inventory_delete on public.consignment_inventory;
-create policy consignment_inventory_delete on public.consignment_inventory as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_inventory_insert on public.consignment_inventory;
-create policy consignment_inventory_insert on public.consignment_inventory as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_inventory_select on public.consignment_inventory;
-create policy consignment_inventory_select on public.consignment_inventory as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_inventory_update on public.consignment_inventory;
-create policy consignment_inventory_update on public.consignment_inventory as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_monthly_reports_delete on public.consignment_monthly_reports;
-create policy consignment_monthly_reports_delete on public.consignment_monthly_reports as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_monthly_reports_insert on public.consignment_monthly_reports;
-create policy consignment_monthly_reports_insert on public.consignment_monthly_reports as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_monthly_reports_select on public.consignment_monthly_reports;
-create policy consignment_monthly_reports_select on public.consignment_monthly_reports as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_monthly_reports_update on public.consignment_monthly_reports;
-create policy consignment_monthly_reports_update on public.consignment_monthly_reports as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_orders_delete on public.consignment_orders;
-create policy consignment_orders_delete on public.consignment_orders as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_orders_insert on public.consignment_orders;
-create policy consignment_orders_insert on public.consignment_orders as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_orders_select on public.consignment_orders;
-create policy consignment_orders_select on public.consignment_orders as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_orders_update on public.consignment_orders;
-create policy consignment_orders_update on public.consignment_orders as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_partners_delete on public.consignment_partners;
-create policy consignment_partners_delete on public.consignment_partners as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_partners_insert on public.consignment_partners;
-create policy consignment_partners_insert on public.consignment_partners as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_partners_select on public.consignment_partners;
-create policy consignment_partners_select on public.consignment_partners as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_partners_update on public.consignment_partners;
-create policy consignment_partners_update on public.consignment_partners as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_returns_delete on public.consignment_returns;
-create policy consignment_returns_delete on public.consignment_returns as permissive for delete to authenticated
-  using (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_returns_insert on public.consignment_returns;
-create policy consignment_returns_insert on public.consignment_returns as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_consignments'::text));
-
-drop policy if exists consignment_returns_select on public.consignment_returns;
-create policy consignment_returns_select on public.consignment_returns as permissive for select to authenticated
-  using (public.require_permission('can_view_consignments'::text));
-
-drop policy if exists consignment_returns_update on public.consignment_returns;
-create policy consignment_returns_update on public.consignment_returns as permissive for update to authenticated
-  using (public.require_permission('can_manage_consignments'::text))
-  with check (public.require_permission('can_manage_consignments'::text));
 
 drop policy if exists customers_delete on public.customers;
 create policy customers_delete on public.customers as permissive for delete to authenticated
