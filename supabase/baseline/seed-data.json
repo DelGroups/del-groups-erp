@@ -1,0 +1,826 @@
+{
+ "roles": {
+  "why": "the three built-in roles with their permission sets, copied from production",
+  "rows": [
+   {
+    "id": "ab6ff689-4e0b-4a7f-97dc-3b0bb2a45d39",
+    "name": "Admin",
+    "permissions": {
+     "can_view_hr": true,
+     "can_view_crm": true,
+     "can_manage_hr": true,
+     "can_edit_sales": true,
+     "can_manage_crm": true,
+     "can_view_sales": true,
+     "can_delete_sales": true,
+     "can_manage_roles": true,
+     "can_manage_users": true,
+     "can_view_finance": true,
+     "can_view_reports": true,
+     "can_view_expenses": true,
+     "can_view_products": true,
+     "can_view_settings": true,
+     "can_create_invoice": true,
+     "can_edit_purchases": true,
+     "can_manage_finance": true,
+     "can_view_customers": true,
+     "can_view_dashboard": true,
+     "can_view_purchases": true,
+     "can_view_suppliers": true,
+     "can_create_purchase": true,
+     "can_manage_expenses": true,
+     "can_manage_products": true,
+     "can_manage_settings": true,
+     "can_view_production": true,
+     "can_delete_purchases": true,
+     "can_manage_customers": true,
+     "can_manage_suppliers": true,
+     "can_view_commissions": true,
+     "can_manage_production": true,
+     "can_manage_warehouses": true,
+     "can_view_consignments": true,
+     "can_manage_commissions": true,
+     "can_writeoff_inventory": true,
+     "can_manage_consignments": true,
+     "can_view_financial_reports": true,
+     "can_approve_purchase_requests": true,
+     "can_view_production_financials": true
+    },
+    "description": null,
+    "created_at": "2026-08-24T07:48:16.525677+00:00",
+    "is_system": false,
+    "scopes": {
+     "record_access": "\"ALL_RECORDS\"",
+     "allowed_warehouses": [],
+     "allowed_financial_accounts": []
+    }
+   },
+   {
+    "id": "19de1e03-39f0-4de6-ac55-0a603dc65efb",
+    "name": "Manager",
+    "permissions": {
+     "_v": 2,
+     "_matrix": {
+      "hr": {
+       "view": false,
+       "manage": false,
+       "view_commissions": false,
+       "manage_commissions": false
+      },
+      "crm": {
+       "view_pipeline": true,
+       "view_customers": true,
+       "view_suppliers": true,
+       "manage_pipeline": true,
+       "manage_customers": true,
+       "manage_suppliers": true
+      },
+      "sales": {
+       "edit": false,
+       "view": true,
+       "create": true,
+       "delete": false
+      },
+      "finance": {
+       "view": false,
+       "manage": false,
+       "view_reports": false,
+       "create_income": false,
+       "view_expenses": false,
+       "create_expense": false,
+       "manage_expenses": false
+      },
+      "reports": {
+       "view": false,
+       "view_financial": false
+      },
+      "dashboard": {
+       "view": false
+      },
+      "inventory": {
+       "view": true,
+       "manage": true,
+       "writeoff": true,
+       "add_stock": true,
+       "view_slips": true,
+       "approve_slips": false,
+       "manage_transfers": true,
+       "manage_warehouses": true,
+       "send_to_warehouse": false
+      },
+      "purchases": {
+       "edit": false,
+       "view": true,
+       "create": true,
+       "delete": false
+      },
+      "production": {
+       "view": true,
+       "manage": true,
+       "view_financials": true,
+       "approve_purchase": true
+      },
+      "consignments": {
+       "view": true,
+       "manage": false
+      },
+      "administration": {
+       "manage_roles": false,
+       "manage_users": false,
+       "view_settings": false,
+       "manage_settings": false
+      }
+     },
+     "can_view_hr": false,
+     "can_view_crm": true,
+     "can_manage_hr": false,
+     "can_edit_sales": false,
+     "can_manage_crm": true,
+     "can_view_sales": true,
+     "can_delete_sales": false,
+     "can_manage_roles": false,
+     "can_manage_users": false,
+     "can_view_finance": false,
+     "can_view_reports": false,
+     "can_view_expenses": false,
+     "can_view_products": true,
+     "can_view_settings": false,
+     "can_create_invoice": true,
+     "can_edit_purchases": false,
+     "can_manage_finance": false,
+     "can_view_customers": true,
+     "can_view_dashboard": false,
+     "can_view_purchases": true,
+     "can_view_suppliers": true,
+     "can_create_purchase": true,
+     "can_manage_expenses": false,
+     "can_manage_products": true,
+     "can_manage_settings": false,
+     "can_view_production": true,
+     "can_delete_purchases": false,
+     "can_manage_customers": true,
+     "can_manage_suppliers": true,
+     "can_view_commissions": false,
+     "can_manage_production": true,
+     "can_manage_warehouses": true,
+     "can_send_to_warehouse": false,
+     "can_view_consignments": true,
+     "can_manage_commissions": false,
+     "can_writeoff_inventory": true,
+     "can_manage_consignments": false,
+     "can_view_warehouse_slips": true,
+     "can_view_financial_reports": false,
+     "can_approve_warehouse_slips": false,
+     "can_approve_purchase_requests": true,
+     "can_view_production_financials": true
+    },
+    "description": null,
+    "created_at": "2026-08-24T07:48:16.525677+00:00",
+    "is_system": false,
+    "scopes": {
+     "record_access": "ALL_RECORDS",
+     "allowed_warehouses": [],
+     "allowed_financial_accounts": []
+    }
+   },
+   {
+    "id": "f03ed266-d5db-4bea-9bd8-ffddd98f6edb",
+    "name": "User",
+    "permissions": {
+     "can_view_hr": false,
+     "can_view_crm": true,
+     "can_manage_hr": false,
+     "can_edit_sales": false,
+     "can_manage_crm": false,
+     "can_view_sales": true,
+     "can_delete_sales": false,
+     "can_manage_roles": false,
+     "can_manage_users": false,
+     "can_view_finance": false,
+     "can_view_reports": false,
+     "can_view_expenses": false,
+     "can_view_products": true,
+     "can_view_settings": false,
+     "can_create_invoice": false,
+     "can_edit_purchases": false,
+     "can_manage_finance": false,
+     "can_view_customers": true,
+     "can_view_dashboard": false,
+     "can_view_purchases": true,
+     "can_view_suppliers": true,
+     "can_create_purchase": false,
+     "can_manage_expenses": false,
+     "can_manage_products": false,
+     "can_manage_settings": false,
+     "can_view_production": true,
+     "can_delete_purchases": false,
+     "can_manage_customers": false,
+     "can_manage_suppliers": false,
+     "can_view_commissions": false,
+     "can_manage_production": false,
+     "can_manage_warehouses": true,
+     "can_view_consignments": false,
+     "can_manage_commissions": false,
+     "can_writeoff_inventory": false,
+     "can_manage_consignments": false,
+     "can_view_financial_reports": false,
+     "can_approve_purchase_requests": false,
+     "can_view_production_financials": false
+    },
+    "description": null,
+    "created_at": "2026-08-24T07:48:16.525677+00:00",
+    "is_system": false,
+    "scopes": {
+     "record_access": "\"ALL_RECORDS\"",
+     "allowed_warehouses": [],
+     "allowed_financial_accounts": []
+    }
+   }
+  ],
+  "conflict": "do nothing"
+ },
+ "chart_of_accounts": {
+  "why": "account codes the posting functions look up (1000 Kassa, 1200 AR, 4000 revenue ...), copied from production",
+  "rows": [
+   {
+    "id": "a7f243dc-06c8-4c4e-b6fc-b5f705b0dc9d",
+    "code": "1000",
+    "name": "Kassa",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-10T11:40:25.654088+00:00"
+   },
+   {
+    "id": "b7104b8c-004b-4b1c-a464-6ab640c74520",
+    "code": "1100",
+    "name": "Kassa və Bank",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "158f0db7-f3b6-455c-aef5-67aae31ceb5d",
+    "code": "1200",
+    "name": "Alıcılar (Debitor borclar)",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "74181ce5-a983-421d-96e9-545cfd86210e",
+    "code": "1300",
+    "name": "Anbar / Inventar",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "5c617f46-6cad-4b58-a498-a82b04183638",
+    "code": "1350",
+    "name": "WIP / İstehsalat inventarı",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "4e35da45-8812-47f1-8eca-ce4592cec540",
+    "code": "1410",
+    "name": "Əvəzləşdirilən ƏDV",
+    "account_type": "asset",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-10-06T05:03:55.405231+00:00"
+   },
+   {
+    "id": "c44cf832-9692-47f5-a15e-c3c05422599b",
+    "code": "2100",
+    "name": "Təchizatçılar (Kreditor borclar)",
+    "account_type": "liability",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "c062cc4d-3483-4fa3-832d-d2883728be0d",
+    "code": "2150",
+    "name": "Alınmış, fakturası gözlənilən mallar",
+    "account_type": "liability",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-10-03T12:28:07.340335+00:00"
+   },
+   {
+    "id": "03dbe754-d060-40a8-9ac1-8c1131e8440c",
+    "code": "2400",
+    "name": "İşçilərə borc (xərc kompensasiyası)",
+    "account_type": "liability",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-10-05T14:00:13.439096+00:00"
+   },
+   {
+    "id": "fa7a2266-e872-49a3-b252-e6ba1e2fd1e9",
+    "code": "3100",
+    "name": "Nizamnamə Kapitalı (Equity)",
+    "account_type": "equity",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "793832e3-1648-4762-8d2d-3c14cdb8fc2d",
+    "code": "3900",
+    "name": "İlkin qalıq kapitalı",
+    "account_type": "equity",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-01T10:06:17.893707+00:00"
+   },
+   {
+    "id": "a8eab547-a70a-41ef-9954-0efe653ed2b4",
+    "code": "4000",
+    "name": "Satış gəliri",
+    "account_type": "revenue",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-10T11:40:25.654088+00:00"
+   },
+   {
+    "id": "2b9d2bf1-197e-4fd2-9fff-c25718c1acf8",
+    "code": "4100",
+    "name": "Satış gəliri (köhnə kod)",
+    "account_type": "revenue",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "f2948c20-6332-4814-b637-561adbdfc2bb",
+    "code": "4950",
+    "name": "İnventarizasiya artığı (gəlir)",
+    "account_type": "revenue",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-24T08:25:43.607106+00:00"
+   },
+   {
+    "id": "333082a8-6d0b-4c01-a62a-0408764bd88a",
+    "code": "4990",
+    "name": "Digər gəlir",
+    "account_type": "revenue",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-01T10:06:17.893707+00:00"
+   },
+   {
+    "id": "3e08972e-626d-4347-a274-9854c734a2a4",
+    "code": "5000",
+    "name": "Satılan malların maya dəyəri (COGS)",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-10T11:40:25.654088+00:00"
+   },
+   {
+    "id": "c37d634c-a7a7-48a2-8dfc-08c3e75ebbc8",
+    "code": "5100",
+    "name": "Maya dəyəri (COGS)",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "d5418038-ae0e-4059-afd0-b15a95536e44",
+    "code": "6000",
+    "name": "Ümumi xərclər",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-10T11:40:25.654088+00:00"
+   },
+   {
+    "id": "ea9022dc-55c1-4e6e-a352-0deadde38086",
+    "code": "6100",
+    "name": "Əməliyyat xərcləri",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-08-29T09:55:04.875948+00:00"
+   },
+   {
+    "id": "3c6fcadb-875b-4791-81da-c3d37ce5b296",
+    "code": "6190",
+    "name": "Digər xərc",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-01T10:06:17.893707+00:00"
+   },
+   {
+    "id": "8102a982-0ef9-443e-8bc5-0db90b461ef6",
+    "code": "6250",
+    "name": "İnventarizasiya çatışmazlığı (xərc)",
+    "account_type": "expense",
+    "parent_id": null,
+    "is_active": true,
+    "created_at": "2026-09-24T08:25:43.607106+00:00"
+   }
+  ],
+  "conflict": "do nothing"
+ },
+ "financial_categories": {
+  "why": "default income/expense categories, parents first, copied from production",
+  "rows": [
+   {
+    "id": "c7486bc6-7b63-4df4-938a-ec45080e4924",
+    "name": "Alət / Material",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "f2d472c4-1421-41cf-bca9-859328f25c5d",
+    "name": "Çatdırılma",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "81fa9b5a-9c69-48bd-9f48-fc9076a463f5",
+    "name": "Digər",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "4dc31aaa-6036-4b17-a0cf-c09d439c637e",
+    "name": "Digər gəlir",
+    "type": "INCOME",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "b8eca520-65d4-4408-acd6-c8e35f2018fc",
+    "name": "Elektrik",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "581e90b6-e1a5-4fce-b775-97efccbab4d3",
+    "name": "Əl ilə xərc",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "9d26fd4b-7a26-4383-b976-34bf88b9ca28",
+    "name": "İcarə",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "1d141be1-3acd-4f0f-8ba6-db31fafe185f",
+    "name": "İnternet",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "7e7dee04-8576-4a9a-b2f6-c4794a87412d",
+    "name": "İstehsalat xərci",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "e8820774-3290-425b-a14d-5f8b7c415dee",
+    "name": "Maaş",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "c94e766c-1773-45b2-a74a-d1b3451769e7",
+    "name": "Müştəri avansı",
+    "type": "INCOME",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "b4601f8c-ed63-4b7a-9495-b866e1c92540",
+    "name": "Nəqliyyat",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "1e08595e-4a60-4891-a964-efc23fb0861f",
+    "name": "Quraşdırma",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "edf98e23-379d-48df-9b5c-5a7a8b48155b",
+    "name": "Reklam",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "88c6b9fe-add4-4e41-91c6-5c445cefc28f",
+    "name": "Satın alma",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "745a6256-e698-4426-b636-5c3dae144692",
+    "name": "Satış gəliri",
+    "type": "INCOME",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "0689315e-be58-4ada-980c-0e2d6e94c583",
+    "name": "Təmir",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "410e3581-c09d-4571-85a2-26d0eeeaea75",
+    "name": "Yanacaq",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "e93dd931-3e5d-43fa-99a0-c8dd31d597ec",
+    "name": "İstehsalat Xərcləri",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.537116+00:00",
+    "parent_id": null,
+    "coa_id": null
+   },
+   {
+    "id": "c4df832c-16f6-4436-8009-0d3dabd74011",
+    "name": "Boya / Rəng",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.537116+00:00",
+    "parent_id": "e93dd931-3e5d-43fa-99a0-c8dd31d597ec",
+    "coa_id": null
+   },
+   {
+    "id": "794c7a34-6a23-4206-b789-5a438783d171",
+    "name": "Lazer Kəsimi",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.537116+00:00",
+    "parent_id": "e93dd931-3e5d-43fa-99a0-c8dd31d597ec",
+    "coa_id": null
+   },
+   {
+    "id": "a629d7ed-d751-4715-87e0-1c31f9660a78",
+    "name": "Usta Haqqı",
+    "type": "EXPENSE",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.537116+00:00",
+    "parent_id": "e93dd931-3e5d-43fa-99a0-c8dd31d597ec",
+    "coa_id": null
+   }
+  ],
+  "conflict": "do nothing"
+ },
+ "expense_categories": {
+  "why": "default expense categories, copied from production",
+  "rows": [
+   {
+    "id": "91d60e1e-e738-41ad-84d9-26b9eac312cd",
+    "name": "Alət / Material",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "1e3d0749-e246-4d80-baab-701c65c8e451",
+    "name": "Çatdırılma",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "2e3ff196-2ee4-4ac5-a357-c5c359433979",
+    "name": "Digər",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "177d285b-3a39-4c36-97d2-ac150149b728",
+    "name": "Elektrik",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "b0f0b23a-ac51-46af-bc4e-f8d7634fbff1",
+    "name": "İcarə",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "86439e4b-6351-48cf-8b17-3bbfe95864ac",
+    "name": "İnternet",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "98fd639a-bafb-4337-9cb6-1c70452ef964",
+    "name": "Maaş",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "83255b9e-4fa5-4baa-8850-8ccc259651c3",
+    "name": "Nəqliyyat",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "218f535a-b7c0-46c4-82d3-8fdd95778648",
+    "name": "Quraşdırma",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "9e2511ed-479b-4745-a28e-482f0f4f3ced",
+    "name": "Reklam",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "2fa54cb6-2f1c-4ee4-bc73-ccd7981fbc24",
+    "name": "Təmir",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   },
+   {
+    "id": "8e75e811-c7dd-481b-9bfa-2a672f964662",
+    "name": "Yanacaq",
+    "is_active": true,
+    "created_at": "2026-09-08T13:54:56.236329+00:00"
+   }
+  ],
+  "conflict": "do nothing"
+ },
+ "system_settings": {
+  "why": "module defaults as written in the original migrations (company-neutral, empty n8n secret)",
+  "rows": [
+   {
+    "key": "barcode_label_config",
+    "value": {
+     "paper_size": "80x50mm",
+     "barcode_type": "CODE128",
+     "show_company_logo": true,
+     "show_item_code": true,
+     "show_price": false,
+     "show_dimensions": true,
+     "show_warehouse_location": true,
+     "header_title": "",
+     "margin_padding_mm": 2,
+     "custom_width_mm": 80,
+     "custom_height_mm": 50
+    }
+   },
+   {
+    "key": "crm_config",
+    "value": {
+     "quote_prefix": "TKL-2026-",
+     "default_validity_days": 14,
+     "terms_and_conditions": "",
+     "show_bank_details_on_quote": true,
+     "company_seal_signature_url": null,
+     "stages": [
+      {
+       "id": "LEAD",
+       "label": "Lead",
+       "color": "#38bdf8",
+       "kind": "open",
+       "locked": false
+      },
+      {
+       "id": "QUALIFIED",
+       "label": "Qualified",
+       "color": "#818cf8",
+       "kind": "open",
+       "locked": false
+      },
+      {
+       "id": "PROPOSAL",
+       "label": "Proposal",
+       "color": "#fbbf24",
+       "kind": "proposal",
+       "locked": false
+      },
+      {
+       "id": "WON",
+       "label": "Won",
+       "color": "#34d399",
+       "kind": "won",
+       "locked": true
+      },
+      {
+       "id": "LOST",
+       "label": "Lost",
+       "color": "#fb7185",
+       "kind": "lost",
+       "locked": true
+      }
+     ]
+    }
+   },
+   {
+    "key": "tax_payroll_config",
+    "value": {
+     "company_voen": "",
+     "default_vat_rate": "18",
+     "e_qaime_export_format": "XML_ETAXES",
+     "dsmf_employer_rate": 22,
+     "dsmf_employee_rate": 3,
+     "its_rate": 0.5,
+     "non_taxable_salary_limit": 0
+    }
+   },
+   {
+    "key": "procurement_config",
+    "value": {
+     "auto_create_purchase_request": true,
+     "default_lead_time_days": 7,
+     "critical_stock_notification": true,
+     "price_weight": 40,
+     "quality_weight": 30,
+     "delivery_speed_weight": 30
+    }
+   },
+   {
+    "key": "audit_config",
+    "value": {
+     "log_retention_days": 0,
+     "track_read_events": false,
+     "alert_on_record_deletion": true
+    }
+   },
+   {
+    "key": "n8n_ai_config",
+    "value": {
+     "webhook_url": "",
+     "secret_token": ""
+    }
+   }
+  ],
+  "conflict": "(key) do nothing"
+ }
+}
