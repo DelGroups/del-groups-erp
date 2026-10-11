@@ -26,7 +26,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PGDATA: ${{ runner.temp }}/pgdata
       DATABASE_URL: postgresql://postgres@127.0.0.1:55432/postgres
     steps:
       - uses: actions/checkout@v5
@@ -41,6 +40,7 @@ jobs:
 
       - name: Start an empty server
         run: |
+          PGDATA="$RUNNER_TEMP/pgdata"
           initdb -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 > /dev/null
           pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP -c wal_level=logical" -l "$RUNNER_TEMP/pg.log" -w start
           psql "$DATABASE_URL" -Atc "select version()"
