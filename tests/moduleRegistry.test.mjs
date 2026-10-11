@@ -141,6 +141,19 @@ test("a route may only use permissions of the module or its dependencies", () =>
   expectError(modules, /studio: route \/studio\/sales uses "can_view_sales" of module "sales"/);
 });
 
+test("borrowing permissions is allowed only from a module that depends on the borrower", () => {
+  // contracts uses can_view_sales; allowed because sales depends on contracts
+  assert.deepEqual(validateRegistry(MODULES), []);
+  // without the dependency, the borrow is rejected
+  const modules = withModule("sales", (m) => ({ depends: m.depends.filter((d) => d !== "contracts") }));
+  expectError(modules, /contracts: borrows permissions from "sales", but "sales" does not depend on "contracts"/);
+  // and without the borrow, the route permission is rejected
+  expectError(
+    withModule("contracts", () => ({ borrowsPermissionsFrom: [] })),
+    /contracts: route \/contracts uses "can_view_sales" of module "sales"/
+  );
+});
+
 test("menus need a known section, a unique path and a route permission", () => {
   expectError(
     withModule("studio", (m) => ({ menus: [{ ...m.menus[0], section: "nowhere" }] })),

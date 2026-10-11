@@ -38,7 +38,10 @@ imports and never reach into another module's folders; call its public API or em
 - **Permissions:** list the flat keys the module owns in `permissions` (each key has exactly one owner)
   and its role-editor checkboxes in `matrix` (`group`, `key`, `order`). Matrix group ids are stored
   in the database: never rename them.
-- A module may only use permissions of itself or of modules in its `depends`.
+- A module may only use permissions of itself or of modules in its `depends`. Exception:
+  `borrowsPermissionsFrom` lists modules whose permissions it may use because they depend on it
+  (contracts uses `can_view_sales`; sales and purchases depend on contracts, so contracts is
+  always on together with them).
 
 ## Checks
 

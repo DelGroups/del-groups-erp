@@ -104,6 +104,12 @@ export interface ModuleManifest {
   name: string;
   version: string;
   depends: ModuleId[];
+  /**
+   * Modules whose permissions this module may use without depending on them.
+   * Allowed only for a module that itself depends on this one (it can never be
+   * on while this module is off), e.g. contracts uses can_view_sales.
+   */
+  borrowsPermissionsFrom?: ModuleId[];
   /** Flat permission keys this module owns (each key has exactly one owner). */
   permissions: PermissionKey[];
   /** Checkboxes this module adds to the role permission matrix. */
