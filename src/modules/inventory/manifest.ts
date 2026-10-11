@@ -1,0 +1,51 @@
+import { defineModule } from "../types";
+
+/** Stock, warehouses, transfers, counts/audits, write-offs, warehouse slips. */
+export default defineModule({
+  id: "inventory",
+  name: "Inventory",
+  version: "1.0.0",
+  depends: ["core"],
+  permissions: [
+    "can_manage_warehouses",
+    "can_writeoff_inventory",
+    "can_unpost_inventory",
+    "can_post_inventory_count",
+    "can_view_warehouse_slips",
+    "can_approve_warehouse_slips",
+    "can_send_to_warehouse",
+  ],
+  matrix: [
+    { group: "inventory", key: "manage_warehouses", label: "Anbarları idarə etmək", legacyKey: "can_manage_warehouses", order: 40 },
+    { group: "inventory", key: "manage_transfers", label: "Anbar köçürmələrini idarə etmək", legacyKey: "can_manage_warehouses", order: 50 },
+    { group: "inventory", key: "writeoff", label: "Zədələnmə çıxışı", legacyKey: "can_writeoff_inventory", order: 60 },
+    { group: "inventory", key: "unpost", label: "Təsdiqlənmiş sənədi qaralamaya qaytarmaq", legacyKey: "can_unpost_inventory", order: 70 },
+    { group: "inventory", key: "post_count", label: "İnventarizasiyanı təsdiqləyib tətbiq etmək", legacyKey: "can_post_inventory_count", order: 80 },
+    { group: "inventory", key: "view_slips", label: "Anbar qaimələrini görmək", legacyKey: "can_view_warehouse_slips", order: 90 },
+    { group: "inventory", key: "approve_slips", label: "Anbar qaimələrini təsdiqləmək", legacyKey: "can_approve_warehouse_slips", order: 100 },
+    { group: "inventory", key: "send_to_warehouse", label: "Fakturanı anbara göndərmək", legacyKey: "can_send_to_warehouse", order: 110 },
+  ],
+  menus: [
+    { path: "/inventory", label: "nav.items.warehouseStock", icon: "Boxes", section: "inventory", order: 20 },
+    { path: "/inventory/transfers/new", label: "nav.items.warehouseTransfers", icon: "ArrowRightLeft", section: "inventory", order: 30 },
+    { path: "/inventory/counts", label: "nav.items.inventoryAudit", icon: "ClipboardCheck", section: "inventory", order: 40 },
+    { path: "/warehouse/initial-balance", label: "nav.items.initialBalances", icon: "ClipboardList", section: "inventory", order: 50 },
+    { path: "/warehouses", label: "nav.items.warehouses", icon: "Warehouse", section: "inventory", order: 60 },
+    { path: "/dashboard/warehouse/slips", label: "nav.items.warehouseSlips", icon: "ClipboardList", section: "inventory", order: 70 },
+    { path: "/products/damaged-goods", label: "nav.items.damagedGoods", icon: "Trash2", section: "inventory", order: 80 },
+    { path: "/dashboard/reports/inventory-turnover", label: "nav.items.inventoryTurnover", icon: "Package", section: "reports", order: 50 },
+  ],
+  routes: [
+    { prefix: "/inventory-audit", permission: "can_writeoff_inventory" },
+    { prefix: "/inventory/counts", permission: "can_writeoff_inventory" },
+    { prefix: "/inventory/transfers", permission: "can_manage_warehouses" },
+    { prefix: "/inventory", permission: "can_view_products" },
+    { prefix: "/products/damaged-goods", permission: "can_writeoff_inventory" },
+    { prefix: "/dashboard/warehouse/slips", permission: "can_view_warehouse_slips" },
+    { prefix: "/warehouse/initial-balance", permission: "can_manage_products" },
+    { prefix: "/warehouses", permission: "can_manage_warehouses" },
+    { prefix: "/dashboard/reports/inventory-turnover", permission: "can_view_reports" },
+  ],
+  aiTools: ["stock_alerts"],
+  settings: [],
+});

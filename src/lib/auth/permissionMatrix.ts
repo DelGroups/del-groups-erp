@@ -13,6 +13,7 @@ import {
   type RoleScopes,
   type UserProfile,
 } from "@/types/database.types";
+import { buildPermissionMatrix, MODULES } from "@/modules/registry";
 
 export type { RecordAccessScope, RoleScopes };
 
@@ -38,131 +39,8 @@ export const DEFAULT_ROLE_SCOPES: RoleScopes = {
   record_access: "ALL_RECORDS",
 };
 
-export const GRANULAR_PERMISSION_MODULES: GranularPermissionModule[] = [
-  {
-    id: "dashboard",
-    title: "Əsas Panel",
-    permissions: [{ key: "view", label: "Ana səhifəni görmək", legacyKey: "can_view_dashboard" }],
-  },
-  {
-    id: "sales",
-    title: "Satış",
-    permissions: [
-      { key: "view", label: "Satışları görmək", legacyKey: "can_view_sales" },
-      { key: "create", label: "Satış fakturası yaratmaq", legacyKey: "can_create_invoice" },
-      { key: "edit", label: "Satışları redaktə etmək", legacyKey: "can_edit_sales" },
-      { key: "delete", label: "Satışları silmək", legacyKey: "can_delete_sales" },
-    ],
-  },
-  {
-    id: "purchases",
-    title: "Alış",
-    permissions: [
-      { key: "view", label: "Alışları görmək", legacyKey: "can_view_purchases" },
-      { key: "create", label: "Alış fakturası yaratmaq", legacyKey: "can_create_purchase" },
-      { key: "edit", label: "Alışları redaktə etmək", legacyKey: "can_edit_purchases" },
-      { key: "delete", label: "Alışları silmək", legacyKey: "can_delete_purchases" },
-    ],
-  },
-  {
-    id: "consignments",
-    title: "Əmanət Satışı",
-    permissions: [
-      { key: "view", label: "Əmanət sənədlərini görmək", legacyKey: "can_view_consignments" },
-      { key: "manage", label: "Əmanət sənədlərini idarə etmək", legacyKey: "can_manage_consignments" },
-    ],
-  },
-  {
-    id: "inventory",
-    title: "Anbar və Məhsul",
-    hasWarehouseScope: true,
-    permissions: [
-      { key: "view", label: "Məhsulları görmək", legacyKey: "can_view_products" },
-      { key: "manage", label: "Məhsulları idarə etmək", legacyKey: "can_manage_products" },
-      { key: "add_stock", label: "Stok əlavə etmək", legacyKey: "can_manage_products" },
-      { key: "manage_warehouses", label: "Anbarları idarə etmək", legacyKey: "can_manage_warehouses" },
-      { key: "manage_transfers", label: "Anbar köçürmələrini idarə etmək", legacyKey: "can_manage_warehouses" },
-      { key: "writeoff", label: "Zədələnmə çıxışı", legacyKey: "can_writeoff_inventory" },
-      { key: "unpost", label: "Təsdiqlənmiş sənədi qaralamaya qaytarmaq", legacyKey: "can_unpost_inventory" },
-      { key: "post_count", label: "İnventarizasiyanı təsdiqləyib tətbiq etmək", legacyKey: "can_post_inventory_count" },
-      { key: "view_slips", label: "Anbar qaimələrini görmək", legacyKey: "can_view_warehouse_slips" },
-      { key: "approve_slips", label: "Anbar qaimələrini təsdiqləmək", legacyKey: "can_approve_warehouse_slips" },
-      { key: "send_to_warehouse", label: "Fakturanı anbara göndərmək", legacyKey: "can_send_to_warehouse" },
-    ],
-  },
-  {
-    id: "production",
-    title: "İstehsalat",
-    permissions: [
-      { key: "view", label: "İstehsalatı görmək", legacyKey: "can_view_production" },
-      { key: "manage", label: "İstehsalatın idarə edilməsi (CRUD)", legacyKey: "can_manage_production" },
-      {
-        key: "view_financials",
-        label: "Maliyyə məlumatlarını görmək (büdcə, mənfəət)",
-        legacyKey: "can_view_production_financials",
-      },
-      {
-        key: "approve_purchase",
-        label: "Satın alma tələbi təsdiqləmək",
-        legacyKey: "can_approve_purchase_requests",
-      },
-    ],
-  },
-  {
-    id: "crm",
-    title: "Əlaqələr (CRM)",
-    permissions: [
-      { key: "view_customers", label: "Müştəriləri görmək", legacyKey: "can_view_customers" },
-      { key: "manage_customers", label: "Müştəriləri idarə etmək", legacyKey: "can_manage_customers" },
-      { key: "view_pipeline", label: "CRM boru xəttini görmək", legacyKey: "can_view_crm" },
-      { key: "manage_pipeline", label: "CRM boru xəttini idarə etmək", legacyKey: "can_manage_crm" },
-      { key: "view_suppliers", label: "Təchizatçıları görmək", legacyKey: "can_view_suppliers" },
-      { key: "manage_suppliers", label: "Təchizatçıları idarə etmək", legacyKey: "can_manage_suppliers" },
-    ],
-  },
-  {
-    id: "finance",
-    title: "Maliyyə",
-    hasAccountScope: true,
-    permissions: [
-      { key: "view", label: "Kassa və tranzaksiyaları görmək", legacyKey: "can_view_finance" },
-      { key: "manage", label: "Kassa və tranzaksiyaları idarə etmək", legacyKey: "can_manage_finance" },
-      { key: "view_expenses", label: "Xərcləri görmək", legacyKey: "can_view_expenses" },
-      { key: "manage_expenses", label: "Xərcləri idarə etmək", legacyKey: "can_manage_expenses" },
-      { key: "create_expense", label: "Xərc yaratmaq", legacyKey: "can_manage_expenses" },
-      { key: "create_income", label: "Mədaxil yaratmaq", legacyKey: "can_manage_finance" },
-      { key: "view_reports", label: "Maliyyə hesabatlarını görmək", legacyKey: "can_view_financial_reports" },
-    ],
-  },
-  {
-    id: "hr",
-    title: "İnsan Resursları",
-    permissions: [
-      { key: "view", label: "İşçiləri görmək", legacyKey: "can_view_hr" },
-      { key: "manage", label: "İşçilər və maaş idarəetməsi", legacyKey: "can_manage_hr" },
-      { key: "view_commissions", label: "Komissiyaları görmək", legacyKey: "can_view_commissions" },
-      { key: "manage_commissions", label: "Komissiyaları idarə etmək", legacyKey: "can_manage_commissions" },
-    ],
-  },
-  {
-    id: "reports",
-    title: "Hesabatlar",
-    permissions: [
-      { key: "view", label: "Satış hesabatlarını görmək", legacyKey: "can_view_reports" },
-      { key: "view_financial", label: "Maliyyə hesabatlarını görmək", legacyKey: "can_view_financial_reports" },
-    ],
-  },
-  {
-    id: "administration",
-    title: "Administrasiya",
-    permissions: [
-      { key: "view_settings", label: "Tənzimləmələri görmək", legacyKey: "can_view_settings" },
-      { key: "manage_settings", label: "Tənzimləmələri dəyişmək", legacyKey: "can_manage_settings" },
-      { key: "manage_users", label: "İstifadəçiləri idarə etmək", legacyKey: "can_manage_users" },
-      { key: "manage_roles", label: "Rol və icazələri idarə etmək", legacyKey: "can_manage_roles" },
-    ],
-  },
-];
+/** Role permission matrix, generated from the module manifests (src/modules). */
+export const GRANULAR_PERMISSION_MODULES: GranularPermissionModule[] = buildPermissionMatrix(MODULES);
 
 const LEGACY_ALIAS: Partial<Record<PermissionKey, PermissionKey>> = {
   can_view_production: "can_view_products",

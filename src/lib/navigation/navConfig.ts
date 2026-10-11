@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
+import { buildNavSections, MODULES } from "@/modules/registry";
+import type { FeatureFlag } from "@/modules/types";
 import {
   LayoutDashboard,
   Package,
@@ -55,123 +57,72 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export const NAV_SECTIONS: NavSection[] = [
-  {
-    id: "dashboard",
-    titleKey: "nav.sections.dashboard",
-    icon: LayoutDashboard,
-    items: [{ titleKey: "nav.items.home", path: "/", icon: LayoutDashboard }],
-  },
-  {
-    id: "trade",
-    titleKey: "nav.sections.trade",
-    icon: Store,
-    items: [
-      { titleKey: "nav.items.sales", path: "/sales", icon: ShoppingCart, keywords: ["invoice", "faktura"] },
-      { titleKey: "nav.items.purchases", path: "/purchases", icon: ShoppingBag },
-      { titleKey: "nav.items.contracts", path: "/contracts", icon: FileText },
-      { titleKey: "nav.items.consignments", path: "/consignments", icon: FileSpreadsheet },
-    ],
-  },
-  {
-    id: "inventory",
-    titleKey: "nav.sections.inventory",
-    icon: Boxes,
-    items: [
-      { titleKey: "nav.items.products", path: "/products", icon: Package },
-      { titleKey: "nav.items.warehouseStock", path: "/inventory", icon: Boxes },
-      {
-        titleKey: "nav.items.warehouseTransfers",
-        path: "/inventory/transfers/new",
-        icon: ArrowRightLeft,
-      },
-      { titleKey: "nav.items.inventoryAudit", path: "/inventory/counts", icon: ClipboardCheck },
-      { titleKey: "nav.items.initialBalances", path: "/warehouse/initial-balance", icon: ClipboardList },
-      { titleKey: "nav.items.warehouses", path: "/warehouses", icon: Warehouse },
-      { titleKey: "nav.items.warehouseSlips", path: "/dashboard/warehouse/slips", icon: ClipboardList },
-      { titleKey: "nav.items.damagedGoods", path: "/products/damaged-goods", icon: Trash2 },
-    ],
-  },
-  {
-    id: "production",
-    titleKey: "nav.sections.production",
-    icon: Factory,
-    items: [
-      { titleKey: "nav.items.production", path: "/production", icon: Factory },
-      { titleKey: "nav.items.productionBom", path: "/production/bom", icon: Layers },
-    ],
-  },
-  {
-    id: "crm",
-    titleKey: "nav.sections.crm",
-    icon: Contact,
-    items: [
-      { titleKey: "nav.items.pipeline", path: "/crm", icon: KanbanSquare },
-      { titleKey: "nav.items.customers", path: "/customers", icon: Users, keywords: ["customer", "müştəri"] },
-      { titleKey: "nav.items.suppliers", path: "/suppliers", icon: Truck, keywords: ["supplier", "təchizatçı"] },
-      { titleKey: "nav.items.businessPartners", path: "/dashboard/partners", icon: Users },
-    ],
-  },
-  {
-    id: "finance",
-    titleKey: "nav.sections.finance",
-    icon: Landmark,
-    items: [
-      { titleKey: "nav.items.cashBank", path: "/cash-bank", icon: Wallet },
-      { titleKey: "nav.items.payments", path: "/dashboard/payments", icon: Wallet },
-      { titleKey: "nav.items.expenses", path: "/expenses", icon: Receipt },
-      { titleKey: "nav.items.finance", path: "/finance", icon: CircleDollarSign },
-      {
-        titleKey: "nav.items.financialOpeningBalances",
-        path: "/finance/opening-balances",
-        icon: Landmark,
-      },
-    ],
-  },
-  {
-    id: "hr",
-    titleKey: "nav.sections.hr",
-    icon: Briefcase,
-    items: [
-      { titleKey: "nav.items.employees", path: "/employees", icon: UserCheck },
-      { titleKey: "nav.items.commissions", path: "/commissions", icon: Percent },
-    ],
-  },
-  {
-    id: "reports",
-    titleKey: "nav.sections.reports",
-    icon: BarChart3,
-    items: [
-      { titleKey: "nav.items.reports", path: "/reports", icon: FileText },
-      { titleKey: "nav.items.glFinancialReports", path: "/dashboard/reports/financial", icon: BarChart3 },
-      { titleKey: "nav.items.trialBalance", path: "/dashboard/reports/osv", icon: Table2 },
-      { titleKey: "nav.items.reconciliationAct", path: "/dashboard/reports/reconciliation", icon: FileCheck2 },
-      { titleKey: "nav.items.inventoryTurnover", path: "/dashboard/reports/inventory-turnover", icon: Package },
-    ],
-  },
-  {
-    id: "settings",
-    titleKey: "nav.sections.settings",
-    icon: SlidersHorizontal,
-    items: [
-      { titleKey: "nav.items.settings", path: "/settings", icon: Settings },
-      { titleKey: "nav.items.roles", path: "/settings/roles", icon: ShieldCheck },
-      { titleKey: "nav.items.users", path: "/users", icon: Users },
-      { titleKey: "nav.items.commissionRules", path: "/settings/commissions", icon: Percent },
-      { titleKey: "nav.items.initialSetup", path: "/settings/initial-setup", icon: Landmark },
-      { titleKey: "nav.items.backup", path: "/settings/backup", icon: Database },
-      ...(isBarcodeModuleEnabled()
-        ? [{ titleKey: "nav.items.barcode", path: "/settings/barcode", icon: Barcode }]
-        : []),
-      { titleKey: "nav.items.crmSettings", path: "/settings/crm", icon: KanbanSquare },
-      { titleKey: "nav.items.taxPayroll", path: "/settings/tax-payroll", icon: Scale },
-      { titleKey: "nav.items.procurement", path: "/settings/procurement", icon: ShoppingBag },
-      { titleKey: "nav.items.aiIntegration", path: "/settings/ai", icon: Sparkles },
-      { titleKey: "nav.items.studio", path: "/settings/studio", icon: Blocks },
-      { titleKey: "nav.items.audit", path: "/settings/audit", icon: ScrollText },
-    ],
-  },
-];
+/** Icons a module manifest may name (src/modules/<id>/manifest.ts). */
+const NAV_ICONS: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Package,
+  Warehouse,
+  ShoppingCart,
+  ShoppingBag,
+  Users,
+  Truck,
+  FileSpreadsheet,
+  Wallet,
+  Receipt,
+  UserCheck,
+  FileText,
+  Settings,
+  Layers,
+  Trash2,
+  Percent,
+  CircleDollarSign,
+  Store,
+  Boxes,
+  Contact,
+  Landmark,
+  Briefcase,
+  BarChart3,
+  Table2,
+  FileCheck2,
+  SlidersHorizontal,
+  ShieldCheck,
+  ClipboardList,
+  ClipboardCheck,
+  ArrowRightLeft,
+  Database,
+  Barcode,
+  ScrollText,
+  Factory,
+  KanbanSquare,
+  Scale,
+  Sparkles,
+  Blocks,
+};
+
+function navIcon(name: string): LucideIcon {
+  const icon = NAV_ICONS[name];
+  if (!icon) throw new Error(`Unknown nav icon "${name}": add it to NAV_ICONS in navConfig.ts`);
+  return icon;
+}
+
+const FEATURE_FLAGS: Record<FeatureFlag, () => boolean> = {
+  barcodeModule: isBarcodeModuleEnabled,
+};
+
+/** Sidebar and command palette sections, generated from the module manifests. */
+export const NAV_SECTIONS: NavSection[] = buildNavSections(MODULES, (flag) => FEATURE_FLAGS[flag]()).map(
+  (section) => ({
+    id: section.id,
+    titleKey: section.titleKey,
+    icon: navIcon(section.icon),
+    items: section.items.map((item) => ({
+      titleKey: item.titleKey,
+      path: item.path,
+      icon: navIcon(item.icon),
+      ...(item.keywords ? { keywords: item.keywords } : {}),
+    })),
+  })
+);
 
 export function flattenNavItems(sections: NavSection[]): NavItem[] {
   return sections.flatMap((section) => section.items);

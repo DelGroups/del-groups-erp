@@ -1,6 +1,13 @@
 import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import { DEFAULT_ROLE_SCOPES } from "@/lib/auth/permissionMatrix";
 import {
+  buildNavPathPermissions,
+  buildRouteRules,
+  MODULES,
+  resolveRoutePermission,
+  type RouteRule,
+} from "@/modules/registry";
+import {
   ADMIN_ROLE_NAME,
   isAdminRole,
   normalizeRoleScopes,
@@ -10,126 +17,14 @@ import {
   type UserProfile,
 } from "@/types/database.types";
 
-/** Longest-prefix-first route rules for page access. */
-const ROUTE_RULES: { prefix: string; permission: PermissionKey; exact?: boolean }[] = [
-  { prefix: "/settings/audit", permission: "can_manage_settings" },
-  { prefix: "/settings/barcode", permission: "can_manage_settings" },
-  { prefix: "/settings/crm", permission: "can_manage_settings" },
-  { prefix: "/settings/tax-payroll", permission: "can_manage_settings" },
-  { prefix: "/settings/procurement", permission: "can_manage_settings" },
-  { prefix: "/settings/ai", permission: "can_manage_settings" },
-  { prefix: "/settings/studio", permission: "can_manage_settings" },
-  { prefix: "/settings/backup", permission: "can_manage_settings" },
-  { prefix: "/settings/initial-setup", permission: "can_manage_settings" },
-  { prefix: "/settings/roles", permission: "can_manage_roles" },
-  { prefix: "/settings/commissions", permission: "can_manage_commissions" },
-  { prefix: "/users", permission: "can_manage_users" },
-  { prefix: "/settings", permission: "can_view_settings" },
-  { prefix: "/dashboard/reports/inventory-turnover", permission: "can_view_reports" },
-  { prefix: "/dashboard/reports/reconciliation", permission: "can_view_financial_reports" },
-  { prefix: "/dashboard/reports/osv", permission: "can_view_financial_reports" },
-  { prefix: "/dashboard/reports/financial", permission: "can_view_financial_reports" },
-  { prefix: "/reports/financial", permission: "can_view_financial_reports" },
-  { prefix: "/reports/sales", permission: "can_view_reports" },
-  { prefix: "/reports", permission: "can_view_reports" },
-  { prefix: "/sales/polywood/new", permission: "can_create_invoice" },
-  { prefix: "/sales/new", permission: "can_create_invoice" },
-  { prefix: "/contracts", permission: "can_view_sales" },
-  { prefix: "/sales", permission: "can_view_sales" },
-  { prefix: "/purchases", permission: "can_view_purchases" },
-  { prefix: "/consignments", permission: "can_view_consignments" },
-  { prefix: "/dashboard/partners", permission: "can_view_customers" },
-  { prefix: "/dashboard/inventory/polywood/import", permission: "can_manage_products" },
-  { prefix: "/polywood", permission: "can_view_products" },
-  { prefix: "/production", permission: "can_view_production" },
-  { prefix: "/inventory-audit", permission: "can_writeoff_inventory" },
-  { prefix: "/inventory/counts", permission: "can_writeoff_inventory" },
-  { prefix: "/products/damaged-goods", permission: "can_writeoff_inventory" },
-  { prefix: "/dashboard/warehouse/slips", permission: "can_view_warehouse_slips" },
-  { prefix: "/warehouse/initial-balance", permission: "can_manage_products" },
-  { prefix: "/products/new", permission: "can_manage_products" },
-  { prefix: "/inventory/transfers", permission: "can_manage_warehouses" },
-  { prefix: "/inventory", permission: "can_view_products" },
-  { prefix: "/products", permission: "can_view_products" },
-  { prefix: "/warehouses", permission: "can_manage_warehouses" },
-  { prefix: "/crm", permission: "can_view_crm" },
-  { prefix: "/customers", permission: "can_view_customers" },
-  { prefix: "/suppliers", permission: "can_view_suppliers" },
-  { prefix: "/cash-bank", permission: "can_view_finance" },
-  { prefix: "/dashboard/payments", permission: "can_view_finance" },
-  { prefix: "/finance/opening-balances", permission: "can_manage_settings" },
-  { prefix: "/finance", permission: "can_view_finance" },
-  { prefix: "/expenses", permission: "can_view_expenses" },
-  { prefix: "/employees", permission: "can_view_hr" },
-  { prefix: "/commissions", permission: "can_view_commissions" },
-  { prefix: "/comissions/report", permission: "can_view_commissions" },
-  { prefix: "/comissions", permission: "can_view_commissions" },
-  { prefix: "/", permission: "can_view_dashboard", exact: true },
-];
+/** Page access rules from the module manifests, longest prefix first. */
+export const ROUTE_RULES: readonly RouteRule[] = buildRouteRules(MODULES);
 
 /** Sidebar / nav path → minimum view permission. */
-export const NAV_PATH_PERMISSIONS: Record<string, PermissionKey> = {
-  "/": "can_view_dashboard",
-  "/sales": "can_view_sales",
-  "/sales/polywood/new": "can_create_invoice",
-  "/contracts": "can_view_sales",
-  "/purchases": "can_view_purchases",
-  "/consignments": "can_view_consignments",
-  "/inventory/transfers/new": "can_manage_warehouses",
-  "/inventory": "can_view_products",
-  "/products": "can_view_products",
-  "/polywood": "can_view_products",
-  "/dashboard/partners": "can_view_customers",
-  "/dashboard/inventory/polywood/import": "can_manage_products",
-  "/production": "can_view_production",
-  "/production/bom": "can_view_production",
-  "/inventory/counts": "can_writeoff_inventory",
-  "/products/damaged-goods": "can_writeoff_inventory",
-  "/dashboard/warehouse/slips": "can_view_warehouse_slips",
-  "/warehouse/initial-balance": "can_manage_products",
-  "/warehouses": "can_manage_warehouses",
-  "/crm": "can_view_crm",
-  "/customers": "can_view_customers",
-  "/suppliers": "can_view_suppliers",
-  "/cash-bank": "can_view_finance",
-  "/dashboard/payments": "can_view_finance",
-  "/expenses": "can_view_expenses",
-  "/finance": "can_view_finance",
-  "/finance/opening-balances": "can_manage_settings",
-  "/employees": "can_view_hr",
-  "/commissions": "can_view_commissions",
-  "/comissions": "can_view_commissions",
-  "/reports": "can_view_reports",
-  "/dashboard/reports/financial": "can_view_financial_reports",
-  "/dashboard/reports/osv": "can_view_financial_reports",
-  "/dashboard/reports/reconciliation": "can_view_financial_reports",
-  "/dashboard/reports/inventory-turnover": "can_view_reports",
-  "/settings": "can_view_settings",
-  "/settings/roles": "can_manage_roles",
-  "/users": "can_manage_users",
-  "/settings/commissions": "can_manage_commissions",
-  "/settings/initial-setup": "can_manage_settings",
-  "/settings/backup": "can_manage_settings",
-  "/settings/barcode": "can_manage_settings",
-  "/settings/crm": "can_manage_settings",
-  "/settings/tax-payroll": "can_manage_settings",
-  "/settings/procurement": "can_manage_settings",
-  "/settings/ai": "can_manage_settings",
-  "/settings/studio": "can_manage_settings",
-  "/settings/audit": "can_manage_settings",
-};
+export const NAV_PATH_PERMISSIONS: Record<string, PermissionKey> = buildNavPathPermissions(MODULES, ROUTE_RULES);
 
 export function getRequiredPermission(pathname: string): PermissionKey | null {
-  for (const rule of ROUTE_RULES) {
-    if (rule.exact) {
-      if (pathname === rule.prefix) return rule.permission;
-      continue;
-    }
-    if (pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`)) {
-      return rule.permission;
-    }
-  }
-  return null;
+  return resolveRoutePermission(ROUTE_RULES, pathname);
 }
 
 export function getNavItemPermission(path: string): PermissionKey | null {
