@@ -11,7 +11,7 @@ import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentReportToInvoicePrint";
+import { mapConsignmentReportToInvoicePrint } from "../lib/mapConsignmentReportToInvoicePrint";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
@@ -19,10 +19,10 @@ import {
   listConsignmentInventoryAction,
   settleConsignmentPartnerAtomicAction,
   type ConsignmentLookups,
-} from "@/lib/actions/consignment";
+} from "../actions/consignment";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { generateConsignmentDocNo } from "@/lib/consignment/types";
-import type { ConsignmentInventoryRow } from "@/lib/consignment/types";
+import { generateConsignmentDocNo } from "../lib/types";
+import type { ConsignmentInventoryRow } from "../lib/types";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7);
@@ -37,7 +37,7 @@ interface SettlementRow {
   unit_price: string;
 }
 
-export default function ConsignmentSettlementNewPageClient() {
+export default function ConsignmentSettlementNewPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();

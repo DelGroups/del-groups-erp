@@ -11,7 +11,7 @@ import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ProductCombobox from "@/components/products/ProductCombobox";
-import ConsignmentDeliveryPrintTemplate from "@/components/consignment/ConsignmentDeliveryPrintTemplate";
+import ConsignmentDeliveryPrintTemplate from "./ConsignmentDeliveryPrintTemplate";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -21,9 +21,9 @@ import {
   fetchConsignmentSourceStockAction,
   resolveConsignmentBarcodeAction,
   type ConsignmentLookups,
-} from "@/lib/actions/consignment";
+} from "../actions/consignment";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { generateConsignmentDocNo, type ConsignmentDispatch } from "@/lib/consignment/types";
+import { generateConsignmentDocNo, type ConsignmentDispatch } from "../lib/types";
 import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
@@ -58,7 +58,7 @@ function createEmptyLine(): DispatchLine {
   };
 }
 
-export default function ConsignmentDispatchNewPageClient() {
+export default function ConsignmentDispatchNewPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();

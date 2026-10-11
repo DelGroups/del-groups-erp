@@ -1,0 +1,23 @@
+{
+  "why": "Consignment stock held at partner shops: partners, dispatches, the stock at each partner, monthly settlements and returns, plus the atomic RPCs that move that stock. The older consignments / consignment_items / consignment_orders tables are kept here too. Settlements point to sales(id), so this module installs after sales.",
+  "tables": [
+    "consignment_dispatches",
+    "consignment_inventory",
+    "consignment_items",
+    "consignment_monthly_reports",
+    "consignment_orders",
+    "consignment_partners",
+    "consignment_returns",
+    "consignments"
+  ],
+  "functions": [
+    "consignment_adjust_warehouse_stock",
+    "create_consignment_dispatch_atomic",
+    "set_consignment_initial_balance_atomic",
+    "settle_consignment_partner_atomic"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

@@ -3,7 +3,7 @@
 import React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
-import type { ConsignmentDocumentType } from "@/lib/consignment/types";
+import type { ConsignmentDocumentType } from "../lib/types";
 
 interface ConsignmentDocumentStatusBadgeProps {
   documentType: ConsignmentDocumentType;

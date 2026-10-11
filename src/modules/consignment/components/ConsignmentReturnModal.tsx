@@ -3,8 +3,8 @@
 import React from "react";
 import { Modal } from "@/components/ui/modal";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { ConsignmentLookups } from "@/lib/actions/consignment";
-import type { ConsignmentInventoryRow } from "@/lib/consignment/types";
+import type { ConsignmentLookups } from "../actions/consignment";
+import type { ConsignmentInventoryRow } from "../lib/types";
 
 export interface ConsignmentReturnModalProps {
   open: boolean;

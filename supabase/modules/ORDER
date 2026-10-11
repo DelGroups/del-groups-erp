@@ -2,3 +2,4 @@
 # One id per line; checked against src/modules (tests/moduleSql.test.mjs).
 contracts
 crm
+consignment

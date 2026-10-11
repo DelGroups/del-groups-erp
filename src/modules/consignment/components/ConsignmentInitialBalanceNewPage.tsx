@@ -18,9 +18,9 @@ import {
   resolveConsignmentProductBarcodeAction,
   setConsignmentInitialBalanceAtomicAction,
   type ConsignmentLookups,
-} from "@/lib/actions/consignment";
+} from "../actions/consignment";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { generateConsignmentDocNo } from "@/lib/consignment/types";
+import { generateConsignmentDocNo } from "../lib/types";
 import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackagePlus, Trash2 } from "lucide-react";
 
@@ -52,7 +52,7 @@ function createEmptyLine(): InitialBalanceLine {
   };
 }
 
-export default function ConsignmentInitialBalanceNewPageClient() {
+export default function ConsignmentInitialBalanceNewPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();

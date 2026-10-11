@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import ConsignmentDeliveryPrintTemplate from "@/components/consignment/ConsignmentDeliveryPrintTemplate";
-import ConsignmentKpiCards from "@/components/consignment/ConsignmentKpiCards";
+import ConsignmentDeliveryPrintTemplate from "./ConsignmentDeliveryPrintTemplate";
+import ConsignmentKpiCards from "./ConsignmentKpiCards";
 import ConsignmentRepPerformanceChart, {
   type ConsignmentRepPerformanceRow,
-} from "@/components/consignment/ConsignmentRepPerformanceChart";
-import ConsignmentReturnModal from "@/components/consignment/ConsignmentReturnModal";
-import ConsignmentDocumentStatusBadge from "@/components/consignment/ConsignmentDocumentStatusBadge";
+} from "./ConsignmentRepPerformanceChart";
+import ConsignmentReturnModal from "./ConsignmentReturnModal";
+import ConsignmentDocumentStatusBadge from "./ConsignmentDocumentStatusBadge";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { mapConsignmentReportToInvoicePrint } from "@/lib/print/mapConsignmentReportToInvoicePrint";
+import { mapConsignmentReportToInvoicePrint } from "../lib/mapConsignmentReportToInvoicePrint";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -26,7 +26,7 @@ import {
   listConsignmentReturnsAction,
   saveConsignmentPartnerAction,
   type ConsignmentLookups,
-} from "@/lib/actions/consignment";
+} from "../actions/consignment";
 import type {
   ConsignmentDispatch,
   ConsignmentDispatchItem,
@@ -34,7 +34,7 @@ import type {
   ConsignmentInventoryRow,
   ConsignmentMonthlyReport,
   ConsignmentReturn,
-} from "@/lib/consignment/types";
+} from "../lib/types";
 import { Handshake, Printer, FileSpreadsheet, PackageMinus, PackagePlus, ReceiptText, RotateCcw, Plus } from "lucide-react";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -70,7 +70,7 @@ function dispatchValue(items: ConsignmentDispatchItem[]): number {
   return items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
 }
 
-export default function ConsignmentPage() {
+export default function ConsignmentsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { can } = useAuth();
