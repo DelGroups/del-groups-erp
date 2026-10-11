@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { SaleItem, SalesCommissionInsert } from "@/types/database.types";
-import { resolveCommissionRate } from "@/lib/commissions/api";
+import { resolveCommissionRate } from "./api";
 import { normalizeCommissionRule } from "@/types/database.types";
 
 export async function recordSaleCommissions(

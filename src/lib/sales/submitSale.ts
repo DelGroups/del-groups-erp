@@ -11,7 +11,7 @@ import {
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
 import { supabase } from "@/lib/supabase";
-import { recordSaleCommissions } from "@/lib/commissions/recordSaleCommissions";
+import { recordSaleCommissions } from "@/modules/commissions";
 import { DEFAULT_FULL_SHEET_LENGTH_M } from "@/lib/polywood/constants";
 import {
   processMixedDimensionalSaleRpc,

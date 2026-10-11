@@ -7,12 +7,10 @@ alter table public.ai_usage_log enable row level security;
 alter table public.audit_alerts enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.categories enable row level security;
-alter table public.commission_rules enable row level security;
 alter table public.company_settings enable row level security;
 alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_advances enable row level security;
-alter table public.employee_commission_rules enable row level security;
 alter table public.employee_departments enable row level security;
 alter table public.employee_leaves enable row level security;
 alter table public.employees enable row level security;
@@ -21,8 +19,6 @@ alter table public.expenses enable row level security;
 alter table public.inventory_count_items enable row level security;
 alter table public.inventory_counts enable row level security;
 alter table public.inventory_writeoffs enable row level security;
-alter table public.monthly_commission_details enable row level security;
-alter table public.monthly_commissions enable row level security;
 alter table public.payrolls enable row level security;
 alter table public.production_bom_items enable row level security;
 alter table public.production_boms enable row level security;
@@ -36,7 +32,6 @@ alter table public.roles enable row level security;
 alter table public.salary_payments enable row level security;
 alter table public.sale_items enable row level security;
 alter table public.sales enable row level security;
-alter table public.sales_commissions enable row level security;
 alter table public.settings enable row level security;
 alter table public.stock_movements enable row level security;
 alter table public.stock_transfer_items enable row level security;
@@ -133,27 +128,6 @@ create policy categories_update on public.categories as permissive for update to
   using (public.require_permission('can_manage_products'::text))
   with check (public.require_permission('can_manage_products'::text));
 
-drop policy if exists commission_rules_delete on public.commission_rules;
-create policy commission_rules_delete on public.commission_rules as permissive for delete to authenticated
-  using (public.require_permission('can_manage_commissions'::text));
-
-drop policy if exists commission_rules_insert on public.commission_rules;
-create policy commission_rules_insert on public.commission_rules as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_commissions'::text));
-
-drop policy if exists commission_rules_select on public.commission_rules;
-create policy commission_rules_select on public.commission_rules as permissive for select to authenticated
-  using (public.require_permission('can_view_commissions'::text));
-
-drop policy if exists commission_rules_select_sellers on public.commission_rules;
-create policy commission_rules_select_sellers on public.commission_rules as permissive for select to authenticated
-  using (public.require_permission('can_create_invoice'::text));
-
-drop policy if exists commission_rules_update on public.commission_rules;
-create policy commission_rules_update on public.commission_rules as permissive for update to authenticated
-  using (public.require_permission('can_manage_commissions'::text))
-  with check (public.require_permission('can_manage_commissions'::text));
-
 drop policy if exists company_settings_delete on public.company_settings;
 create policy company_settings_delete on public.company_settings as permissive for delete to authenticated
   using (public.require_permission('can_manage_settings'::text));
@@ -195,23 +169,6 @@ create policy manage_policy_employee_advances on public.employee_advances as per
 drop policy if exists select_policy_employee_advances on public.employee_advances;
 create policy select_policy_employee_advances on public.employee_advances as permissive for select to authenticated
   using ((public.is_admin() OR (('can_view_hr' IS NOT NULL) AND public.has_permission('can_view_hr'::text))));
-
-drop policy if exists employee_commission_rules_delete on public.employee_commission_rules;
-create policy employee_commission_rules_delete on public.employee_commission_rules as permissive for delete to authenticated
-  using (public.require_permission('can_manage_commissions'::text));
-
-drop policy if exists employee_commission_rules_insert on public.employee_commission_rules;
-create policy employee_commission_rules_insert on public.employee_commission_rules as permissive for insert to authenticated
-  with check (public.require_permission('can_manage_commissions'::text));
-
-drop policy if exists employee_commission_rules_select on public.employee_commission_rules;
-create policy employee_commission_rules_select on public.employee_commission_rules as permissive for select to authenticated
-  using ((public.require_permission('can_view_commissions'::text) OR public.require_permission('can_edit_sales'::text)));
-
-drop policy if exists employee_commission_rules_update on public.employee_commission_rules;
-create policy employee_commission_rules_update on public.employee_commission_rules as permissive for update to authenticated
-  using (public.require_permission('can_manage_commissions'::text))
-  with check (public.require_permission('can_manage_commissions'::text));
 
 drop policy if exists employee_departments_delete on public.employee_departments;
 create policy employee_departments_delete on public.employee_departments as permissive for delete to authenticated
@@ -544,23 +501,6 @@ drop policy if exists sales_update on public.sales;
 create policy sales_update on public.sales as permissive for update to authenticated
   using ((public.require_permission('can_edit_sales'::text) AND public.user_can_access_own_sales_row(created_by, seller_id, issued_by)))
   with check ((public.require_permission('can_edit_sales'::text) AND public.user_can_access_own_sales_row(created_by, seller_id, issued_by)));
-
-drop policy if exists sales_commissions_delete on public.sales_commissions;
-create policy sales_commissions_delete on public.sales_commissions as permissive for delete to authenticated
-  using (public.require_permission('can_manage_commissions'::text));
-
-drop policy if exists sales_commissions_insert on public.sales_commissions;
-create policy sales_commissions_insert on public.sales_commissions as permissive for insert to authenticated
-  with check ((public.require_permission('can_manage_commissions'::text) OR (public.require_permission('can_edit_sales'::text) AND (status = 'pending'::text) AND (payroll_id IS NULL))));
-
-drop policy if exists sales_commissions_select on public.sales_commissions;
-create policy sales_commissions_select on public.sales_commissions as permissive for select to authenticated
-  using (public.require_permission('can_view_commissions'::text));
-
-drop policy if exists sales_commissions_update on public.sales_commissions;
-create policy sales_commissions_update on public.sales_commissions as permissive for update to authenticated
-  using (public.require_permission('can_manage_commissions'::text))
-  with check (public.require_permission('can_manage_commissions'::text));
 
 drop policy if exists settings_delete on public.settings;
 create policy settings_delete on public.settings as permissive for delete to authenticated

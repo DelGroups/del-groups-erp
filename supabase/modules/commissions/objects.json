@@ -1,0 +1,15 @@
+{
+  "why": "Sales commissions: the general and per-employee commission rules, the commission recorded for each sale, and the older monthly commission tables. sales_commissions points to sales and salary_payments, so this module installs after them.",
+  "tables": [
+    "commission_rules",
+    "employee_commission_rules",
+    "monthly_commission_details",
+    "monthly_commissions",
+    "sales_commissions"
+  ],
+  "functions": [],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}
