@@ -63,9 +63,11 @@ def load():
     return data
 
 
-def write(name, parts):
-    path = BASE / name
-    path.write_text(HEADER + "\n".join(parts).rstrip() + "\n", encoding="utf-8")
+def write(name, parts, base=None):
+    path = (base or BASE) / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # newline="\n": identical bytes on Windows and Linux (the files are stored with -text).
+    path.write_text(HEADER + "\n".join(parts).rstrip() + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size} bytes)")
 
 
@@ -354,8 +356,153 @@ def seed():
     return out
 
 
+MODULES_DIR = ROOT / "supabase" / "modules"
+
+
+def module_order():
+    """Module ids with an install script, in install (dependency) order: supabase/modules/ORDER."""
+    path = MODULES_DIR / "ORDER"
+    if not path.exists():
+        return []
+    ids = [l.strip() for l in path.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
+    for i in ids:
+        if not (MODULES_DIR / i / "objects.json").exists():
+            sys.exit(f"supabase/modules/ORDER lists {i!r} but supabase/modules/{i}/objects.json is missing")
+    for d in MODULES_DIR.iterdir() if MODULES_DIR.exists() else []:
+        if (d / "objects.json").exists() and d.name not in ids:
+            sys.exit(f"supabase/modules/{d.name}/objects.json exists but {d.name!r} is not in supabase/modules/ORDER")
+    return ids
+
+
+def partition(c, order):
+    """Split the catalog into core (the baseline files) and one part per module.
+
+    A module owns the tables, functions, sequences, views, buckets and storage
+    policies listed in supabase/modules/<id>/objects.json, plus everything that
+    hangs off its tables (columns' defaults, constraints, indexes, triggers,
+    policies, grants, realtime publication). A core object that depends on a
+    module object (a foreign key to a module table, a trigger calling a module
+    function, a view reading a module table) goes with that module, so the core
+    baseline always builds on its own.
+    """
+    rank = {"core": -1, **{m: i for i, m in enumerate(order)}}
+    owner = {k: {} for k in ("tables", "functions", "sequences", "views", "buckets", "storage_policies")}
+    for m in order:
+        spec = json.loads((MODULES_DIR / m / "objects.json").read_text(encoding="utf-8"))
+        for kind in owner:
+            for name in spec.get(kind, []):
+                if name in owner[kind]:
+                    sys.exit(f"{kind} {name!r} is listed by both {owner[kind][name]!r} and {m!r}")
+                owner[kind][name] = m
+
+    known = {
+        "tables": {t["n"] for t in c["tables"]},
+        "functions": {f["n"] for f in c["functions"]},
+        "sequences": {s["n"] for s in c["sequences"]},
+        "views": {v["n"] for v in c["views"]},
+        "buckets": {b["id"] for b in c["buckets"]},
+        "storage_policies": {p["n"] for p in c["policies"] if p["s"] == "storage"},
+    }
+    for kind, names in owner.items():
+        for name, m in names.items():
+            if name not in known[kind]:
+                sys.exit(f"supabase/modules/{m}/objects.json: {kind} {name!r} does not exist in live-catalog.json")
+
+    def later(*mods):
+        return max(mods, key=lambda m: rank[m])
+
+    table_of = lambda t: owner["tables"].get(t, "core")
+    module_tables = {t: m for t, m in owner["tables"].items()}
+
+    def referenced_tables(sql):
+        return [m for t, m in module_tables.items() if re.search(rf"(?<![\w.]){re.escape(t)}(?![\w])|public\.{re.escape(t)}(?![\w])", sql)]
+
+    def view_owner(v):
+        if v["n"] in owner["views"]:
+            return owner["views"][v["n"]]
+        return later("core", *referenced_tables(v["def"]))
+
+    def constraint_owner(r):
+        mods = [table_of(r["t"])]
+        if r["type"] == "f":
+            ref = re.search(r"REFERENCES (?:public\.)?\"?([\w]+)\"?", r["def"])
+            if ref:
+                mods.append(table_of(ref.group(1)))
+        return later(*mods)
+
+    def trigger_owner(t):
+        mods = [table_of(t["t"]) if t["s"] == "public" else "core"]
+        fn = re.search(r"EXECUTE (?:FUNCTION|PROCEDURE) (?:public\.)?(\w+)\(", t["def"])
+        if fn:
+            mods.append(owner["functions"].get(fn.group(1), "core"))
+        return later(*mods)
+
+    def policy_owner(p):
+        if p["s"] == "storage":
+            return owner["storage_policies"].get(p["n"], "core")
+        return table_of(p["t"])
+
+    def sequence_owner(s):
+        if s["n"] in owner["sequences"]:
+            return owner["sequences"][s["n"]]
+        return table_of(s["owned"]["t"]) if s["owned"] else "core"
+
+    rules = {
+        "enums": lambda x: "core",
+        "domains": lambda x: "core",
+        "composites": lambda x: "core",
+        "sequences": sequence_owner,
+        "tables": lambda x: table_of(x["n"]),
+        "constraints": constraint_owner,
+        "indexes": lambda x: table_of(x["t"]),
+        "views": view_owner,
+        "triggers": trigger_owner,
+        "policies": policy_owner,
+        "functions": lambda x: owner["functions"].get(x["n"], "core"),
+        "buckets": lambda x: owner["buckets"].get(x["id"], "core"),
+        "publication": lambda x: table_of(x["t"]),
+    }
+    parts = {m: {k: [] for k in c} for m in ["core", *order]}
+    for kind, items in c.items():
+        rule = rules.get(kind)
+        if rule is None:
+            sys.exit(f"live-catalog.json has an unknown section {kind!r}: teach partition() about it")
+        for item in items:
+            parts[rule(item)][kind].append(item)
+    return parts
+
+
+def module_install(m, c):
+    sections = [
+        ("types", types(c)),
+        ("sequences", sequences(c)),
+        ("tables", tables(c)),
+        ("functions", functions(c) if c["functions"] else []),
+        ("column defaults, sequence ownership", defaults(c)),
+        ("constraints", constraints(c)),
+        ("indexes", indexes(c)),
+        ("views", views(c)),
+        ("triggers", triggers(c)),
+        ("row level security and policies", policies(c) if (c["policies"] or any(t["rls"] or t["force"] for t in c["tables"])) else []),
+        ("grants", grants(c)),
+        ("storage buckets, realtime publication", storage(c) if (c["buckets"] or c["publication"]) else []),
+    ]
+    out = [
+        f"-- Install script of module {m!r}: its part of the schema as it was in production at",
+        "-- supabase/baseline/VERSION. Applied after the core baseline (scripts/db/build-fresh.sh).",
+        "-- Objects owned by this module: supabase/modules/" + m + "/objects.json. Safe to re-run.",
+        "",
+    ]
+    for title, body in sections:
+        if body and any(line.strip() for line in body):
+            out += [f"-- -- {title} " + "-" * max(4, 60 - len(title)), *body, ""]
+    return out
+
+
 def main():
-    c = load()
+    order = module_order()
+    parts = partition(load(), order)
+    c = parts["core"]
     write("00_extensions.sql", extensions())
     write("01_types.sql", types(c))
     write("02_sequences.sql", sequences(c))
@@ -370,6 +517,8 @@ def main():
     write("11_grants.sql", grants(c))
     write("12_storage_realtime.sql", storage(c))
     write("13_seed.sql", seed())
+    for m in order:
+        write("install.sql", module_install(m, parts[m]), base=MODULES_DIR / m)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import {
   getCrmConfigAction,
   saveCrmConfigAction,
   uploadCrmSealAction,
-} from "@/lib/actions/crmSettings";
+} from "../actions/crmSettings";
 import {
   CRM_STAGE_KINDS,
   DEFAULT_CRM_CONFIG,
@@ -23,7 +23,7 @@ import {
   type CrmConfig,
   type CrmPipelineStage,
   type CrmStageKind,
-} from "@/lib/crm/config";
+} from "../lib/config";
 
 function ToggleRow({
   label,

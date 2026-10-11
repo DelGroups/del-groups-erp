@@ -1,4 +1,4 @@
-import CrmPipelinePage from "./page.client";
+import { CrmPipelinePage } from "@/modules/crm/pages";
 
 export const dynamic = "force-dynamic";
 

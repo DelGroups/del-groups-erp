@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CRM_CONFIG_KEY } from "@/lib/crm/config";
 import {
   COMPANY_PROFILE_TABLE,
   EMPTY_COMPANY_PROFILE,
@@ -10,6 +9,13 @@ import {
 } from "@/lib/company/profile";
 
 export type CompanyProfileSource = "profile" | "legacy";
+
+/**
+ * system_settings key of the CRM settings, where the seal lived before the
+ * company profile. Written out here because core must not depend on the CRM
+ * module; only this pre-migration fallback reads it.
+ */
+const LEGACY_CRM_CONFIG_KEY = "crm_config";
 
 /**
  * Reads the company profile with the given client (browser, server or admin;
@@ -28,7 +34,7 @@ export async function loadCompanyProfile(
   const [settings, company, crm] = await Promise.all([
     client.from("settings").select("company_name, voen, phone, address, logo_url").limit(1).maybeSingle(),
     client.from("company_settings").select("*").limit(1).maybeSingle(),
-    client.from("system_settings").select("value").eq("key", CRM_CONFIG_KEY).maybeSingle(),
+    client.from("system_settings").select("value").eq("key", LEGACY_CRM_CONFIG_KEY).maybeSingle(),
   ]);
   const crmValue = (crm.data?.value ?? {}) as Record<string, unknown>;
   return {

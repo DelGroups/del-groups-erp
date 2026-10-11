@@ -16,6 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BASELINE_DIR="$ROOT/supabase/baseline"
 MIGRATIONS_DIR="$ROOT/supabase/migrations"
+MODULES_DIR="$ROOT/supabase/modules"
 DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 PLAIN=0
 BASELINE_ONLY=0
@@ -55,12 +56,21 @@ if [[ $PLAIN == 1 ]]; then
   "${PSQL[@]}" -f "$ROOT/scripts/db/supabase-shim.sql"
 fi
 
-echo "Applying baseline"
+echo "Applying baseline and module install scripts"
 {
   for f in "$BASELINE_DIR"/[0-9][0-9]_*.sql; do
     echo "\\echo '  $(basename "$f")'"
     echo "\\ir $f"
   done
+  # Module parts of the schema (supabase/modules/<id>/install.sql), dependencies first.
+  if [[ -f "$MODULES_DIR/ORDER" ]]; then
+    while IFS= read -r module || [[ -n "$module" ]]; do
+      module="${module%%#*}"; module="${module//[[:space:]]/}"
+      [[ -z "$module" ]] && continue
+      echo "\\echo '  modules/$module/install.sql'"
+      echo "\\ir $MODULES_DIR/$module/install.sql"
+    done < "$MODULES_DIR/ORDER"
+  fi
 } | "${PSQL[@]}" --single-transaction -f -
 
 "${PSQL[@]}" <<'SQL'

@@ -16,7 +16,7 @@ import {
   parseCrmConfig,
   stageIdByKind,
   type CrmConfig,
-} from "@/lib/crm/config";
+} from "../lib/config";
 import {
   calcQuotationLine,
   calcQuotationTotals,
