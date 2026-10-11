@@ -17,7 +17,6 @@ alter table public.inventory_counts enable row level security;
 alter table public.inventory_writeoffs enable row level security;
 alter table public.products enable row level security;
 alter table public.profiles enable row level security;
-alter table public.purchase_items enable row level security;
 alter table public.purchases enable row level security;
 alter table public.roles enable row level security;
 alter table public.salary_payments enable row level security;
@@ -275,23 +274,6 @@ drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles as permissive for update to authenticated
   using ((((id = auth.uid()) AND public.is_active_user()) OR public.has_permission('can_manage_users'::text)))
   with check ((((id = auth.uid()) AND public.is_active_user()) OR public.has_permission('can_manage_users'::text)));
-
-drop policy if exists purchase_items_delete on public.purchase_items;
-create policy purchase_items_delete on public.purchase_items as permissive for delete to authenticated
-  using (public.require_permission('can_delete_purchases'::text));
-
-drop policy if exists purchase_items_insert on public.purchase_items;
-create policy purchase_items_insert on public.purchase_items as permissive for insert to authenticated
-  with check (public.require_permission('can_create_purchase'::text));
-
-drop policy if exists purchase_items_select on public.purchase_items;
-create policy purchase_items_select on public.purchase_items as permissive for select to authenticated
-  using (public.require_permission('can_view_purchases'::text));
-
-drop policy if exists purchase_items_update on public.purchase_items;
-create policy purchase_items_update on public.purchase_items as permissive for update to authenticated
-  using (public.require_permission('can_edit_purchases'::text))
-  with check (public.require_permission('can_edit_purchases'::text));
 
 drop policy if exists purchases_delete on public.purchases;
 create policy purchases_delete on public.purchases as permissive for delete to authenticated

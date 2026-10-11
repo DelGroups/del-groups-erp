@@ -3,13 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import PurchaseForm from "@/components/purchases/PurchaseForm";
+import PurchaseForm from "./PurchaseForm";
 import { FormLayout } from "@/components/ui/form-layout";
-import { fetchPurchaseById, fetchPurchaseFormData } from "@/lib/purchases/fetchPurchases";
+import { fetchPurchaseById, fetchPurchaseFormData } from "../lib/fetchPurchases";
 import type { Product, PurchaseRecord, Supplier, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 
-export default function NewPurchasePage() {
+export default function PurchaseNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft");

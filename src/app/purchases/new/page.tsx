@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import NewPurchasePage from "./page.client";
+import { PurchaseNewPage } from "@/modules/purchases/pages";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <NewPurchasePage />
+      <PurchaseNewPage />
     </Suspense>
   );
 }

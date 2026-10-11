@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { ProcurementSettingsPage } from "@/modules/purchases/pages";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <PageClient />;
+  return <ProcurementSettingsPage />;
 }

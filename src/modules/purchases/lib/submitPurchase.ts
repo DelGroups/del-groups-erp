@@ -9,7 +9,7 @@ import { persistPurchaseOfficialFields } from "@/lib/finance/officialTransaction
 import { applyPurchaseStockDeltas } from "@/lib/inventory/stockAdjustment";
 import { supabase } from "@/lib/supabase";
 import type { PurchaseInsert, PurchaseLineItem } from "@/types/database.types";
-import { fulfillProductionPurchaseRequestsByPurchaseId } from "@/lib/purchases/fulfillProductionRequests";
+import { fulfillProductionPurchaseRequestsByPurchaseId } from "./fulfillProductionRequests";
 import { purchaseLineItemsToRows, type PurchasePaymentRow } from "@/lib/purchases/helpers";
 import { applyMetricPurchaseReceipts } from "@/lib/polywood/metricReceive";
 

@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { listProductionPurchaseRequisitionsAction } from "@/lib/actions/purchaseRequisitions";
-import type { PurchaseRequisitionRow } from "@/lib/actions/purchaseRequisitions";
+import { listProductionPurchaseRequisitionsAction } from "../actions/purchaseRequisitions";
+import type { PurchaseRequisitionRow } from "../actions/purchaseRequisitions";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Props {

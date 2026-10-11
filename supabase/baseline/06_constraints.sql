@@ -175,11 +175,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchase_items_pkey' and conrelid = 'public.purchase_items'::regclass) then
-    execute $c$alter table only public.purchase_items add constraint purchase_items_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchase_requests_pkey' and conrelid = 'public.purchase_requests'::regclass) then
     execute $c$alter table only public.purchase_requests add constraint purchase_requests_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -237,11 +232,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sub_categories_pkey' and conrelid = 'public.sub_categories'::regclass) then
     execute $c$alter table only public.sub_categories add constraint sub_categories_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_pkey' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -372,11 +362,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sub_categories_category_id_slug_key' and conrelid = 'public.sub_categories'::regclass) then
     execute $c$alter table only public.sub_categories add constraint sub_categories_category_id_slug_key UNIQUE (category_id, slug);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_purchase_id_key' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_purchase_id_key UNIQUE (purchase_id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -600,11 +585,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchase_items_currency_check' and conrelid = 'public.purchase_items'::regclass) then
-    execute $c$alter table only public.purchase_items add constraint purchase_items_currency_check CHECK ((currency = ANY (ARRAY['AZN'::text, 'USD'::text, 'EUR'::text])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchase_requests_quantity_check' and conrelid = 'public.purchase_requests'::regclass) then
     execute $c$alter table only public.purchase_requests add constraint purchase_requests_quantity_check CHECK ((quantity > (0)::numeric));$c$;
   end if;
@@ -732,16 +712,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'studio_fields_options_check' and conrelid = 'public.studio_fields'::regclass) then
     execute $c$alter table only public.studio_fields add constraint studio_fields_options_check CHECK ((jsonb_typeof(options) = 'array'::text));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_delivery_speed_score_check' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_delivery_speed_score_check CHECK (((delivery_speed_score >= 1) AND (delivery_speed_score <= 5)));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_quality_score_check' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_quality_score_check CHECK (((quality_score >= 1) AND (quality_score <= 5)));$c$;
   end if;
 end $$;
 do $$ begin
@@ -1070,16 +1040,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchase_items_product_id_fkey' and conrelid = 'public.purchase_items'::regclass) then
-    execute $c$alter table only public.purchase_items add constraint purchase_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'purchase_items_purchase_id_fkey' and conrelid = 'public.purchase_items'::regclass) then
-    execute $c$alter table only public.purchase_items add constraint purchase_items_purchase_id_fkey FOREIGN KEY (purchase_id) REFERENCES public.purchases(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchase_requests_created_by_fkey' and conrelid = 'public.purchase_requests'::regclass) then
     execute $c$alter table only public.purchase_requests add constraint purchase_requests_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;$c$;
   end if;
@@ -1227,16 +1187,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sub_categories_category_id_fkey' and conrelid = 'public.sub_categories'::regclass) then
     execute $c$alter table only public.sub_categories add constraint sub_categories_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_purchase_id_fkey' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_purchase_id_fkey FOREIGN KEY (purchase_id) REFERENCES public.purchases(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'supplier_delivery_ratings_supplier_id_fkey' and conrelid = 'public.supplier_delivery_ratings'::regclass) then
-    execute $c$alter table only public.supplier_delivery_ratings add constraint supplier_delivery_ratings_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin

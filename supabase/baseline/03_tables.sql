@@ -508,17 +508,6 @@ create table if not exists public.profiles (
   employee_id uuid
 );
 
-create table if not exists public.purchase_items (
-  id uuid not null,
-  purchase_id uuid,
-  product_id uuid,
-  quantity numeric(12,2) not null,
-  unit_price numeric(12,2) not null,
-  total_price numeric(12,2) not null,
-  currency text not null,
-  exchange_rate numeric not null
-);
-
 create table if not exists public.purchase_requests (
   id uuid not null,
   request_no text not null,
@@ -763,16 +752,6 @@ create table if not exists public.sub_categories (
   category_id uuid not null,
   name text not null,
   slug text not null,
-  created_at timestamp with time zone not null
-);
-
-create table if not exists public.supplier_delivery_ratings (
-  id uuid not null,
-  supplier_id uuid not null,
-  purchase_id uuid,
-  quality_score integer not null,
-  delivery_speed_score integer not null,
-  notes text,
   created_at timestamp with time zone not null
 );
 

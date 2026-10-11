@@ -68,8 +68,6 @@ CREATE INDEX IF NOT EXISTS idx_products_sub_category_id ON public.products USING
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles USING btree (email);
 CREATE INDEX IF NOT EXISTS idx_profiles_employee_id ON public.profiles USING btree (employee_id) WHERE (employee_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_profiles_role_id ON public.profiles USING btree (role_id);
-CREATE INDEX IF NOT EXISTS idx_purchase_items_product_id ON public.purchase_items USING btree (product_id);
-CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON public.purchase_items USING btree (purchase_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_requests_order ON public.purchase_requests USING btree (production_order_id, status);
 CREATE INDEX IF NOT EXISTS idx_purchase_requests_product_open ON public.purchase_requests USING btree (product_id, status) WHERE (status = ANY (ARRAY['pending'::text, 'ordered'::text, 'auto_triggered'::text]));
 CREATE INDEX IF NOT EXISTS idx_purchase_requests_status ON public.purchase_requests USING btree (status, created_at DESC);
@@ -99,7 +97,6 @@ CREATE INDEX IF NOT EXISTS idx_stock_transfer_items_transfer ON public.stock_tra
 CREATE INDEX IF NOT EXISTS idx_stock_transfers_date ON public.stock_transfers USING btree (transfer_date DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_studio_fields_model ON public.studio_fields USING btree (model_key, sequence) WHERE active;
 CREATE INDEX IF NOT EXISTS idx_sub_categories_category_id ON public.sub_categories USING btree (category_id);
-CREATE INDEX IF NOT EXISTS idx_supplier_delivery_ratings_supplier ON public.supplier_delivery_ratings USING btree (supplier_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions USING btree (account_id) WHERE (account_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON public.transactions USING btree (category_id) WHERE (category_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions USING btree (created_at DESC);

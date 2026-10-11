@@ -1,0 +1,22 @@
+{
+  "why": "Purchase invoice lines, supplier delivery ratings, and the purchase workflow RPCs (draft save/post, receipt, cancel/void, document numbers). The purchases table itself stays in core with suppliers: partner payables, reconciliation, payments, the GL views and supplier AP read it (some as SQL functions, which need the table when they are created). Foreign keys from core tables to purchase_items install with this module; the purchases table's own triggers stay in core.",
+  "tables": ["purchase_items", "supplier_delivery_ratings"],
+  "functions": [
+    "cancel_purchase_invoice_atomic",
+    "create_purchase_atomic",
+    "next_purchase_doc_no",
+    "peek_next_purchase_doc_no",
+    "post_purchase_bill_gl_journal",
+    "post_purchase_invoice_draft",
+    "process_purchase_receipt_event",
+    "rate_supplier_delivery",
+    "revert_purchase_stock",
+    "save_purchase_invoice_draft",
+    "void_purchase_atomic",
+    "void_purchase_invoice"
+  ],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

@@ -7,18 +7,18 @@ import ListPageChrome from "@/components/layout/ListPageChrome";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import PurchaseForm from "@/components/purchases/PurchaseForm";
-import PurchaseDocumentStatusBadge from "@/components/purchases/PurchaseDocumentStatusBadge";
+import PurchaseForm from "./PurchaseForm";
+import PurchaseDocumentStatusBadge from "./PurchaseDocumentStatusBadge";
 import { isPurchaseDraft } from "@/lib/invoices/invoiceStatus";
-import PurchaseViewModal from "@/components/purchases/PurchaseViewModal";
-import PurchaseRequisitionsPanel from "@/components/purchases/PurchaseRequisitionsPanel";
+import PurchaseViewModal from "./PurchaseViewModal";
+import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import {
   fetchPurchaseById,
   fetchPurchaseFormData,
   fetchPurchaseList,
-} from "@/lib/purchases/fetchPurchases";
-import { recordPurchasePaymentAction } from "@/lib/actions/payments";
+} from "../lib/fetchPurchases";
+import { recordPurchasePaymentAction } from "../actions/payments";
 import { sendPurchaseToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import type { Product, PurchaseRecord, Supplier, Warehouse } from "@/types/database.types";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
