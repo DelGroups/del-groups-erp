@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Save, X } from "lucide-react";
 import type { Employee } from "@/types/database.types";
-import { createEmployeeAction } from "@/lib/actions/hr";
+import { createEmployeeAction } from "../actions/hr";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 

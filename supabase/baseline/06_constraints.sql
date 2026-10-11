@@ -75,11 +75,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_pkey' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employees_pkey' and conrelid = 'public.employees'::regclass) then
     execute $c$alter table only public.employees add constraint employees_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -535,26 +530,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_check' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_check CHECK ((end_date >= start_date));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_days_count_check' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_days_count_check CHECK ((days_count > 0));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_leave_type_check' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_leave_type_check CHECK (((leave_type)::text = ANY ((ARRAY['PAID'::character varying, 'UNPAID'::character varying, 'SICK'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_status_check' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_status_check CHECK (((status)::text = ANY ((ARRAY['APPROVED'::character varying, 'PENDING'::character varying, 'REJECTED'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'financial_categories_type_check' and conrelid = 'public.financial_categories'::regclass) then
     execute $c$alter table only public.financial_categories add constraint financial_categories_type_check CHECK (((type)::text = ANY ((ARRAY['INCOME'::character varying, 'EXPENSE'::character varying])::text[])));$c$;
   end if;
@@ -982,11 +957,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'employee_advances_transaction_id_fkey' and conrelid = 'public.employee_advances'::regclass) then
     execute $c$alter table only public.employee_advances add constraint employee_advances_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'employee_leaves_employee_id_fkey' and conrelid = 'public.employee_leaves'::regclass) then
-    execute $c$alter table only public.employee_leaves add constraint employee_leaves_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;$c$;
   end if;
 end $$;
 do $$ begin

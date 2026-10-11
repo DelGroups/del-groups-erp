@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import Button from "@/components/ui/button";
-import type { EmployeeDepartmentRow } from "@/lib/hr/employeeDepartments";
-import { slugifyDepartmentCode } from "@/lib/hr/employeeDepartments";
+import type { EmployeeDepartmentRow } from "../lib/employeeDepartments";
+import { slugifyDepartmentCode } from "../lib/employeeDepartments";
 import {
   createEmployeeDepartmentAction,
   deleteEmployeeDepartmentAction,
   updateEmployeeDepartmentAction,
-} from "@/lib/actions/employeeDepartments";
+} from "../actions/employeeDepartments";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface EmployeeDepartmentManagerModalProps {

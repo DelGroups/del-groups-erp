@@ -1,0 +1,9 @@
+{
+  "why": "Employee leave: the leave requests and the helpers that count leave days in a month and the unpaid-leave deduction (payroll, which depends on hr, calls the deduction). The employees and employee_departments tables stay in core: profiles, sales, production orders and modules that do not depend on hr (consignment, expenses) point to them.",
+  "tables": ["employee_leaves"],
+  "functions": ["hr_leave_days_in_month", "hr_unpaid_leave_deduction"],
+  "sequences": [],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

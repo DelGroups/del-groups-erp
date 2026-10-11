@@ -8,7 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import {
   slugifyDepartmentCode,
   type EmployeeDepartmentRow,
-} from "@/lib/hr/employeeDepartments";
+} from "../lib/employeeDepartments";
 
 export type DepartmentActionResult<T = void> =
   | { success: true; data?: T }

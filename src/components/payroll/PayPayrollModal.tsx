@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { PayrollRun } from "@/types/database.types";
 import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
-import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
+import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface PayPayrollModalProps {

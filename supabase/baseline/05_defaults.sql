@@ -65,11 +65,6 @@ alter table only public.employee_departments alter column sort_order set default
 alter table only public.employee_departments alter column is_active set default true;
 alter table only public.employee_departments alter column created_at set default now();
 alter table only public.employee_departments alter column updated_at set default now();
-alter table only public.employee_leaves alter column id set default gen_random_uuid();
-alter table only public.employee_leaves alter column leave_type set default 'PAID'::character varying;
-alter table only public.employee_leaves alter column status set default 'PENDING'::character varying;
-alter table only public.employee_leaves alter column created_at set default now();
-alter table only public.employee_leaves alter column updated_at set default now();
 alter table only public.employees alter column id set default gen_random_uuid();
 alter table only public.employees alter column salary set default 0.00;
 alter table only public.employees alter column created_at set default now();

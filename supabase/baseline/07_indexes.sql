@@ -16,8 +16,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON public.chart_of_
 CREATE INDEX IF NOT EXISTS idx_doc_expenses_doc ON public.document_expenses USING btree (document_type, document_id);
 CREATE INDEX IF NOT EXISTS idx_employee_advances_employee ON public.employee_advances USING btree (employee_id, status, request_date DESC);
 CREATE INDEX IF NOT EXISTS idx_employee_departments_active_sort ON public.employee_departments USING btree (is_active, sort_order, name);
-CREATE INDEX IF NOT EXISTS idx_employee_leaves_employee ON public.employee_leaves USING btree (employee_id, start_date DESC);
-CREATE INDEX IF NOT EXISTS idx_employee_leaves_period ON public.employee_leaves USING btree (start_date, end_date) WHERE ((status)::text = 'APPROVED'::text);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_erp_events_idempotency ON public.erp_events USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_erp_events_source ON public.erp_events USING btree (source_table, source_id);
 CREATE INDEX IF NOT EXISTS idx_erp_events_type_created ON public.erp_events USING btree (event_type, created_at DESC);

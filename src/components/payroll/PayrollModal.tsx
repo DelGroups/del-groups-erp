@@ -5,7 +5,7 @@ import { Calculator, X } from "lucide-react";
 import type { Employee, SalesCommission } from "@/types/database.types";
 import { calcAzPayroll } from "@/lib/tax/azPayroll";
 import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
-import PayrollTaxBreakdown from "@/components/hr/PayrollTaxBreakdown";
+import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
 import { fetchPendingCommissionsForEmployee } from "@/modules/commissions";
 import { parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";

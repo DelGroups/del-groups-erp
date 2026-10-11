@@ -12,7 +12,6 @@ alter table public.customers enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_advances enable row level security;
 alter table public.employee_departments enable row level security;
-alter table public.employee_leaves enable row level security;
 alter table public.employees enable row level security;
 alter table public.inventory_count_items enable row level security;
 alter table public.inventory_counts enable row level security;
@@ -184,14 +183,6 @@ drop policy if exists employee_departments_update on public.employee_departments
 create policy employee_departments_update on public.employee_departments as permissive for update to authenticated
   using (public.require_permission('can_manage_hr'::text))
   with check (public.require_permission('can_manage_hr'::text));
-
-drop policy if exists manage_policy_employee_leaves on public.employee_leaves;
-create policy manage_policy_employee_leaves on public.employee_leaves as permissive for all to authenticated
-  using ((public.is_admin() OR (('can_manage_hr' IS NOT NULL) AND public.has_permission('can_manage_hr'::text))));
-
-drop policy if exists select_policy_employee_leaves on public.employee_leaves;
-create policy select_policy_employee_leaves on public.employee_leaves as permissive for select to authenticated
-  using ((public.is_admin() OR (('can_view_hr' IS NOT NULL) AND public.has_permission('can_view_hr'::text))));
 
 drop policy if exists employees_delete on public.employees;
 create policy employees_delete on public.employees as permissive for delete to authenticated
