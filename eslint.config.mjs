@@ -47,6 +47,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate app with its own lint config (control-panel/eslint.config.mjs).
+    "control-panel/**",
   ]),
 ]);
 

@@ -1,0 +1,254 @@
+@import "tailwindcss";
+/* Shared with the ERP: the same --erp-* tokens and typography classes. */
+@import "../../src/design-system/index.css";
+
+@theme {
+  --color-primary: var(--erp-color-primary);
+  --color-primary-hover: var(--erp-color-primary-hover);
+  --color-secondary: var(--erp-color-secondary);
+  --color-success: var(--erp-color-success);
+  --color-warning: var(--erp-color-warning);
+  --color-danger: var(--erp-color-danger);
+  --color-info: var(--erp-color-info);
+}
+
+html,
+body {
+  background: var(--erp-bg-main);
+  color: var(--erp-text-main);
+  font-family: var(--erp-font-sans);
+  font-size: var(--erp-text-sm);
+  line-height: var(--erp-leading-normal);
+}
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.cp-shell {
+  display: grid;
+  grid-template-columns: var(--erp-sidebar-width) 1fr;
+  min-height: 100vh;
+}
+.cp-sidebar {
+  background: var(--erp-bg-sidebar);
+  color: var(--erp-text-sidebar);
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-1);
+  padding: var(--erp-space-4) var(--erp-space-3);
+}
+.cp-brand {
+  color: var(--erp-text-inverse);
+  font-size: var(--erp-text-lg);
+  font-weight: var(--erp-font-weight-semibold);
+  padding: var(--erp-space-2) var(--erp-space-3) var(--erp-space-5);
+}
+.cp-nav-link {
+  border-radius: var(--erp-radius-md);
+  color: var(--erp-text-sidebar);
+  padding: var(--erp-space-2) var(--erp-space-3);
+  transition: background var(--erp-duration-fast) var(--erp-ease-default);
+}
+.cp-nav-link:hover,
+.cp-nav-link[aria-current="page"] {
+  background: var(--erp-bg-sidebar-footer);
+  color: var(--erp-text-inverse);
+}
+.cp-sidebar-footer {
+  border-top: 1px solid var(--erp-border-sidebar);
+  color: var(--erp-text-sidebar-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-2);
+  margin-top: auto;
+  padding: var(--erp-space-4) var(--erp-space-3) 0;
+  font-size: var(--erp-text-xs);
+}
+.cp-main {
+  padding: var(--erp-content-padding-y) var(--erp-content-padding-x);
+  min-width: 0;
+}
+
+/* ── Page parts ────────────────────────────────────────────────────────── */
+.cp-page-header {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--erp-space-4);
+  justify-content: space-between;
+  margin-bottom: var(--erp-space-5);
+}
+.cp-panel {
+  background: var(--erp-bg-panel);
+  border: 1px solid var(--erp-border-default);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: var(--erp-shadow-sm);
+  margin-bottom: var(--erp-space-5);
+  padding: var(--erp-panel-padding-y) var(--erp-panel-padding-x) var(--erp-space-4);
+}
+.cp-panel-title {
+  border-bottom: 1px solid var(--erp-border-default);
+  font-size: var(--erp-text-base);
+  font-weight: var(--erp-font-weight-semibold);
+  margin-bottom: var(--erp-space-3);
+  padding-bottom: var(--erp-space-2);
+}
+.cp-muted {
+  color: var(--erp-text-muted);
+}
+.cp-grid-2 {
+  display: grid;
+  gap: 0 var(--erp-space-5);
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────── */
+.cp-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.cp-table th {
+  background: var(--erp-bg-table-header);
+  color: var(--erp-text-muted);
+  font-size: var(--erp-text-xs);
+  font-weight: var(--erp-font-weight-semibold);
+  text-align: left;
+  text-transform: uppercase;
+}
+.cp-table th,
+.cp-table td {
+  border-bottom: 1px solid var(--erp-border-default);
+  padding: var(--erp-space-2) var(--erp-space-3);
+  vertical-align: top;
+}
+.cp-table tbody tr:nth-child(even) {
+  background: var(--erp-bg-table-row-alt);
+}
+.cp-dl {
+  display: grid;
+  gap: var(--erp-space-2) var(--erp-space-4);
+  grid-template-columns: max-content 1fr;
+}
+.cp-dl dt {
+  color: var(--erp-text-muted);
+}
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--erp-space-1);
+  margin-bottom: var(--erp-space-4);
+}
+.cp-input {
+  background: var(--erp-bg-input);
+  border: 1px solid var(--erp-border-strong);
+  border-radius: var(--erp-radius-md);
+  color: var(--erp-text-main);
+  padding: var(--erp-space-2) var(--erp-space-3);
+  width: 100%;
+}
+.cp-input:focus {
+  border-color: var(--erp-color-primary);
+  box-shadow: 0 0 0 3px var(--erp-border-focus);
+  outline: none;
+}
+.cp-input[aria-invalid="true"] {
+  border-color: var(--erp-color-danger);
+}
+.cp-error {
+  color: var(--erp-color-danger);
+  font-size: var(--erp-text-xs);
+}
+.cp-hint {
+  color: var(--erp-text-muted);
+  font-size: var(--erp-text-xs);
+}
+.cp-alert {
+  border-radius: var(--erp-radius-md);
+  margin-bottom: var(--erp-space-4);
+  padding: var(--erp-space-2) var(--erp-space-3);
+}
+.cp-alert-error {
+  background: color-mix(in srgb, var(--erp-color-danger) 10%, transparent);
+  color: var(--erp-color-danger);
+}
+.cp-alert-success {
+  background: color-mix(in srgb, var(--erp-color-success) 12%, transparent);
+  color: var(--erp-color-success-hover);
+}
+
+/* ── Buttons, badges, links ────────────────────────────────────────────── */
+.cp-button {
+  align-items: center;
+  background: var(--erp-color-primary);
+  border: 1px solid transparent;
+  border-radius: var(--erp-radius-md);
+  color: var(--erp-color-primary-foreground);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: var(--erp-font-weight-medium);
+  gap: var(--erp-space-2);
+  padding: var(--erp-space-2) var(--erp-space-4);
+  transition: background var(--erp-duration-fast) var(--erp-ease-default);
+}
+.cp-button:hover {
+  background: var(--erp-color-primary-hover);
+}
+.cp-button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+.cp-button-secondary {
+  background: var(--erp-bg-panel);
+  border-color: var(--erp-border-strong);
+  color: var(--erp-text-main);
+}
+.cp-button-secondary:hover {
+  background: var(--erp-bg-table-header);
+}
+.cp-link {
+  color: var(--erp-color-link);
+}
+.cp-link:hover {
+  color: var(--erp-color-link-hover);
+  text-decoration: underline;
+}
+.cp-badge {
+  border-radius: var(--erp-radius-full);
+  display: inline-block;
+  font-size: var(--erp-text-xs);
+  font-weight: var(--erp-font-weight-semibold);
+  padding: 0 var(--erp-space-2);
+  white-space: nowrap;
+}
+.cp-badge-success {
+  background: color-mix(in srgb, var(--erp-color-success) 15%, transparent);
+  color: var(--erp-color-success-hover);
+}
+.cp-badge-info {
+  background: color-mix(in srgb, var(--erp-color-info) 15%, transparent);
+  color: var(--erp-color-info-hover);
+}
+.cp-badge-warning {
+  background: color-mix(in srgb, var(--erp-color-warning) 18%, transparent);
+  color: var(--erp-color-warning-hover);
+}
+.cp-badge-danger {
+  background: color-mix(in srgb, var(--erp-color-danger) 15%, transparent);
+  color: var(--erp-color-danger-hover);
+}
+.cp-badge-muted {
+  background: var(--erp-bg-table-header);
+  color: var(--erp-text-muted);
+}
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
+.cp-login {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--erp-space-4);
+}
+.cp-login-card {
+  max-width: 24rem;
+  width: 100%;
+}

@@ -1,0 +1,74 @@
+name: control-panel
+
+# Lint, tests and build of the control panel (control-panel/), plus its database
+# checks on a plain Postgres 17: the migrations run twice, then
+# supabase/tests/rls_and_audit.sql checks RLS, the audit log and Vault secrets.
+# Never connects to any Supabase project.
+on:
+  pull_request:
+    paths:
+      - "control-panel/**"
+      - "src/design-system/**"
+      - "src/modules/*/manifest.ts"
+      - "scripts/db/supabase-shim.sql"
+      - ".github/workflows/control-panel.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: control-panel
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: control-panel/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres@127.0.0.1:55432/postgres
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Postgres 17
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Start an empty server
+        run: |
+          PGDATA="$RUNNER_TEMP/pgdata"
+          initdb -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 > /dev/null
+          pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP" -l "$RUNNER_TEMP/pg.log" -w start
+
+      - name: Migrations (twice) and RLS / audit checks
+        run: |
+          PSQL=(psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1)
+          "${PSQL[@]}" -f scripts/db/supabase-shim.sql
+          "${PSQL[@]}" -f control-panel/supabase/tests/vault-shim.sql
+          for pass in 1 2; do
+            for f in control-panel/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
+          done
+          "${PSQL[@]}" -f control-panel/supabase/tests/rls_and_audit.sql | tee "$RUNNER_TEMP/result.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/result.txt"
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

@@ -1,4 +1,6 @@
 node_modules
+# The control panel is its own image (control-panel/Dockerfile).
+control-panel
 .next
 .git
 .gitignore
