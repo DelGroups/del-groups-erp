@@ -2,8 +2,8 @@
  * Public API of the commissions module. Other code imports commissions only from
  * here (`@/modules/commissions`), never from its components/ or lib/.
  *
- * Saving a sale records its commissions, and the payroll form lists an
- * employee's unpaid commissions.
+ * The payroll form lists an employee's unpaid commissions. Commissions of a saved sale
+ * are recorded through sales' SaleSavedHook (see pages.ts), so sales does not import
+ * this module.
  */
-export { recordSaleCommissions } from "./lib/recordSaleCommissions";
 export { fetchPendingCommissionsForEmployee } from "./lib/api";

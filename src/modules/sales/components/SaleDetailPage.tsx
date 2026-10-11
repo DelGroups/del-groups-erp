@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { fetchSaleById, getSaleRemaining, type SaleRecord } from "@/lib/sales/fetchSales";
-import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
+import { fetchSaleById, getSaleRemaining, type SaleRecord } from "../lib/fetchSales";
+import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useToast } from "@/hooks/useToast";
@@ -21,7 +21,7 @@ interface SaleDetailPageClientProps {
   saleId: string;
 }
 
-export default function SaleDetailPageClient({ saleId }: SaleDetailPageClientProps) {
+export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
   const router = useRouter();
   const { t } = useI18n();
   const { profile } = useAuth();

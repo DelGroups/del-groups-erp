@@ -17,7 +17,7 @@ import {
   type SalePayment,
 } from "@/types/database.types";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { submitSale } from "@/lib/sales/submitSale";
+import { submitSale, type SaleSavedHook } from "../lib/submitSale";
 import {
   normalizeSaleItemProductId,
   validateSaleItemsHaveProductIds,
@@ -44,10 +44,10 @@ import {
   validateDocumentAdditionalExpenses,
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
-import SalesDocumentStatusBadge from "@/components/sales/SalesDocumentStatusBadge";
+import SalesDocumentStatusBadge from "./SalesDocumentStatusBadge";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
-import { fetchSaleById, type SaleRecord } from "@/lib/sales/fetchSales";
+import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { fetchSaleById, type SaleRecord } from "../lib/fetchSales";
 import { fetchPartnerNetBalance } from "@/lib/partners/fetchPartners";
 import {
   isSalesDraft,
@@ -58,7 +58,7 @@ import {
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import ResponsiblePersonField from "@/components/documents/ResponsiblePersonField";
 import { useResponsiblePerson } from "@/hooks/useResponsiblePerson";
-import { resolveIssuedByProfileId } from "@/lib/sales/invoiceIssuer";
+import { resolveIssuedByProfileId } from "../lib/invoiceIssuer";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -108,7 +108,7 @@ import {
   getProductSaleUnitOptions,
   isDimensionalInvoiceProduct,
   resolveInvoiceLineUnitPrice,
-} from "@/lib/sales/resolveInvoiceLinePrice";
+} from "../lib/resolveInvoiceLinePrice";
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import Button from "@/components/ui/button";
@@ -166,6 +166,8 @@ export interface InvoiceFormProps {
   layoutMode?: "modal" | "page";
   draftId?: string | null;
   onDraftSaved?: (saleId: string, docNo: string) => void;
+  /** Run after a sale is saved (see SaleSavedHook); commissions records its commission here. */
+  afterSaleSaved?: SaleSavedHook;
 }
 
 interface Employee {
@@ -364,6 +366,7 @@ export default function UniversalInvoiceForm({
   layoutMode = "modal",
   draftId = null,
   onDraftSaved,
+  afterSaleSaved,
 }: InvoiceFormProps) {
   const [docNo, setDocNo] = useState("");
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
@@ -1544,6 +1547,7 @@ export default function UniversalInvoiceForm({
       paymentType,
       dueDate: dueDate || null,
       currencyBreakdown: calcCurrencyBreakdown(saleItems),
+      afterSave: afterSaleSaved,
     });
 
     if (!result.success) {

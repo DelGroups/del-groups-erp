@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import SalesReportView from "@/components/reports/SalesReportView";
+import SalesReportView from "./SalesReportView";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
-import { fetchSalesReport } from "@/lib/reports/fetchSalesReport";
+import { fetchSalesReport } from "../lib/fetchSalesReport";
 import type {
   Category,
   ReportFilters,

@@ -5,8 +5,7 @@ import { useEffect, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import MixedDimensionalInvoiceForm from "./MixedDimensionalInvoiceForm";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
-import { fetchSaleById } from "@/lib/sales/fetchSales";
-import { mapSaleToInvoicePrint } from "@/lib/print/mapSaleToInvoicePrint";
+import { fetchSaleById, mapSaleToInvoicePrint } from "@/modules/sales";
 
 export default function PolywoodSaleNewPage() {
   const router = useRouter();

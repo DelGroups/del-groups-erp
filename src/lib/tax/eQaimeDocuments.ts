@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import type { CompanyBranding } from "@/lib/print/types";
-import type { SaleRecord } from "@/lib/sales/fetchSales";
+import type { SaleRecord } from "@/modules/sales";
 import type { PurchaseRecord } from "@/types/database.types";
 import {
   TAX_PAYROLL_CONFIG_KEY,

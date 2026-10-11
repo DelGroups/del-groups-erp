@@ -1,5 +1,5 @@
-import type { SaleRecord } from "@/lib/sales/fetchSales";
-import { getSaleRemaining } from "@/lib/sales/fetchSales";
+import type { SaleRecord } from "./fetchSales";
+import { getSaleRemaining } from "./fetchSales";
 import type { InvoiceLineKind, InvoicePrintData, InvoicePrintLine, SaleItemWithMeta } from "@/lib/print/types";
 
 function inferLineKind(item: SaleItemWithMeta): InvoiceLineKind {
