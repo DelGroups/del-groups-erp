@@ -4,7 +4,7 @@ export default defineModule({
   id: "purchases",
   name: "Purchases",
   version: "1.0.0",
-  depends: ["core", "inventory", "accounting"],
+  depends: ["core", "inventory", "accounting", "contracts"],
   permissions: ["can_view_purchases", "can_create_purchase", "can_edit_purchases", "can_delete_purchases"],
   matrix: [
     { group: "purchases", key: "view", label: "Alışları görmək", legacyKey: "can_view_purchases", order: 10 },

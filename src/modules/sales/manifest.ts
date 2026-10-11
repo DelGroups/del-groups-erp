@@ -4,7 +4,7 @@ export default defineModule({
   id: "sales",
   name: "Sales",
   version: "1.0.0",
-  depends: ["core", "inventory", "accounting"],
+  depends: ["core", "inventory", "accounting", "contracts"],
   permissions: ["can_view_sales", "can_create_invoice", "can_edit_sales", "can_delete_sales"],
   matrix: [
     { group: "sales", key: "view", label: "Satışları görmək", legacyKey: "can_view_sales", order: 10 },

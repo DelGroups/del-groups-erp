@@ -146,10 +146,18 @@ export function validateRegistry(
     }
   }
 
-  // A module may only use permissions of itself or its dependencies.
+  // A module may only use permissions of itself, its dependencies, or modules it
+  // borrows from (which must depend on it, so they are never on without it).
   if (!cycle) {
     for (const m of modules) {
       const reachable = moduleClosure(modules, m.id);
+      for (const lender of m.borrowsPermissionsFrom ?? []) {
+        if (!ids.has(lender)) errors.push(`${m.id}: borrowsPermissionsFrom unknown module "${lender}"`);
+        else if (!moduleClosure(modules, lender).has(m.id)) {
+          errors.push(`${m.id}: borrows permissions from "${lender}", but "${lender}" does not depend on "${m.id}"`);
+        }
+        reachable.add(lender);
+      }
       const check = (key: string, where: string) => {
         const by = owner.get(key);
         if (by && !reachable.has(by)) {

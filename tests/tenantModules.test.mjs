@@ -48,6 +48,20 @@ test("an enabled module keeps its dependencies on", () => {
   assert.equal(moduleStates(rows).inventory, "disabled");
 });
 
+test("contracts are always on together with sales and purchases", () => {
+  // Turning contracts off while sales or purchases are on has no effect.
+  assert.equal(resolveEnabledModules(off("contracts")).has("contracts"), true);
+  assert.equal(moduleStates(off("contracts")).contracts, "required");
+  assert.equal(resolveEnabledModules(off("contracts", "sales")).has("contracts"), true, "purchases still needs it");
+  assert.ok(modulesToEnable("sales").includes("contracts"));
+  assert.ok(modulesToEnable("purchases").includes("contracts"));
+
+  // Only with sales, purchases and everything needing them off can contracts be off.
+  const needsContracts = MODULES.filter((m) => m.id !== "contracts" && modulesToEnable(m.id).includes("contracts")).map((m) => m.id);
+  const enabled = resolveEnabledModules(off("contracts", ...needsContracts));
+  assert.equal(enabled.has("contracts"), false, [...enabled].join(","));
+});
+
 test("enabling a module lists its dependencies too", () => {
   assert.deepEqual(new Set(modulesToEnable("payroll")), new Set(["payroll", "hr", "accounting", "tax-az", "core"]));
   assert.deepEqual(new Set(modulesToEnable("core")), new Set(["core"]));
