@@ -16,7 +16,9 @@
 | معماری ماژولار | هسته (Core) + ماژول‌های قابل نصب با فایل manifest، شبیه Odoo |
 | قیمت‌گذاری | پلن ماهانه/سالانه = هزینه پایه + (قیمت هر ماژول × تعداد یوزر) |
 | شرکت فعلی Del Groups | **مستأجر شماره ۱**؛ دیتابیس فعلی همان‌جا می‌ماند و منتقل نمی‌شود |
-| UI جدید | پوسته جدید شبیه Odoo (App launcher، List/Kanban/Form/Pivot/Graph) با موشن و اینفوگراف؛ ماژول به ماژول جایگزین می‌شود |
+| UI جدید | پوسته جدید شبیه Odoo (App launcher، List/Kanban/Form/Pivot/Graph) با موشن و اینفوگراف، طرح‌ها از vibeprompts.dev؛ ماژول به ماژول جایگزین می‌شود |
+| ماژول‌های جدید | Activities/Chatter، تقویم، CRM جدید، To-do، Documents و بقیه اپ‌های Odoo (بخش ۵.۴) |
+| اجرا | پرامپت آماده Claude Code برای هر کار در `docs/claude-code-prompts.md` |
 
 ---
 
@@ -186,7 +188,30 @@ export default defineModule({
 - **Next.js:** صفحات در `src/app` می‌مانند (محدودیت App Router)، ولی فقط یک لایه نازک هستند که کامپوننت ماژول را صدا می‌زنند؛ نگهبان مسیر در `proxy.ts` اگر ماژول نصب نباشد صفحه «این ماژول در پلن شما نیست» نشان می‌دهد.
 - **Schema پایه:** ۱۱۷ مایگریشن + ۳۵ فایل `types/*.sql` به یک baseline تمیز هسته و یک baseline برای هر ماژول تبدیل می‌شوند (از روی schema واقعی دیتابیس فعلی تولید می‌شود). یک تست CI هر بار یک دیتابیس خالی می‌سازد و مطمئن می‌شود همه چیز بدون خطا اجرا می‌شود.
 
-### ۵.۴ کپی کردن Odoo: مرز قانونی
+### ۵.۴ ماژول‌های جدید و ارتقای ماژول‌های فعلی (بند ۸ پیام Del)
+
+وضعیت فعلی CRM: فقط جدول `deals` با مرحله ثابت (`LEAD` …)، یک مبلغ، مسئول و یادداشت، به‌علاوه پیش‌فاکتور (`quotations`). تقویم، کارها (To-do)، فعالیت‌ها و مدیریت اسناد وجود ندارد.
+
+| اولویت | ماژول | محتوا (الگو از اپ هم‌نام در Odoo) | وابستگی |
+|---|---|---|---|
+| ۱ | **Activities + Chatter (هسته)** | فعالیت زمان‌دار روی هر رکورد (تماس، جلسه، ایمیل، کار)، یادداشت و پیام، دنبال‌کننده‌ها، تاریخچه تغییرات | پایه همه ماژول‌های زیر |
+| ۱ | **Calendar** | تقویم کاری شخصی و تیمی (روز/هفته/ماه)، جلسه با شرکت‌کننده، تکرار، یادآور، اتصال به فعالیت‌ها، همگام‌سازی با Google/Outlook در مرحله دوم | Activities |
+| ۱ | **CRM (بازنویسی)** | Lead و Opportunity جدا، مراحل قابل تنظیم برای هر تیم، Kanban با drag، احتمال و درآمد پیش‌بینی‌شده، دلیل باخت، تیم فروش و هدف، امتیازدهی Lead، تبدیل به پیش‌فاکتور و فاکتور فروش، گزارش قیف و پیش‌بینی | Activities، Calendar، Sales |
+| ۱ | **To-do** | کارهای شخصی با مرحله‌های شخصی، برچسب، اولویت، تبدیل به کار پروژه | Activities |
+| ۲ | **Documents** | پوشه‌ها (Workspace)، برچسب، پیش‌نمایش PDF/عکس، اتصال فایل به هر رکورد، درخواست سند از کارمند یا مشتری، دسترسی به پوشه | Storage، Activities |
+| ۲ | **Project + Timesheets** | پروژه، کار، زیرکار، Kanban، Gantt، ثبت ساعت کار، اتصال به تولید و هزینه | Activities، HR |
+| ۲ | **Discuss** | کانال‌های گفتگوی داخلی و پیام مستقیم | Chatter |
+| ۲ | **Approvals** | درخواست‌های تأیید عمومی (خرید، مرخصی، هزینه) با چند مرحله؛ همان فاز ۳ برنامه Studio | Activities |
+| ۳ | **Knowledge** | ویکی داخلی شرکت | — |
+| ۳ | **Helpdesk** | تیکت مشتری، SLA، تیم پشتیبانی | CRM |
+| ۳ | **Sign** | امضای الکترونیکی قرارداد | Documents، Contracts |
+| ۳ | **Maintenance / Quality / Fleet** | نگه‌داری دستگاه‌های تولید، کنترل کیفیت، خودروها | Production، Inventory |
+| ۳ | **Recruitment / Time Off / Attendance / Appraisals** | تکمیل منابع انسانی | HR |
+| ۴ | **POS / Website / eCommerce / Email Marketing / Surveys** | بعد از پایلوت و بر اساس تقاضای مشتری‌ها | — |
+
+فهرست نهایی و جزئیات هر کدام بعد از گزارش Odoo (بخش ۸) قطعی می‌شود. هر ماژول جدید از روز اول با manifest و روی موتور View جدید ساخته می‌شود، پس به UI قدیمی چیزی اضافه نمی‌شود.
+
+### ۵.۵ کپی کردن Odoo: مرز قانونی
 
 Odoo Community تحت LGPL و Odoo Enterprise تحت لایسنس اختصاصی است. **از Odoo مفهوم، ساختار و جریان کار را الگو می‌گیریم، نه کد، آیکون، متن یا برند را.** UI ما طراحی خودمان است. این برای فروش تجاری محصول مهم است.
 
@@ -211,7 +236,37 @@ Odoo Community تحت LGPL و Odoo Enterprise تحت لایسنس اختصاصی
 - **موبایل و PWA:** PWA موجود است؛ Kanban و Form برای موبایل بازطراحی می‌شوند (اسکن بارکد در انبار).
 - **AI در متن:** دکمه «از AI بپرس» روی هر لیست و داشبورد، با زمینه همان صفحه.
 
-### ۶.۳ روش اجرا
+### ۶.۳ منبع طرح‌های UI: vibeprompts.dev (بند ۷ پیام Del)
+
+سایت [vibeprompts.dev](https://vibeprompts.dev/) حدود ۲۸۶ پرامپت در ۱۵ دسته دارد. هر صفحه یک پرامپت متنی و کد آماده HTML + Tailwind (و در بعضی‌ها JavaScript ساده) دارد. روش استفاده:
+
+- **کد را مستقیم کپی نمی‌کنیم.** پرامپت و کد هر بخش مرجع ظاهر و رفتار است. Claude Code آن را به کامپوننت React + TypeScript در `src/design-system` تبدیل می‌کند، با tokenهای ما، Radix برای دسترس‌پذیری و `motion` برای انیمیشن. JavaScript ساده (مثل drag در Kanban) با معادل React جایگزین می‌شود.
+- قبل از استفاده، شرایط استفاده سایت چک می‌شود. در صفحه اصلی لایسنسی ذکر نشده و صفحه‌ها خودشان را «free prompt» معرفی می‌کنند.
+
+نقشه بخش‌های سایت به نیاز ERP:
+
+| نیاز ERP | صفحه vibeprompts.dev |
+|---|---|
+| App Launcher و منوی بالا | `nav/nav-multi-product-launcher-nav`, `nav/nav-app-bar-with-search-and-tabs`, `nav/nav-workspace-switcher-nav`, `nav/nav-breadcrumb-page-header`, `nav/nav-mobile-drawer-menu`, `nav/nav-bottom-tab-bar` |
+| List view و نوار جستجو/فیلتر | `dashboards/dashboards-data-table-with-toolbar` |
+| Kanban (CRM، To-do، Project، تولید) | `dashboards/dashboards-kanban-board-with-drag-and-drop` |
+| Calendar | `dashboards/dashboards-week-schedule-grid`, `stats/stats-contribution-rhythm-calendar` |
+| داشبورد و KPI | `dashboards/dashboards-sidebar-stat-cards`, `dashboards/dashboards-analytics-overview-with-range-chips`, `dashboards/dashboards-chart-card-with-legend`, `dashboards/dashboards-regional-performance-board` |
+| اینفوگراف | `stats/stats-metric-cards-with-sparkline-bars`, `stats/stats-ring-gauge-trio`, `stats/stats-conversion-funnel-steps`, `stats/stats-goal-progress-bars`, `stats/stats-cohort-retention-heatmap`, `stats/stats-count-up-metrics-on-view`, `stats/stats-leaderboard-with-rank-movement`, `stats/stats-week-over-week-delta-table`, `stats/stats-anomaly-pulse-strip` |
+| انبار | `dashboards/dashboards-inventory-replenishment-cockpit` |
+| Chatter و فعالیت‌ها | `dashboards/dashboards-activity-feed-panel`, `blog/blog-comment-thread-with-replies` |
+| Approvals | `dashboards/dashboards-approvals-queue-with-detail-drawer` |
+| Discuss / صندوق پیام | `dashboards/dashboards-inbox-split-view` |
+| یوزرها و نقش‌ها | `dashboards/dashboards-team-and-roles-admin`, `features/features-permission-inheritance-explorer`, `auth/auth-active-sessions-manager` |
+| ورود، دعوت، 2FA | `auth/auth-split-screen-with-visual`, `auth/auth-workspace-invite-acceptance`, `auth/auth-two-factor-setup-with-qr`, `auth/auth-reset-password-with-strength-meter`, `auth/auth-trial-signup-with-plan-summary` |
+| ویزارد راه‌اندازی شرکت جدید | `onboarding/onboarding-stepper-progress`, `onboarding/onboarding-brand-your-workspace-step`, `onboarding/onboarding-invite-teammates-step`, `onboarding/onboarding-csv-column-mapping-step`, `onboarding/onboarding-sample-data-or-your-own`, `onboarding/onboarding-checklist-card`, `onboarding/onboarding-setup-complete-celebration` |
+| کنترل‌پنل: پلن و صورتحساب | `pricing/pricing-module-bundle-builder`, `pricing/pricing-per-seat-pricing-with-quantity-stepper`, `pricing/pricing-change-plan-with-prorated-preview`, `pricing/pricing-comparison-table`, `pricing/pricing-prices-in-local-currency`, `dashboards/dashboards-usage-and-billing-meters`, `cta/cta-seat-limit-collaboration-nudge`, `cta/cta-in-app-upgrade-nudge`, `cta/cta-renewal-reminder-banner` |
+| سایت فروش محصول | دسته‌های `hero`, `features`, `pricing`, `testimonials`, `faq`, `cta`, `footer`, `contact` (مثلاً `contact/contact-demo-booking-with-time-slots`) |
+| اجزای عمومی | `bonus/bonus-command-palette`, `bonus/bonus-toast-notification`, `bonus/bonus-empty-state`, `bonus/bonus-skeleton-loading-state`, `bonus/bonus-file-upload-dropzone`, `bonus/bonus-type-to-confirm-delete-dialog`, `bonus/bonus-keyboard-shortcuts-sheet` |
+
+برای List، Form، Pivot و Gantt که در سایت نمونه مستقیم ندارند، طرح از روی گزارش Odoo و با همین سیستم طراحی ساخته می‌شود.
+
+### ۶.۴ روش اجرا
 
 پوسته جدید پشت یک feature flag ساخته می‌شود و **ماژول به ماژول** جایگزین می‌شود (اول یک ماژول ساده مثل CRM برای امتحان موتور View، بعد فروش، انبار و …). UI قدیمی تا پایان انتقال کار می‌کند. قبل از کدنویسی، طرح Figma یا یک نمونه کلیک‌پذیر از ۵ صفحه کلیدی برای تأیید Del آماده می‌شود.
 
@@ -231,7 +286,7 @@ Odoo Community تحت LGPL و Odoo Enterprise تحت لایسنس اختصاصی
 
 ## ۸. بررسی حساب Odoo با Chrome (بند ۵ پیام Del)
 
-**هدف:** یک گزارش فنی ساختاری از Odoo برای هر اپ (مدل‌ها و فیلدها، viewها، جریان کار و وضعیت‌ها، تنظیمات، گزارش‌ها، اتوماسیون‌ها) با استفاده واقعی مثل یک شرکت (ساخت محصول، فروش، خرید، انبار، تولید، حسابداری، حقوق)، و مقایسه با ERP خودمان.
+**هدف:** نصب همه اپ‌ها از بخش Apps در دیتابیس تست Odoo و تهیه یک گزارش فنی ساختاری برای هر اپ (مدل‌ها و فیلدها، viewها، جریان کار و وضعیت‌ها، تنظیمات، گزارش‌ها، اتوماسیون‌ها) با استفاده واقعی مثل یک شرکت (ساخت محصول، فروش، خرید، انبار، تولید، حسابداری، حقوق)، و مقایسه با ERP خودمان.
 
 **چه چیزی از Del لازم است:**
 1. یک **دیتابیس تست یا trial** در Odoo (نه دیتابیس واقعی شرکت)، چون قرار است دیتای آزمایشی ثبت شود.
@@ -257,8 +312,11 @@ Odoo Community تحت LGPL و Odoo Enterprise تحت لایسنس اختصاصی
 | **۴. پلن، محدودیت و پرداخت** | پلن‌ها و قیمت‌ها، اشتراک، صورتحساب، درگاه، محدودیت یوزر/ماژول/Storage/AI، مهلت و تعلیق | متوسط | ۳ |
 | **۵. بررسی Odoo** | گزارش ساختاری (بخش ۸) | متوسط | دسترسی از Del؛ موازی با ۳ و ۴ |
 | **۶. UI/UX جدید** | طرح و تأیید؛ پوسته و App Launcher؛ موتور View؛ Chatter؛ داشبوردها؛ انتقال ماژول به ماژول | خیلی بزرگ | ۲ و ۵ |
+| **۶ب. ماژول‌های جدید** | Activities/Chatter، Calendar، CRM جدید، To-do، بعد Documents و Project و بقیه (بخش ۵.۴) روی موتور View جدید | خیلی بزرگ | ۲، ۵ و پوسته فاز ۶ |
 | **۷. آماده‌سازی فروش** | سایت معرفی و ثبت‌نام، شرکت دمو، شرایط استفاده و قرارداد پردازش داده، مستندات کاربری، پشتیبانی، مانیتورینگ و بکاپ خودکار هر مستأجر | متوسط | ۴ |
 | **۸. پایلوت** | ۲ تا ۳ شرکت آزمایشی با قیمت ویژه، جمع‌آوری بازخورد، بعد فروش عمومی | — | ۶، ۷ |
+
+پرامپت آماده Claude Code برای هر فاز در [`docs/claude-code-prompts.md`](claude-code-prompts.md) است.
 
 ادامه برنامه Studio و AI (اتوماسیون، تأییدها، ابزارهای نوشتن AI) داخل فاز ۲ و ۶ ادغام می‌شود چون همان رجیستری metadata را لازم دارد.
 
