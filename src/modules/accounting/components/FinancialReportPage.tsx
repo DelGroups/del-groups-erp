@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import FinancialReportView from "@/components/reports/FinancialReportView";
+import FinancialReportView from "./FinancialReportView";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
-import { fetchFinancialReport } from "@/lib/reports/fetchFinancialReport";
+import { fetchFinancialReport } from "../lib/fetchFinancialReport";
 import { logAuditReadEventAction } from "@/lib/actions/audit";
 import type {
   Category,

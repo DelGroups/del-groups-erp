@@ -11,7 +11,7 @@ import {
   mapPlSummary,
   type GlFinancialReportsData,
   type GlFinancialReportsQuery,
-} from "@/lib/reports/glFinancialReports";
+} from "../lib/glFinancialReports";
 import { fetchGlAccounts } from "@/lib/accounting";
 
 export type GlFinancialReportsActionResult =

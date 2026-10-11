@@ -19,7 +19,7 @@ function formatDate(value: string): string {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
 }
 
-export default function PaymentsPageClient() {
+export default function PaymentsPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_finance");

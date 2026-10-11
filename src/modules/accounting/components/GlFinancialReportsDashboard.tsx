@@ -4,7 +4,7 @@ import type {
   GlBalanceSheetSummary,
   GlFinancialReportsData,
   GlProfitAndLossSummary,
-} from "@/lib/reports/glFinancialReports";
+} from "../lib/glFinancialReports";
 import { useI18n } from "@/i18n/I18nProvider";
 
 type GlFinancialReportsDashboardProps = {

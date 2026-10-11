@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { GlFinancialReportsPage } from "@/modules/accounting/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function GlFinancialReportsPage() {
-  return <PageClient />;
+export default function Page() {
+  return <GlFinancialReportsPage />;
 }

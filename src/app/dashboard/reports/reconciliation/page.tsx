@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { PartnerReconciliationPage } from "@/modules/accounting/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function PartnerReconciliationPage() {
-  return <PageClient />;
+export default function Page() {
+  return <PartnerReconciliationPage />;
 }

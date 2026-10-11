@@ -1,7 +1,7 @@
-import PageClient from "./page.client";
+import { PaymentsPage } from "@/modules/accounting/pages";
 
 export const dynamic = "force-dynamic";
 
-export default function PaymentsPage() {
-  return <PageClient />;
+export default function Page() {
+  return <PaymentsPage />;
 }

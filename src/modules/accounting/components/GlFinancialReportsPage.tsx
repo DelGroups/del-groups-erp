@@ -4,13 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import GlFinancialReportsDashboard from "@/components/reports/GlFinancialReportsDashboard";
+import GlFinancialReportsDashboard from "./GlFinancialReportsDashboard";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
-import type { GlFinancialReportsData } from "@/lib/reports/glFinancialReports";
+import type { GlFinancialReportsData } from "../lib/glFinancialReports";
 import {
   fetchGlFinancialReportsAction,
   fetchGlReportFilterOptionsAction,
-} from "@/lib/actions/glFinancialReports";
+} from "../actions/glFinancialReports";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
 import type { Category, EmployeeOption, ReportFilters, Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -40,7 +40,7 @@ const emptyData: GlFinancialReportsData = {
 
 const LEDGER_PAGE_SIZE = 50;
 
-export default function GlFinancialReportsPageClient() {
+export default function GlFinancialReportsPage() {
   const { t } = useI18n();
   const [filters, setFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 import PageLayout from "@/components/layout/PageLayout";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import TrialBalanceTable from "@/components/reports/TrialBalanceTable";
+import TrialBalanceTable from "./TrialBalanceTable";
 import { fetchTrialBalanceAction } from "@/lib/actions/accountingReports";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import { isZeroTrialBalanceRow, type TrialBalanceReport } from "@/lib/reports/trialBalance";
@@ -28,7 +28,7 @@ const emptyReport: TrialBalanceReport = {
   },
 };
 
-export default function TrialBalancePageClient() {
+export default function TrialBalancePage() {
   const { t } = useI18n();
   const [filters, setFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);

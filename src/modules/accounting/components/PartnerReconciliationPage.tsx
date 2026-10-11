@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ReportFiltersPanel from "@/components/reports/ReportFiltersPanel";
-import PartnerReconciliationDocument from "@/components/reports/PartnerReconciliationDocument";
+import PartnerReconciliationDocument from "./PartnerReconciliationDocument";
 import { fetchPartnerReconciliationAction } from "@/lib/actions/accountingReports";
-import { fetchGlReportFilterOptionsAction } from "@/lib/actions/glFinancialReports";
+import { fetchGlReportFilterOptionsAction } from "../actions/glFinancialReports";
 import { DEFAULT_REPORT_FILTERS } from "@/lib/reports/dateRange";
 import type { PartnerReconciliationReport } from "@/lib/reports/partnerReconciliation";
 import { fetchReportFilterOptions } from "@/lib/reports/fetchFilterOptions";
@@ -25,7 +25,7 @@ const emptyReport: PartnerReconciliationReport = {
   lines: [],
 };
 
-export default function PartnerReconciliationPageClient() {
+export default function PartnerReconciliationPage() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<ReportFilters>(DEFAULT_REPORT_FILTERS);
