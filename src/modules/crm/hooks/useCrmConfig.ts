@@ -7,7 +7,7 @@ import {
   DEFAULT_CRM_CONFIG,
   parseCrmConfig,
   type CrmConfig,
-} from "@/lib/crm/config";
+} from "../lib/config";
 
 export function useCrmConfig(): {
   config: CrmConfig;

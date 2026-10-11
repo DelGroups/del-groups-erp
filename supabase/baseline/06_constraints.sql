@@ -105,11 +105,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'deals_pkey' and conrelid = 'public.deals'::regclass) then
-    execute $c$alter table only public.deals add constraint deals_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'document_expenses_pkey' and conrelid = 'public.document_expenses'::regclass) then
     execute $c$alter table only public.document_expenses add constraint document_expenses_pkey PRIMARY KEY (id);$c$;
   end if;
@@ -327,11 +322,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchases_pkey' and conrelid = 'public.purchases'::regclass) then
     execute $c$alter table only public.purchases add constraint purchases_pkey PRIMARY KEY (id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_pkey' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_pkey PRIMARY KEY (id);$c$;
   end if;
 end $$;
 do $$ begin
@@ -950,11 +940,6 @@ do $$ begin
   end if;
 end $$;
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_status_check' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_status_check CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'SENT'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying, 'WON'::character varying, 'CONVERTED'::character varying])::text[])));$c$;
-  end if;
-end $$;
-do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'sale_items_currency_check' and conrelid = 'public.sale_items'::regclass) then
     execute $c$alter table only public.sale_items add constraint sale_items_currency_check CHECK ((currency = ANY (ARRAY['AZN'::text, 'USD'::text, 'EUR'::text])));$c$;
   end if;
@@ -1227,21 +1212,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'consignments_customer_id_fkey' and conrelid = 'public.consignments'::regclass) then
     execute $c$alter table only public.consignments add constraint consignments_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'deals_assigned_to_fkey' and conrelid = 'public.deals'::regclass) then
-    execute $c$alter table only public.deals add constraint deals_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.profiles(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'deals_client_id_fkey' and conrelid = 'public.deals'::regclass) then
-    execute $c$alter table only public.deals add constraint deals_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.customers(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'deals_production_order_id_fkey' and conrelid = 'public.deals'::regclass) then
-    execute $c$alter table only public.deals add constraint deals_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
   end if;
 end $$;
 do $$ begin
@@ -1827,21 +1797,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'purchases_warehouse_slip_id_fkey' and conrelid = 'public.purchases'::regclass) then
     execute $c$alter table only public.purchases add constraint purchases_warehouse_slip_id_fkey FOREIGN KEY (warehouse_slip_id) REFERENCES public.warehouse_slips(id);$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_created_by_fkey' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_deal_id_fkey' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deals(id) ON DELETE CASCADE;$c$;
-  end if;
-end $$;
-do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'quotations_production_order_id_fkey' and conrelid = 'public.quotations'::regclass) then
-    execute $c$alter table only public.quotations add constraint quotations_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(id) ON DELETE SET NULL;$c$;
   end if;
 end $$;
 do $$ begin

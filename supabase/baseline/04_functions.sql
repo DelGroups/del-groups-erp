@@ -5901,28 +5901,6 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.next_quotation_number()
- RETURNS text
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_n INT;
-  v_prefix TEXT;
-BEGIN
-  v_n := nextval('public.quotation_number_seq');
-  SELECT COALESCE(NULLIF(btrim(value ->> 'quote_prefix'), ''), 'TKL-2026-')
-    INTO v_prefix
-    FROM public.system_settings
-    WHERE key = 'crm_config';
-  IF v_prefix IS NULL OR btrim(v_prefix) = '' THEN
-    v_prefix := 'TKL-2026-';
-  END IF;
-  RETURN v_prefix || lpad(v_n::TEXT, 4, '0');
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.next_sales_doc_no(p_prefix text DEFAULT 'SS'::text)
  RETURNS text
  LANGUAGE plpgsql

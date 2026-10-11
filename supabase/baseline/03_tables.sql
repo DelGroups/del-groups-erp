@@ -270,19 +270,6 @@ create table if not exists public.customers (
   custom_fields jsonb not null
 );
 
-create table if not exists public.deals (
-  id uuid not null,
-  client_id uuid,
-  title character varying(240) not null,
-  stage character varying(40) not null,
-  expected_value numeric(15,2) not null,
-  assigned_to uuid,
-  notes text,
-  production_order_id uuid,
-  created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
-);
-
 create table if not exists public.document_expenses (
   id uuid not null,
   document_type text not null,
@@ -1080,23 +1067,6 @@ create table if not exists public.purchases (
   posted_at timestamp with time zone,
   currency_breakdown jsonb not null,
   custom_fields jsonb not null
-);
-
-create table if not exists public.quotations (
-  id uuid not null,
-  deal_id uuid not null,
-  quote_number character varying(40) not null,
-  total_amount numeric(15,2) not null,
-  discount numeric(15,2) not null,
-  tax numeric(15,2) not null,
-  valid_until date,
-  status character varying(20) not null,
-  items_json jsonb not null,
-  notes text,
-  production_order_id uuid,
-  created_by uuid,
-  created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
 );
 
 create table if not exists public.roles (

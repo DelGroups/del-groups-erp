@@ -1,0 +1,9 @@
+{
+  "why": "CRM pipeline (deals) and quotations. The crm-assets bucket stays in core: the company profile stores the logo and seal there.",
+  "tables": ["deals", "quotations"],
+  "functions": ["next_quotation_number"],
+  "sequences": ["quotation_number_seq"],
+  "views": [],
+  "buckets": [],
+  "storage_policies": []
+}

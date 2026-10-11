@@ -21,9 +21,6 @@ CREATE INDEX IF NOT EXISTS idx_consignment_monthly_reports_sales_rep ON public.c
 CREATE INDEX IF NOT EXISTS idx_consignment_returns_partner ON public.consignment_returns USING btree (partner_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON public.contracts USING btree (contract_number);
 CREATE INDEX IF NOT EXISTS idx_contracts_party_type_status ON public.contracts USING btree (party_id, type, status);
-CREATE INDEX IF NOT EXISTS idx_deals_assigned ON public.deals USING btree (assigned_to);
-CREATE INDEX IF NOT EXISTS idx_deals_client ON public.deals USING btree (client_id);
-CREATE INDEX IF NOT EXISTS idx_deals_stage ON public.deals USING btree (stage, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_doc_expenses_doc ON public.document_expenses USING btree (document_type, document_id);
 CREATE INDEX IF NOT EXISTS idx_employee_advances_employee ON public.employee_advances USING btree (employee_id, status, request_date DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_commission_rules_employee_category ON public.employee_commission_rules USING btree (employee_id, lower(category_name));
@@ -125,8 +122,6 @@ CREATE INDEX IF NOT EXISTS idx_purchases_due_date ON public.purchases USING btre
 CREATE INDEX IF NOT EXISTS idx_purchases_partner_id ON public.purchases USING btree (partner_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_status ON public.purchases USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_purchases_supplier_id ON public.purchases USING btree (supplier_id);
-CREATE INDEX IF NOT EXISTS idx_quotations_deal ON public.quotations USING btree (deal_id, created_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_quotations_quote_number ON public.quotations USING btree (quote_number);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON public.sale_items USING btree (product_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON public.sale_items USING btree (sale_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_warehouse_id ON public.sale_items USING btree (warehouse_id) WHERE (warehouse_id IS NOT NULL);

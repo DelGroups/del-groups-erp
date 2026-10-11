@@ -4,15 +4,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
-import DealFormModal from "@/components/crm/DealFormModal";
-import QuotationBuilderModal from "@/components/crm/QuotationBuilderModal";
+import DealFormModal from "./DealFormModal";
+import QuotationBuilderModal from "./QuotationBuilderModal";
 import QuotationPrintTemplate, {
   type QuotationPrintData,
-} from "@/components/crm/QuotationPrintTemplate";
+} from "./QuotationPrintTemplate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
-import { useCrmConfig } from "@/hooks/useCrmConfig";
+import { useCrmConfig } from "../hooks/useCrmConfig";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -21,8 +21,8 @@ import {
   createDealAction,
   saveQuotationAction,
   updateDealStageAction,
-} from "@/lib/actions/crm";
-import { fetchCrmCustomers, fetchCrmDeals, fetchCrmProducts } from "@/lib/crm/api";
+} from "../actions/crm";
+import { fetchCrmCustomers, fetchCrmDeals, fetchCrmProducts } from "../lib/api";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import {
   type CrmDeal,

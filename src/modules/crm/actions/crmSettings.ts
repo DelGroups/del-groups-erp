@@ -9,7 +9,7 @@ import {
   DEFAULT_CRM_CONFIG,
   parseCrmConfig,
   type CrmConfig,
-} from "@/lib/crm/config";
+} from "../lib/config";
 
 const SEAL_BUCKET = "crm-assets";
 const MAX_SEAL_BYTES = 5 * 1024 * 1024;

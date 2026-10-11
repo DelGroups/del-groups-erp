@@ -19,7 +19,6 @@ alter table public.consignment_returns enable row level security;
 alter table public.consignments enable row level security;
 alter table public.contracts enable row level security;
 alter table public.customers enable row level security;
-alter table public.deals enable row level security;
 alter table public.document_number_counters enable row level security;
 alter table public.employee_advances enable row level security;
 alter table public.employee_commission_rules enable row level security;
@@ -42,7 +41,6 @@ alter table public.products enable row level security;
 alter table public.profiles enable row level security;
 alter table public.purchase_items enable row level security;
 alter table public.purchases enable row level security;
-alter table public.quotations enable row level security;
 alter table public.roles enable row level security;
 alter table public.salary_payments enable row level security;
 alter table public.sale_items enable row level security;
@@ -316,14 +314,6 @@ drop policy if exists customers_update on public.customers;
 create policy customers_update on public.customers as permissive for update to authenticated
   using (public.require_permission('can_manage_customers'::text))
   with check (public.require_permission('can_manage_customers'::text));
-
-drop policy if exists manage_policy_deals on public.deals;
-create policy manage_policy_deals on public.deals as permissive for all to authenticated
-  using ((public.is_admin() OR (('can_manage_crm' IS NOT NULL) AND public.has_permission('can_manage_crm'::text))));
-
-drop policy if exists select_policy_deals on public.deals;
-create policy select_policy_deals on public.deals as permissive for select to authenticated
-  using ((public.is_admin() OR (('can_view_crm' IS NOT NULL) AND public.has_permission('can_view_crm'::text))));
 
 drop policy if exists manage_policy_employee_advances on public.employee_advances;
 create policy manage_policy_employee_advances on public.employee_advances as permissive for all to authenticated
@@ -611,14 +601,6 @@ drop policy if exists purchases_update on public.purchases;
 create policy purchases_update on public.purchases as permissive for update to authenticated
   using (public.require_permission('can_edit_purchases'::text))
   with check (public.require_permission('can_edit_purchases'::text));
-
-drop policy if exists manage_policy_quotations on public.quotations;
-create policy manage_policy_quotations on public.quotations as permissive for all to authenticated
-  using ((public.is_admin() OR (('can_manage_crm' IS NOT NULL) AND public.has_permission('can_manage_crm'::text))));
-
-drop policy if exists select_policy_quotations on public.quotations;
-create policy select_policy_quotations on public.quotations as permissive for select to authenticated
-  using ((public.is_admin() OR (('can_view_crm' IS NOT NULL) AND public.has_permission('can_view_crm'::text))));
 
 drop policy if exists roles_delete on public.roles;
 create policy roles_delete on public.roles as permissive for delete to authenticated

@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { CompanyBranding } from "@/lib/print/types";
-import type { CrmConfig } from "@/lib/crm/config";
+import type { CrmConfig } from "../lib/config";
 import type { CrmDeal, CrmQuotation } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";

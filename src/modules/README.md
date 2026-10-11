@@ -10,7 +10,24 @@ the manifests, checks them and generates:
 | `ROUTE_RULES`, `NAV_PATH_PERMISSIONS` (`src/lib/auth/routePermissions.ts`) | page guards, menu filtering |
 | `GRANULAR_PERMISSION_MODULES` (`src/lib/auth/permissionMatrix.ts`) | role editor, permission checks |
 
-Component files have not moved yet; a manifest only describes its module.
+## Code layout
+
+Modules move here one at a time (moved so far: **crm**). A moved module looks like:
+
+```
+src/modules/crm/
+  manifest.ts      what the module owns (registry)
+  index.ts         public API for other modules: import "@/modules/crm"
+  pages.ts         screens for the thin route files in src/app: import "@/modules/crm/pages"
+  components/  lib/  actions/  hooks/     internals (keep each folder flat)
+```
+
+Its SQL is in `supabase/modules/<id>/` (see the README there).
+
+**Import rule** (ESLint `no-restricted-imports`, `eslint.config.mjs`): outside a module, import
+only `@/modules/<id>` or, from `src/app`, `@/modules/<id>/pages`. Inside a module use relative
+imports and never reach into another module's folders; call its public API or emit an
+`erp_events` event instead. Core code (`src/lib`, `src/components`) must not import modules.
 
 ## Adding to a manifest
 

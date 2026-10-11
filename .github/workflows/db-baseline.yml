@@ -48,10 +48,12 @@ jobs:
       - name: Generated baseline files are up to date
         run: |
           python3 scripts/db/generate-baseline.py
-          git diff --exit-code -- supabase/baseline || {
-            echo "::error::supabase/baseline/*.sql does not match live-catalog.json. Run python3 scripts/db/generate-baseline.py and commit."
+          git diff --exit-code -- supabase/baseline supabase/modules || {
+            echo "::error::supabase/baseline/*.sql or supabase/modules/*/install.sql does not match live-catalog.json. Run python3 scripts/db/generate-baseline.py and commit."
             exit 1
           }
+          untracked=$(git ls-files --others --exclude-standard -- supabase/baseline supabase/modules)
+          [[ -z "$untracked" ]] || { echo "::error::generated files not committed: $untracked"; exit 1; }
 
       - name: Build from baseline
         run: scripts/db/build-fresh.sh --plain-postgres --baseline-only
