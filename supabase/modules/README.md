@@ -27,6 +27,12 @@ Schema changes are still one file in `supabase/migrations/` (see `supabase/basel
 When the baseline is refreshed from production, the generator splits the new snapshot into
 core and modules again.
 
+
+A tenant may be installed with only some modules (control panel provisioning). A migration that
+touches a table owned by a module must therefore guard that part with
+`IF to_regclass('public.<table>') IS NOT NULL THEN ... END IF;` (in a `DO` block), or the
+migration fails on tenants without the module. `tests/moduleSql.test.mjs` checks this for every
+migration newer than `supabase/baseline/VERSION`.
 ## Checks
 
 - CI (`.github/workflows/db-baseline.yml`) regenerates the files and fails on any difference,

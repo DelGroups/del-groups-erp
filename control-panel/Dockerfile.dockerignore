@@ -2,6 +2,9 @@
 *
 !control-panel
 !src/design-system
+!supabase/baseline
+!supabase/modules
+!supabase/migrations
 control-panel/node_modules
 control-panel/.next
 control-panel/.env*
