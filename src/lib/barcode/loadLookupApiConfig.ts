@@ -6,7 +6,7 @@ import {
 } from "@/lib/barcode/lookupApiConfig";
 
 export async function loadBarcodeLookupApiConfigForServer(): Promise<BarcodeLookupApiConfig> {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data } = await admin
     .from("system_settings")
     .select("value")

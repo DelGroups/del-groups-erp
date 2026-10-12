@@ -14,12 +14,12 @@ import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
-  fetchTransferSourceStock,
   loadWarehousesForTransfer,
   resolveTransferBarcode,
   type StockTransferLineInput,
   type StockTransferPrintData,
 } from "../lib/stockTransfer";
+import { fetchTransferSourceStock } from "../actions/stockTransfer";
 import type { Warehouse } from "@/types/database.types";
 import { generateStockTransferDocumentNumber } from "@/types/database.types";
 

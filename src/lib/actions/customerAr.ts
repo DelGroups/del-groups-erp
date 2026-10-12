@@ -29,7 +29,7 @@ export async function fetchCustomerOpeningBalancesAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("customers")
       .select("id, code, full_name, balance, opening_balance")
@@ -58,7 +58,7 @@ export async function setCustomerOpeningBalanceAction(
 ): Promise<CustomerOpeningBalanceResult<{ balance: number }>> {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("set_customer_opening_balance_atomic", {
       p_customer_id: customerId,
       p_opening_balance: Math.max(0, Number(openingBalance) || 0),

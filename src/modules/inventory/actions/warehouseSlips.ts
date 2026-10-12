@@ -28,7 +28,7 @@ export async function fetchWarehouseSlipsAction(
   try {
     await requirePermissionAction("can_view_warehouse_slips");
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     let query = admin
       .from("warehouse_slips")
       .select("*")
@@ -69,7 +69,7 @@ async function updateSlipStatus(
       return { success: false, error: "Etibarsız qaimə identifikatoru" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const now = new Date().toISOString();
 
     const { data, error } = await admin
@@ -94,7 +94,7 @@ async function updateSlipStatus(
     const slip = mapRow(data as Record<string, unknown>);
     if (slip.source_document_id && slip.source_type && slip.source_type !== "writeoff") {
       try {
-        const admin = createSupabaseAdminClient();
+        const admin = await createSupabaseAdminClient();
         await syncDocumentSlipStatus(
           admin,
           slip.source_type,

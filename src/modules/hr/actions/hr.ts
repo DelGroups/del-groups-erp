@@ -99,7 +99,7 @@ export async function updateEmployeeLeaveStatusAction(
 }
 
 async function assertActiveDepartmentCode(code: string): Promise<string | null> {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { count, error } = await admin
     .from("employee_departments")
     .select("id", { count: "exact", head: true })
@@ -127,7 +127,7 @@ export async function createEmployeeAction(
     const deptError = await assertActiveDepartmentCode(row.department);
     if (deptError) return { success: false, error: deptError };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("employees").insert([row]);
     if (error) return { success: false, error: error.message };
     return { success: true };
@@ -180,7 +180,7 @@ export async function updateEmployeeAction(
       patch.documents_json = payload.documents_json ?? {};
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("employees").update(patch).eq("id", id);
     if (error) return { success: false, error: error.message };
     return { success: true };
@@ -197,7 +197,7 @@ export async function deleteEmployeeAction(
     await requirePermissionAction("can_manage_hr");
     if (!isValidUuid(id)) return { success: false, error: "İşçi tapılmadı" };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("employees").delete().eq("id", id);
     if (error) return { success: false, error: error.message };
     return { success: true };

@@ -31,7 +31,7 @@ export async function importPolywoodStockAction(
 ): Promise<PolywoodActionResult<{ imported: number; skipped: number }>> {
   try {
     await requirePermissionAction("can_manage_products", { module: "polywood" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const warehouse = await ensurePolywoodWarehouseAdmin();
 
     let imported = 0;
@@ -164,7 +164,7 @@ export async function addPolywoodPiecesAction(input: {
   try {
     await requirePermissionAction("can_manage_products", { module: "polywood" });
     const warehouse = await ensurePolywoodWarehouseAdmin();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const fullSheetLengthM = input.fullSheetLengthM || DEFAULT_FULL_SHEET_LENGTH_M;
     const rows = input.lengthsM
@@ -199,7 +199,7 @@ export async function deletePolywoodInventoryAction(input: {
 }): Promise<PolywoodActionResult<{ deletedPieces: number; removedLengthM: number }>> {
   try {
     const { user } = await requirePermissionAction("can_manage_products", { module: "polywood" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const warehouse = await ensurePolywoodWarehouseAdmin();
 
     let query = admin

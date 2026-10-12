@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data, error, schemaWarnings } = await upsertProductsWithSchemaFallback(admin, prepared);
 
   if (error) {

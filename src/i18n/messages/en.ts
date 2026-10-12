@@ -3177,4 +3177,24 @@ export const enMessages: Messages = {
       back: "Back to the dashboard",
     },
   },
+  tenantStatus: {
+    notFound: {
+      title: "This address was not found",
+      body: "This domain is not linked to any company. Check the address or contact your administrator.",
+    },
+    suspended: {
+      title: "Account suspended",
+      body: "This company's account is suspended. Your data has not been deleted. Contact your administrator to restore access.",
+    },
+    preparing: {
+      title: "Your ERP is being prepared",
+      body: "The ERP for your company is being set up. Please check again in a few minutes.",
+    },
+    unavailable: {
+      title: "Temporarily unavailable",
+      body: "The company's settings could not be loaded right now. Please try again shortly.",
+    },
+    readOnlyBanner: "This account is read-only: you can view and export data, but you cannot create or change documents.",
+    retry: "Try again",
+  },
 };

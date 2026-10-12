@@ -5,9 +5,9 @@ import {
 } from "./warehouseStock";
 import type { Product } from "@/types/database.types";
 
-type StockAdminClient = ReturnType<
+type StockAdminClient = Awaited<ReturnType<
   typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient
->;
+>>;
 
 const CATALOG_SELECT_ATTEMPTS = [
   "id,code,name,unit,buy_price,stock,inventory_mode,barcode,qr_code",

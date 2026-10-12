@@ -24,7 +24,7 @@ export interface AuditAlertRow {
 }
 
 async function purgeExpiredAuditLogs(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   config: AuditConfig
 ): Promise<void> {
   const cutoff = auditRetentionCutoffIso(config.log_retention_days);
@@ -36,7 +36,7 @@ async function purgeExpiredAuditLogs(
 export async function getAuditConfigAction(): Promise<ActionResult<AuditConfig>> {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("system_settings")
       .select("value")
@@ -55,7 +55,7 @@ export async function saveAuditConfigAction(
   try {
     await requirePermissionAction("can_manage_settings");
     const config = parseAuditConfig(input);
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("system_settings").upsert(
       {
         key: AUDIT_CONFIG_KEY,
@@ -77,7 +77,7 @@ export async function listAuditAlertsAction(
 ): Promise<ActionResult<AuditAlertRow[]>> {
   try {
     await requirePermissionAction("can_manage_settings");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("audit_alerts")
       .select(

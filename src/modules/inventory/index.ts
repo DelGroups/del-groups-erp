@@ -7,5 +7,5 @@
  * slips and "send to warehouse") stays in core. This module owns the inventory screens.
  * The stock transfer API route (src/app/api/inventory/transfers) submits transfers here.
  */
-export { submitStockTransfer } from "./lib/stockTransfer";
+export { submitStockTransfer } from "./lib/stockTransferServer";
 export type { SubmitStockTransferPayload } from "./lib/stockTransfer";

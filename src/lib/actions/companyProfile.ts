@@ -88,7 +88,7 @@ export async function uploadCompanyAssetAction(
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
     const folder = kind === "seal" ? "seals" : "company";
     const path = `${folder}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.storage.from(COMPANY_ASSET_BUCKET).upload(path, Buffer.from(await file.arrayBuffer()), {
       contentType: mime,
       upsert: false,

@@ -6,8 +6,11 @@
  * process.env.NEXT_PUBLIC_* directly. Those references are inlined by
  * `next build`, so a build made without them could never serve a tenant.
  *
- * For now there is one tenant, read from the server env at request time. A
- * later task resolves the tenant from the Host header via the control plane.
+ * Single-tenant mode (no control plane configured): one tenant, read from the
+ * server env at request time, exactly as before. Multi-tenant mode
+ * (CONTROL_PLANE_URL + CONTROL_PLANE_SERVICE_ROLE_KEY set): server code reads the
+ * tenant from the signed headers src/proxy.ts adds (src/lib/tenant/server.ts);
+ * this module then never falls back to the env project on the server.
  *
  * Kept free of Next/React imports and `@/` aliases so `node --test` can load it.
  */
@@ -28,12 +31,19 @@ export interface TenantConfig {
   issue: SupabaseConfigIssue;
   /** First 32 chars of the raw URL, for error screens. */
   urlPreview: string;
+  /** Set when the tenant came from the control plane (multi-tenant mode). */
+  fromControlPlane?: boolean;
 }
 
 /** The part of a tenant config that is safe to send to the browser. */
 export interface PublicTenantConfig {
   url: string;
   anonKey: string;
+  /**
+   * Present only for a control-plane tenant: its URL may be any https URL (or local http
+   * in development), not only *.supabase.co. Absent in single-tenant mode.
+   */
+  controlPlane?: true;
 }
 
 export const DEFAULT_TENANT_ID = "default";
@@ -73,6 +83,27 @@ export function isValidSupabaseUrl(url: string): boolean {
   }
 }
 
+/**
+ * URL a control-plane tenant may use: any https URL; plain http only for localhost
+ * (local Supabase stacks) outside production. Env values keep isValidSupabaseUrl.
+ */
+export function isAllowedTenantApiUrl(url: string, production: boolean): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.username || parsed.password) return false;
+    if (parsed.protocol === "https:") return true;
+    if (parsed.protocol !== "http:" || production) return false;
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+
+/** True on the server when a control plane is configured (multi-tenant mode). */
+export function isMultiTenantEnv(env: EnvSource = runtimeEnv()): boolean {
+  return Boolean(cleanEnvValue(env.CONTROL_PLANE_URL) && cleanEnvValue(env.CONTROL_PLANE_SERVICE_ROLE_KEY));
+}
+
 export function isValidSupabaseAnonKey(key: string): boolean {
   if (key.startsWith("eyJ") && key.length > 40) return true;
   if (key.startsWith("sb_publishable_") && key.length > 24) return true;
@@ -110,20 +141,28 @@ export function resolveTenantConfigFromEnv(
   };
 }
 
+/** Config of a tenant that could not be resolved: every client built from it fails. */
+export function unresolvedTenantConfig(tenantId = "unresolved"): TenantConfig {
+  return { tenantId, supabaseUrl: "", supabaseAnonKey: "", isConfigured: false, issue: "missing", urlPreview: "" };
+}
+
 /**
- * Config of the tenant serving this request. The source is unused until
- * tenants are resolved from the Host header; callers pass it already so that
- * change needs no call-site edits.
+ * Single-tenant config from the env. In multi-tenant mode on the server this is
+ * "unresolved": server code gets the tenant from src/lib/tenant/server.ts instead,
+ * so a request can never fall through to the env project by accident.
  */
 export function getTenantConfig(source?: TenantConfigSource): TenantConfig {
   void source;
+  if (typeof window === "undefined" && isMultiTenantEnv()) return unresolvedTenantConfig();
   return resolveTenantConfigFromEnv([runtimeEnv(), buildTimeEnv()]);
 }
 
 /** Browser-safe subset, or null when the tenant is not configured. */
 export function toPublicTenantConfig(config: TenantConfig): PublicTenantConfig | null {
   if (!config.isConfigured) return null;
-  return { url: config.supabaseUrl, anonKey: config.supabaseAnonKey };
+  return config.fromControlPlane
+    ? { url: config.supabaseUrl, anonKey: config.supabaseAnonKey, controlPlane: true }
+    : { url: config.supabaseUrl, anonKey: config.supabaseAnonKey };
 }
 
 const PLACEHOLDER_URL = "https://placeholder.supabase.co";
@@ -151,10 +190,13 @@ export function publicConfigScript(config: PublicTenantConfig | null): string {
 /** Validates an untrusted value (embedded global or API payload) as a public config. */
 export function parsePublicTenantConfig(value: unknown): PublicTenantConfig | null {
   if (!value || typeof value !== "object") return null;
-  const { url, anonKey } = value as Record<string, unknown>;
+  const { url, anonKey, controlPlane } = value as Record<string, unknown>;
   if (typeof url !== "string" || typeof anonKey !== "string") return null;
-  if (!isValidSupabaseUrl(url) || !isValidSupabaseAnonKey(anonKey)) return null;
-  return { url, anonKey };
+  if (!isValidSupabaseAnonKey(anonKey)) return null;
+  if (controlPlane === true) {
+    return isAllowedTenantApiUrl(url, process.env.NODE_ENV === "production") ? { url, anonKey, controlPlane: true } : null;
+  }
+  return isValidSupabaseUrl(url) ? { url, anonKey } : null;
 }
 
 /** Service-role key of the tenant. Server only; never send it to the browser. */

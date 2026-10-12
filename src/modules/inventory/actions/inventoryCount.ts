@@ -20,8 +20,8 @@ export type InventoryCountActionResult<T = void> =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseClient = { from: (table: string) => any; rpc: (fn: string, args?: Record<string, unknown>) => any };
 
-function db(): LooseClient {
-  return createSupabaseAdminClient() as unknown as LooseClient;
+async function db(): Promise<LooseClient> {
+  return (await createSupabaseAdminClient()) as unknown as LooseClient;
 }
 
 function fail(err: unknown): { success: false; error: string } {
@@ -96,7 +96,7 @@ function mapLine(row: Record<string, unknown>): InventoryCountLine {
 }
 
 async function requireStatus(countId: string, allowed: InventoryCountStatus[]): Promise<void> {
-  const { data, error } = await db()
+  const { data, error } = await (await db())
     .from("inventory_counts")
     .select("status")
     .eq("id", countId)
@@ -109,7 +109,7 @@ async function requireStatus(countId: string, allowed: InventoryCountStatus[]): 
 }
 
 async function callRpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await db().rpc(fn, args);
+  const { data, error } = await (await db()).rpc(fn, args);
   if (error) throw new Error(mapRpcError(error.message));
   return data as T;
 }
@@ -119,7 +119,7 @@ async function callRpc<T>(fn: string, args: Record<string, unknown>): Promise<T>
 export async function fetchInventoryCountsAction(): Promise<InventoryCountActionResult<InventoryCountDocument[]>> {
   try {
     await requirePermissionAction("can_writeoff_inventory");
-    const { data, error } = await db()
+    const { data, error } = await (await db())
       .from("inventory_counts")
       .select("*")
       .order("count_date", { ascending: false })
@@ -137,7 +137,7 @@ export async function fetchInventoryCountAction(
 ): Promise<InventoryCountActionResult<InventoryCountDetail>> {
   try {
     await requirePermissionAction("can_writeoff_inventory");
-    const client = db();
+    const client = (await db());
     const { data: header, error: headerError } = await client
       .from("inventory_counts")
       .select("*")
@@ -171,7 +171,7 @@ export async function fetchInventoryCountWarehousesAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_writeoff_inventory");
-    const { data, error } = await db().from("warehouses").select("id, name").order("name");
+    const { data, error } = await (await db()).from("warehouses").select("id, name").order("name");
     if (error) return { success: false, error: error.message };
     return { success: true, data: (data || []) as InventoryCountOption[] };
   } catch (err) {
@@ -213,7 +213,7 @@ export async function createInventoryCountAction(
   try {
     const { user, profile } = await requirePermissionAction("can_writeoff_inventory");
     if (!input.warehouse_id) return { success: false, error: "Anbar seçilməyib" };
-    const client = db();
+    const client = (await db());
 
     const categoryName = input.category_name?.trim() || null;
     const subcategoryName = categoryName ? input.subcategory_name?.trim() || null : null;
@@ -257,7 +257,7 @@ export async function deleteInventoryCountAction(countId: string): Promise<Inven
   try {
     await requirePermissionAction("can_writeoff_inventory");
     await requireStatus(countId, ["draft", "in_progress", "review"]);
-    const { error } = await db().from("inventory_counts").delete().eq("id", countId).neq("status", "posted");
+    const { error } = await (await db()).from("inventory_counts").delete().eq("id", countId).neq("status", "posted");
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err) {
@@ -291,7 +291,7 @@ export async function scanInventoryCountAction(
       p_code: code,
       p_actor: user.id,
     });
-    const { data, error } = await db()
+    const { data, error } = await (await db())
       .from("inventory_count_items")
       .select("*")
       .eq("id", scan.line_id)
@@ -340,7 +340,7 @@ export async function markUncountedAsZeroAction(countId: string): Promise<Invent
   try {
     const { user } = await requirePermissionAction("can_writeoff_inventory");
     await requireStatus(countId, ["in_progress"]);
-    const client = db();
+    const client = (await db());
     const now = new Date().toISOString();
 
     const standard = await client

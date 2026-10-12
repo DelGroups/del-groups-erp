@@ -4,7 +4,7 @@ import {
 } from "@/lib/finance/financialCategories";
 import { PRODUCTION_EXPENSE_CATEGORIES } from "./types";
 
-type DbClient = ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>;
+type DbClient = Awaited<ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>>;
 
 export type { ExpenseCategoryOption };
 

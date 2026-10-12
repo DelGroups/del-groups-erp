@@ -84,7 +84,7 @@ export async function deleteProductAction(productId: string): Promise<DeleteActi
     };
   }
 
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
 
   const { count: saleItemCount } = await admin
     .from("sale_items")

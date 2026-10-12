@@ -2,7 +2,9 @@ import { cache } from "react";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
-import { getTenantConfig, type TenantConfigSource } from "@/lib/tenant/config";
+import type { TenantConfigSource } from "@/lib/tenant/config";
+import { getServerTenantConfig, isMultiTenant } from "@/lib/tenant/server";
+import { requestTenantSource } from "@/lib/tenant/request";
 import { isMissingTableError } from "@/lib/company/profile";
 import {
   firstDisabledModule,
@@ -43,15 +45,16 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
  * table does not exist yet, or cannot be read: then every module is enabled, so
  * a database hiccup never locks people out of their ERP.
  */
-async function loadRows(source?: TenantConfigSource): Promise<TenantModuleRow[] | null> {
-  const { tenantId } = getTenantConfig(source);
+async function loadRows(requested?: TenantConfigSource): Promise<TenantModuleRow[] | null> {
+  const source = await requestTenantSource(requested);
+  const { tenantId } = getServerTenantConfig(source);
   const cached = memo.get(tenantId);
   if (cached && cached.expires > Date.now()) return cached.rows;
 
   let rows: TenantModuleRow[] | null = null;
   let ttl = TTL_MS;
   try {
-    const admin = createSupabaseAdminClient(source) as unknown as SupabaseClient;
+    const admin = (await createSupabaseAdminClient(source)) as unknown as SupabaseClient;
     const { data, error } = await withTimeout(
       admin.from(TENANT_MODULES_TABLE).select("module_id, enabled, installed_at, version"),
       TIMEOUT_MS
@@ -101,5 +104,7 @@ export async function requireModuleApi(id: ModuleId, request?: Request): Promise
 
 /** Drops the cached rows, e.g. after the control panel changed them. */
 export function invalidateEnabledModules(source?: TenantConfigSource): void {
-  memo.delete(getTenantConfig(source).tenantId);
+  // Without a request at hand in multi-tenant mode the tenant is unknown: drop all.
+  if (!source && isMultiTenant()) memo.clear();
+  else memo.delete(getServerTenantConfig(source).tenantId);
 }

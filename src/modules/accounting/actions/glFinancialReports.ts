@@ -34,7 +34,7 @@ export async function fetchGlFinancialReportsAction(
       return { success: false, error: "Tarix aralığı tələb olunur" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const limit = Math.min(Math.max(query.ledgerLimit ?? 50, 1), 200);
     const offset = Math.max(query.ledgerOffset ?? 0, 0);
 
@@ -85,7 +85,7 @@ export async function fetchGlReportFilterOptionsAction(): Promise<{
 }> {
   try {
     await requirePermissionAction("can_view_financial_reports");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const accounts = await fetchGlAccounts({ useAdmin: true });
 

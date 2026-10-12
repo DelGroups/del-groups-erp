@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { parseTenantInput, type TenantErrors } from "@/lib/tenants";
+import { notifyErpTenantChanged } from "@/lib/erpWebhook";
 
 export interface TenantFormState {
   status: "idle" | "error" | "saved";
@@ -41,6 +42,7 @@ export async function createTenant(_prev: TenantFormState, formData: FormData): 
       : failure(values, {}, "saveFailed");
   }
 
+  await notifyErpTenantChanged(data.id);
   revalidatePath("/tenants");
   redirect(`/tenants/${data.id}?created=1`);
 }
@@ -68,6 +70,8 @@ export async function updateTenant(
       : failure(values, {}, "saveFailed");
   }
   if (!data) return failure(values, {}, "notFound");
+
+  await notifyErpTenantChanged(tenantId);
 
   revalidatePath("/tenants");
   revalidatePath(`/tenants/${tenantId}`);

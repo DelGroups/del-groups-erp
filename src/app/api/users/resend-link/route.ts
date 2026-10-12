@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   let admin;
   try {
-    admin = createSupabaseAdminClient();
+    admin = await createSupabaseAdminClient();
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Server konfiqurasiya xətası" },

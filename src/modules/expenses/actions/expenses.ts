@@ -85,7 +85,7 @@ function supplierLabel(row: Record<string, unknown>): string {
 
 /** Attachments per expense; empty when the attachments table is not there yet. */
 async function countExpenseAttachments(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   expenseIds: string[]
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
@@ -115,7 +115,7 @@ export async function fetchExpenseFormOptionsAction(): Promise<ActionResult<Expe
       "can_manage_expenses",
       "can_manage_finance"
     );
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const [accountsRes, categoriesRes, suppliersRes, departmentsRes, employeesRes] = await Promise.all([
       admin.from("accounts").select("id,name,balance,is_vat_account").order("name"),
@@ -217,7 +217,7 @@ export async function fetchExpensesAction(
     const ids = (key: string) =>
       Array.from(new Set(rows.map((r) => r[key]).filter((v): v is string => typeof v === "string")));
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const accountIds = Array.from(new Set([...ids("account_id"), ...ids("vat_account_id")]));
     const supplierIds = ids("supplier_id");
     const departmentIds = ids("department_id");
@@ -503,7 +503,7 @@ export async function reimburseExpenseAction(
 /* ------------------------------------------------------------------ */
 
 async function loadExpenseStatus(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   expenseId: string
 ): Promise<ExpenseStatus | null> {
   const { data } = await admin.from("expenses").select("status").eq("id", expenseId).maybeSingle();
@@ -516,7 +516,7 @@ export async function listExpenseAttachmentsAction(
   try {
     await requireAnyExpensePermission("can_view_expenses", "can_manage_expenses");
     if (!isValidUuid(expenseId)) return { success: false, error: "Xərc sənədi tapılmadı" };
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("expense_attachments" as never)
       .select("id,storage_path,file_name,mime_type,size_bytes,created_at")
@@ -560,7 +560,7 @@ export async function createExpenseAttachmentUploadAction(
     const invalid = validateExpenseAttachment(file);
     if (invalid) return { success: false, error: invalid };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const status = await loadExpenseStatus(admin, expenseId);
     if (!status) return { success: false, error: "Xərc sənədi tapılmadı" };
     if (status === "cancelled") return { success: false, error: "Ləğv edilmiş xərcə fayl əlavə etmək olmaz" };
@@ -585,7 +585,7 @@ export async function confirmExpenseAttachmentAction(
     if (!isValidUuid(expenseId) || !isExpenseAttachmentPath(expenseId, path)) {
       return { success: false, error: "Fayl tapılmadı" };
     }
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const bucket = admin.storage.from(ATTACHMENT_BUCKET);
     const info = await bucket.info(path);
     if (info.error || !info.data) return { success: false, error: "Fayl yüklənməyib" };
@@ -624,7 +624,7 @@ export async function deleteExpenseAttachmentAction(attachmentId: string): Promi
   try {
     const { profile } = await requireAnyExpensePermission("can_manage_expenses");
     if (!isValidUuid(attachmentId)) return { success: false, error: "Fayl tapılmadı" };
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("expense_attachments" as never)
       .select("id,expense_id,storage_path")

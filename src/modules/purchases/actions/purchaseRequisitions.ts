@@ -21,7 +21,7 @@ function num(value: unknown): number {
 export async function listProductionPurchaseRequisitionsAction(): Promise<PurchaseRequisitionsResult> {
   try {
     await requirePermissionAction("can_view_purchases");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data, error } = await admin
       .from("purchase_requests")

@@ -98,7 +98,7 @@ export async function sendSaleToWarehouseAction(
     const autoApprove = isAdminRole(profile?.role);
     const documentNo = String(sale.doc_no ?? "").trim() || String(saleId);
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const result = await sendDocumentToWarehouse(admin, {
       sourceType: "sale",
       documentId: saleId,
@@ -177,7 +177,7 @@ export async function sendPurchaseToWarehouseAction(
     const documentNo =
       String(purchase.invoice_number ?? "").trim() || String(purchaseId);
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const result = await sendDocumentToWarehouse(admin, {
       sourceType: "purchase",
       documentId: purchaseId,

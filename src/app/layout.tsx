@@ -9,11 +9,9 @@ import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { TableColumnResizer } from "@/components/ui/TableColumnResizer";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
-import {
-  getTenantConfig,
-  publicConfigScript,
-  toPublicTenantConfig,
-} from "@/lib/tenant/config";
+import { publicConfigScript, toPublicTenantConfig } from "@/lib/tenant/config";
+import { getServerTenant } from "@/lib/tenant/server";
+import ReadOnlyBanner from "@/components/tenant/ReadOnlyBanner";
 import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/brand";
 import { getPublicCompanyInfo } from "@/lib/company/server";
 import { CompanyInfoProvider } from "@/hooks/useCompanyProfile";
@@ -70,9 +68,8 @@ export default async function RootLayout({
   // Read per request (not at build), so the browser gets this tenant's
   // Supabase config before any client code runs.
   const requestHeaders = await headers();
-  const supabaseConfigScript = publicConfigScript(
-    toPublicTenantConfig(getTenantConfig(requestHeaders))
-  );
+  const tenant = getServerTenant(requestHeaders);
+  const supabaseConfigScript = publicConfigScript(toPublicTenantConfig(tenant.config));
   // Company name for the first paint and the login page (cached per tenant).
   // Also the modules in the tenant's plan, so menus and widgets are right on the first paint.
   const [companyInfo, enabledModuleSet] = await Promise.all([
@@ -100,6 +97,7 @@ export default async function RootLayout({
               <AuthProvider>
                 <QueryProvider>
                   <I18nProvider>
+                    {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
                     {children}
                     <SonnerProvider />
                     <TableColumnResizer />

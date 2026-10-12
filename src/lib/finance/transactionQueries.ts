@@ -20,7 +20,7 @@ async function hydrateLedgerAccountNames(
 
   if (accountIds.length === 0) return rows;
 
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const { data: accounts, error } = await admin
     .from("accounts")
     .select("id,name")
@@ -38,7 +38,7 @@ async function hydrateLedgerAccountNames(
 export async function fetchTransactionsRaw(
   filter?: { type?: UnifiedTransactionType; limit?: number }
 ): Promise<{ rows: Record<string, unknown>[]; error: string | null }> {
-  const admin = createSupabaseAdminClient();
+  const admin = await createSupabaseAdminClient();
   const limit = filter?.limit ?? 2000;
   let lastError: string | null = null;
 

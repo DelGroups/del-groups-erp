@@ -89,7 +89,7 @@ export async function createProductWithRelations(
   input: CreateProductWithRelationsInput,
   adminClient?: SupabaseClient<Database>
 ): Promise<CreateProductWithRelationsResult> {
-  const admin = adminClient ?? createSupabaseAdminClient();
+  const admin = adminClient ?? await createSupabaseAdminClient();
   const isDimensional = Boolean(input.product.is_dimensional);
   const baseLengthM = isDimensional ? Number(input.product.base_length) || 0 : 0;
   const productInput = { ...input.product };

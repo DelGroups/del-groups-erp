@@ -122,7 +122,7 @@ export async function fetchDocumentExpenseCategoriesAction(): Promise<
 > {
   try {
     await requireDocumentExpenseCategoryAccess();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const options = await fetchActiveExpenseCategoryOptions(admin);
     return { success: true, data: options };
   } catch (err) {
@@ -140,7 +140,7 @@ export async function quickCreateExpenseCategoryAction(
     const trimmed = clampString(name, 200);
     if (!trimmed) return { success: false, error: "Kateqoriya adı tələb olunur" };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const payload: Record<string, unknown> = {
       name: trimmed,
       type: "EXPENSE",
@@ -176,7 +176,7 @@ export async function fetchFinancialCategoriesAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_finance");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { rows, error } = await fetchFinancialCategoryRows(admin, { includeInactive: false });
     if (error) return { success: false, error };
 
@@ -216,7 +216,7 @@ export async function fetchFinancialCategoryTreeAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_finance");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { rows, error } = await fetchFinancialCategoryRows(admin, { includeInactive: true });
     if (error) return { success: false, error };
     const expenseRows = rows.filter((row) => row.type === "EXPENSE");
@@ -244,7 +244,7 @@ export async function createFinancialCategoryAction(input: {
       return { success: false, error: "Etibarlı əsas kateqoriya seçin" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const payload: Record<string, unknown> = {
       name,
       type,
@@ -288,7 +288,7 @@ export async function updateFinancialCategoryAction(input: {
       return { success: false, error: "Kateqoriya özünün alt kateqoriyası ola bilməz" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const patch: Record<string, unknown> = {
       name,
       parent_id: parentId,
@@ -316,7 +316,7 @@ export async function deleteFinancialCategoryAction(
     await requireFinanceOrExpenseManageAction();
     if (!isValidUuid(categoryId)) return { success: false, error: "Etibarlı kateqoriya seçin" };
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: category, error: fetchError } = await admin
       .from("financial_categories")
       .select("id,name")
@@ -416,7 +416,7 @@ export async function fetchAccountLedgerBalancesAction(): Promise<
 > {
   try {
     const { profile } = await requirePermissionAction("can_view_finance");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const [accountsRes, ledger] = await Promise.all([
       admin.from("accounts").select("id,code,name,type,balance").order("name"),
       fetchUnifiedLedgerAction(),

@@ -1,7 +1,7 @@
 import type { UnifiedTransactionType } from "@/lib/finance/unifiedLedger";
 import { isSchemaColumnError } from "@/lib/supabase/schemaFallback";
 
-type DbClient = ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>;
+type DbClient = Awaited<ReturnType<typeof import("@/lib/supabaseAdmin").createSupabaseAdminClient>>;
 
 export type FinancialCategoryRecord = {
   id: string;

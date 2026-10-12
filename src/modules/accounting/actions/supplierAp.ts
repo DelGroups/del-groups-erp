@@ -24,7 +24,7 @@ export async function fetchSupplierOpeningBalancesAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_manage_settings", { module: "accounting" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("suppliers")
       .select("id, code, full_name, company_name, balance, opening_balance")
@@ -53,7 +53,7 @@ export async function setSupplierOpeningBalanceAction(
 ): Promise<SupplierOpeningBalanceResult<{ balance: number }>> {
   try {
     await requirePermissionAction("can_manage_settings", { module: "accounting" });
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin.rpc("set_supplier_opening_balance_atomic", {
       p_supplier_id: supplierId,
       p_opening_balance: Math.max(0, Number(openingBalance) || 0),

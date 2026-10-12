@@ -139,7 +139,7 @@ export async function importProductsAction(
       return { success: false, error: "No products to import" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const errors: string[] = [];
     let inserted = 0;
     let skipped = 0;

@@ -157,7 +157,7 @@ function isProductionContractsTableError(error?: { message?: string; code?: stri
 }
 
 async function selectProductionContractForOrder(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string
 ): Promise<ProductionContract | null> {
   const { data, error } = await selectProductionContractRow(admin, orderId);
@@ -355,7 +355,7 @@ function materialSchemaColumnFromError(error?: { message?: string; code?: string
 
 /** Join product/warehouse metadata — never read product_code or product_name from production_materials. */
 async function enrichMaterialRows(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   materials: ProductionMaterial[]
 ): Promise<ProductionMaterial[]> {
   if (!materials.length) return materials;
@@ -395,7 +395,7 @@ async function enrichMaterialRows(
 }
 
 async function selectMaterialRowById(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   materialId: string
 ): Promise<ProductionMaterial | null> {
   const result = await selectProductionMaterialsWithFallback<Record<string, unknown>>(async (columns) => {
@@ -414,7 +414,7 @@ async function selectMaterialRowById(
 }
 
 async function selectMaterialsForOrder(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   options: {
     orderId: string;
     stageNo?: number;
@@ -452,7 +452,7 @@ async function selectMaterialsForOrder(
 }
 
 async function insertMaterialRow(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   input: MaterialInsertInput
 ): Promise<{ error: string | null; material: ProductionMaterial | null }> {
   const item = buildStrictMaterialInsertPayload({
@@ -503,7 +503,7 @@ async function insertMaterialRow(
 }
 
 async function insertMaterialRows(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   rows: MaterialInsertInput[]
 ): Promise<string | null> {
   for (const row of rows) {
@@ -514,7 +514,7 @@ async function insertMaterialRows(
 }
 
 async function updateMaterialOmittingMissingColumns(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   materialId: string,
   patch: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
@@ -627,7 +627,7 @@ function buildOutsourcingInsertPayload(input: OutsourcingInsertInput): Record<st
 }
 
 async function selectOutsourcingRows(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   options: { orderId?: string; orderIds?: string[]; limit?: number; orderCreatedAt?: boolean }
 ) {
   let columns: string[] = [...OUTSOURCING_FIELD_NAMES];
@@ -647,7 +647,7 @@ async function selectOutsourcingRows(
 }
 
 async function insertOutsourcingRows(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   rows: OutsourcingInsertInput[]
 ): Promise<{ error: string | null; rows: ProductionOutsourcing[] }> {
   let payload = rows.map((row) => buildOutsourcingInsertPayload(row));
@@ -767,7 +767,7 @@ function orderRowWithoutRelations(row: Record<string, unknown>): Record<string, 
 }
 
 async function loadOrderBundleRelational(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   id: string
 ): Promise<ProductionOrder | null> {
   const dropped = new Set<string>();
@@ -828,7 +828,7 @@ async function loadOrderBundleRelational(
 }
 
 async function loadOrderBundleParallel(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   id: string
 ): Promise<ProductionOrder | null> {
   const { data: order, error } = await selectProductionOrders(admin, { id, maybeSingle: true });
@@ -852,7 +852,7 @@ async function loadOrderBundleParallel(
 }
 
 async function loadOrderBundle(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   id: string
 ): Promise<ProductionOrder | null> {
   const relational = await loadOrderBundleRelational(admin, id);
@@ -861,7 +861,7 @@ async function loadOrderBundle(
 }
 
 async function loadProductionOrderHeader(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   id: string
 ): Promise<ProductionOrder | null> {
   const { data, error } = await selectProductionOrders(admin, { id, maybeSingle: true });
@@ -899,7 +899,7 @@ function orderCollectionDelta(
 }
 
 async function recastContractorFee(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string,
   totalProjectPrice: number
 ) {
@@ -933,7 +933,7 @@ export async function fetchProductionLookupsAction(): Promise<
   try {
     await requirePermissionAction("can_view_production");
     const { user } = await getServerAuthContext();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const profile = user ? await fetchUserProfile(admin, user.id) : null;
     const access = resolveEffectiveAccess(profile);
     const [customers, products, warehouses, suppliers, employees, accounts, bomsRes, expenseCategories, productionParties] =
@@ -1018,7 +1018,7 @@ export async function listProductionOrdersAction(): Promise<
 > {
   try {
     await requirePermissionAction("can_view_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await selectProductionOrders(admin, {
       orderCreatedAtDesc: true,
       limit: 50,
@@ -1086,7 +1086,7 @@ export async function getProductionOrderAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_view_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, id);
     if (!order) return { success: false, error: "İstehsalat sənədi tapılmadı" };
     return { success: true, data: order };
@@ -1159,7 +1159,7 @@ export async function createProductionOrderAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     const { user, profile } = await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const productionModel = input.production_model
       ? normalizeProductionModel(input.production_model)
@@ -1486,7 +1486,7 @@ export async function createProductionOrderAction(
 }
 
 async function syncProductionAdvancePayment(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   order: ProductionOrder,
   options?: { accountId?: string | null; amount?: number }
 ): Promise<{ ok: boolean; error?: string }> {
@@ -1532,7 +1532,7 @@ export async function updateProductionOrderAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const current = await loadOrderBundle(admin, id);
     if (!current) return { success: false, error: "Sənəd tapılmadı" };
 
@@ -1606,7 +1606,7 @@ export async function updateProductionOrderAction(
 }
 
 async function runProductionMaterialIssueEvent(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string,
   options?: { materialIds?: string[]; updateStatus?: boolean }
 ): Promise<{ ok: boolean; error?: string }> {
@@ -1627,7 +1627,7 @@ async function runProductionMaterialIssueEvent(
 }
 
 async function runProductionReadyEvent(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string
 ): Promise<{ ok: boolean; error?: string }> {
   const { data, error } = await admin.rpc("process_production_ready_event", {
@@ -1645,7 +1645,7 @@ async function runProductionReadyEvent(
 }
 
 async function issueMaterialRow(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   material: ProductionMaterial,
   options?: { updateStatus?: boolean }
 ): Promise<{ ok: boolean; error?: string }> {
@@ -1701,7 +1701,7 @@ async function issueMaterialRow(
 }
 
 async function issuePartialMaterialQuantity(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   material: ProductionMaterial,
   issueQty: number
 ): Promise<{ ok: boolean; error?: string }> {
@@ -1756,7 +1756,7 @@ async function issuePartialMaterialQuantity(
 }
 
 async function syncProductionReservations(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string
 ): Promise<{ ok: boolean; error?: string }> {
   const materials = await selectMaterialsForOrder(admin, { orderId });
@@ -1780,7 +1780,7 @@ async function syncProductionReservations(
 }
 
 async function allocateOrderMaterials(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   order: ProductionOrder
 ): Promise<{ ok: boolean; error?: string }> {
   const pending = order.materials.filter((material) => !material.issued);
@@ -1850,7 +1850,7 @@ export async function updateProductionStatusAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     if (deliverOptions?.header && nextStatus === "Delivered") {
       const saved = await updateProductionOrderAction(id, deliverOptions.header);
@@ -1949,7 +1949,7 @@ export async function syncProductionDeliveryAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, id);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (normalizeProductionType(order.type) !== "Custom") {
@@ -1989,7 +1989,7 @@ export async function addProductionMaterialAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     const { user, profile } = await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.status === "Delivered") return { success: false, error: "Təhvil verilmiş sənədə material əlavə edilə bilməz" };
@@ -2160,7 +2160,7 @@ export async function issueProductionStageAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.status === "Delivered") {
@@ -2204,7 +2204,7 @@ export async function issueProductionMaterialAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     const material = await selectMaterialRowById(admin, materialId);
@@ -2236,7 +2236,7 @@ export async function removeProductionMaterialAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const material = await selectMaterialRowById(admin, materialId);
     if (!material || material.production_order_id !== orderId) {
       return { success: false, error: "Material tapılmadı" };
@@ -2287,7 +2287,7 @@ export async function addProductionOutsourcingAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.type !== "Custom") return { success: false, error: "Xarici kəsim yalnız fərdi layihələrdədir" };
@@ -2326,7 +2326,7 @@ export async function removeProductionOutsourcingAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin
       .from("production_outsourcing")
       .delete()
@@ -2373,7 +2373,7 @@ async function postFinanceSideExpense(
     p_actor_name: input.actorName || null,
   });
   if (error || !data) {
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const inserted = await insertProductionExpenseRow(admin, {
       production_order_id: input.orderId,
       category: input.category,
@@ -2467,7 +2467,7 @@ export async function addProductionExpenseAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     const { user, profile } = await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const client = await createSupabaseServerClient();
     const order = await loadProductionOrderHeader(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
@@ -2571,7 +2571,7 @@ export async function removeProductionExpenseAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: expense } = await admin
       .from("production_expenses")
       .select("id,finance_expense_id,finance_transaction_id,account_id,amount,description")
@@ -2631,7 +2631,7 @@ export async function assignProductionContractorAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.type !== "Custom" || order.custom_workflow !== "subcontractor") {
@@ -2666,7 +2666,7 @@ export async function saveProductionContractAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.type !== "Custom") {
@@ -2782,7 +2782,7 @@ export async function saveProductionBomAction(
 ): Promise<ProductionActionResult<ProductionBom>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     if (!input.finished_product_id) return { success: false, error: "Hazır məhsul seçin" };
     if (!input.name.trim()) return { success: false, error: "BOM adı tələb olunur" };
     if (!input.items.length) return { success: false, error: "Ən azı bir xammal əlavə edin" };
@@ -2859,7 +2859,7 @@ export async function saveProductionBomAction(
 export async function deleteProductionBomAction(bomId: string): Promise<ProductionActionResult> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { error } = await admin.from("production_boms").delete().eq("id", bomId);
     if (error) return { success: false, error: error.message };
     return { success: true };
@@ -2891,7 +2891,7 @@ function mapPurchaseRequest(row: Record<string, unknown>): PurchaseRequest {
 }
 
 async function cancelLinkedDraftPurchase(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   purchaseId: string | null | undefined
 ): Promise<void> {
   if (!purchaseId) return;
@@ -2899,7 +2899,7 @@ async function cancelLinkedDraftPurchase(
 }
 
 async function cancelPendingPurchaseRequestsForProduct(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   orderId: string,
   productId: string | null | undefined
 ): Promise<void> {
@@ -2930,7 +2930,7 @@ async function cancelPendingPurchaseRequestsForProduct(
 }
 
 async function createPurchaseRequestInternal(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   input: {
     orderId: string;
     product: Pick<Product, "id" | "code" | "name" | "unit" | "buy_price">;
@@ -3081,14 +3081,14 @@ async function createPurchaseRequestInternal(
 export type WarehouseProductOption = WarehouseCatalogItem;
 
 async function fetchPolywoodWarehouseProducts(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   warehouseId: string
 ): Promise<WarehouseProductOption[]> {
   return fetchPolywoodWarehouseCatalog(admin, warehouseId);
 }
 
 async function fetchStandardWarehouseProducts(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   warehouseId: string
 ): Promise<WarehouseProductOption[]> {
   return fetchStandardWarehouseCatalog(admin, warehouseId);
@@ -3103,7 +3103,7 @@ export async function fetchWarehouseProductsForProductionAction(
       return { success: true, data: [] };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: warehouse, error: warehouseError } = await admin
       .from("warehouses")
       .select("id, warehouse_type")
@@ -3140,7 +3140,7 @@ export async function createPurchaseRequestAction(
 ): Promise<ProductionActionResult<PurchaseRequest[]>> {
   try {
     const { user } = await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const qty = num(input.quantity);
     if (qty <= 0) return { success: false, error: "Miqdar sıfırdan böyük olmalıdır" };
 
@@ -3205,7 +3205,7 @@ export async function cancelPurchaseRequestAction(
 ): Promise<ProductionActionResult<PurchaseRequest[]>> {
   try {
     await requireProductionIssuePermission();
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data: request, error } = await admin
       .from("purchase_requests")
@@ -3250,7 +3250,7 @@ export async function listPurchaseRequestsAction(
 ): Promise<ProductionActionResult<PurchaseRequest[]>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data, error } = await admin
       .from("purchase_requests")
       .select("*")
@@ -3294,7 +3294,7 @@ export async function updateProductionLogisticsAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
 
@@ -3391,7 +3391,7 @@ export async function recordProductionCustomerPaymentAction(
 ): Promise<ProductionActionResult<ProductionOrder>> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (!input.accountId?.trim()) {
@@ -3428,7 +3428,7 @@ export async function deleteProductionOrderAction(
 ): Promise<ProductionActionResult> {
   try {
     await requirePermissionAction("can_manage_production");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const order = await loadOrderBundle(admin, orderId);
     if (!order) return { success: false, error: "Sənəd tapılmadı" };
     if (order.status === "Delivered" && order.sale_id) {

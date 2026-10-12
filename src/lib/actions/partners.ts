@@ -20,7 +20,7 @@ function partnerCode(input: PartnerFormInput): string {
 }
 
 async function syncCustomerRecord(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   input: PartnerFormInput,
   existingCustomerId: string | null
 ): Promise<string | null> {
@@ -53,7 +53,7 @@ async function syncCustomerRecord(
 }
 
 async function syncSupplierRecord(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   input: PartnerFormInput,
   existingSupplierId: string | null
 ): Promise<string | null> {
@@ -121,7 +121,7 @@ export async function createPartnerAction(
       return { success: false, error: "Ən azı bir rol seçilməlidir" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const customerId = await syncCustomerRecord(admin, input, null);
     const supplierId = await syncSupplierRecord(admin, input, null);
 
@@ -150,7 +150,7 @@ export async function updatePartnerAction(
       return { success: false, error: "Ən azı bir rol seçilməlidir" };
     }
 
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
     const { data: existing, error: fetchError } = await admin
       .from("partners")
       .select("id, customer_id, supplier_id")
@@ -187,7 +187,7 @@ export async function updatePartnerAction(
 export async function deletePartnerAction(partnerId: string): Promise<PartnerActionResult> {
   try {
     await requirePermissionAction("can_manage_customers");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const [{ count: salesCount }, { count: purchasesCount }] = await Promise.all([
       admin
@@ -226,7 +226,7 @@ export async function mergePartnersAction(
 ): Promise<PartnerActionResult<{ salesMoved: number; purchasesMoved: number }>> {
   try {
     await requirePermissionAction("can_manage_customers");
-    const admin = createSupabaseAdminClient();
+    const admin = await createSupabaseAdminClient();
 
     const { data, error } = await admin.rpc("merge_partners", {
       p_source_partner_id: sourcePartnerId,
