@@ -9,6 +9,9 @@ import type { TenantStatus } from "@/lib/tenants";
 import TenantForm from "../TenantForm";
 import { updateTenant } from "../actions";
 import { tenantFormLabels } from "../labels";
+import ProvisioningPanel from "./provisioning/ProvisioningPanel";
+import { loadProvisioningView } from "./provisioning/view";
+import { provisioningConfig } from "@/lib/provisioning/server";
 
 interface Tenant {
   id: string;
@@ -110,6 +113,16 @@ export default async function TenantDetailPage({
 
   const tenant = tenantRes.data as Tenant | null;
   if (!tenant) notFound();
+  const [provisioning, modulesRes] = await Promise.all([
+    loadProvisioningView(supabase, tenant.id),
+    supabase.from("modules").select("id, name, is_core").eq("is_active", true).order("is_core", { ascending: false }).order("name"),
+  ]);
+  const { config: provisioningSettings, missing: missingSettings } = provisioningConfig();
+  const moduleOptions = ((modulesRes.data ?? []) as { id: string; name: string; is_core: boolean }[]).map((m) => ({
+    id: m.id,
+    name: m.name,
+    isCore: m.is_core,
+  }));
   const domains = (domainsRes.data ?? []) as Domain[];
   const database = dbRes.data as TenantDatabase | null;
   const subscription = subRes.data as Subscription | null;
@@ -222,6 +235,38 @@ export default async function TenantDetailPage({
           )}
         </section>
       </div>
+
+      <section className="cp-panel">
+        <h2 className="cp-panel-title">{t("provisioning.title")}</h2>
+        <ProvisioningPanel
+          key={provisioning.job?.id ?? "new"}
+          tenantId={tenant.id}
+          initial={provisioning}
+          modules={moduleOptions}
+          missingSettings={missingSettings}
+          hasDatabase={Boolean(database?.supabase_project_ref)}
+          siteUrl={provisioningSettings ? `https://${tenant.slug}.${provisioningSettings.baseDomain}` : ""}
+          labels={{
+            intro: messages.provisioning.intro,
+            notConfigured: messages.provisioning.notConfigured,
+            hasDatabase: messages.provisioning.hasDatabase,
+            form: messages.provisioning.form,
+            finalStatuses: messages.provisioning.finalStatuses,
+            steps: messages.provisioning.steps,
+            stepStatuses: messages.provisioning.stepStatuses,
+            jobStatuses: messages.provisioning.jobStatuses,
+            attempts: messages.provisioning.attempts,
+            running: messages.provisioning.running,
+            paused: messages.provisioning.paused,
+            continue: messages.provisioning.continue,
+            retry: messages.provisioning.retry,
+            done: messages.provisioning.done,
+            log: messages.provisioning.log,
+            noLog: messages.provisioning.noLog,
+            errors: messages.provisioning.errors,
+          }}
+        />
+      </section>
 
       <section className="cp-panel">
         <h2 className="cp-panel-title">{t("tenants.editTitle")}</h2>

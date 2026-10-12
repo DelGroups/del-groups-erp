@@ -13,13 +13,17 @@ const sql = readdirSync(dir)
 
 const tables = [...sql.matchAll(/create table if not exists public\.(\w+)/g)].map((m) => m[1]);
 
-// The table names listed in `foreach t in array array[...]` right after a marker comment.
-function arrayAfter(marker) {
-  const at = sql.indexOf(marker);
-  assert.ok(at >= 0, marker);
-  const body = sql.slice(at, sql.indexOf("] loop", at));
-  return [...body.matchAll(/'(\w+)'/g)].map((m) => m[1]);
+// Tables handled by `foreach t in array array[...] loop ... end loop` blocks whose body
+// contains `marker` (e.g. "enable row level security", "trg_audit_"), in every migration.
+function loopTables(marker) {
+  const found = new Set();
+  for (const [, list, body] of sql.matchAll(/foreach t in array array\[([^\]]*)\] loop([\s\S]*?)end loop;/g)) {
+    if (body.includes(marker)) for (const [, t] of list.matchAll(/'(\w+)'/g)) found.add(t);
+  }
+  return found;
 }
+/** Append-only logs: not row-audited (they are the record themselves). */
+const LOG_TABLES = ["platform_audit_log", "provisioning_log"];
 const quotedList = (text) => [...text.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 
 test("migration file names are <14-digit version>_<name>.sql", () => {
@@ -49,15 +53,23 @@ test("all tables from the plan exist", () => {
 
 test("every table has row level security", () => {
   const enabled = new Set([
-    ...arrayAfter("-- Tables platform admins read and write directly."),
+    ...loopTables("enable row level security"),
     ...[...sql.matchAll(/alter table public\.(\w+) enable row level security/g)].map((m) => m[1]),
   ]);
   for (const t of tables) assert.ok(enabled.has(t), `${t} has no RLS`);
 });
 
-test("every table except the log itself is audited", () => {
-  const audited = arrayAfter("-- ── Triggers");
-  for (const t of tables.filter((name) => name !== "platform_audit_log")) assert.ok(audited.includes(t), `${t} is not audited`);
+test("every table except the append-only logs is audited", () => {
+  const audited = loopTables("trg_audit_");
+  for (const t of tables.filter((name) => !LOG_TABLES.includes(name))) assert.ok(audited.has(t), `${t} is not audited`);
+});
+
+test("logs are append-only: no update or delete grant", () => {
+  for (const t of LOG_TABLES) {
+    for (const [, grant] of sql.matchAll(new RegExp(`grant ([^;]*) on table public\\.${t} to authenticated`, "g"))) {
+      assert.doesNotMatch(grant, /(update|delete|truncate)/, `${t}: ${grant}`);
+    }
+  }
 });
 
 test("anon is granted nothing", () => {
@@ -87,7 +99,8 @@ test("seeded modules are the ERP's modules (src/modules/*/manifest.ts)", () => {
     .filter((d) => d.isDirectory() && existsSync(new URL(`${d.name}/manifest.ts`, modulesDir)))
     .map((d) => readFileSync(new URL(`${d.name}/manifest.ts`, modulesDir), "utf8").match(/id:\s*"([a-z-]+)"/)[1])
     .sort();
-  const seed = sql.slice(sql.indexOf("insert into public.modules"));
+  const start = sql.indexOf("insert into public.modules");
+  const seed = sql.slice(start, sql.indexOf("on conflict", start));
   const seeded = [...seed.matchAll(/\('([a-z-]+)', '/g)].map((m) => m[1]).sort();
   assert.deepEqual(seeded, erp);
 });

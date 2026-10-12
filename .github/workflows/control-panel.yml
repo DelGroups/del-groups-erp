@@ -11,6 +11,10 @@ on:
       - "src/design-system/**"
       - "src/modules/*/manifest.ts"
       - "scripts/db/supabase-shim.sql"
+      # Provisioning applies the ERP schema (control-panel/tests/provisioning.test.mjs reads it).
+      - "supabase/baseline/**"
+      - "supabase/modules/**"
+      - "supabase/migrations/**"
       - ".github/workflows/control-panel.yml"
   workflow_dispatch:
 

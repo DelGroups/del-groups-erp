@@ -36,6 +36,11 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 # Tracing starts at the repo root (next.config.ts), so the server sits in control-panel/.
 COPY --from=builder /repo/control-panel/.next/standalone ./
 COPY --from=builder /repo/control-panel/.next/static ./control-panel/.next/static
+# The ERP schema provisioning applies to a new tenant (baseline, module install scripts, migrations).
+COPY supabase/baseline ./supabase/baseline
+COPY supabase/modules ./supabase/modules
+COPY supabase/migrations ./supabase/migrations
+ENV ERP_SQL_DIR=/app/supabase
 
 USER nextjs
 EXPOSE 3100

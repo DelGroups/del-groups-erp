@@ -69,3 +69,27 @@ test("a foreign key between two modules is in both install scripts and needs bot
   }
   assert.ok(links > 0, "expected at least one foreign key between modules (crm/expenses and production)");
 });
+
+test("migrations newer than the baseline guard every module table they touch", () => {
+  const version = readFileSync(new URL("../supabase/baseline/VERSION", import.meta.url), "utf8").trim();
+  const moduleTables = new Map();
+  for (const id of order) {
+    const { tables = [] } = JSON.parse(readFileSync(new URL(`${id}/objects.json`, dir), "utf8"));
+    for (const table of tables) moduleTables.set(table, id);
+  }
+  const migrations = new URL("../supabase/migrations/", import.meta.url);
+  for (const file of readdirSync(migrations).filter((f) => /^\d{14}_.+\.sql$/.test(f) && f.slice(0, 14) > version)) {
+    const sql = readFileSync(new URL(file, migrations), "utf8")
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n");
+    for (const [table, id] of moduleTables) {
+      if (new RegExp(`\\bpublic\\.${table}\\b`).test(sql)) {
+        assert.ok(
+          sql.includes(`to_regclass('public.${table}')`),
+          `${file} touches ${table} (module ${id}) without IF to_regclass('public.${table}') IS NOT NULL: a tenant without ${id} could not apply it`
+        );
+      }
+    }
+  }
+});

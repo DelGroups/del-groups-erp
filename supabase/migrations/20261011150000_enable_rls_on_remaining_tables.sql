@@ -32,6 +32,10 @@
 --
 -- Idempotent: safe to run more than once.
 
+-- 2026-10-12 (prompt 9): the blocks of module-owned tables are wrapped in
+-- `IF to_regclass(...) IS NOT NULL`, so a tenant installed without that module can apply
+-- this migration. Where the tables exist (production, every full install) the effect is
+-- unchanged; production already applied this file, so nothing runs again there.
 BEGIN;
 
 -- ════ General ledger: written only by SECURITY DEFINER functions ════
@@ -413,63 +417,70 @@ CREATE POLICY polywood_pieces_delete ON public.polywood_pieces
 -- Written by a server action with the service role. Same rules as
 -- polywood_pieces.
 
-ALTER TABLE public.polywood_inventory_items ENABLE ROW LEVEL SECURITY;
+-- Module table (polywood): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.polywood_inventory_items') IS NOT NULL THEN
+    ALTER TABLE public.polywood_inventory_items ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS polywood_inventory_items_select ON public.polywood_inventory_items;
-CREATE POLICY polywood_inventory_items_select ON public.polywood_inventory_items
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_products')
-    OR public.require_permission('can_create_invoice')
-    OR public.require_permission('can_create_purchase')
-    OR public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_consignments')
-  );
+    DROP POLICY IF EXISTS polywood_inventory_items_select ON public.polywood_inventory_items;
+    CREATE POLICY polywood_inventory_items_select ON public.polywood_inventory_items
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_products')
+        OR public.require_permission('can_create_invoice')
+        OR public.require_permission('can_create_purchase')
+        OR public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_consignments')
+      );
 
-DROP POLICY IF EXISTS polywood_inventory_items_insert ON public.polywood_inventory_items;
-CREATE POLICY polywood_inventory_items_insert ON public.polywood_inventory_items
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    public.require_permission('can_manage_products')
-    OR public.require_permission('can_create_invoice')
-    OR public.require_permission('can_edit_sales')
-    OR public.require_permission('can_create_purchase')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_manage_warehouses')
-  );
+    DROP POLICY IF EXISTS polywood_inventory_items_insert ON public.polywood_inventory_items;
+    CREATE POLICY polywood_inventory_items_insert ON public.polywood_inventory_items
+      FOR INSERT TO authenticated
+      WITH CHECK (
+        public.require_permission('can_manage_products')
+        OR public.require_permission('can_create_invoice')
+        OR public.require_permission('can_edit_sales')
+        OR public.require_permission('can_create_purchase')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_manage_warehouses')
+      );
 
-DROP POLICY IF EXISTS polywood_inventory_items_update ON public.polywood_inventory_items;
-CREATE POLICY polywood_inventory_items_update ON public.polywood_inventory_items
-  FOR UPDATE TO authenticated
-  USING (
-    public.require_permission('can_manage_products')
-    OR public.require_permission('can_create_invoice')
-    OR public.require_permission('can_edit_sales')
-    OR public.require_permission('can_create_purchase')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_manage_warehouses')
-  )
-  WITH CHECK (
-    public.require_permission('can_manage_products')
-    OR public.require_permission('can_create_invoice')
-    OR public.require_permission('can_edit_sales')
-    OR public.require_permission('can_create_purchase')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_manage_warehouses')
-  );
+    DROP POLICY IF EXISTS polywood_inventory_items_update ON public.polywood_inventory_items;
+    CREATE POLICY polywood_inventory_items_update ON public.polywood_inventory_items
+      FOR UPDATE TO authenticated
+      USING (
+        public.require_permission('can_manage_products')
+        OR public.require_permission('can_create_invoice')
+        OR public.require_permission('can_edit_sales')
+        OR public.require_permission('can_create_purchase')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_manage_warehouses')
+      )
+      WITH CHECK (
+        public.require_permission('can_manage_products')
+        OR public.require_permission('can_create_invoice')
+        OR public.require_permission('can_edit_sales')
+        OR public.require_permission('can_create_purchase')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_manage_warehouses')
+      );
 
-DROP POLICY IF EXISTS polywood_inventory_items_delete ON public.polywood_inventory_items;
-CREATE POLICY polywood_inventory_items_delete ON public.polywood_inventory_items
-  FOR DELETE TO authenticated
-  USING (
-    public.require_permission('can_manage_products')
-    OR public.require_permission('can_create_invoice')
-    OR public.require_permission('can_edit_sales')
-    OR public.require_permission('can_create_purchase')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_manage_warehouses')
-  );
+    DROP POLICY IF EXISTS polywood_inventory_items_delete ON public.polywood_inventory_items;
+    CREATE POLICY polywood_inventory_items_delete ON public.polywood_inventory_items
+      FOR DELETE TO authenticated
+      USING (
+        public.require_permission('can_manage_products')
+        OR public.require_permission('can_create_invoice')
+        OR public.require_permission('can_edit_sales')
+        OR public.require_permission('can_create_purchase')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_manage_warehouses')
+      );
+  END IF;
+END
+$guard$;
 
 -- ─── inventory_batches ─────────────────────────────────────────────────────────
 
@@ -539,55 +550,69 @@ CREATE POLICY inventory_batch_consumptions_delete ON public.inventory_batch_cons
 
 -- Opening stock documents (src/lib/initialBalance/actions.ts, service role).
 
-ALTER TABLE public.inventory_initial_balances ENABLE ROW LEVEL SECURITY;
+-- Module table (inventory): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.inventory_initial_balances') IS NOT NULL THEN
+    ALTER TABLE public.inventory_initial_balances ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS inventory_initial_balances_select ON public.inventory_initial_balances;
-CREATE POLICY inventory_initial_balances_select ON public.inventory_initial_balances
-  FOR SELECT TO authenticated
-  USING (public.require_permission('can_view_products'));
+    DROP POLICY IF EXISTS inventory_initial_balances_select ON public.inventory_initial_balances;
+    CREATE POLICY inventory_initial_balances_select ON public.inventory_initial_balances
+      FOR SELECT TO authenticated
+      USING (public.require_permission('can_view_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balances_insert ON public.inventory_initial_balances;
-CREATE POLICY inventory_initial_balances_insert ON public.inventory_initial_balances
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balances_insert ON public.inventory_initial_balances;
+    CREATE POLICY inventory_initial_balances_insert ON public.inventory_initial_balances
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balances_update ON public.inventory_initial_balances;
-CREATE POLICY inventory_initial_balances_update ON public.inventory_initial_balances
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_products'))
-  WITH CHECK (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balances_update ON public.inventory_initial_balances;
+    CREATE POLICY inventory_initial_balances_update ON public.inventory_initial_balances
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_products'))
+      WITH CHECK (public.require_permission('can_manage_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balances_delete ON public.inventory_initial_balances;
-CREATE POLICY inventory_initial_balances_delete ON public.inventory_initial_balances
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balances_delete ON public.inventory_initial_balances;
+    CREATE POLICY inventory_initial_balances_delete ON public.inventory_initial_balances
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_products'));
+  END IF;
+END
+$guard$;
 
 -- ─── inventory_initial_balance_items ───────────────────────────────────────────
 
 -- Same as inventory_initial_balances.
 
-ALTER TABLE public.inventory_initial_balance_items ENABLE ROW LEVEL SECURITY;
+-- Module table (inventory): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.inventory_initial_balance_items') IS NOT NULL THEN
+    ALTER TABLE public.inventory_initial_balance_items ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS inventory_initial_balance_items_select ON public.inventory_initial_balance_items;
-CREATE POLICY inventory_initial_balance_items_select ON public.inventory_initial_balance_items
-  FOR SELECT TO authenticated
-  USING (public.require_permission('can_view_products'));
+    DROP POLICY IF EXISTS inventory_initial_balance_items_select ON public.inventory_initial_balance_items;
+    CREATE POLICY inventory_initial_balance_items_select ON public.inventory_initial_balance_items
+      FOR SELECT TO authenticated
+      USING (public.require_permission('can_view_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balance_items_insert ON public.inventory_initial_balance_items;
-CREATE POLICY inventory_initial_balance_items_insert ON public.inventory_initial_balance_items
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balance_items_insert ON public.inventory_initial_balance_items;
+    CREATE POLICY inventory_initial_balance_items_insert ON public.inventory_initial_balance_items
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balance_items_update ON public.inventory_initial_balance_items;
-CREATE POLICY inventory_initial_balance_items_update ON public.inventory_initial_balance_items
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_products'))
-  WITH CHECK (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balance_items_update ON public.inventory_initial_balance_items;
+    CREATE POLICY inventory_initial_balance_items_update ON public.inventory_initial_balance_items
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_products'))
+      WITH CHECK (public.require_permission('can_manage_products'));
 
-DROP POLICY IF EXISTS inventory_initial_balance_items_delete ON public.inventory_initial_balance_items;
-CREATE POLICY inventory_initial_balance_items_delete ON public.inventory_initial_balance_items
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_products'));
+    DROP POLICY IF EXISTS inventory_initial_balance_items_delete ON public.inventory_initial_balance_items;
+    CREATE POLICY inventory_initial_balance_items_delete ON public.inventory_initial_balance_items
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_products'));
+  END IF;
+END
+$guard$;
 
 -- ─── product_bom ───────────────────────────────────────────────────────────────
 
@@ -655,156 +680,191 @@ CREATE POLICY sub_categories_delete ON public.sub_categories
 
 -- Production actions use the service role; /reports reads it in the browser.
 
-ALTER TABLE public.production_contractors ENABLE ROW LEVEL SECURITY;
+-- Module table (production): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.production_contractors') IS NOT NULL THEN
+    ALTER TABLE public.production_contractors ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS production_contractors_select ON public.production_contractors;
-CREATE POLICY production_contractors_select ON public.production_contractors
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_reports')
-  );
+    DROP POLICY IF EXISTS production_contractors_select ON public.production_contractors;
+    CREATE POLICY production_contractors_select ON public.production_contractors
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_reports')
+      );
 
-DROP POLICY IF EXISTS production_contractors_insert ON public.production_contractors;
-CREATE POLICY production_contractors_insert ON public.production_contractors
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contractors_insert ON public.production_contractors;
+    CREATE POLICY production_contractors_insert ON public.production_contractors
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_contractors_update ON public.production_contractors;
-CREATE POLICY production_contractors_update ON public.production_contractors
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_production'))
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contractors_update ON public.production_contractors;
+    CREATE POLICY production_contractors_update ON public.production_contractors
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_production'))
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_contractors_delete ON public.production_contractors;
-CREATE POLICY production_contractors_delete ON public.production_contractors
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contractors_delete ON public.production_contractors;
+    CREATE POLICY production_contractors_delete ON public.production_contractors
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_production'));
+  END IF;
+END
+$guard$;
 
 -- ─── production_contracts ──────────────────────────────────────────────────────
 
 -- Production actions use the service role; /reports reads it in the browser.
 
-ALTER TABLE public.production_contracts ENABLE ROW LEVEL SECURITY;
+-- Module table (production): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.production_contracts') IS NOT NULL THEN
+    ALTER TABLE public.production_contracts ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS production_contracts_select ON public.production_contracts;
-CREATE POLICY production_contracts_select ON public.production_contracts
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_reports')
-  );
+    DROP POLICY IF EXISTS production_contracts_select ON public.production_contracts;
+    CREATE POLICY production_contracts_select ON public.production_contracts
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_reports')
+      );
 
-DROP POLICY IF EXISTS production_contracts_insert ON public.production_contracts;
-CREATE POLICY production_contracts_insert ON public.production_contracts
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contracts_insert ON public.production_contracts;
+    CREATE POLICY production_contracts_insert ON public.production_contracts
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_contracts_update ON public.production_contracts;
-CREATE POLICY production_contracts_update ON public.production_contracts
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_production'))
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contracts_update ON public.production_contracts;
+    CREATE POLICY production_contracts_update ON public.production_contracts
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_production'))
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_contracts_delete ON public.production_contracts;
-CREATE POLICY production_contracts_delete ON public.production_contracts
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_contracts_delete ON public.production_contracts;
+    CREATE POLICY production_contracts_delete ON public.production_contracts
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_production'));
+  END IF;
+END
+$guard$;
 
 -- ─── production_expenses ───────────────────────────────────────────────────────
 
 -- Production actions use the service role; /reports reads it in the browser.
 
-ALTER TABLE public.production_expenses ENABLE ROW LEVEL SECURITY;
+-- Module table (production): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.production_expenses') IS NOT NULL THEN
+    ALTER TABLE public.production_expenses ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS production_expenses_select ON public.production_expenses;
-CREATE POLICY production_expenses_select ON public.production_expenses
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_reports')
-  );
+    DROP POLICY IF EXISTS production_expenses_select ON public.production_expenses;
+    CREATE POLICY production_expenses_select ON public.production_expenses
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_reports')
+      );
 
-DROP POLICY IF EXISTS production_expenses_insert ON public.production_expenses;
-CREATE POLICY production_expenses_insert ON public.production_expenses
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_expenses_insert ON public.production_expenses;
+    CREATE POLICY production_expenses_insert ON public.production_expenses
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_expenses_update ON public.production_expenses;
-CREATE POLICY production_expenses_update ON public.production_expenses
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_production'))
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_expenses_update ON public.production_expenses;
+    CREATE POLICY production_expenses_update ON public.production_expenses
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_production'))
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_expenses_delete ON public.production_expenses;
-CREATE POLICY production_expenses_delete ON public.production_expenses
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_expenses_delete ON public.production_expenses;
+    CREATE POLICY production_expenses_delete ON public.production_expenses
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_production'));
+  END IF;
+END
+$guard$;
 
 -- ─── production_materials ──────────────────────────────────────────────────────
 
 -- Production actions use the service role; /reports reads it in the browser.
 
-ALTER TABLE public.production_materials ENABLE ROW LEVEL SECURITY;
+-- Module table (production): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.production_materials') IS NOT NULL THEN
+    ALTER TABLE public.production_materials ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS production_materials_select ON public.production_materials;
-CREATE POLICY production_materials_select ON public.production_materials
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_reports')
-  );
+    DROP POLICY IF EXISTS production_materials_select ON public.production_materials;
+    CREATE POLICY production_materials_select ON public.production_materials
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_reports')
+      );
 
-DROP POLICY IF EXISTS production_materials_insert ON public.production_materials;
-CREATE POLICY production_materials_insert ON public.production_materials
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_materials_insert ON public.production_materials;
+    CREATE POLICY production_materials_insert ON public.production_materials
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_materials_update ON public.production_materials;
-CREATE POLICY production_materials_update ON public.production_materials
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_production'))
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_materials_update ON public.production_materials;
+    CREATE POLICY production_materials_update ON public.production_materials
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_production'))
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_materials_delete ON public.production_materials;
-CREATE POLICY production_materials_delete ON public.production_materials
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_materials_delete ON public.production_materials;
+    CREATE POLICY production_materials_delete ON public.production_materials
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_production'));
+  END IF;
+END
+$guard$;
 
 -- ─── production_outsourcing ────────────────────────────────────────────────────
 
 -- Production actions use the service role; /reports reads it in the browser.
 
-ALTER TABLE public.production_outsourcing ENABLE ROW LEVEL SECURITY;
+-- Module table (production): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.production_outsourcing') IS NOT NULL THEN
+    ALTER TABLE public.production_outsourcing ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS production_outsourcing_select ON public.production_outsourcing;
-CREATE POLICY production_outsourcing_select ON public.production_outsourcing
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_production')
-    OR public.require_permission('can_manage_production')
-    OR public.require_permission('can_view_reports')
-  );
+    DROP POLICY IF EXISTS production_outsourcing_select ON public.production_outsourcing;
+    CREATE POLICY production_outsourcing_select ON public.production_outsourcing
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_production')
+        OR public.require_permission('can_manage_production')
+        OR public.require_permission('can_view_reports')
+      );
 
-DROP POLICY IF EXISTS production_outsourcing_insert ON public.production_outsourcing;
-CREATE POLICY production_outsourcing_insert ON public.production_outsourcing
-  FOR INSERT TO authenticated
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_outsourcing_insert ON public.production_outsourcing;
+    CREATE POLICY production_outsourcing_insert ON public.production_outsourcing
+      FOR INSERT TO authenticated
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_outsourcing_update ON public.production_outsourcing;
-CREATE POLICY production_outsourcing_update ON public.production_outsourcing
-  FOR UPDATE TO authenticated
-  USING (public.require_permission('can_manage_production'))
-  WITH CHECK (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_outsourcing_update ON public.production_outsourcing;
+    CREATE POLICY production_outsourcing_update ON public.production_outsourcing
+      FOR UPDATE TO authenticated
+      USING (public.require_permission('can_manage_production'))
+      WITH CHECK (public.require_permission('can_manage_production'));
 
-DROP POLICY IF EXISTS production_outsourcing_delete ON public.production_outsourcing;
-CREATE POLICY production_outsourcing_delete ON public.production_outsourcing
-  FOR DELETE TO authenticated
-  USING (public.require_permission('can_manage_production'));
+    DROP POLICY IF EXISTS production_outsourcing_delete ON public.production_outsourcing;
+    CREATE POLICY production_outsourcing_delete ON public.production_outsourcing
+      FOR DELETE TO authenticated
+      USING (public.require_permission('can_manage_production'));
+  END IF;
+END
+$guard$;
 
 -- ════ Purchasing ════
 
@@ -864,19 +924,26 @@ CREATE POLICY purchase_requests_delete ON public.purchase_requests
 
 -- Written by rate_supplier_delivery (SECURITY DEFINER), so no write policy.
 
-ALTER TABLE public.supplier_delivery_ratings ENABLE ROW LEVEL SECURITY;
+-- Module table (purchases): only when that module is installed (supabase/modules).
+DO $guard$
+BEGIN
+  IF to_regclass('public.supplier_delivery_ratings') IS NOT NULL THEN
+    ALTER TABLE public.supplier_delivery_ratings ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS supplier_delivery_ratings_select ON public.supplier_delivery_ratings;
-CREATE POLICY supplier_delivery_ratings_select ON public.supplier_delivery_ratings
-  FOR SELECT TO authenticated
-  USING (
-    public.require_permission('can_view_suppliers')
-    OR public.require_permission('can_view_purchases')
-  );
+    DROP POLICY IF EXISTS supplier_delivery_ratings_select ON public.supplier_delivery_ratings;
+    CREATE POLICY supplier_delivery_ratings_select ON public.supplier_delivery_ratings
+      FOR SELECT TO authenticated
+      USING (
+        public.require_permission('can_view_suppliers')
+        OR public.require_permission('can_view_purchases')
+      );
 
-DROP POLICY IF EXISTS supplier_delivery_ratings_insert ON public.supplier_delivery_ratings;
-DROP POLICY IF EXISTS supplier_delivery_ratings_update ON public.supplier_delivery_ratings;
-DROP POLICY IF EXISTS supplier_delivery_ratings_delete ON public.supplier_delivery_ratings;
+    DROP POLICY IF EXISTS supplier_delivery_ratings_insert ON public.supplier_delivery_ratings;
+    DROP POLICY IF EXISTS supplier_delivery_ratings_update ON public.supplier_delivery_ratings;
+    DROP POLICY IF EXISTS supplier_delivery_ratings_delete ON public.supplier_delivery_ratings;
+  END IF;
+END
+$guard$;
 
 -- ════ System tables ════
 
