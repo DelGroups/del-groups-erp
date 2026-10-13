@@ -23,7 +23,7 @@ function loopTables(marker) {
   return found;
 }
 /** Append-only logs: not row-audited (they are the record themselves). */
-const LOG_TABLES = ["platform_audit_log", "provisioning_log"];
+const LOG_TABLES = ["platform_audit_log", "provisioning_log", "tenant_migration_log"];
 const quotedList = (text) => [...text.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 
 test("migration file names are <14-digit version>_<name>.sql", () => {

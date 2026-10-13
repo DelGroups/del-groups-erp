@@ -1,0 +1,70 @@
+name: tenant-migrations
+
+# Applies new supabase/migrations files to every tenant database (prompt 10):
+# canary first, then the other tenants in batches; stops at the first failure.
+# Manual only (Actions tab -> tenant-migrations -> Run workflow), never on push.
+# Runs from main only, so only merged migrations reach tenants. Start with a dry run.
+#
+# Secrets (repository or "tenant-migrations" environment):
+#   CONTROL_PLANE_URL                control panel's Supabase project URL
+#   CONTROL_PLANE_SERVICE_ROLE_KEY   its service-role key (reads tenants, records versions)
+#   SUPABASE_MANAGEMENT_API_TOKEN    token that may run SQL on the tenant projects
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: only list what each tenant would get"
+        type: boolean
+        default: true
+      tenant:
+        description: "Only this tenant (slug); empty = all tenants, canary first"
+        type: string
+        default: ""
+      canary:
+        description: "Canary tenant (slug); empty = the tenant marked canary in the panel"
+        type: string
+        default: ""
+      batch_size:
+        description: "Tenants migrated in parallel after the canary"
+        type: string
+        default: "5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tenant-migrations
+  cancel-in-progress: false # never interrupt a running migration
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: tenant-migrations
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Migrate tenants
+        env:
+          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
+          CONTROL_PLANE_SERVICE_ROLE_KEY: ${{ secrets.CONTROL_PLANE_SERVICE_ROLE_KEY }}
+          SUPABASE_MANAGEMENT_API_TOKEN: ${{ secrets.SUPABASE_MANAGEMENT_API_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ONLY_TENANT: ${{ inputs.tenant }}
+          CANARY: ${{ inputs.canary }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+        run: |
+          args=(--batch-size "${BATCH_SIZE:-5}")
+          [[ "$DRY_RUN" == "true" ]] && args+=(--dry-run)
+          [[ -n "$ONLY_TENANT" ]] && args+=(--tenant "$ONLY_TENANT")
+          [[ -n "$CANARY" ]] && args+=(--canary "$CANARY")
+          npm run tenants:migrate -- "${args[@]}"

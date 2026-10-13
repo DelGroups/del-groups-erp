@@ -71,8 +71,27 @@ npm run build
 
 Database checks, without Supabase: on a plain Postgres 17, run `scripts/db/supabase-shim.sql`,
 `supabase/tests/vault-shim.sql`, the migrations (twice), then
-`supabase/tests/rls_and_audit.sql`. The last file prints `ALL CHECKS PASSED`. CI does this in
+`supabase/tests/rls_and_audit.sql`, `runtime_lookup.sql` and `tenant_migrations.sql`. Each
+prints `ALL CHECKS PASSED`. CI does this in
 `.github/workflows/control-panel.yml`.
+
+## Tenant database migrations
+
+New files in `supabase/migrations` (the ERP schema) reach the tenant databases in two ways. Both
+use `lib/migrations`, apply only files newer than `supabase/baseline/VERSION` that the tenant
+does not have yet (from its `supabase_migrations.schema_migrations`), and record the tenant's
+version in `tenant_databases` and every step in `tenant_migration_log`.
+
+- **All tenants:** GitHub Actions → **tenant-migrations** → Run workflow (from `main`, manual
+  only; start with the default dry run). The canary tenant goes first and alone, then the others
+  in batches. The run stops at the first failure, so a broken migration only reaches the canary.
+  Mark the canary on its tenant page. Tenants that are provisioning or cancelled are skipped.
+- **One tenant:** "Migrate this tenant" on the tenant page (needs
+  `SUPABASE_MANAGEMENT_API_TOKEN`).
+
+The tenants list shows each tenant's DB version and flags the ones behind the repo.
+`scripts/tenants/e2e-local.sh` rehearses the whole flow on local Postgres (three tenants, a
+working and a broken migration); CI runs it.
 
 ## Docker
 
@@ -97,5 +116,6 @@ With compose it is off by default. Set `CP_SUPABASE_URL` / `CP_SUPABASE_ANON_KEY
 | `lib/i18n/messages.ts` | all UI text in az, en and ru |
 | `lib/auth.ts` | `requireAdmin()`, called by every page and action |
 | `proxy.ts` | session refresh and redirect to `/login` |
+| `lib/migrations` | tenant migrations: pending files, canary-first run (used by the panel and `scripts/tenants/migrate-all.ts`) |
 | `supabase/migrations` | control-plane schema |
 | `supabase/tests` | database checks (RLS, audit, Vault) |
