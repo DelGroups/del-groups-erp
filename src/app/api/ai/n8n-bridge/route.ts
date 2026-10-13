@@ -23,6 +23,8 @@ import {
 } from "@/lib/ai/n8nBridgeResponse";
 import { erpAgentSessionId, resolveTargetAgent, type ErpAiAgentId } from "@/lib/ai/agents";
 import { requireModuleApi } from "@/lib/modules/server";
+import { checkUsage } from "@/lib/limits/server";
+import { limitResponse } from "@/lib/limits/messages";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -79,6 +81,10 @@ export async function POST(request: NextRequest) {
   if (auth.error) return auth.error;
   const notInPlan = await requireModuleApi("ai");
   if (notInPlan) return notInPlan;
+
+  // Plan AI credit for this month (the native assistant checks the same).
+  const aiQuota = await checkUsage("ai");
+  if (!aiQuota.allowed) return limitResponse("ai", aiQuota.usage);
 
   const limit = rateLimit(`n8n:${auth.user.id}:${getClientIp(request)}`, RATE_LIMIT, RATE_WINDOW_MS);
   if (!limit.allowed) {
@@ -282,6 +288,8 @@ async function uploadAssistantFile(
   originalName: string
 ): Promise<string | null> {
   try {
+    // Over the plan's storage: send the file inline instead (the caller falls back to base64).
+    if (!(await checkUsage("storage")).allowed) return null;
     const ext = extensionFor(mime, originalName);
     const path = `${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
     const admin = await createSupabaseAdminClient();

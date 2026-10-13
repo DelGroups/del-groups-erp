@@ -43,6 +43,8 @@ type BridgeResponse = {
   configured?: boolean;
   steps?: AgentStep[];
   conversationId?: string | null;
+  /** This month's AI credit is 80 % used (plan limit). */
+  limitWarning?: { used: number; limit: number | null };
 };
 
 const AGENT_KEY = "del-erp-ai-agent";
@@ -70,6 +72,7 @@ export default function AiAssistantWidget() {
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState("");
+  const [limitNotice, setLimitNotice] = useState("");
   const [configured, setConfigured] = useState<boolean | null>(null);
   /** Native Claude assistant (/api/ai/agent); null until checked. Text goes there when enabled. */
   const [nativeEnabled, setNativeEnabled] = useState<boolean | null>(null);
@@ -219,6 +222,14 @@ export default function AiAssistantWidget() {
           return;
         }
         appendAssistant(payload);
+        setLimitNotice(
+          payload.limitWarning
+            ? t("limits.aiWarning", {
+                used: payload.limitWarning.used.toFixed(2),
+                limit: payload.limitWarning.limit === null ? "∞" : payload.limitWarning.limit.toFixed(2),
+              })
+            : ""
+        );
       } catch {
         setError(t("aiAssistant.error"));
       } finally {
@@ -569,6 +580,7 @@ export default function AiAssistantWidget() {
                 <p className="text-xs font-semibold text-red-500">{t("aiAssistant.recording")}</p>
               )}
               {error && <p className="text-xs text-red-500">{error}</p>}
+              {limitNotice && !error && <p className="text-xs text-amber-600">{limitNotice}</p>}
               <div ref={bottomRef} />
             </div>
 

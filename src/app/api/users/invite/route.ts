@@ -10,6 +10,9 @@ import {
   normalizeEmail,
 } from "@/lib/auth/validate";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { checkSeats } from "@/lib/limits/server";
+import { limitResponse } from "@/lib/limits/messages";
+import { isSeatLimitDbError } from "@/lib/limits/limits";
 
 interface InviteBody {
   email?: string;
@@ -91,6 +94,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Plan seat limit (the database trigger is the second layer).
+  const seats = await checkSeats(1);
+  if (!seats.allowed) return limitResponse("users", seats);
+
   const redirectTo = new URL("/auth/set-password", getSiteUrl());
 
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
@@ -102,6 +109,12 @@ export async function POST(request: NextRequest) {
   );
 
   if (inviteError || !invited?.user) {
+    // The seat trigger fired while Auth created the user's profile (a seat was taken
+    // between the check above and now). Auth only says "Database error saving new user".
+    if (isSeatLimitDbError(inviteError) || /database error saving new user/i.test(inviteError?.message ?? "")) {
+      const now = await checkSeats(1);
+      if (!now.allowed) return limitResponse("users", now);
+    }
     const alreadyRegistered = /already been registered|already exists/i.test(
       inviteError?.message ?? ""
     );
@@ -127,6 +140,9 @@ export async function POST(request: NextRequest) {
     { onConflict: "id" }
   );
 
+  if (isSeatLimitDbError(profileError)) {
+    return limitResponse("users", await checkSeats(0));
+  }
   if (profileError) {
     return NextResponse.json(
       {

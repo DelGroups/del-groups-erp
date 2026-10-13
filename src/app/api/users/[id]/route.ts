@@ -9,6 +9,9 @@ import {
   isValidUuid,
   normalizeEmail,
 } from "@/lib/auth/validate";
+import { checkSeats } from "@/lib/limits/server";
+import { limitResponse } from "@/lib/limits/messages";
+import { isSeatLimitDbError } from "@/lib/limits/limits";
 
 interface UpdateUserBody {
   full_name?: string;
@@ -93,6 +96,12 @@ export async function PATCH(
     return NextResponse.json({ error: "İstifadəçi tapılmadı" }, { status: 404 });
   }
 
+  // Activating an inactive user takes a seat of the plan.
+  if (isActive === true && !(existingProfile as { is_active?: boolean | null }).is_active) {
+    const seats = await checkSeats(1);
+    if (!seats.allowed) return limitResponse("users", seats);
+  }
+
   let targetRoleName: string | undefined;
   if (roleId !== undefined) {
     const { data: role, error: roleError } = await admin
@@ -170,6 +179,9 @@ export async function PATCH(
     .select("id, email, full_name, role_id, is_active, locale, created_at, updated_at")
     .single();
 
+  if (isSeatLimitDbError(profileUpdateError)) {
+    return limitResponse("users", await checkSeats(0));
+  }
   if (profileUpdateError || !updatedProfile) {
     return NextResponse.json(
       { error: profileUpdateError?.message || "Profil yenilənmədi" },

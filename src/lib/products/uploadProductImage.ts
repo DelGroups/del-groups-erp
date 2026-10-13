@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
+import { storageFullMessage } from "@/lib/limits/client";
 export const PRODUCT_IMAGE_BUCKET = "product-images";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -39,7 +40,7 @@ export async function uploadProductImage(
   });
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: (await storageFullMessage(supabase)) ?? error.message };
   }
 
   const { data } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path);

@@ -93,6 +93,32 @@ The tenants list shows each tenant's DB version and flags the ones behind the re
 `scripts/tenants/e2e-local.sh` rehearses the whole flow on local Postgres (three tenants, a
 working and a broken migration); CI runs it.
 
+## Plans, subscriptions and limits
+
+Prices follow plan §4.2 and are computed only in `lib/billing/pricing.ts` (integer cents, tested):
+monthly = base fee + Σ module price × (users if per-user) + Σ add-on price × quantity; yearly =
+monthly × 12 × (1 − discount). Proration is per day; changing monthly ↔ yearly starts a new period.
+
+- **Plans → New plan / a plan:** base fee, module prices (per user or flat), yearly discount,
+  limits (most users, included storage, included AI credit, custom domain) and add-on prices
+  (extra user, +10 GB, +10 USD AI credit, custom domain). Saved in one transaction (`save_plan()`).
+- **Tenant → Manage subscription:** plan, status, period, seats, modules (dependencies are added),
+  add-ons, with a live price and a "due today" proration preview (no invoice yet). Saving
+  (`save_subscription()`) copies the enabled modules (`tenant_modules`) and the limits
+  (`tenant_limits`) to the tenant's database through the Management API; needs
+  `SUPABASE_MANAGEMENT_API_TOKEN`. **Do not give Del Groups (`del-groups`) a subscription until
+  you want its modules and seats limited.**
+- Limits come from `tenant_entitlements()`: seats = users + extra users; storage and AI = plan +
+  add-ons (null = unlimited). In the ERP: inviting or activating a user beyond the seats is refused
+  by `/api/users` and by a trigger in the tenant database; uploads stop when storage is full; AI
+  questions stop when this month's AI credit is used; 80 % shows a warning.
+- **Daily usage:** the `tenant-usage` workflow (`npm run tenants:usage`) writes `usage_snapshots`,
+  lists tenants at 80 % / 100 % and re-copies modules and limits. Off until the repository variable
+  `USAGE_SNAPSHOTS_ENABLED` is `true`.
+
+`scripts/tenants/e2e-limits.sh` rehearses it on local Postgres (a 5-user plan refuses a 6th
+user); CI runs it.
+
 ## Docker
 
 The image builds from the **repo root**, because the panel reuses `src/design-system`:

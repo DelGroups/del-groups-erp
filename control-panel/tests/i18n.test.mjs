@@ -42,10 +42,11 @@ test("keys built at run time exist: statuses, SSL states, audit actions", () => 
   const dynamic = [
     ...TENANT_STATUSES.map((s) => `tenants.statuses.${s}`),
     ...["pending", "active", "failed"].map((s) => `tenants.detail.sslStatuses.${s}`),
-    ...["insert", "update", "delete", "migrate", "canary", "register_tenant_1"].map((a) => `tenants.detail.actions.${a}`),
+    ...["insert", "update", "delete", "migrate", "canary", "register_tenant_1", "subscription", "tenant_sync"].map((a) => `tenants.detail.actions.${a}`),
     ...["idle", "running", "succeeded", "failed"].map((s) => `migrations.statuses.${s}`),
     ...["migrated", "up_to_date", "planned", "failed", "busy"].map((o) => `migrations.outcomes.${o}`),
     ...["notConfigured", "notMigratable", "failedToStart"].map((e) => `migrations.errors.${e}`),
+    ...["not_synced", "synced", "failed"].map((s) => `billing.subscription.syncStatuses.${s}`),
   ];
   for (const locale of LOCALES) {
     for (const key of dynamic) assert.notEqual(translate(MESSAGES[locale], key), key, `${locale}: ${key}`);

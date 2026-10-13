@@ -73,6 +73,12 @@ jobs:
       - name: Newer migrations apply on top of the baseline
         run: scripts/db/build-fresh.sh --plain-postgres
 
+      # Plan limits in the tenant database (prompt 12): seats trigger, storage policy, status.
+      - name: Tenant limits checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/tenant_limits.sql | tee "$RUNNER_TEMP/tenant_limits.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/tenant_limits.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

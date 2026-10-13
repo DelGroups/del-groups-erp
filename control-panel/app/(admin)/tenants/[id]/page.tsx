@@ -46,12 +46,16 @@ interface TenantDatabase {
 }
 interface Subscription {
   status: string;
+  user_count: number;
+  sync_status: "not_synced" | "synced" | "failed";
   plans: { name: string } | null;
   subscription_items: { module_id: string; modules: { name: string } | null }[];
 }
 interface Usage {
   snapshot_date: string;
   active_users: number;
+  storage_bytes: number;
+  ai_cost: number;
 }
 interface AuditEntry {
   id: number;
@@ -96,13 +100,13 @@ export default async function TenantDetailPage({
       .maybeSingle(),
     supabase
       .from("subscriptions")
-      .select("status, plans(name), subscription_items(module_id, modules(name))")
+      .select("status, user_count, sync_status, plans(name), subscription_items(module_id, modules(name))")
       .eq("tenant_id", id)
       .in("status", ["trial", "active", "past_due"])
       .maybeSingle(),
     supabase
       .from("usage_snapshots")
-      .select("snapshot_date, active_users")
+      .select("snapshot_date, active_users, storage_bytes, ai_cost")
       .eq("tenant_id", id)
       .order("snapshot_date", { ascending: false })
       .limit(1)
@@ -195,6 +199,14 @@ export default async function TenantDetailPage({
             <>
               <p>
                 {t("tenants.detail.plan")}: <strong>{subscription.plans?.name ?? none}</strong>
+                {" · "}
+                {t("billing.subscription.seatsCount", { count: subscription.user_count })}
+                {" · "}
+                <span
+                  className={`cp-badge ${subscription.sync_status === "synced" ? "cp-badge-success" : subscription.sync_status === "failed" ? "cp-badge-danger" : "cp-badge-warning"}`}
+                >
+                  {t(`billing.subscription.syncStatuses.${subscription.sync_status}`)}
+                </span>
               </p>
               {subscription.subscription_items.length === 0 ? (
                 <p className="cp-muted">{t("tenants.detail.noModules")}</p>
@@ -209,6 +221,9 @@ export default async function TenantDetailPage({
               )}
             </>
           )}
+          <Link className="cp-button cp-button-secondary" href={`/tenants/${tenant.id}/subscription`}>
+            {t("billing.subscription.manage")}
+          </Link>
         </section>
 
         <section className="cp-panel">
@@ -216,10 +231,17 @@ export default async function TenantDetailPage({
           {!usage ? (
             <p className="cp-muted">{t("tenants.detail.noUsage")}</p>
           ) : (
-            <p>
-              {t("tenants.detail.usersCount")}: <strong>{usage.active_users}</strong>{" "}
-              <span className="cp-muted">{t("tenants.detail.asOf", { date: formatDate(locale, usage.snapshot_date) })}</span>
-            </p>
+            <>
+              <p>
+                {t("tenants.detail.usersCount")}: <strong>{usage.active_users}</strong>{" "}
+                <span className="cp-muted">{t("tenants.detail.asOf", { date: formatDate(locale, usage.snapshot_date) })}</span>
+              </p>
+              <p>
+                {t("billing.usage.storage")}: <strong>{(Number(usage.storage_bytes) / 1024 ** 3).toFixed(2)} GB</strong>
+                {" · "}
+                {t("billing.usage.aiCost")}: <strong>{Number(usage.ai_cost).toFixed(2)} USD</strong>
+              </p>
+            </>
           )}
         </section>
 

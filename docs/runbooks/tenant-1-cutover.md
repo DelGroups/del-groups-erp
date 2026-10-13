@@ -71,10 +71,10 @@ Files used:
    Export the result (CSV) as `preflight-before.csv`. How to read it:
    - `history / schema_migrations table`: `missing` is expected (production was built by hand).
      Step 5 creates it.
-   - `pending / …`: which of the four newer migrations already took effect. Usually
+   - `pending / …`: which of the newer migrations already took effect. Usually
      `company_profile` and `tenant_modules` are `missing`, `is_admin()` says `no`, and the
      RLS line says `0` (20261011150000 was applied by hand on 2026-10-11). Any mix is fine:
-     all four are safe to run again.
+     all of them are safe to run again.
    - `data / …`: row counts, stock total and newest sale. They must not drop later.
 2. On your PC, in the repo:
 
@@ -180,9 +180,9 @@ table and is safe to run twice.
 GitHub → Actions → **tenant-migrations** → Run workflow (branch `main`):
 
 1. `dry_run` ticked, `tenant` = `del-groups`. The summary lists the files it would apply
-   (normally the four `20261011…` files). Nothing else may be listed.
+   (normally the four `20261011…` files and `20261014100000_tenant_limits`). Nothing else may be listed.
 2. Run again with `dry_run` unticked, `tenant` = `del-groups`. Result `migrated`, version
-   `20261011150000`.
+   = the newest file listed in step 1 (`20261014100000` at the time of writing).
 
 What staff notice (all intended by earlier prompts):
 
@@ -192,6 +192,7 @@ What staff notice (all intended by earlier prompts):
 | `20261011130000_tenant_modules` | every module stays on (same as today without the table) |
 | `20261011140000_fix_is_admin_role_column` | fixes the `column "role" does not exist` error when saving CRM deals and HR advances/leaves/payrolls |
 | `20261011150000_enable_rls_on_remaining_tables` | already in production; runs again with the same result |
+| `20261014100000_tenant_limits` | adds the empty plan-limits table, the seat trigger and the storage quota policy; with no limits row (no subscription) nothing changes |
 
 Then, still in single-tenant mode:
 
@@ -246,7 +247,7 @@ curl -s https://erp.del-groups.com/api/public-config | grep -o '"controlPlane":t
    - [ ] log out and log in again
 3. ERP SQL Editor: run `tenant1_preflight.sql` again → `preflight-after.csv`. Every `data`
    count is equal or higher than in `preflight-before.csv`; `history` shows 121+ rows.
-4. Control panel → Tenants: `del-groups` shows DB version `20261011150000` without "behind";
+4. Control panel → Tenants: `del-groups` shows the newest DB version (`20261014100000` at the time of writing) without "behind";
    its page shows the migration log of step 6.
 
 ## 9. Watch (first day)

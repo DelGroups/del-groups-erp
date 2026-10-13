@@ -67,6 +67,9 @@ select 'pending', '20261011150000_enable_rls_on_remaining_tables: tables of that
              'production_outsourcing', 'purchase_requests', 'sub_categories',
              'supplier_delivery_ratings', 'warehouse_stocks'))
 union all
+select 'pending', '20261014100000_tenant_limits: table (no row = no limits)',
+       case when to_regclass('public.tenant_limits') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

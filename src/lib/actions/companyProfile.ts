@@ -16,6 +16,7 @@ import {
   type CompanyProfile,
 } from "@/lib/company/profile";
 
+import { storageFullError } from "@/lib/limits/messages";
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const ALLOWED_ASSET_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 
@@ -88,6 +89,7 @@ export async function uploadCompanyAssetAction(
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
     const folder = kind === "seal" ? "seals" : "company";
     const path = `${folder}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    if (await storageFullError()) return { success: false, error: "limits.storageFull" };
     const admin = await createSupabaseAdminClient();
     const { error } = await admin.storage.from(COMPANY_ASSET_BUCKET).upload(path, Buffer.from(await file.arrayBuffer()), {
       contentType: mime,

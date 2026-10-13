@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
+import { storageFullMessage } from "@/lib/limits/client";
 export type ContractType = "sale" | "purchase" | "service";
 export type ContractStatus = "active" | "completed" | "cancelled";
 
@@ -322,7 +323,7 @@ export async function uploadContractAttachment(
     .upload(path, file, { upsert: false, contentType: file.type });
 
   if (uploadError) {
-    return { ok: false, error: uploadError.message };
+    return { ok: false, error: (await storageFullMessage(supabase)) ?? uploadError.message };
   }
 
   const result = await updateContract(contractId, { attachment_path: path });
