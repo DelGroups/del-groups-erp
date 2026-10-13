@@ -17,6 +17,8 @@ on:
       - "supabase/migrations/**"
       # Tenant migrations (prompt 10): the engine lives in control-panel/lib/migrations.
       - "scripts/tenants/**"
+      - "supabase/scripts/tenant1_*.sql"
+      - "src/lib/tenant/**"
       - "scripts/db/**"
       - ".github/workflows/control-panel.yml"
   workflow_dispatch:
@@ -88,6 +90,13 @@ jobs:
         env:
           PG_BASE_URL: postgresql://postgres@127.0.0.1:55432
         run: scripts/tenants/e2e-local.sh
+
+      # Tenant #1 cutover (prompt 11): the runbook's database steps on a stand-in for
+      # production built from the snapshot (docs/runbooks/tenant-1-cutover.md).
+      - name: Tenant 1 cutover rehearsal
+        env:
+          PG_BASE_URL: postgresql://postgres@127.0.0.1:55432
+        run: scripts/tenants/rehearse-tenant-1.sh
 
       - name: Server log on failure
         if: failure()
