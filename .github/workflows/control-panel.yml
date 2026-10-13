@@ -76,7 +76,7 @@ jobs:
           for pass in 1 2; do
             for f in control-panel/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
           done
-          for t in rls_and_audit runtime_lookup tenant_migrations plans_and_limits; do
+          for t in rls_and_audit runtime_lookup tenant_migrations plans_and_limits billing; do
             "${PSQL[@]}" -f "control-panel/supabase/tests/$t.sql" | tee "$RUNNER_TEMP/$t.txt"
             grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/$t.txt"
           done
@@ -104,6 +104,16 @@ jobs:
         env:
           PG_BASE_URL: postgresql://postgres@127.0.0.1:55432
         run: scripts/tenants/e2e-limits.sh
+
+      # Invoices and dunning (prompt 13): a renewal invoice, then an unpaid one walks a tenant
+      # through past_due → read_only → suspended and back to active after payment; Del Groups
+      # (billing_exempt) is never touched.
+      - name: Billing and dunning rehearsal
+        env:
+          PG_BASE_URL: postgresql://postgres@127.0.0.1:55432
+        run: |
+          (cd control-panel && npm ci --ignore-scripts --no-audit --no-fund)
+          scripts/tenants/e2e-billing.sh
 
       - name: Server log on failure
         if: failure()

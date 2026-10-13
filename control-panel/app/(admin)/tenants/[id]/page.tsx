@@ -221,9 +221,14 @@ export default async function TenantDetailPage({
               )}
             </>
           )}
-          <Link className="cp-button cp-button-secondary" href={`/tenants/${tenant.id}/subscription`}>
-            {t("billing.subscription.manage")}
-          </Link>
+          <p style={{ display: "flex", gap: "var(--erp-space-2)", flexWrap: "wrap" }}>
+            <Link className="cp-button cp-button-secondary" href={`/tenants/${tenant.id}/subscription`}>
+              {t("billing.subscription.manage")}
+            </Link>
+            <Link className="cp-button cp-button-secondary" href={`/tenants/${tenant.id}/billing`} title={t("billingAdmin.tenant.openHint")}>
+              {t("billingAdmin.tenant.open")}
+            </Link>
+          </p>
         </section>
 
         <section className="cp-panel">

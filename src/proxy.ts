@@ -26,6 +26,9 @@ const TENANT_PAGES = {
 /** API routes that answer for any host (Caddy's on-demand TLS check, the control-panel webhook). */
 const TENANTLESS_API_PREFIX = "/api/tenant/";
 
+/** API routes a read-only (unpaid) tenant may still post to: asking for a plan change. */
+const READ_ONLY_OPEN_API_PREFIX = "/api/billing/";
+
 /** Query params Supabase attaches to invite/recovery/magic-link redirects. */
 const AUTH_LINK_PARAMS = ["code", "token_hash"] as const;
 
@@ -95,7 +98,7 @@ async function multiTenant(request: NextRequest, headerKey: string): Promise<Nex
   const access = tenantAccess(record.status, request.method);
   if (access.kind === "suspended") return fail("suspended", 403, "tenant_suspended");
   if (access.kind === "preparing") return fail("preparing", 503, "tenant_provisioning");
-  if (access.kind === "read_only_blocked") {
+  if (access.kind === "read_only_blocked" && !pathname.startsWith(READ_ONLY_OPEN_API_PREFIX)) {
     return NextResponse.json({ error: "tenant_read_only" }, { status: 403 });
   }
 

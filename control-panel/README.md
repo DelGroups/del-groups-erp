@@ -119,6 +119,36 @@ monthly × 12 × (1 − discount). Proration is per day; changing monthly ↔ ye
 `scripts/tenants/e2e-limits.sh` rehearses it on local Postgres (a 5-user plan refuses a 6th
 user); CI runs it.
 
+## Invoices, payments and dunning
+
+Nothing is billed until **both** are on: a tenant's "Bill this subscription automatically"
+(Tenant → Billing; off by default) and the `billing` workflow (repository variable
+`BILLING_ENABLED=true`). Tenants marked `billing_exempt` are never invoiced or dunned; the
+migration marks `del-groups` exempt.
+
+- **Billing page:** seller and bank details printed on invoices, numbering prefix (numbers restart
+  every year: `INV-2026-00001`), tax, payment terms and the dunning timeline; pending
+  upgrade/downgrade requests from tenants; recent invoices and every billing email.
+- **Tenant → Billing:** billing email, customer VÖEN and address, automatic billing, payment
+  method, "pause dunning until"; invoices (PDF, record a bank transfer, void), payments, emails,
+  and "Run billing now" (today's run for this tenant only).
+- **Renewal:** the invoice for the next period is issued `payment_terms_days` (default 7) before the
+  renewal date and is due on it; its PDF (`lib/billing/pdf.ts`, Noto Sans, in the tenant's
+  language) goes to the private Storage bucket `invoices` and is emailed.
+- **Dunning** (`lib/billing/dunning.ts`): due → past due for `grace_days` (7, full access) →
+  read-only for `suspend_after_days` (30) → suspended. A recorded payment reactivates the tenant at
+  once and the ERP is told through its webhook. Statuses an admin set by hand are never lifted
+  automatically.
+- **Payments** (`lib/billing/providers`): `PaymentProvider` with bank transfer (an admin records
+  the payment) and a stub for the local card gateway, configured only through `CARD_GATEWAY_*` in
+  env. Its webhook is `/api/payments/<gateway id>/webhook` (needs `CONTROL_PLANE_SERVICE_ROLE_KEY`).
+- **Emails** (`lib/billing/email.ts`): invoice, payment received/failed, past due, read-only,
+  suspended, reactivated; each once per invoice. Without `BILLING_EMAIL_API_KEY` /
+  `BILLING_EMAIL_FROM` they are recorded but not sent.
+
+`scripts/tenants/e2e-billing.sh` rehearses a renewal and a full dunning walk on local Postgres;
+CI runs it.
+
 ## Docker
 
 The image builds from the **repo root**, because the panel reuses `src/design-system`:
@@ -137,11 +167,14 @@ With compose it is off by default. Set `CP_SUPABASE_URL` / `CP_SUPABASE_ANON_KEY
 | Path | What |
 | --- | --- |
 | `app/login` | sign-in (only platform admins stay signed in) |
-| `app/(admin)` | shell, tenants (list, new, detail and edit) and plans |
+| `app/(admin)` | shell, tenants (list, new, detail and edit), plans and billing |
+| `app/api/payments/[provider]/webhook` | card gateway webhook (signature checked, no session) |
 | `lib/tenants.ts` | tenant rules, kept in sync with the SQL checks by `tests/schema.test.mjs` |
 | `lib/i18n/messages.ts` | all UI text in az, en and ru |
 | `lib/auth.ts` | `requireAdmin()`, called by every page and action |
-| `proxy.ts` | session refresh and redirect to `/login` |
+| `proxy.ts` | session refresh and redirect to `/login` (not for the payment webhook) |
+| `lib/billing` | prices, limits, invoices, dunning, payment providers, PDF and emails (`run.ts` ties them together) |
+| `assets/fonts` | Noto Sans for invoice PDFs (SIL Open Font License, `OFL.txt`) |
 | `lib/migrations` | tenant migrations: pending files, canary-first run (used by the panel and `scripts/tenants/migrate-all.ts`) |
 | `supabase/migrations` | control-plane schema |
 | `supabase/tests` | database checks (RLS, audit, Vault) |

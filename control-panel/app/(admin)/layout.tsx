@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="cp-brand">{t("common.appName")}</div>
         <NavLink href="/tenants">{t("nav.tenants")}</NavLink>
         <NavLink href="/plans">{t("nav.plans")}</NavLink>
+        <NavLink href="/billing">{t("nav.billing")}</NavLink>
         <div className="cp-sidebar-footer">
           <span>{admin.fullName || admin.email}</span>
           <LanguageSelect

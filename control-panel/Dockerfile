@@ -36,6 +36,9 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 # Tracing starts at the repo root (next.config.ts), so the server sits in control-panel/.
 COPY --from=builder /repo/control-panel/.next/standalone ./
 COPY --from=builder /repo/control-panel/.next/static ./control-panel/.next/static
+# Invoice PDF fonts (Noto Sans, SIL OFL), read at run time by lib/billing/pdf.ts.
+COPY control-panel/assets/fonts ./control-panel/assets/fonts
+ENV BILLING_FONT_DIR=/app/control-panel/assets/fonts
 # The ERP schema provisioning applies to a new tenant (baseline, module install scripts, migrations).
 COPY supabase/baseline ./supabase/baseline
 COPY supabase/modules ./supabase/modules

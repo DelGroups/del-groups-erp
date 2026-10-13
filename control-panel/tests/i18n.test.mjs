@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MESSAGES, LOCALES, translate } from "../lib/i18n/messages.ts";
 import { TENANT_STATUSES } from "../lib/tenants.ts";
+import { EMAIL_KINDS } from "../lib/billing/email.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
@@ -42,11 +43,21 @@ test("keys built at run time exist: statuses, SSL states, audit actions", () => 
   const dynamic = [
     ...TENANT_STATUSES.map((s) => `tenants.statuses.${s}`),
     ...["pending", "active", "failed"].map((s) => `tenants.detail.sslStatuses.${s}`),
-    ...["insert", "update", "delete", "migrate", "canary", "register_tenant_1", "subscription", "tenant_sync"].map((a) => `tenants.detail.actions.${a}`),
+    ...["insert", "update", "delete", "migrate", "canary", "register_tenant_1", "subscription", "tenant_sync", "billing_run"].map((a) => `tenants.detail.actions.${a}`),
     ...["idle", "running", "succeeded", "failed"].map((s) => `migrations.statuses.${s}`),
     ...["migrated", "up_to_date", "planned", "failed", "busy"].map((o) => `migrations.outcomes.${o}`),
     ...["notConfigured", "notMigratable", "failedToStart"].map((e) => `migrations.errors.${e}`),
     ...["not_synced", "synced", "failed"].map((s) => `billing.subscription.syncStatuses.${s}`),
+    ...["draft", "issued", "paid", "overdue", "void"].map((s) => `billingAdmin.invoices.statuses.${s}`),
+    ...["renewal", "change", "manual"].map((k) => `billingAdmin.invoices.kinds.${k}`),
+    ...EMAIL_KINDS.map((k) => `billingAdmin.emails.kinds.${k}`),
+    ...["pending", "sent", "skipped", "failed"].map((s) => `billingAdmin.emails.statuses.${s}`),
+    ...["pending", "succeeded", "failed", "refunded"].map((s) => `billingAdmin.tenant.paymentStatuses.${s}`),
+    ...["bank_transfer", "card", "cash", "other"].map((m) => `billingAdmin.tenant.methods.${m}`),
+    ...["admin", "billing"].map((s) => `billingAdmin.tenant.sources.${s}`),
+    ...["monthly", "yearly"].map((p) => `billing.subscription.periods.${p}`),
+    ...EMAIL_KINDS.flatMap((k) => [`billingEmail.${k}.subject`, `billingEmail.${k}.body`]),
+    ...["beneficiary", "beneficiaryTaxId", "bankName", "bankCode", "bankTaxId", "swift", "correspondentAccount", "account", "reference"].map((b) => `invoiceDoc.bank.${b}`),
   ];
   for (const locale of LOCALES) {
     for (const key of dynamic) assert.notEqual(translate(MESSAGES[locale], key), key, `${locale}: ${key}`);
