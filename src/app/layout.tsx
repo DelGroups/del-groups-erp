@@ -12,6 +12,7 @@ import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
 import { publicConfigScript, toPublicTenantConfig } from "@/lib/tenant/config";
 import { getServerTenant } from "@/lib/tenant/server";
 import ReadOnlyBanner from "@/components/tenant/ReadOnlyBanner";
+import LimitBanner from "@/components/limits/LimitBanner";
 import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/brand";
 import { getPublicCompanyInfo } from "@/lib/company/server";
 import { CompanyInfoProvider } from "@/hooks/useCompanyProfile";
@@ -98,6 +99,8 @@ export default async function RootLayout({
                 <QueryProvider>
                   <I18nProvider>
                     {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
+                    {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
+                    {tenant.status !== null ? <LimitBanner /> : null}
                     {children}
                     <SonnerProvider />
                     <TableColumnResizer />

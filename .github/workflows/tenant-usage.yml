@@ -1,0 +1,48 @@
+name: tenant-usage
+
+# Daily usage snapshot of every tenant (prompt 12): active users, file storage and this
+# month's AI cost go to usage_snapshots in the control panel; what is at 80 % / 100 % of the
+# plan is listed in the job summary; each tenant's modules and limits are copied again from
+# its subscription. Reads the tenant databases; writes only usage_snapshots, subscription
+# sync status, tenant_modules and tenant_limits (the latter two from the subscription).
+#
+# OFF until the repository variable USAGE_SNAPSHOTS_ENABLED is "true" (Settings → Secrets and
+# variables → Actions → Variables). A manual run (Run workflow) works either way, from main.
+#
+# Secrets (repository or "tenant-migrations" environment, same as tenant-migrations):
+#   CONTROL_PLANE_URL, CONTROL_PLANE_SERVICE_ROLE_KEY, SUPABASE_MANAGEMENT_API_TOKEN
+on:
+  schedule:
+    - cron: "30 1 * * *" # 01:30 UTC = 05:30 Baku
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tenant-usage
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.USAGE_SNAPSHOTS_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: tenant-migrations
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Usage snapshot
+        env:
+          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
+          CONTROL_PLANE_SERVICE_ROLE_KEY: ${{ secrets.CONTROL_PLANE_SERVICE_ROLE_KEY }}
+          SUPABASE_MANAGEMENT_API_TOKEN: ${{ secrets.SUPABASE_MANAGEMENT_API_TOKEN }}
+        run: npm run tenants:usage

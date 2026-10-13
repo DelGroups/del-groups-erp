@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Mail,
@@ -25,6 +25,9 @@ import { fetchAllProfiles, fetchRoles } from "@/lib/auth/profile";
 import type { Role, UserProfile } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import SeatLimitNudge from "@/components/limits/SeatLimitNudge";
+import { useLimitStatus } from "@/components/limits/useLimitStatus";
+import { isSeatLimitDbError } from "@/lib/limits/limits";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "-";
@@ -365,8 +368,11 @@ function UsersView() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { status: limits, reload: reloadLimits } = useLimitStatus();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
+    reloadLimits();
     setLoading(true);
     setError("");
     try {
@@ -416,7 +422,13 @@ function UsersView() {
       .eq("id", profile.id);
 
     if (updateError) {
-      setError(updateError.message);
+      // The plan's seat limit (database trigger trg_profiles_seat_limit).
+      setError(
+        isSeatLimitDbError(updateError)
+          ? t("limits.seatLimitReached", { used: limits?.users.used ?? "?", limit: limits?.users.limit ?? "?" })
+          : updateError.message
+      );
+      reloadLimits();
       return;
     }
     flash(
@@ -513,7 +525,11 @@ function UsersView() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl app-card">
+      {limits ? (
+        <SeatLimitNudge users={limits.users} onReview={() => tableRef.current?.scrollIntoView({ behavior: "smooth" })} />
+      ) : null}
+
+      <div ref={tableRef} className="overflow-hidden rounded-2xl app-card">
         <table className="w-full text-left text-xs">
           <thead className="bg-app-card-hover text-[10px] font-bold uppercase tracking-wide text-app-muted">
             <tr>

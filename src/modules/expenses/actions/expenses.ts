@@ -33,6 +33,7 @@ import type { PermissionKey } from "@/types/database.types";
 import type { ActionResult } from "@/lib/supabase/actionResult";
 import { assertModulesEnabled } from "@/lib/modules/server";
 
+import { storageFullError } from "@/lib/limits/messages";
 export interface ExpenseAccountOption {
   id: string;
   name: string;
@@ -564,6 +565,10 @@ export async function createExpenseAttachmentUploadAction(
     const status = await loadExpenseStatus(admin, expenseId);
     if (!status) return { success: false, error: "Xərc sənədi tapılmadı" };
     if (status === "cancelled") return { success: false, error: "Ləğv edilmiş xərcə fayl əlavə etmək olmaz" };
+
+    // Signed upload URLs bypass the storage policy, so the plan's storage is checked here.
+    const full = await storageFullError();
+    if (full) return { success: false, error: full };
 
     const ext = EXPENSE_ATTACHMENT_TYPES[normalizeAttachmentMime(file.type)];
     const path = `${expenseId}/${crypto.randomUUID()}.${ext}`;

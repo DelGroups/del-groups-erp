@@ -12,6 +12,8 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import { companyDisplayName, EMPTY_COMPANY_PROFILE } from "@/lib/company/profile";
 import { getEnabledModules, requireModuleApi } from "@/lib/modules/server";
+import { checkUsage } from "@/lib/limits/server";
+import { limitResponse } from "@/lib/limits/messages";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,10 @@ export async function POST(request: NextRequest) {
       { status: 429, headers: { "Retry-After": String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } }
     );
   }
+
+  // Plan AI credit for this month: no new question at 100 %, a warning from 80 %.
+  const aiQuota = await checkUsage("ai");
+  if (!aiQuota.allowed) return limitResponse("ai", aiQuota.usage);
 
   let body: { message?: string; locale?: string; conversationId?: string; history?: unknown };
   try {
@@ -171,5 +177,6 @@ export async function POST(request: NextRequest) {
     conversationId,
     model: result.model,
     tier: result.tier,
+    ...(aiQuota.state === "warning" ? { limitWarning: { used: aiQuota.usage.used, limit: aiQuota.usage.limit } } : {}),
   });
 }

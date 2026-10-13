@@ -11,6 +11,7 @@ import {
   type CrmConfig,
 } from "../lib/config";
 
+import { storageFullError } from "@/lib/limits/messages";
 const SEAL_BUCKET = "crm-assets";
 const MAX_SEAL_BYTES = 5 * 1024 * 1024;
 const ALLOWED_SEAL_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
@@ -74,6 +75,8 @@ export async function uploadCrmSealAction(formData: FormData): Promise<ActionRes
     }
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
     const path = `seals/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const full = await storageFullError();
+    if (full) return { success: false, error: full };
     const admin = await createSupabaseAdminClient();
     const buffer = Buffer.from(await file.arrayBuffer());
     const { error } = await admin.storage.from(SEAL_BUCKET).upload(path, buffer, {

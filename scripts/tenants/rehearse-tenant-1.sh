@@ -140,11 +140,17 @@ echo "  business data identical before and after"
 echo "  company profile filled from today's settings (screens unchanged)"
 [[ "$(q "$COPY" "select count(*) filter (where enabled) || '/' || count(*) from public.tenant_modules")" == "18/18" ]] || fail "modules"
 echo "  tenant_modules: 18/18 enabled (same as today: no table = everything on)"
-[[ "$(q "$COPY" "select count(*) from supabase_migrations.schema_migrations where version like '20261011%'")" == 4 ]] || fail "history"
-echo "  migration history: 117 baseline files + the 4 newer ones recorded"
-[[ "$(q "$CP" "select schema_version || ' ' || migration_status from public.tenant_databases where supabase_project_ref = '$REF'")" == "20261011150000 succeeded" ]] \
+VERSION="$(tr -d '[:space:]' < "$ROOT/supabase/baseline/VERSION")"
+NEWER=0; LATEST="$VERSION"
+for f in "$ROOT"/supabase/migrations/*.sql; do
+  v="$(basename "$f" | cut -c1-14)"
+  if [[ "$v" > "$VERSION" ]]; then NEWER=$((NEWER + 1)); LATEST="$v"; fi
+done
+[[ "$(q "$COPY" "select count(*) from supabase_migrations.schema_migrations where version > '$VERSION'")" == "$NEWER" ]] || fail "history"
+echo "  migration history: 117 baseline files + the $NEWER newer ones recorded"
+[[ "$(q "$CP" "select schema_version || ' ' || migration_status from public.tenant_databases where supabase_project_ref = '$REF'")" == "$LATEST succeeded" ]] \
   || fail "control plane version"
-echo "  control plane: del-groups at 20261011150000, last run succeeded"
+echo "  control plane: del-groups at $LATEST, last run succeeded"
 
 echo
 echo "== 10. Rollback: restore the backup into a fresh database"
