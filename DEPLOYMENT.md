@@ -124,6 +124,11 @@ proxy. The service-role key is fetched server-side from the control plane, kept 
 memory and never sent to the browser. Register the production domain as a tenant before
 turning this on, or it shows "not found".
 
+With Docker, also set `ERP_HEALTHCHECK_HOST` to a registered domain (e.g. `erp.del-groups.com`):
+the container healthcheck loads `/login` with that `Host`, because in multi-tenant mode
+`127.0.0.1` is not a tenant. Switching Del Groups' own production (tenant #1) step by step,
+with backup, rehearsal, smoke test and rollback: `docs/runbooks/tenant-1-cutover.md`.
+
 Note: `read_only` blocks mutations that go through this server (server actions, POST/PUT/
 PATCH/DELETE on `/api`). Writes the browser sends straight to Supabase are not blocked by
 the proxy; enforcing read-only in the tenant database comes with plan limits (prompt 12).

@@ -37,7 +37,10 @@ COPY --from=builder /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 
+# In multi-tenant mode the proxy serves a page only for a registered domain, so the check
+# must name one: set ERP_HEALTHCHECK_HOST (e.g. erp.del-groups.com) in .env.production.
+# Unset, the request is exactly wget's default (Host: 127.0.0.1:3000).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/login || exit 1
+  CMD wget -qO- --header "Host: ${ERP_HEALTHCHECK_HOST:-127.0.0.1:3000}" http://127.0.0.1:3000/login || exit 1
 
 CMD ["node", "server.js"]
