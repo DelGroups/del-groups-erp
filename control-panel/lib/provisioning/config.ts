@@ -18,6 +18,11 @@ export interface ProvisioningConfig {
 
 export type MissingSetting = "SUPABASE_MANAGEMENT_API_TOKEN" | "SUPABASE_ORG_SLUG" | "TENANT_BASE_DOMAIN";
 
+/** Folder with the ERP's baseline/, modules/ and migrations/ SQL (ERP_SQL_DIR, else ../supabase). */
+export function erpSqlDir(env: Readonly<Record<string, string | undefined>>, cwd: string): string {
+  return (env.ERP_SQL_DIR ?? "").trim() || path.resolve(cwd, "..", "supabase");
+}
+
 export function provisioningConfigFromEnv(
   env: Readonly<Record<string, string | undefined>>,
   cwd: string
@@ -32,7 +37,7 @@ export function provisioningConfigFromEnv(
   if (!baseDomain) missing.push("TENANT_BASE_DOMAIN");
   const group = value("SUPABASE_REGION_GROUP");
   const regionGroup = group === "americas" || group === "apac" ? group : "emea";
-  const sqlDir = value("ERP_SQL_DIR") || path.resolve(cwd, "..", "supabase");
+  const sqlDir = erpSqlDir(env, cwd);
   if (missing.length) return { config: null, missing };
   return { config: { managementToken, organizationSlug, regionGroup, baseDomain, sqlDir }, missing };
 }

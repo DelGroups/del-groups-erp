@@ -15,6 +15,9 @@ on:
       - "supabase/baseline/**"
       - "supabase/modules/**"
       - "supabase/migrations/**"
+      # Tenant migrations (prompt 10): the engine lives in control-panel/lib/migrations.
+      - "scripts/tenants/**"
+      - "scripts/db/**"
       - ".github/workflows/control-panel.yml"
   workflow_dispatch:
 
@@ -60,7 +63,7 @@ jobs:
         run: |
           PGDATA="$RUNNER_TEMP/pgdata"
           initdb -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 > /dev/null
-          pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP" -l "$RUNNER_TEMP/pg.log" -w start
+          pg_ctl -D "$PGDATA" -o "-p 55432 -k $RUNNER_TEMP -c wal_level=logical" -l "$RUNNER_TEMP/pg.log" -w start
 
       - name: Migrations (twice), RLS / audit and tenant lookup checks
         run: |
@@ -70,10 +73,21 @@ jobs:
           for pass in 1 2; do
             for f in control-panel/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
           done
-          for t in rls_and_audit runtime_lookup; do
+          for t in rls_and_audit runtime_lookup tenant_migrations; do
             "${PSQL[@]}" -f "control-panel/supabase/tests/$t.sql" | tee "$RUNNER_TEMP/$t.txt"
             grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/$t.txt"
           done
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      # Three local tenants + a local control plane: a new migration reaches the canary
+      # first, a broken one stops the run after the canary (scripts/tenants/e2e-local.sh).
+      - name: Tenant migrations rehearsal
+        env:
+          PG_BASE_URL: postgresql://postgres@127.0.0.1:55432
+        run: scripts/tenants/e2e-local.sh
 
       - name: Server log on failure
         if: failure()

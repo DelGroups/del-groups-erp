@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "node --import ./scripts/node-ts/register.mjs --test \"tests/**/*.test.mjs\"",
     "build:zip": "node scripts/create-source-zip.mjs",
-    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs",
+    "tenants:migrate": "node --import ./scripts/node-ts/register.mjs scripts/tenants/migrate-all.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

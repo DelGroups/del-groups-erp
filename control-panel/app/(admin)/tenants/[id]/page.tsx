@@ -12,6 +12,11 @@ import { tenantFormLabels } from "../labels";
 import ProvisioningPanel from "./provisioning/ProvisioningPanel";
 import { loadProvisioningView } from "./provisioning/view";
 import { provisioningConfig } from "@/lib/provisioning/server";
+import MigrationPanel from "./migrations/MigrationPanel";
+import { loadMigrationView } from "./migrations/view";
+import { migrationConfig, repoLatestVersion } from "@/lib/migrations/server";
+import { dbVersion, SKIPPED_STATUSES } from "@/lib/migrations/plan";
+import { erpSqlDir } from "@/lib/provisioning/config";
 
 interface Tenant {
   id: string;
@@ -113,11 +118,14 @@ export default async function TenantDetailPage({
 
   const tenant = tenantRes.data as Tenant | null;
   if (!tenant) notFound();
-  const [provisioning, modulesRes] = await Promise.all([
+  const [provisioning, migrations, modulesRes] = await Promise.all([
     loadProvisioningView(supabase, tenant.id),
+    loadMigrationView(supabase, tenant.id),
     supabase.from("modules").select("id, name, is_core").eq("is_active", true).order("is_core", { ascending: false }).order("name"),
   ]);
   const { config: provisioningSettings, missing: missingSettings } = provisioningConfig();
+  const { missing: missingMigrationSettings } = migrationConfig();
+  const latest = repoLatestVersion(erpSqlDir(process.env, process.cwd()));
   const moduleOptions = ((modulesRes.data ?? []) as { id: string; name: string; is_core: boolean }[]).map((m) => ({
     id: m.id,
     name: m.name,
@@ -125,6 +133,7 @@ export default async function TenantDetailPage({
   }));
   const domains = (domainsRes.data ?? []) as Domain[];
   const database = dbRes.data as TenantDatabase | null;
+  const version = dbVersion(database);
   const subscription = subRes.data as Subscription | null;
   const usage = usageRes.data as Usage | null;
   const history = (auditRes.data ?? []) as AuditEntry[];
@@ -225,7 +234,16 @@ export default async function TenantDetailPage({
               <dt>{t("tenants.detail.region")}</dt>
               <dd>{database.region ?? none}</dd>
               <dt>{t("tenants.detail.schemaVersion")}</dt>
-              <dd>{database.schema_version ?? none}</dd>
+              <dd>
+                {version ?? none}{" "}
+                {version && latest ? (
+                  version >= latest ? (
+                    <span className="cp-badge cp-badge-success">{t("tenants.detail.upToDate")}</span>
+                  ) : (
+                    <span className="cp-badge cp-badge-warning">{t("tenants.detail.behind", { latest })}</span>
+                  )
+                ) : null}
+              </dd>
               <dt>{t("tenants.detail.lastMigration")}</dt>
               <dd>
                 {database.last_migration ?? none}
@@ -264,6 +282,37 @@ export default async function TenantDetailPage({
             log: messages.provisioning.log,
             noLog: messages.provisioning.noLog,
             errors: messages.provisioning.errors,
+          }}
+        />
+      </section>
+
+      <section className="cp-panel">
+        <h2 className="cp-panel-title">{t("migrations.title")}</h2>
+        <MigrationPanel
+          tenantId={tenant.id}
+          initial={migrations}
+          hasDatabase={Boolean(database?.supabase_project_ref)}
+          canMigrate={
+            Boolean(database?.supabase_project_ref) && !(SKIPPED_STATUSES as readonly string[]).includes(tenant.status)
+          }
+          missingSettings={missingMigrationSettings}
+          labels={{
+            intro: messages.migrations.intro,
+            notConfigured: messages.migrations.notConfigured,
+            notMigratable: messages.migrations.notMigratable,
+            canary: messages.migrations.canary,
+            canaryHint: messages.migrations.canaryHint,
+            status: messages.migrations.status,
+            statuses: messages.migrations.statuses,
+            migrate: messages.migrations.migrate,
+            migrating: messages.migrations.migrating,
+            confirm: messages.migrations.confirm,
+            confirmYes: messages.migrations.confirmYes,
+            cancel: messages.common.cancel,
+            outcomes: messages.migrations.outcomes,
+            errors: messages.migrations.errors,
+            log: messages.migrations.log,
+            noLog: messages.migrations.noLog,
           }}
         />
       </section>
