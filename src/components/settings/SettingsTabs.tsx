@@ -2,13 +2,14 @@
 
 import React from "react";
 import Link from "next/link";
-import { Blocks, Boxes, Building2, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { Blocks, Boxes, Building2, CreditCard, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { PermissionKey } from "@/types/database.types";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
+import { billingPageEnabled } from "@/lib/billing/overview";
 import type { ModuleId } from "@/modules/types";
 
 interface SettingsTab {
@@ -123,6 +124,14 @@ const SETTINGS_TABS: SettingsTab[] = [
     adminOnly: true,
   },
   {
+    id: "billing",
+    titleKey: "settings.billingTab",
+    path: "/settings/billing",
+    icon: CreditCard,
+    permission: "can_manage_settings",
+    adminOnly: true,
+  },
+  {
     id: "audit",
     titleKey: "settings.auditTab",
     path: "/settings/audit",
@@ -130,6 +139,9 @@ const SETTINGS_TABS: SettingsTab[] = [
     permission: "can_manage_settings",
   },
 ];
+
+// Next inlines NEXT_PUBLIC_* only when referenced by name. Off unless "true" (prompt 13).
+const BILLING_TAB = billingPageEnabled({ NEXT_PUBLIC_BILLING_PAGE_ENABLED: process.env.NEXT_PUBLIC_BILLING_PAGE_ENABLED });
 
 export default function SettingsTabs({ activeTab }: { activeTab: string }) {
   const { can, isAdmin } = useAuth();
@@ -140,7 +152,8 @@ export default function SettingsTabs({ activeTab }: { activeTab: string }) {
       can(tab.permission) &&
       (!tab.adminOnly || isAdmin) &&
       isEnabled(tab.module) &&
-      (isBarcodeModuleEnabled() || tab.id !== "barcode")
+      (isBarcodeModuleEnabled() || tab.id !== "barcode") &&
+      (BILLING_TAB || tab.id !== "billing")
   );
 
   return (

@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const PAYMENT_WEBHOOKS = "/api/payments/";
+
 /**
  * Refreshes the Supabase session cookie and sends signed-out visitors to /login.
  * Optimistic only: every page and action checks the platform admin again (lib/auth.ts).
  */
 export async function proxy(request: NextRequest) {
+  // Payment gateways call their webhook without a session; the route checks their signature.
+  if (request.nextUrl.pathname.startsWith(PAYMENT_WEBHOOKS)) return NextResponse.next();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const isLogin = request.nextUrl.pathname === "/login";

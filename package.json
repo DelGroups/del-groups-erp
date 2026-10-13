@@ -14,7 +14,8 @@
     "tenants:migrate": "node --import ./scripts/node-ts/register.mjs scripts/tenants/migrate-all.ts",
     "tenants:history-sql": "node --import ./scripts/node-ts/register.mjs scripts/tenants/migration-history.ts",
     "tenants:smoke": "node --import ./scripts/node-ts/register.mjs scripts/tenants/smoke-test.ts",
-    "tenants:usage": "node --import ./scripts/node-ts/register.mjs scripts/tenants/usage-snapshot.ts"
+    "tenants:usage": "node --import ./scripts/node-ts/register.mjs scripts/tenants/usage-snapshot.ts",
+    "tenants:billing": "node --import ./scripts/node-ts/register.mjs scripts/tenants/billing-run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

@@ -1,0 +1,63 @@
+name: billing
+
+# Daily billing run (prompt 13, scripts/tenants/billing-run.ts): for every tenant whose
+# subscription has "Bill this subscription automatically" on (never a billing_exempt tenant
+# such as Del Groups), issues the renewal invoice when it is due, stores its PDF and emails it,
+# and moves unpaid tenants through dunning (past_due → read_only → suspended) or back to
+# active once paid. Writes only to the control plane; the ERP is told through its webhook.
+#
+# OFF until the repository variable BILLING_ENABLED is "true" (Settings → Secrets and
+# variables → Actions → Variables). A manual run (Run workflow) works either way, from main;
+# with no auto-billed subscription it does nothing.
+#
+# Secrets (repository or "tenant-migrations" environment):
+#   required  CONTROL_PLANE_URL, CONTROL_PLANE_SERVICE_ROLE_KEY
+#   optional  BILLING_EMAIL_API_KEY, BILLING_EMAIL_FROM (without them emails are recorded, not sent)
+#             ERP_TENANT_WEBHOOK_URL, TENANT_WEBHOOK_SECRET (status changes reach the ERP at once)
+#             CARD_GATEWAY_ID, CARD_GATEWAY_API_URL, CARD_GATEWAY_MERCHANT_ID, CARD_GATEWAY_SECRET_KEY,
+#             CARD_GATEWAY_WEBHOOK_SECRET (saved-card charges, once the gateway is wired in)
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC = 07:00 Baku, after the usage snapshot
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: billing
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.BILLING_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: tenant-migrations
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          (cd control-panel && npm ci --ignore-scripts --no-audit --no-fund)
+
+      - name: Billing run
+        env:
+          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
+          CONTROL_PLANE_SERVICE_ROLE_KEY: ${{ secrets.CONTROL_PLANE_SERVICE_ROLE_KEY }}
+          BILLING_EMAIL_API_KEY: ${{ secrets.BILLING_EMAIL_API_KEY }}
+          BILLING_EMAIL_FROM: ${{ secrets.BILLING_EMAIL_FROM }}
+          ERP_TENANT_WEBHOOK_URL: ${{ secrets.ERP_TENANT_WEBHOOK_URL }}
+          TENANT_WEBHOOK_SECRET: ${{ secrets.TENANT_WEBHOOK_SECRET }}
+          CARD_GATEWAY_ID: ${{ secrets.CARD_GATEWAY_ID }}
+          CARD_GATEWAY_API_URL: ${{ secrets.CARD_GATEWAY_API_URL }}
+          CARD_GATEWAY_MERCHANT_ID: ${{ secrets.CARD_GATEWAY_MERCHANT_ID }}
+          CARD_GATEWAY_SECRET_KEY: ${{ secrets.CARD_GATEWAY_SECRET_KEY }}
+          CARD_GATEWAY_WEBHOOK_SECRET: ${{ secrets.CARD_GATEWAY_WEBHOOK_SECRET }}
+        run: npm run tenants:billing
