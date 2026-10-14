@@ -19,6 +19,8 @@ import type { DashboardData } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
+import AppsPageClient from "@/app/apps/page.client";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -52,7 +54,7 @@ const emptyDashboard: DashboardData = {
   monthlyTrend: [],
 };
 
-export default function ManagementDashboardPage() {
+function ManagementDashboardPage() {
   const { t } = useI18n();
   const { can } = useAuth();
   const canReconcileAr =
@@ -269,4 +271,13 @@ export default function ManagementDashboardPage() {
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
+}
+
+/**
+ * Home: with the new shell on, the first screen is the app launcher (every module as a tile,
+ * the user picks one), like the ERP's own home. With it off, the management dashboard as before.
+ */
+export default function HomePage() {
+  const { active } = useNewUi();
+  return active ? <AppsPageClient /> : <ManagementDashboardPage />;
 }

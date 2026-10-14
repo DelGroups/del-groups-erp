@@ -57,6 +57,11 @@ test("with NEW_UI off nothing is read and nothing changes", () => {
   assert.match(read("src/app/api/shell/kpis/route.ts"), /if \(!isNewUiEnabled\(\)\) return NextResponse\.json\(\{ error: "not_found" \}, \{ status: 404 \}\);/);
 });
 
+test("the home page opens the app launcher in the new shell and the dashboard otherwise", () => {
+  const home = read("src/app/page.client.tsx");
+  assert.match(home, /export default function HomePage\(\) \{\s*const \{ active \} = useNewUi\(\);\s*return active \? <AppsPageClient \/> : <ManagementDashboardPage \/>;/);
+});
+
 // ── Apps ─────────────────────────────────────────────────────────────────────
 
 const SECTIONS = [
