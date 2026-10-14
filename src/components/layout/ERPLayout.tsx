@@ -3,6 +3,8 @@
 import React from "react";
 import Sidebar from "@/components/Sidebar";
 import AppTopBar from "@/components/layout/AppTopBar";
+import NewShell from "@/components/shell/NewShell";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 import { cn } from "@/lib/cn";
 
 export interface ERPLayoutProps {
@@ -23,6 +25,16 @@ export function ERPLayout({
   className,
   contentClassName,
 }: ERPLayoutProps) {
+  // NEW_UI (prompt 16): an admin who switched to the new shell gets it here; everyone else,
+  // and everyone while NEW_UI is off, gets the classic shell exactly as before.
+  const { active: newShell } = useNewUi();
+  if (newShell) {
+    return (
+      <NewShell pageTitle={pageTitle} contentClassName={contentClassName}>
+        {children}
+      </NewShell>
+    );
+  }
   return (
     <div className={cn("flex h-screen overflow-hidden bg-[color:var(--erp-bg-main)]", className)}>
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={onMobileClose} />

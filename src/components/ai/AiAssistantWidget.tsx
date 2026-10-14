@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AI_OPEN_EVENT } from "@/lib/shell/shell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bot, Mic, Paperclip, Send, Sparkles, Square, X } from "lucide-react";
@@ -114,6 +115,13 @@ export default function AiAssistantWidget() {
     streamRef.current = null;
     recorderRef.current = null;
     setRecording(false);
+  }, []);
+
+  // The new shell's AI button (prompt 16) opens the assistant; nothing sends this otherwise.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(AI_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(AI_OPEN_EVENT, onOpen);
   }, []);
 
   useEffect(() => {

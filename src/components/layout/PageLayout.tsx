@@ -10,6 +10,7 @@ import PermissionGuard from "@/components/auth/PermissionGuard";
 import { SidebarMenuProvider } from "@/components/layout/SidebarContext";
 import { getRequiredPermission } from "@/lib/auth/routePermissions";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 import type { PermissionKey } from "@/types/database.types";
 
 interface PageLayoutProps {
@@ -23,6 +24,8 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const aiEnabled = useEnabledModules().isEnabled("ai");
+  // The new shell (prompt 16) brings its own palette and mobile menu.
+  const { active: newShell } = useNewUi();
   const requiredPermission =
     permission === undefined ? getRequiredPermission(pathname) : permission;
 
@@ -50,7 +53,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
         closeMobileMenu: () => setMobileMenuOpen(false),
       }}
     >
-      {mobileMenuOpen ? (
+      {mobileMenuOpen && !newShell ? (
         <button
           type="button"
           aria-label={t("nav.closeMenu")}
@@ -67,7 +70,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
         {content}
       </ERPLayout>
 
-      <CommandPalette />
+      {newShell ? null : <CommandPalette />}
       {aiEnabled ? <AiAssistantWidget /> : null}
     </SidebarMenuProvider>
   );
