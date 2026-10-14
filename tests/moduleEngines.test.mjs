@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as hr from "../src/modules/hr/views/hr.ts";
 import * as exp from "../src/modules/expenses/views/expenses.ts";
 import * as com from "../src/modules/commissions/views/commissions.ts";
 import * as cons from "../src/modules/consignment/views/consignment.ts";
@@ -74,6 +75,8 @@ const TEXT_FILES = [
   "src/modules/commissions/components/CommissionsScreen.tsx",
   "src/modules/expenses/views/expenses.ts",
   "src/modules/expenses/components/ExpensesScreen.tsx",
+  "src/modules/hr/views/hr.ts",
+  "src/modules/hr/components/EmployeesScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -353,4 +356,46 @@ test("expenses: approval stages, filters and the classic summary", () => {
   const k = Object.fromEntries(exp.expenseKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
   // Classic summary: booked = posted + approved (owed), cancelled out; pending = draft + submitted.
   assert.deepEqual(k, { month: "148 common.currency", total: "158.00 common.currency", pending: "70.00 common.currency", owed: "30.00 common.currency" });
+});
+
+// ── HR ───────────────────────────────────────────────────────────────────────
+
+test("hr: the employees route keeps the classic page while NEW_UI is off, payroll tabs included", () => {
+  assert.match(read("src/app/employees/page.tsx"), /if \(!isNewUiEnabled\(\)\) return <EmployeesPageClient \/>;/);
+  const sw = read("src/app/employees/new-ui-switch.tsx");
+  assert.match(sw, /return active \? <EmployeesScreen extraTabs=\{isEnabled\("payroll"\) \? PAYROLL_EMPLOYEE_TABS : \[\]\} \/> : <EmployeesPageClient \/>;/);
+  assert.match(read("src/app/employees/page.client.tsx"), /<EmployeesPage extraTabs=\{isEnabled\("payroll"\) \? PAYROLL_EMPLOYEE_TABS : \[\]\} \/>/);
+});
+
+test("hr: directory with the classic paid-leave balance, leaves, filters and cards", () => {
+  const leaves = [
+    { id: "l1", employee_id: "e1", leave_type: "PAID", status: "APPROVED", start_date: "2026-03-01", end_date: "2026-03-05", days_count: 5, employees: { full_name: "Leyla" } },
+    { id: "l2", employee_id: "e1", leave_type: "PAID", status: "PENDING", start_date: "2026-11-01", end_date: "2026-11-03", days_count: 3 },
+    { id: "l3", employee_id: "e1", leave_type: "PAID", status: "APPROVED", start_date: "2025-12-20", end_date: "2025-12-24", days_count: 4 },
+    { id: "l4", employee_id: "e2", leave_type: "SICK", status: "APPROVED", start_date: "2026-10-13", end_date: "2026-10-15", days_count: 3 },
+  ];
+  const used = hr.paidLeaveUsed(leaves, NOW);
+  assert.equal(used.get("e1"), 5);
+  const emps = [
+    hr.employeeToRecord({ id: "e1", employee_code: "E1", full_name: "Leyla", status: "active", base_salary: 1200, contract_end_date: "2026-11-01" }, used),
+    hr.employeeToRecord({ id: "e2", employee_code: "E2", full_name: "Rauf", status: "on_leave", base_salary: 900 }, used),
+    hr.employeeToRecord({ id: "e3", employee_code: "E3", full_name: "Old", status: "inactive", base_salary: 500 }, used),
+  ];
+  assert.equal(emps[0].paid_leave_left, 16);
+  assert.equal(emps[1].paid_leave_left, 21);
+  const edef = hr.employeesDefinition({ fetchAll: async () => [] }, [{ value: "sales", label: "Sales" }]);
+  assert.deepEqual(validateDefinition(edef), []);
+  assert.equal(edef.model.readPermission, "can_view_hr");
+  assert.deepEqual(emps.filter((r) => matchesFilters(r, edef.filters, ["contract_ending"], { userId: null, now: NOW })).map((r) => r.id), ["e1"]);
+  const ek = Object.fromEntries(hr.employeeKpis(emps, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(ek, { active: "1", on_leave: "1", payroll: "1,200 common.currency", contracts: "1" });
+  const lrecs = leaves.map(hr.leaveToRecord);
+  assert.equal(lrecs[0].employee_name, "Leyla");
+  const ldef = hr.leavesDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(validateDefinition(ldef), []);
+  const ids = (f) => lrecs.filter((r) => matchesFilters(r, ldef.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["current"]), "l4");
+  assert.equal(ids(["upcoming"]), "l2");
+  const lk = Object.fromEntries(hr.leaveKpis(lrecs, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(lk, { pending: "1", today: "1", paid_days: "5", sick: "3" });
 });
