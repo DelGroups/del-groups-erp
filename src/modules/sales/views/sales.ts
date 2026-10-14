@@ -11,8 +11,10 @@ import type { FilterDef, ModelDef, SelectionOption, ViewDefinition, ViewRecord }
 export const SALES_VIEW_KEY = "sales.invoices";
 export const SALES_REPORT_VIEW_KEY = "sales.report";
 
-export type PaymentState = "unpaid" | "partial" | "paid";
-export type WarehouseState = "not_sent" | "pending" | "approved" | "rejected";
+export type { PaymentState, WarehouseState } from "../../../lib/invoices/documentStates";
+export { paymentState, warehouseState } from "../../../lib/invoices/documentStates";
+import type { PaymentState, WarehouseState } from "../../../lib/invoices/documentStates";
+import { paymentState, warehouseState, DOC_STATUS_OPTIONS as DOC, PAYMENT_STATE_OPTIONS as PAY, WAREHOUSE_STATE_OPTIONS as WH } from "../../../lib/invoices/documentStates";
 
 export interface SaleListRecord extends ViewRecord {
   doc_no: string | null;
@@ -56,19 +58,6 @@ export function saleRemaining(row: Record<string, unknown>): number {
   }).totalRemaining;
 }
 
-export function paymentState(total: number, paid: number, remaining: number): PaymentState {
-  if (remaining <= 0.004) return "paid";
-  return paid > 0 || remaining < total - 0.004 ? "partial" : "unpaid";
-}
-
-/** The classic send badge: not sent, waiting for approval, sent, else rejected. */
-export function warehouseState(sent: unknown, slipStatus: unknown): WarehouseState {
-  if (sent !== true) return "not_sent";
-  if (slipStatus === "pending") return "pending";
-  if (slipStatus === "approved") return "approved";
-  return "rejected";
-}
-
 /** A row of fetchSalesListWithMeta / fetchSaleById (SaleRecord) → a flat record. */
 export function saleToRecord(row: Record<string, unknown>): SaleListRecord {
   const total = num(row.total_amount);
@@ -99,22 +88,9 @@ export function saleToRecord(row: Record<string, unknown>): SaleListRecord {
   };
 }
 
-export const DOC_STATUS_OPTIONS: SelectionOption[] = [
-  { value: "draft", labelKey: "invoice.statusDraft", color: "#94a3b8" },
-  { value: "posted", labelKey: "invoice.statusPosted", color: "#10b981" },
-  { value: "cancelled", labelKey: "invoice.statusCancelled", color: "#f43f5e" },
-];
-export const PAYMENT_STATE_OPTIONS: SelectionOption[] = [
-  { value: "unpaid", labelKey: "sales.engine.payment.unpaid", color: "#f43f5e" },
-  { value: "partial", labelKey: "sales.engine.payment.partial", color: "#f59e0b" },
-  { value: "paid", labelKey: "sales.engine.payment.paid", color: "#10b981" },
-];
-export const WAREHOUSE_STATE_OPTIONS: SelectionOption[] = [
-  { value: "not_sent", labelKey: "warehouseSend.notSent", color: "#94a3b8" },
-  { value: "pending", labelKey: "warehouseSend.pendingApproval", color: "#f59e0b" },
-  { value: "approved", labelKey: "warehouseSend.sent", color: "#10b981" },
-  { value: "rejected", labelKey: "warehouseSend.rejected", color: "#f43f5e" },
-];
+export const DOC_STATUS_OPTIONS: SelectionOption[] = DOC.map((o) => ({ ...o }));
+export const PAYMENT_STATE_OPTIONS: SelectionOption[] = PAY.map((o) => ({ ...o }));
+export const WAREHOUSE_STATE_OPTIONS: SelectionOption[] = WH.map((o) => ({ ...o }));
 export const PAYMENT_TYPE_OPTIONS: SelectionOption[] = [
   { value: "cash", labelKey: "invoice.paymentTypeCash" },
   { value: "credit", labelKey: "invoice.paymentTypeCredit" },

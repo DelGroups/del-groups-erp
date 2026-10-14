@@ -1,0 +1,145 @@
+// Module screens on the view engine (phase 18, NEW_UI): shared dashboard helpers, every
+// switched route still renders its classic page while NEW_UI is off, every text exists in
+// az/en/ru, and each module's own record mapping, definitions and dashboard figures.
+//   npm test
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
+import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import { purchaseFilters, purchaseKpis, purchaseRemaining, purchasesDefinition, purchasesModel, purchaseToRecord } from "../src/modules/purchases/views/purchases.ts";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const read = (p) => readFileSync(join(root, p), "utf8");
+const fmt = { t: (k, p) => (p ? `${k}:${JSON.stringify(p)}` : k), locale: "en" };
+const NOW = new Date(2026, 9, 14, 12);
+
+// ── Shared ───────────────────────────────────────────────────────────────────
+
+test("dashboard helpers: sums, counts, weekly series and month totals", () => {
+  const recs = [
+    { id: "a", d: "2026-10-13", v: 10 },
+    { id: "b", d: "2026-10-02", v: 5 },
+    { id: "c", d: "2026-09-20", v: 20 },
+    { id: "d", d: null, v: 7 },
+    { id: "e", d: "2026-06-01", v: 1 },
+  ];
+  assert.equal(sumIf(recs, (r) => r.v), 43);
+  assert.equal(sumIf(recs, (r) => r.v, (r) => r.v > 6), 37);
+  assert.equal(countIf(recs, (r) => !!r.d), 4);
+  const w = weeklySeries(recs, (r) => r.d, (r) => r.v, NOW, 8);
+  assert.equal(w.length, 8);
+  assert.equal(w[7], 10);
+  assert.equal(w.reduce((s, x) => s + x, 0), 35);
+  assert.deepEqual(monthTotals(recs, (r) => r.d, (r) => r.v, NOW), { current: 15, previous: 20, delta: -25 });
+  assert.deepEqual(monthTotals([recs[0]], (r) => r.d, (r) => r.v, NOW).delta, null);
+});
+
+/**
+ * Every route switched in phase 18: [route dir, module, classic export, screen export].
+ * Each module branch adds its routes here.
+ */
+const ROUTES = [
+  ["purchases", "purchases", "PurchasesPage", "PurchasesScreen"],
+];
+/** New files whose texts must exist in all languages, per module. */
+const TEXT_FILES = [
+  "src/views/components/EngineScreen.tsx",
+  "src/views/components/KpiCards.tsx",
+  "src/modules/purchases/views/purchases.ts",
+  "src/modules/purchases/components/PurchasesScreen.tsx",
+];
+
+test("with NEW_UI off every switched route renders exactly its classic page", () => {
+  for (const [route, module, classic, screen] of ROUTES) {
+    const page = read(`src/app/${route}/page.tsx`);
+    assert.match(page, new RegExp(`if \\(!isNewUiEnabled\\(\\)\\) return <${classic} />;`), route);
+    const client = read(`src/app/${route}/page.client.tsx`);
+    assert.match(client, new RegExp(`return active \\? <${screen} /> : <${classic} />;`), route);
+    assert.match(client, new RegExp(`import\\("@/modules/${module}/pages"\\)\\.then\\(\\(m\\) => m\\.${screen}\\)`), route);
+    assert.match(read(`src/modules/${module}/pages.ts`), new RegExp(`export \\{ default as ${screen} \\}`), route);
+  }
+});
+
+test("every text of the new module screens exists in az, en and ru", () => {
+  const keys = new Set();
+  for (const f of TEXT_FILES) {
+    assert.ok(existsSync(join(root, f)), f);
+    for (const m of read(f).matchAll(/["'`]((?:[a-z][A-Za-z0-9]*)\.[a-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)["'`]/g)) {
+      const k = m[1];
+      // Only translation keys: the first segment is a messages namespace.
+      if (k.split(".")[0] in enMessages) keys.add(k);
+    }
+  }
+  // Model keys look like texts; they are not.
+  for (const k of [...keys]) if (/\.(invoices|records|report|list)$/.test(k) && !k.startsWith("views.")) keys.delete(k);
+  const get = (messages, key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), messages);
+  for (const [name, messages] of [["az", azMessages], ["en", enMessages], ["ru", ruMessages]]) {
+    const missing = [...keys].filter((k) => typeof get(messages, k) !== "string");
+    assert.deepEqual(missing, [], `${name} misses ${missing.join(", ")}`);
+  }
+});
+
+// ── Purchases ────────────────────────────────────────────────────────────────
+
+const prow = (id, extra = {}) => ({
+  id,
+  invoice_number: `P-${id}`,
+  doc_date: "2026-10-05",
+  supplier_id: "s1",
+  supplier_name: "Ali",
+  supplier_company: "Taxta MMC",
+  total_amount: 100,
+  paid_amount: 0,
+  debt_amount: 100,
+  status: "posted",
+  warehouse_sent: false,
+  warehouse_slip_status: null,
+  created_at: "2026-10-05T10:00:00Z",
+  ...extra,
+});
+const pdef = purchasesDefinition(purchasesModel({ fetchAll: async () => [], fetchOne: async () => null }));
+
+test("purchases: record mapping keeps the classic debt, status and send state", () => {
+  const r = purchaseToRecord(prow("a"));
+  assert.equal(r.supplier_name, "Ali (Taxta MMC)");
+  assert.equal(r.remaining, 100);
+  assert.equal(r.payment_state, "unpaid");
+  assert.equal(r.doc_status, "posted");
+  assert.equal(r.warehouse_state, "not_sent");
+  assert.equal(purchaseRemaining({ total_amount: 100, paid_amount: 30, debt_amount: 0 }), 70);
+  assert.equal(purchaseRemaining({ total_amount: 100, paid_amount: 30, debt_amount: 50 }), 50);
+  // Legacy labels: blank or "debtor" are posted, "Ləğv edildi" cancelled.
+  assert.equal(purchaseToRecord(prow("b", { status: null })).doc_status, "posted");
+  assert.equal(purchaseToRecord(prow("c", { status: "Borclu" })).doc_status, "posted");
+  assert.equal(purchaseToRecord(prow("d", { status: "draft" })).doc_status, "draft");
+  assert.equal(purchaseToRecord(prow("e", { supplier_name: null })).supplier_name, "Taxta MMC");
+});
+
+test("purchases: definition, filters and dashboard cards", () => {
+  assert.deepEqual(validateDefinition(pdef), []);
+  assert.equal(pdef.model.module, "purchases");
+  assert.equal(pdef.model.readPermission, "can_view_purchases");
+  assert.ok(pdef.fields.every((f) => f.readonly));
+  const recs = [
+    purchaseToRecord(prow("a", { doc_date: "2026-10-02" })),
+    purchaseToRecord(prow("b", { doc_date: "2026-10-10", paid_amount: 100, debt_amount: 0, warehouse_sent: true, warehouse_slip_status: "approved" })),
+    purchaseToRecord(prow("c", { doc_date: "2026-09-10", total_amount: 200, paid_amount: 50, debt_amount: 150 })),
+    purchaseToRecord(prow("d", { status: "draft", total_amount: 999 })),
+  ];
+  const ctx = { userId: "u", now: NOW };
+  const ids = (f) => recs.filter((r) => matchesFilters(r, purchaseFilters(), f, ctx)).map((r) => r.id).join("");
+  assert.equal(ids(["this_month"]), "abd");
+  assert.equal(ids(["last_month"]), "c");
+  assert.equal(ids(["unpaid", "partial"]), "acd");
+  assert.equal(ids(["not_sent"]), "ac");
+  const k = Object.fromEntries(purchaseKpis(recs, fmt, NOW).map((x) => [x.key, x]));
+  assert.equal(k.month.value, "200 common.currency");
+  assert.equal(k.month.delta, 0);
+  assert.equal(k.payable.value, "250 common.currency");
+  assert.deepEqual(k.payable.filters, ["posted", "unpaid", "partial"]);
+  assert.equal(k.drafts.value, "1");
+  assert.equal(k.not_sent.value, "2");
+});

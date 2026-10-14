@@ -785,3 +785,44 @@ export function parseInput(field: FieldDef, raw: string | boolean): unknown {
   }
   return text;
 }
+
+// ── Dashboard figures ────────────────────────────────────────────────────────
+
+export const sumIf = <R extends ViewRecord>(records: readonly R[], value: (r: R) => number, when: (r: R) => boolean = () => true): number =>
+  Math.round(records.reduce((s, r) => (when(r) ? s + (Number(value(r)) || 0) : s), 0) * 100) / 100;
+
+export const countIf = <R extends ViewRecord>(records: readonly R[], when: (r: R) => boolean): number => records.reduce((n, r) => (when(r) ? n + 1 : n), 0);
+
+/** Totals per week for the last `weeks` weeks (Monday-based, the last one is this week). */
+export function weeklySeries<R extends ViewRecord>(records: readonly R[], date: (r: R) => unknown, value: (r: R) => number, now: Date, weeks = 8): number[] {
+  const out = Array<number>(weeks).fill(0);
+  const first = addDays(startOfWeek(now), -7 * (weeks - 1));
+  for (const r of records) {
+    const d = toDate(date(r));
+    if (!d) continue;
+    const i = Math.round((startOfWeek(d).getTime() - first.getTime()) / (7 * 86400000));
+    if (i >= 0 && i < weeks) out[i] += Number(value(r)) || 0;
+  }
+  return out.map((v) => Math.round(v * 100) / 100);
+}
+
+/** This month's and last month's totals and the change in percent (null without last month). */
+export function monthTotals<R extends ViewRecord>(records: readonly R[], date: (r: R) => unknown, value: (r: R) => number, now: Date): { current: number; previous: number; delta: number | null } {
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  let current = 0;
+  let previous = 0;
+  for (const r of records) {
+    const d = toDate(date(r));
+    if (!d) continue;
+    if (d >= thisMonth) current += Number(value(r)) || 0;
+    else if (d >= lastMonth) previous += Number(value(r)) || 0;
+  }
+  current = Math.round(current * 100) / 100;
+  previous = Math.round(previous * 100) / 100;
+  return { current, previous, delta: previous > 0 ? Math.round(((current - previous) / previous) * 100) : null };
+}
+
+/** "12,480 AZN" in the user's language. */
+export const money = (n: number, fmt: Formatter, digits = 0): string => `${formatNumber(n, digits, fmt.locale)} ${fmt.t("common.currency")}`;
+export const figure = (n: number, fmt: Formatter, digits = 0): string => formatNumber(n, digits, fmt.locale);

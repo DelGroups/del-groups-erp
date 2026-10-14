@@ -450,6 +450,21 @@ export const ruMessages: Messages = {
     },
   },
   purchases: {
+    engine: {
+      responsible: "Ответственный",
+      registerPayment: "Оплатить поставщику",
+      voidTitle: "Аннулировать счёт закупки?",
+      voidConsequence: "Складские записи, баланс поставщика и проводки счёта сторнируются.",
+      kpi: {
+        month: "Закупки за месяц",
+        showMonth: "Показать проведённые закупки этого месяца",
+        payable: "К оплате (счетов: {count})",
+        payableHint: "Неоплаченная часть проведённых счетов закупки",
+        showPayable: "Показать закупки к оплате",
+        draftsHint: "Счета закупки, ещё не проведённые",
+        notSentHint: "Проведённые закупки, ожидающие склада",
+      },
+    },
     title: "Счета закупок",
     description: "Список и управление документами закупок",
     createLabel: "Новый счёт закупки",
@@ -3599,6 +3614,7 @@ export const ruMessages: Messages = {
     kpi_settings: "Активные пользователи",
   },
   views: {
+    dashboard: "Обзор",
     yes: "Да",
     no: "Нет",
     none: "Не задано",

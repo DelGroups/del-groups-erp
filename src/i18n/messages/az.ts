@@ -448,6 +448,21 @@ export const azMessages = {
     },
   },
   purchases: {
+    engine: {
+      responsible: "Məsul şəxs",
+      registerPayment: "Təchizatçıya ödə",
+      voidTitle: "Alış fakturası ləğv edilsin?",
+      voidConsequence: "Fakturanın anbar, təchizatçı balansı və mühasibat yazılışları geri qaytarılır.",
+      kpi: {
+        month: "Bu ay alış",
+        showMonth: "Bu ayın təsdiqlənmiş alışlarını göstər",
+        payable: "Ödəniləcək ({count} faktura)",
+        payableHint: "Təsdiqlənmiş alış fakturalarının ödənilməmiş hissəsi",
+        showPayable: "Ödəniləcək alışları göstər",
+        draftsHint: "Hələ təsdiqlənməmiş alış fakturaları",
+        notSentHint: "Anbarı gözləyən təsdiqlənmiş alışlar",
+      },
+    },
     title: "Alış Fakturaları",
     description: "Alış sənədlərinin siyahısı və idarə olunması",
     createLabel: "Yeni alış fakturası",
@@ -3597,6 +3612,7 @@ export const azMessages = {
     kpi_settings: "Aktiv istifadəçilər",
   },
   views: {
+    dashboard: "İcmal",
     yes: "Bəli",
     no: "Xeyr",
     none: "Yoxdur",

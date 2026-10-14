@@ -450,6 +450,21 @@ export const enMessages: Messages = {
     },
   },
   purchases: {
+    engine: {
+      responsible: "Responsible",
+      registerPayment: "Pay supplier",
+      voidTitle: "Void this purchase invoice?",
+      voidConsequence: "Stock, supplier balance and ledger entries of the invoice are reversed.",
+      kpi: {
+        month: "Purchases this month",
+        showMonth: "Show this month's posted purchases",
+        payable: "Still to pay ({count} invoices)",
+        payableHint: "Unpaid part of posted purchase invoices",
+        showPayable: "Show purchases still to pay",
+        draftsHint: "Purchase invoices not posted yet",
+        notSentHint: "Posted purchases waiting for the warehouse",
+      },
+    },
     title: "Purchase Invoices",
     description: "List and management of purchase documents",
     createLabel: "New purchase invoice",
@@ -3598,6 +3613,7 @@ export const enMessages: Messages = {
     kpi_settings: "Active users",
   },
   views: {
+    dashboard: "Overview",
     yes: "Yes",
     no: "No",
     none: "None",
