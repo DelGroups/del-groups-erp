@@ -40,7 +40,7 @@ const today = () => new Date().toISOString().slice(0, 10);
  * Scope cascades Anbar → Kateqoriya → Alt kateqoriya; each list is built from
  * get_warehouse_active_categories, i.e. only what has stock in that warehouse.
  */
-function CreateCountModal({
+export function CreateCountModal({
   onClose,
   onCreated,
 }: {

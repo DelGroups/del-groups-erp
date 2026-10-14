@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as inv from "../src/modules/inventory/views/inventory.ts";
 import { purchaseFilters, purchaseKpis, purchaseRemaining, purchasesDefinition, purchasesModel, purchaseToRecord } from "../src/modules/purchases/views/purchases.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -43,6 +44,11 @@ test("dashboard helpers: sums, counts, weekly series and month totals", () => {
  */
 const ROUTES = [
   ["purchases", "purchases", "PurchasesPage", "PurchasesScreen"],
+  ["inventory", "inventory", "WarehouseStockPage", "InventoryStockScreen"],
+  ["dashboard/warehouse/slips", "inventory", "WarehouseSlipsPage", "WarehouseSlipsScreen"],
+  ["inventory/counts", "inventory", "InventoryCountsPage", "InventoryCountsScreen"],
+  ["warehouse/initial-balance", "inventory", "InitialBalanceListPage", "InitialBalanceScreen"],
+  ["products/damaged-goods", "inventory", "DamagedGoodsPage", "DamagedGoodsScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -50,6 +56,8 @@ const TEXT_FILES = [
   "src/views/components/KpiCards.tsx",
   "src/modules/purchases/views/purchases.ts",
   "src/modules/purchases/components/PurchasesScreen.tsx",
+  "src/modules/inventory/views/inventory.ts",
+  "src/modules/inventory/components/InventoryScreens.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -59,7 +67,7 @@ test("with NEW_UI off every switched route renders exactly its classic page", ()
     const client = read(`src/app/${route}/page.client.tsx`);
     assert.match(client, new RegExp(`return active \\? <${screen} /> : <${classic} />;`), route);
     assert.match(client, new RegExp(`import\\("@/modules/${module}/pages"\\)\\.then\\(\\(m\\) => m\\.${screen}\\)`), route);
-    assert.match(read(`src/modules/${module}/pages.ts`), new RegExp(`export \\{ default as ${screen} \\}`), route);
+    assert.match(read(`src/modules/${module}/pages.ts`), new RegExp(`export \\{[^}]*\\b${screen}\\b[^}]*\\}`), route);
   }
 });
 
@@ -73,8 +81,8 @@ test("every text of the new module screens exists in az, en and ru", () => {
       if (k.split(".")[0] in enMessages) keys.add(k);
     }
   }
-  // Model keys look like texts; they are not.
-  for (const k of [...keys]) if (/\.(invoices|records|report|list)$/.test(k) && !k.startsWith("views.")) keys.delete(k);
+  // View keys (`..._VIEW_KEY = "inventory.stock"`) look like texts; they are not.
+  for (const f of TEXT_FILES) for (const m of read(f).matchAll(/_VIEW_KEY = "([^"]+)"/g)) keys.delete(m[1]);
   const get = (messages, key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), messages);
   for (const [name, messages] of [["az", azMessages], ["en", enMessages], ["ru", ruMessages]]) {
     const missing = [...keys].filter((k) => typeof get(messages, k) !== "string");
@@ -142,4 +150,80 @@ test("purchases: definition, filters and dashboard cards", () => {
   assert.deepEqual(k.payable.filters, ["posted", "unpaid", "partial"]);
   assert.equal(k.drafts.value, "1");
   assert.equal(k.not_sent.value, "2");
+});
+
+// ── Inventory ────────────────────────────────────────────────────────────────
+
+const noFetch = { fetchAll: async () => [] };
+
+test("inventory: every definition is valid and keeps the classic permissions", () => {
+  const defs = {
+    stock: [inv.stockDefinition(noFetch), "can_view_products"],
+    slips: [inv.slipsDefinition(noFetch), "can_view_warehouse_slips"],
+    counts: [inv.countsDefinition(noFetch), "can_writeoff_inventory"],
+    intake: [inv.intakeDefinition(noFetch), "can_manage_products"],
+    writeoffs: [inv.writeoffsDefinition(noFetch), "can_writeoff_inventory"],
+  };
+  for (const [name, [def, permission]] of Object.entries(defs)) {
+    assert.deepEqual(validateDefinition(def), [], name);
+    assert.equal(def.model.module, "inventory", name);
+    assert.equal(def.model.readPermission, permission, name);
+    assert.ok(def.fields.every((f) => f.readonly), name);
+  }
+});
+
+test("inventory stock: rows, filters and the classic KPI strip", () => {
+  const row = (id, extra) => ({ id, productId: `p${id}`, sku: `S${id}`, name: `Item ${id}`, warehouseId: "w1", warehouseName: "Main", totalPhysical: 10, reserved: 0, available: 10, minLimit: 2, buyPrice: 3, valuation: 30, status: "in_stock", ...extra });
+  const recs = [row("1"), row("2", { status: "low", totalPhysical: 2, valuation: 6 }), row("3", { status: "out", totalPhysical: 0, valuation: 0, reserved: 1 }), row("4", { productId: "p1", warehouseName: "Second", valuation: 12.345 })].map(inv.stockToRecord);
+  assert.equal(recs[3].valuation, 12.35);
+  assert.equal(recs[0].warehouse_id, "w1");
+  const def = inv.stockDefinition(noFetch);
+  const ids = (f) => recs.filter((r) => matchesFilters(r, def.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["low", "out"]), "23");
+  assert.equal(ids(["reserved"]), "3");
+  const k = Object.fromEntries(inv.stockKpis(recs, fmt).map((x) => [x.key, x.value]));
+  assert.deepEqual(k, { items: "3", low: "1", out: "1", value: "48 common.currency" });
+});
+
+test("inventory slips: states, late deliveries and the dashboard", () => {
+  const s = (id, extra) => inv.slipToRecord({ id, slip_number: `W-${id}`, type: "outbound", status: "pending", items: [{}, {}], created_at: "2026-10-14T08:00:00", ...extra });
+  const recs = [
+    s("1", { delivery_due_at: "2026-10-14T09:00:00" }),
+    s("2", { delivery_due_at: "2026-10-14T18:00:00" }),
+    s("3", { status: "approved", approved_at: "2026-10-03T10:00:00" }),
+    s("4", { status: "rejected" }),
+    s("5", { status: "weird" }),
+  ];
+  assert.equal(recs[0].item_count, 2);
+  assert.equal(recs[4].status, "pending");
+  const def = inv.slipsDefinition(noFetch);
+  const ids = (f) => recs.filter((r) => matchesFilters(r, def.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["late"]), "1");
+  assert.equal(ids(["approved", "rejected"]), "34");
+  const k = Object.fromEntries(inv.slipKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(k, { pending: "3", late: "1", today: "2", approved: "1" });
+});
+
+test("inventory counts and intake documents: mapping and dashboards", () => {
+  const c = (id, extra) => inv.countToRecord({ id, document_number: `C-${id}`, status: "in_progress", line_count: 8, counted_count: 2, total_surplus_value: 0, total_shortage_value: 0, total_variance_value: 0, category_name: "Panels", subcategory_name: null, ...extra });
+  const counts = [c("1"), c("2", { status: "review", line_count: 0 }), c("3", { status: "posted", total_surplus_value: 10, total_shortage_value: 4.5, total_variance_value: 5.5 }), c("4", { status: "bogus" })];
+  assert.equal(counts[0].progress, 25);
+  assert.equal(counts[1].progress, 0);
+  assert.equal(counts[0].scope, "Panels");
+  assert.equal(counts[3].status, "draft");
+  const ck = Object.fromEntries(inv.countKpis(counts, fmt).map((x) => [x.key, x.value]));
+  assert.deepEqual(ck, { open: "3", review: "1", surplus: "10.00 common.currency", shortage: "4.50 common.currency" });
+  const d = (id, extra) => inv.intakeToRecord({ id, document_number: `I-${id}`, doc_date: "2026-10-03", entry_type: "receipt", status: "posted", total_amount: 100, ...extra });
+  const docs = [d("1"), d("2", { doc_date: "2026-09-03" }), d("3", { entry_type: "opening_balance", total_amount: 50 }), d("4", { status: "draft" })];
+  const ik = Object.fromEntries(inv.intakeKpis(docs, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(ik, { drafts: "1", receipts: "100 common.currency", opening: "50 common.currency", posted: "3" });
+});
+
+test("inventory write-offs: lines, quantity and the month's figures", () => {
+  const w = (id, extra) => inv.writeoffToRecord({ id, document_number: `D-${id}`, writeoff_date: "2026-10-02", warehouse_name: "Main", checker_name: "Kamal", items: [{ quantity: 2 }, { quantity: 1.5 }], ...extra });
+  const recs = [w("1"), w("2", { writeoff_date: "2026-09-30", items: [{ quantity: 4 }] })];
+  assert.equal(recs[0].item_count, 2);
+  assert.equal(recs[0].quantity, 3.5);
+  const k = Object.fromEntries(inv.writeoffKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(k, { month: "1", qty: "3.50", all: "2" });
 });
