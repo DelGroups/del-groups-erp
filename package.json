@@ -33,6 +33,7 @@
     "cmdk": "^1.1.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.31.0",
+    "motion": "^13.4.4",
     "next": "16.3.0",
     "papaparse": "^5.7.0",
     "qrcode": "^1.5.4",
@@ -58,5 +59,10 @@
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "framer-motion": "13.4.4",
+    "motion-dom": "13.4.4",
+    "motion-utils": "13.3.0"
   }
 }
