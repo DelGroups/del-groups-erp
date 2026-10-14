@@ -50,3 +50,64 @@ export const erpTokens = {
 } as const;
 
 export type ErpTokenPath = typeof erpTokens;
+
+/**
+ * Tokens of the new UI (prompt 15), defined in `theme.css` and only set inside a
+ * `[data-ds]` scope (<DesignScope>). Theme (light / dark / system), density
+ * (comfortable / compact) and the tenant brand colour switch their values.
+ */
+export const dsTokens = {
+  brand: {
+    base: "var(--ds-brand)",
+    hover: "var(--ds-brand-hover)",
+    foreground: "var(--ds-brand-fg)",
+    soft: "var(--ds-brand-soft)",
+  },
+  surface: {
+    bg: "var(--ds-bg)",
+    base: "var(--ds-surface)",
+    sunken: "var(--ds-surface-sunken)",
+    raised: "var(--ds-surface-raised)",
+    overlay: "var(--ds-overlay)",
+  },
+  text: { main: "var(--ds-text)", muted: "var(--ds-text-muted)", subtle: "var(--ds-text-subtle)" },
+  border: { default: "var(--ds-border)", strong: "var(--ds-border-strong)" },
+  status: {
+    success: "var(--ds-success)",
+    warning: "var(--ds-warning)",
+    danger: "var(--ds-danger-strong)",
+    info: "var(--ds-info)",
+  },
+  font: { sans: "var(--ds-font-sans)", mono: "var(--ds-font-mono)" },
+  radius: {
+    xs: "var(--ds-radius-xs)",
+    sm: "var(--ds-radius-sm)",
+    md: "var(--ds-radius-md)",
+    lg: "var(--ds-radius-lg)",
+    xl: "var(--ds-radius-xl)",
+    full: "var(--ds-radius-full)",
+  },
+  elevation: {
+    0: "var(--ds-elevation-0)",
+    1: "var(--ds-elevation-1)",
+    2: "var(--ds-elevation-2)",
+    3: "var(--ds-elevation-3)",
+    4: "var(--ds-elevation-4)",
+  },
+  density: {
+    controlHeight: "var(--ds-control-h)",
+    rowHeight: "var(--ds-row-h)",
+    padX: "var(--ds-pad-x)",
+    padY: "var(--ds-pad-y)",
+    gap: "var(--ds-gap)",
+  },
+  motion: {
+    fast: "var(--ds-duration-fast)",
+    base: "var(--ds-duration-base)",
+    slow: "var(--ds-duration-slow)",
+    easeOut: "var(--ds-ease-out)",
+    easeInOut: "var(--ds-ease-in-out)",
+  },
+} as const;
+
+export type DsTokenPath = typeof dsTokens;
