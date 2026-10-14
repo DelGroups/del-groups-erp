@@ -3753,6 +3753,23 @@ export const azMessages = {
       tabs: "Bölmələr",
     },
   },
+  contracts: {
+    engine: {
+      advanceAmount: "Gözlənilən avans",
+      voen: "VÖEN",
+      hasAttachment: "İmzalı nüsxə əlavə olunub",
+      noAttachment: "İmzalı nüsxəsiz",
+      expiring: "Müddəti bitmək üzrə",
+      expired: "Müddəti keçib, hələ aktivdir",
+      expiringSoon: "{days} gün ərzində bitəcək",
+      expiredHint: "{count} aktiv müqavilənin müddəti keçib",
+      showActive: "Aktiv müqavilələri göstər",
+      showExpiring: "Müddəti bitmək üzrə olanları göstər",
+      typeNumber: "Təsdiq üçün müqavilə nömrəsini yazın",
+      deleteConfirm: "Bu müqavilə silinsin? Ona bağlı fakturaların məlumatları qalır.",
+      audit: "Dəyişiklik qeydə alınır.",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Bu ünvan tapılmadı",

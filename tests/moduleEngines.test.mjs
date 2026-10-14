@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as con from "../src/modules/contracts/views/contracts.ts";
 import * as inv from "../src/modules/inventory/views/inventory.ts";
 import { purchaseFilters, purchaseKpis, purchaseRemaining, purchasesDefinition, purchasesModel, purchaseToRecord } from "../src/modules/purchases/views/purchases.ts";
 
@@ -49,6 +50,7 @@ const ROUTES = [
   ["inventory/counts", "inventory", "InventoryCountsPage", "InventoryCountsScreen"],
   ["warehouse/initial-balance", "inventory", "InitialBalanceListPage", "InitialBalanceScreen"],
   ["products/damaged-goods", "inventory", "DamagedGoodsPage", "DamagedGoodsScreen"],
+  ["contracts", "contracts", "ContractsPage", "ContractsScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -58,6 +60,8 @@ const TEXT_FILES = [
   "src/modules/purchases/components/PurchasesScreen.tsx",
   "src/modules/inventory/views/inventory.ts",
   "src/modules/inventory/components/InventoryScreens.tsx",
+  "src/modules/contracts/views/contracts.ts",
+  "src/modules/contracts/components/ContractsScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -226,4 +230,34 @@ test("inventory write-offs: lines, quantity and the month's figures", () => {
   assert.equal(recs[0].quantity, 3.5);
   const k = Object.fromEntries(inv.writeoffKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
   assert.deepEqual(k, { month: "1", qty: "3.50", all: "2" });
+});
+
+// ── Contracts ────────────────────────────────────────────────────────────────
+
+test("contracts: mapping, expiry filters and the classic stat cards", () => {
+  const c = (id, extra) => con.contractToRecord({ id, contract_number: `M-${id}`, title: `T${id}`, type: "sale", status: "active", total_amount: 1000, advance_percentage: 30, attachment_path: null, ...extra });
+  const recs = [
+    c("1", { expiry_date: "2026-10-20" }),
+    c("2", { expiry_date: "2026-10-01", type: "purchase", attachment_path: "x.pdf" }),
+    c("3", { expiry_date: "2026-12-31", type: "service", advance_percentage: null }),
+    c("4", { status: "cancelled", expiry_date: "2026-10-20" }),
+    c("5", { status: "weird", type: "weird", total_amount: "", advance_percentage: "abc" }),
+  ];
+  assert.equal(recs[0].advance_amount, 300);
+  assert.equal(recs[2].advance_amount, null);
+  assert.equal(recs[4].status, "active");
+  assert.equal(recs[4].type, "sale");
+  assert.equal(recs[4].total_amount, null);
+  assert.equal(recs[1].has_attachment, true);
+  const def = con.contractsDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(validateDefinition(def), []);
+  assert.equal(def.model.readPermission, "can_view_sales");
+  const ids = (f) => recs.filter((r) => matchesFilters(r, def.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["expiring"]), "1");
+  assert.equal(ids(["expired"]), "2");
+  assert.equal(ids(["purchase", "service"]), "23");
+  assert.equal(ids(["no_attachment", "active"]), "135");
+  const k = Object.fromEntries(con.contractKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
+  // Classic stats: active 4; sale+service vs purchase 4 / 1; expected advance on active contracts 300 + 300.
+  assert.deepEqual(k, { active: "4", split: "4 / 1", advance: "600.00 common.currency", expiring: "1" });
 });

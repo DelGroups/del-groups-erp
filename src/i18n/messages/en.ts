@@ -3754,6 +3754,23 @@ export const enMessages: Messages = {
       tabs: "Sections",
     },
   },
+  contracts: {
+    engine: {
+      advanceAmount: "Expected advance",
+      voen: "TIN",
+      hasAttachment: "Signed copy attached",
+      noAttachment: "Without a signed copy",
+      expiring: "Expiring soon",
+      expired: "Past expiry, still active",
+      expiringSoon: "Expiring within {days} days",
+      expiredHint: "{count} active contracts are past their expiry date",
+      showActive: "Show active contracts",
+      showExpiring: "Show contracts expiring soon",
+      typeNumber: "To confirm, type the contract number",
+      deleteConfirm: "Delete this contract? Invoices linked to it keep their data.",
+      audit: "The change is recorded.",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "This address was not found",

@@ -3755,6 +3755,23 @@ export const ruMessages: Messages = {
       tabs: "Разделы",
     },
   },
+  contracts: {
+    engine: {
+      advanceAmount: "Ожидаемый аванс",
+      voen: "ИНН",
+      hasAttachment: "Подписанная копия приложена",
+      noAttachment: "Без подписанной копии",
+      expiring: "Скоро истекают",
+      expired: "Срок истёк, но активен",
+      expiringSoon: "Истекают в течение {days} дн.",
+      expiredHint: "Активных договоров с истёкшим сроком: {count}",
+      showActive: "Показать активные договоры",
+      showExpiring: "Показать договоры, которые скоро истекают",
+      typeNumber: "Для подтверждения введите номер договора",
+      deleteConfirm: "Удалить этот договор? Связанные счета сохраняют свои данные.",
+      audit: "Изменение записывается в журнал.",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Адрес не найден",
