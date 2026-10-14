@@ -130,6 +130,45 @@ export async function createDealAction(payload: {
   }
 }
 
+/**
+ * Edits a deal's title, customer, expected value or notes (the new UI's deal form, prompt 17).
+ * Same rules as creating one; only the fields passed are changed. The stage is changed through
+ * updateDealStageAction.
+ */
+export async function updateDealAction(
+  dealId: string,
+  patch: { title?: string; clientId?: string | null; expectedValue?: number; notes?: string | null }
+): Promise<ActionResult> {
+  try {
+    await requirePermissionAction("can_manage_crm", { module: "crm" });
+    if (!isValidUuid(dealId)) return { success: false, error: "Etibarlı sövdələşmə seçin" };
+
+    const update: Record<string, unknown> = {};
+    if (patch.title !== undefined) {
+      const title = clampString(patch.title || "", 240);
+      if (!title) return { success: false, error: "Sövdələşmə adı tələb olunur" };
+      update.title = title;
+    }
+    if (patch.clientId !== undefined) {
+      const clientId = patch.clientId?.trim() || null;
+      if (clientId && !isValidUuid(clientId)) return { success: false, error: "Etibarlı müştəri seçin" };
+      update.client_id = clientId;
+    }
+    if (patch.expectedValue !== undefined) update.expected_value = Math.max(0, Number(patch.expectedValue) || 0);
+    if (patch.notes !== undefined) update.notes = clampString(patch.notes || "", 2000) || null;
+    if (!Object.keys(update).length) return { success: true };
+    update.updated_at = new Date().toISOString();
+
+    const client = await createSupabaseServerClient();
+    const { error } = await client.from("deals").update(update).eq("id", dealId);
+    if (error) return { success: false, error: mapRpcError(error.message) };
+    return { success: true };
+  } catch (err) {
+    if (err instanceof ActionAuthError) return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : "Sövdələşmə yenilənmədi" };
+  }
+}
+
 export async function updateDealStageAction(
   dealId: string,
   stage: string

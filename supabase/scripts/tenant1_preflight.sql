@@ -70,6 +70,9 @@ union all
 select 'pending', '20261014100000_tenant_limits: table (no row = no limits)',
        case when to_regclass('public.tenant_limits') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261014110000_view_favorites: table (saved searches of the new UI)',
+       case when to_regclass('public.view_favorites') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
