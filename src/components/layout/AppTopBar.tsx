@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
   FilePlus,
+  LayoutGrid,
   Menu,
   Moon,
   Plus,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 
 export default function AppTopBar() {
   const pathname = usePathname();
@@ -38,6 +40,8 @@ export default function AppTopBar() {
   const sidebarMenu = useSidebarMenu();
   const setCommandPaletteOpen = useShellStore((s) => s.setCommandPaletteOpen);
   const { theme, setTheme } = useTheme();
+  // NEW_UI on and an admin: offer the new shell (prompt 16). Hidden otherwise.
+  const { canToggle: canTryNewShell, setPreferred: setNewShell } = useNewUi();
 
   const crumbs = useMemo(
     () => buildBreadcrumbsFromPath(pathname, t),
@@ -125,6 +129,17 @@ export default function AppTopBar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {canTryNewShell ? (
+        <button
+          type="button"
+          onClick={() => setNewShell(true)}
+          className="hidden h-9 items-center gap-1.5 rounded-lg border border-app px-3 text-xs font-semibold text-app transition-colors hover:bg-app-card-hover sm:inline-flex"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          {t("newShell.tryNew")}
+        </button>
+      ) : null}
 
       <button
         type="button"

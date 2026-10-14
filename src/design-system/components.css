@@ -236,3 +236,101 @@
     transform: scaleX(0);
   }
 }
+
+/* ── Menus and popovers (Radix) ── */
+[data-ds] .ds-menu {
+  z-index: 70;
+  min-width: 14rem;
+  padding: 0.375rem;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-elevation-3);
+  color: var(--ds-text);
+}
+[data-ds] .ds-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: var(--ds-control-h);
+  padding: 0 0.625rem;
+  border-radius: var(--ds-radius-sm);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+  cursor: pointer;
+  outline: none;
+  text-decoration: none;
+}
+[data-ds] .ds-menu-item[data-highlighted],
+[data-ds] .ds-menu-item:hover,
+[data-ds] a.ds-menu-item:focus-visible {
+  background: var(--ds-brand-soft);
+}
+[data-ds] .ds-menu-sep {
+  height: 1px;
+  margin: 0.375rem 0;
+  background: var(--ds-border);
+}
+
+/* ── Icon buttons ── */
+[data-ds] .ds-icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--ds-control-h);
+  height: var(--ds-control-h);
+  border-radius: var(--ds-radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-out), color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-icon-btn:hover,
+[data-ds] .ds-icon-btn[data-state="open"] {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+}
+[data-ds] .ds-dot {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--ds-danger-strong);
+  box-shadow: 0 0 0 2px var(--ds-surface);
+}
+
+/* ── Underline tabs (app menu) ── */
+[data-ds] .ds-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.5rem;
+  padding: 0 0.25rem;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color var(--ds-duration-fast) var(--ds-ease-out), border-color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-tab:hover {
+  color: var(--ds-text);
+}
+[data-ds] .ds-tab[aria-current="page"] {
+  color: var(--ds-text);
+  border-bottom-color: var(--ds-text);
+}
+
+/* ── Shell header ── */
+[data-ds] .ds-shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-border);
+}

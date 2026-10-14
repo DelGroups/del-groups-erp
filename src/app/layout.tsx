@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
@@ -12,6 +12,11 @@ import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/theme/types";
 import { publicConfigScript, toPublicTenantConfig } from "@/lib/tenant/config";
 import { getServerTenant } from "@/lib/tenant/server";
 import ReadOnlyBanner from "@/components/tenant/ReadOnlyBanner";
+import { NewUiProvider, type NewUiServerValue } from "@/components/shell/NewUiProvider";
+import { isNewUiEnabled } from "@/lib/features/newUi";
+import { NEW_UI_COOKIE, parseNewUiCookie } from "@/lib/shell/shell";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { loadBrandColor } from "@/design-system/server";
 import LimitBanner from "@/components/limits/LimitBanner";
 import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/brand";
 import { getPublicCompanyInfo } from "@/lib/company/server";
@@ -78,6 +83,7 @@ export default async function RootLayout({
     getEnabledModules(requestHeaders),
   ]);
   const enabledModules = [...enabledModuleSet];
+  const newUi = await newUiServerValue();
 
   return (
     <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} suppressHydrationWarning>
@@ -98,12 +104,14 @@ export default async function RootLayout({
               <AuthProvider>
                 <QueryProvider>
                   <I18nProvider>
-                    {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
-                    {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
-                    {tenant.status !== null ? <LimitBanner /> : null}
-                    {children}
-                    <SonnerProvider />
-                    <TableColumnResizer />
+                    <NewUiProvider value={newUi}>
+                      {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
+                      {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
+                      {tenant.status !== null ? <LimitBanner /> : null}
+                      {children}
+                      <SonnerProvider />
+                      <TableColumnResizer />
+                    </NewUiProvider>
                   </I18nProvider>
                 </QueryProvider>
               </AuthProvider>
@@ -113,4 +121,16 @@ export default async function RootLayout({
       </body>
     </html>
   );
+}
+
+/**
+ * New shell (prompt 16): only while NEW_UI is on does this read the user's choice (cookie) and,
+ * when they chose it, the tenant brand colour. With NEW_UI off nothing is read.
+ */
+async function newUiServerValue(): Promise<NewUiServerValue> {
+  if (!isNewUiEnabled()) return { available: false, preferred: false, brand: null };
+  const preferred = parseNewUiCookie((await cookies()).get(NEW_UI_COOKIE)?.value);
+  if (!preferred) return { available: true, preferred: false, brand: null };
+  const client = await createSupabaseServerClient();
+  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]) };
 }
