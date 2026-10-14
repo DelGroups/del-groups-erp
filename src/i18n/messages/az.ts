@@ -3770,6 +3770,16 @@ export const azMessages = {
       audit: "Dəyişiklik qeydə alınır.",
     },
   },
+  consignment: {
+    engine: {
+      lastDispatch: "Son göndəriş",
+      withRemaining: "Hələ tərəfdaşda",
+      showInStock: "Tərəfdaşlarda qalan malları göstər",
+      showAging: "Köhnələn qalığı göstər",
+      partnersHolding: "Malı olan tərəfdaşlar",
+      agingLines: "{count} sətir köhnəlib",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Bu ünvan tapılmadı",

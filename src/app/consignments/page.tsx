@@ -1,7 +1,11 @@
 import { ConsignmentsPage } from "@/modules/consignment/pages";
+import { isNewUiEnabled } from "@/lib/features/newUi";
+import NewUiSwitch from "./page.client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <ConsignmentsPage />;
+  // NEW_UI off (production): exactly the classic page, nothing else is loaded.
+  if (!isNewUiEnabled()) return <ConsignmentsPage />;
+  return <NewUiSwitch />;
 }

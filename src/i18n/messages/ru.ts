@@ -3772,6 +3772,16 @@ export const ruMessages: Messages = {
       audit: "Изменение записывается в журнал.",
     },
   },
+  consignment: {
+    engine: {
+      lastDispatch: "Последняя отгрузка",
+      withRemaining: "Ещё у партнёра",
+      showInStock: "Показать остатки у партнёров",
+      showAging: "Показать залежавшийся товар",
+      partnersHolding: "Партнёры с остатками",
+      agingLines: "Залежавшихся строк: {count}",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Адрес не найден",

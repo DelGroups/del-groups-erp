@@ -3771,6 +3771,16 @@ export const enMessages: Messages = {
       audit: "The change is recorded.",
     },
   },
+  consignment: {
+    engine: {
+      lastDispatch: "Last dispatch",
+      withRemaining: "Still at the partner",
+      showInStock: "Show stock still at partners",
+      showAging: "Show aging stock",
+      partnersHolding: "Partners holding stock",
+      agingLines: "{count} lines are aging",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "This address was not found",

@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as cons from "../src/modules/consignment/views/consignment.ts";
 import * as con from "../src/modules/contracts/views/contracts.ts";
 import * as inv from "../src/modules/inventory/views/inventory.ts";
 import { purchaseFilters, purchaseKpis, purchaseRemaining, purchasesDefinition, purchasesModel, purchaseToRecord } from "../src/modules/purchases/views/purchases.ts";
@@ -51,6 +52,7 @@ const ROUTES = [
   ["warehouse/initial-balance", "inventory", "InitialBalanceListPage", "InitialBalanceScreen"],
   ["products/damaged-goods", "inventory", "DamagedGoodsPage", "DamagedGoodsScreen"],
   ["contracts", "contracts", "ContractsPage", "ContractsScreen"],
+  ["consignments", "consignment", "ConsignmentsPage", "ConsignmentsScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -62,6 +64,8 @@ const TEXT_FILES = [
   "src/modules/inventory/components/InventoryScreens.tsx",
   "src/modules/contracts/views/contracts.ts",
   "src/modules/contracts/components/ContractsScreen.tsx",
+  "src/modules/consignment/views/consignment.ts",
+  "src/modules/consignment/components/ConsignmentsScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -260,4 +264,40 @@ test("contracts: mapping, expiry filters and the classic stat cards", () => {
   const k = Object.fromEntries(con.contractKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
   // Classic stats: active 4; sale+service vs purchase 4 / 1; expected advance on active contracts 300 + 300.
   assert.deepEqual(k, { active: "4", split: "4 / 1", advance: "600.00 common.currency", expiring: "1" });
+});
+
+// ── Consignment ──────────────────────────────────────────────────────────────
+
+test("consignment: stock at partners, the document history and the classic cards", () => {
+  const stock = [
+    { id: "1", partner_id: "a", partner_name: "Nur", product_name: "Board", delivered_qty: 10, sold_qty: 4, returned_qty: 1, remaining_qty: 5, unit_price: 20, is_aging: false },
+    { id: "2", partner_id: "b", partner_name: "Elm", product_name: "Edge", delivered_qty: 3, sold_qty: 0, returned_qty: 0, remaining_qty: 3, unit_price: 10, is_aging: true, aging_days: 120 },
+    { id: "3", partner_id: "b", partner_name: "Elm", product_name: "Glue", delivered_qty: 2, sold_qty: 2, returned_qty: 0, remaining_qty: 0, unit_price: 5, is_aging: true },
+  ].map(cons.partnerStockToRecord);
+  assert.equal(stock[0].value, 100);
+  const docs = cons.consignmentDocuments(
+    [
+      { id: "d1", dispatch_no: "D-1", partner_id: "a", dispatch_date: "2026-10-01", status: "delivered", sales_rep_name: "Rauf", items: [{ quantity: 2, unit_price: 10 }, { quantity: 1, unit_price: 5 }] },
+      { id: "d2", dispatch_no: "IB-1", partner_id: "b", dispatch_date: "2026-01-01", status: "initial_balance", items: [{ quantity: 5, unit_price: 10 }] },
+    ],
+    [{ id: "r1", return_no: "R-1", partner_id: "a", return_date: "2026-10-05", items: [{ quantity: 1, unit_price: 10 }] }],
+    [
+      { id: "p1", report_no: "S-1", partner_id: "a", report_period: "2026-10", total_amount: 80, sales_rep_name: "Rauf", sold_items: [{}] },
+      { id: "p2", report_no: "S-0", partner_id: "a", report_period: "2026-09", total_amount: 30, sold_items: [] },
+    ]
+  );
+  assert.deepEqual(docs.map((d) => [d.doc_no, d.document_type, d.total_value]), [["R-1", "RETURN", 10], ["D-1", "DISPATCH", 25], ["S-1", "ACTUAL_SALE", 80], ["S-0", "ACTUAL_SALE", 30], ["IB-1", "INITIAL_BALANCE", 50]]);
+  assert.equal(docs.find((d) => d.doc_no === "S-1").date, "2026-10-01");
+  assert.deepEqual(validateDefinition(cons.partnerStockDefinition({ fetchAll: async () => [] })), []);
+  const ddef = cons.documentsDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(validateDefinition(ddef), []);
+  assert.equal(ddef.model.readPermission, "can_view_consignments");
+  const sdef = cons.partnerStockDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(stock.filter((r) => matchesFilters(r, sdef.filters, ["aging"], { userId: null, now: NOW })).map((r) => r.id), ["2"]);
+  const now = new Date(Date.UTC(2026, 9, 14, 12));
+  const k = Object.fromEntries(cons.consignmentKpis(stock, docs, fmt, now).map((x) => [x.key, x.value]));
+  // Classic: stock value = remaining × price; sold this month = this period's reports; aging = aging lines' value.
+  assert.deepEqual(k, { stock: "130.00 common.currency", sold: "80.00 common.currency", aging: "30.00 common.currency", partners: "2" });
+  // Rep chart: opening balances and returns left out.
+  assert.deepEqual(cons.repPerformance(docs, "—"), [{ repName: "Rauf", dispatched: 25, sold: 80 }, { repName: "—", dispatched: 0, sold: 30 }]);
 });
