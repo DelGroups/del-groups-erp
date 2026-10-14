@@ -14,7 +14,8 @@ export interface ListViewProps<R extends ViewRecord> {
   groupBy: readonly string[];
   sort: SortSpec | null;
   onSort: (sort: SortSpec | null) => void;
-  openHref: (record: R) => string;
+  /** Where a row opens; without it rows are plain (report lines). */
+  openHref?: (record: R) => string;
   fmt: Formatter;
 }
 
@@ -42,16 +43,16 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
   const row = (r: R, depth: number) => (
     <tr
       key={r.id}
-      className="cursor-pointer transition-colors hover:bg-[var(--ds-brand-soft)]"
+      className={openHref ? "cursor-pointer transition-colors hover:bg-[var(--ds-brand-soft)]" : undefined}
       style={{ borderTop: "1px solid var(--ds-border)", height: "var(--ds-row-h)" }}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest("a")) return;
+        if (!openHref || (e.target as HTMLElement).closest("a")) return;
         router.push(openHref(r));
       }}
     >
       {columns.map((f, i) => (
         <td key={f.name} className={["px-3 py-1.5", isNumericField(f) ? "text-right ds-mono" : "", i === 0 ? "font-medium" : ""].join(" ")} style={i === 0 && depth ? { paddingLeft: `${0.75 + depth * 1.25}rem` } : undefined}>
-          {i === 0 ? (
+          {i === 0 && openHref ? (
             <Link href={openHref(r)} className="hover:underline focus-visible:underline">
               {displayValue(f, r, fmt) || "—"}
             </Link>

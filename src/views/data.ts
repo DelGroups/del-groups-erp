@@ -95,6 +95,7 @@ export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>): ViewD
     queryKey: keys.rows(def.model.key),
     enabled: allowed,
     queryFn: async () => {
+      if (def.model.fetchAll) return def.model.fetchAll();
       const { data, error } = await supabase
         .from(def.model.table)
         .select(selectWithCustom(def))
@@ -108,7 +109,7 @@ export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>): ViewD
   const definition = useMemo(() => withStudioFields(def, studio), [def, studio]);
   const records = useMemo(
     () =>
-      (query.data ?? []).slice(0, limit).map((row) => {
+      (def.model.fetchAll ? (query.data ?? []) : (query.data ?? []).slice(0, limit)).map((row) => {
         const record = toRecord(def, row, studio);
         return patches[record.id] ? { ...record, ...patches[record.id] } : record;
       }),
@@ -119,7 +120,7 @@ export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>): ViewD
     status,
     definition,
     records,
-    capped: (query.data?.length ?? 0) > limit,
+    capped: !def.model.fetchAll && (query.data?.length ?? 0) > limit,
     canWrite: access.write,
     error: query.error ? query.error.message : null,
     refetch: () => void query.refetch(),
@@ -145,6 +146,7 @@ export function useViewRecord<R extends ViewRecord>(def: ViewDefinition<R>, id: 
     queryKey: keys.row(def.model.key, id),
     enabled: allowed && !!id,
     queryFn: async () => {
+      if (def.model.fetchOne) return def.model.fetchOne(id);
       const { data, error } = await supabase.from(def.model.table).select(selectWithCustom(def)).eq("id", id).maybeSingle();
       if (error) throw new Error(error.message);
       return (data ?? null) as unknown as Record<string, unknown> | null;

@@ -122,6 +122,28 @@ export function CalendarView<R extends ViewRecord>({ definition: def, records, o
             })}
           </div>
         </div>
+      ) : fields.get(cal.dateField)?.type === "date" ? (
+        // A date without a time (invoice date): the day's events as a list, no hour grid.
+        <div className="ds-card overflow-x-auto">
+          <div className="grid min-w-[36rem]" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
+            {days.map((d) => {
+              const list = events.get(dayKey(d)) ?? [];
+              return (
+                <div key={dayKey(d)} className="flex min-h-40 flex-col gap-1 border-l p-1.5 first:border-l-0" style={{ borderColor: "var(--ds-border)" }}>
+                  <div className="mb-1 flex flex-col items-center gap-0.5">
+                    <span className="ds-label">{weekday(d)}</span>
+                    <span className="grid h-7 min-w-7 place-items-center rounded-full ds-mono font-semibold" style={dayKey(d) === today ? { background: "var(--ds-text)", color: "var(--ds-bg)" } : undefined}>
+                      {d.getDate()}
+                    </span>
+                  </div>
+                  {list.map((e) => (
+                    <EventChip key={e.record.id} event={e} href={openHref(e.record)} title={displayValue(titleField, e.record, fmt)} color={colorOf(e.record)} time="" compact />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : (
         <TimeGrid days={days} events={events} today={today} now={now} weekday={weekday} time={time} render={(e) => <EventChip event={e} href={openHref(e.record)} title={displayValue(titleField, e.record, fmt)} color={colorOf(e.record)} time={`${time(e.start)}–${time(e.end)}`} />} />
       )}
