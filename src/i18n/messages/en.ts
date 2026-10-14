@@ -1345,6 +1345,14 @@ export const enMessages: Messages = {
     },
   },
   commissions: {
+    engine: {
+      seller: "Seller",
+      department: "Department",
+      thisMonth: "Earned this month",
+      thisMonthHint: "{count} pending rows from this month",
+      showThisMonth: "Show this month's commissions",
+      openSale: "Open the sale",
+    },
     title: "Commissions",
     description: "Sales commission management",
     empty: "No commission found.",

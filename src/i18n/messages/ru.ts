@@ -1345,6 +1345,14 @@ export const ruMessages: Messages = {
     },
   },
   commissions: {
+    engine: {
+      seller: "Продавец",
+      department: "Отдел",
+      thisMonth: "Начислено в этом месяце",
+      thisMonthHint: "Ожидающих строк за этот месяц: {count}",
+      showThisMonth: "Показать комиссии этого месяца",
+      openSale: "Открыть продажу",
+    },
     title: "Комиссии",
     description: "Управление комиссиями с продаж",
     empty: "Комиссия не найдена.",

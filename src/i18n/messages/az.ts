@@ -1343,6 +1343,14 @@ export const azMessages = {
     },
   },
   commissions: {
+    engine: {
+      seller: "Satıcı",
+      department: "Şöbə",
+      thisMonth: "Bu ay qazanılan",
+      thisMonthHint: "Bu aydan {count} gözləyən sətir",
+      showThisMonth: "Bu ayın komissiyalarını göstər",
+      openSale: "Satışı aç",
+    },
     title: "Komissiyalar",
     description: "Satış komissiyalarının idarəetməsi",
     empty: "Komissiya tapılmadı.",

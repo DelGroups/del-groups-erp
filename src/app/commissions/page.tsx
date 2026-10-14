@@ -1,7 +1,11 @@
 import { CommissionsPage } from "@/modules/commissions/pages";
+import { isNewUiEnabled } from "@/lib/features/newUi";
+import NewUiSwitch from "./page.client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <CommissionsPage />;
+  // NEW_UI off (production): exactly the classic page, nothing else is loaded.
+  if (!isNewUiEnabled()) return <CommissionsPage />;
+  return <NewUiSwitch />;
 }

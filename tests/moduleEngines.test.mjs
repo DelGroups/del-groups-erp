@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as com from "../src/modules/commissions/views/commissions.ts";
 import * as cons from "../src/modules/consignment/views/consignment.ts";
 import * as con from "../src/modules/contracts/views/contracts.ts";
 import * as inv from "../src/modules/inventory/views/inventory.ts";
@@ -53,6 +54,7 @@ const ROUTES = [
   ["products/damaged-goods", "inventory", "DamagedGoodsPage", "DamagedGoodsScreen"],
   ["contracts", "contracts", "ContractsPage", "ContractsScreen"],
   ["consignments", "consignment", "ConsignmentsPage", "ConsignmentsScreen"],
+  ["commissions", "commissions", "CommissionsPage", "CommissionsScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -66,6 +68,8 @@ const TEXT_FILES = [
   "src/modules/contracts/components/ContractsScreen.tsx",
   "src/modules/consignment/views/consignment.ts",
   "src/modules/consignment/components/ConsignmentsScreen.tsx",
+  "src/modules/commissions/views/commissions.ts",
+  "src/modules/commissions/components/CommissionsScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -300,4 +304,21 @@ test("consignment: stock at partners, the document history and the classic cards
   assert.deepEqual(k, { stock: "130.00 common.currency", sold: "80.00 common.currency", aging: "30.00 common.currency", partners: "2" });
   // Rep chart: opening balances and returns left out.
   assert.deepEqual(cons.repPerformance(docs, "—"), [{ repName: "Rauf", dispatched: 25, sold: 80 }, { repName: "—", dispatched: 0, sold: 30 }]);
+});
+
+// ── Commissions ──────────────────────────────────────────────────────────────
+
+test("commissions: sellers as the classic list names them, and its cards", () => {
+  const employees = new Map([["e1", { full_name: "Leyla", department: "sales" }]]);
+  const recs = [
+    { id: "1", employee_id: "e1", seller_name: "old name", sale_id: "s1", sale_doc_no: "S-1", sale_amount: 1000, commission_rate: 2, commission_amount: 20, created_at: "2026-10-03T10:00:00Z" },
+    { id: "2", employee_id: null, seller_name: "Rauf", sale_amount: 500, commission_rate: 3, commission_amount: 15, created_at: "2026-09-03T10:00:00Z" },
+    { id: "3", employee_id: "e1", sale_amount: 200, commission_rate: 2.5, commission_amount: 5, created_at: "2026-10-10T10:00:00Z" },
+  ].map((r) => com.commissionToRecord(r, employees));
+  assert.deepEqual(recs.map((r) => [r.seller_key, r.seller_name, r.department]), [["e1", "Leyla", "sales"], ["Rauf", "Rauf", "general"], ["e1", "Leyla", "sales"]]);
+  const def = com.commissionsDefinition({ fetchAll: async () => [] }, [{ value: "sales", label: "Sales" }]);
+  assert.deepEqual(validateDefinition(def), []);
+  assert.equal(def.model.readPermission, "can_view_commissions");
+  const k = Object.fromEntries(com.commissionKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(k, { rows: "3", total: "40.00 common.currency", sellers: "2", month: "25.00 common.currency" });
 });
