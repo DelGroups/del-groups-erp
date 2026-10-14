@@ -1068,6 +1068,18 @@ export const azMessages = {
     balanceEditHint: "Balans tranzaksiyalar vasitəsilə idarə olunur; burada dəyişdirilmir.",
   },
   expenses: {
+    engine: {
+      payee: "Alan",
+      paidBy: "Ödəyən",
+      paidByCompany: "Şirkət hesabı",
+      booked: "Qeydə alınıb",
+      notCancelled: "Ləğv edilməyən",
+      noReceipt: "Qəbzi olmayan",
+      thisMonth: "Bu ay xərclər",
+      showThisMonth: "Bu ayın qeydə alınmış xərclərini göstər",
+      showPending: "Təsdiq gözləyən xərcləri göstər",
+      showOwed: "İşçilərə borc olan xərcləri göstər",
+    },
     doc: {
       vatAccount: "ƏDV hansı hesabdan ödənilir",
       vatFromMain: "— ƏDV də əsas hesabdan —",

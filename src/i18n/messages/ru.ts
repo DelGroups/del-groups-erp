@@ -1070,6 +1070,18 @@ export const ruMessages: Messages = {
     balanceEditHint: "Баланс управляется через транзакции и здесь не изменяется.",
   },
   expenses: {
+    engine: {
+      payee: "Получатель",
+      paidBy: "Оплатил",
+      paidByCompany: "Счёт компании",
+      booked: "Учтённые",
+      notCancelled: "Не отменённые",
+      noReceipt: "Без чека",
+      thisMonth: "Расходы за месяц",
+      showThisMonth: "Показать учтённые расходы этого месяца",
+      showPending: "Показать расходы на утверждении",
+      showOwed: "Показать расходы, которые нужно вернуть сотрудникам",
+    },
     doc: {
       vatAccount: "Откуда платить НДС",
       vatFromMain: "— НДС тоже с основного счёта —",

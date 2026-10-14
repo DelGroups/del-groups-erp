@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as exp from "../src/modules/expenses/views/expenses.ts";
 import * as com from "../src/modules/commissions/views/commissions.ts";
 import * as cons from "../src/modules/consignment/views/consignment.ts";
 import * as con from "../src/modules/contracts/views/contracts.ts";
@@ -55,6 +56,7 @@ const ROUTES = [
   ["contracts", "contracts", "ContractsPage", "ContractsScreen"],
   ["consignments", "consignment", "ConsignmentsPage", "ConsignmentsScreen"],
   ["commissions", "commissions", "CommissionsPage", "CommissionsScreen"],
+  ["expenses", "expenses", "ExpensesPage", "ExpensesScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -70,6 +72,8 @@ const TEXT_FILES = [
   "src/modules/consignment/components/ConsignmentsScreen.tsx",
   "src/modules/commissions/views/commissions.ts",
   "src/modules/commissions/components/CommissionsScreen.tsx",
+  "src/modules/expenses/views/expenses.ts",
+  "src/modules/expenses/components/ExpensesScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -321,4 +325,32 @@ test("commissions: sellers as the classic list names them, and its cards", () =>
   assert.equal(def.model.readPermission, "can_view_commissions");
   const k = Object.fromEntries(com.commissionKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
   assert.deepEqual(k, { rows: "3", total: "40.00 common.currency", sellers: "2", month: "25.00 common.currency" });
+});
+
+// ── Expenses ─────────────────────────────────────────────────────────────────
+
+test("expenses: approval stages, filters and the classic summary", () => {
+  const e = (id, extra) => exp.expenseToRecord({ id, code: `E-${id}`, expense_date: "2026-10-05", status: "posted", payment_mode: "company", category: "Fuel", net_amount: 100, vat_amount: 18, amount: 118, attachment_count: 1, is_production: false, ...extra });
+  const recs = [
+    e("1"),
+    e("2", { status: "draft", amount: 50 }),
+    e("3", { status: "submitted", amount: 20 }),
+    e("4", { status: "approved", payment_mode: "employee", amount: 30, attachment_count: 0 }),
+    e("5", { status: "cancelled", amount: 999 }),
+    e("6", { expense_date: "2026-09-20", amount: 10, category: "" }),
+  ];
+  assert.deepEqual(recs.map((r) => r.stage), ["posted", "draft", "submitted", "owed", "cancelled", "posted"]);
+  assert.equal(recs[5].category, "—");
+  const def = exp.expensesDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(validateDefinition(def), []);
+  assert.equal(def.model.readPermission, "can_view_expenses");
+  const ids = (f) => recs.filter((r) => matchesFilters(r, def.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["pending"]), "23");
+  assert.equal(ids(["owed"]), "4");
+  assert.equal(ids(["booked", "this_month"]), "14");
+  assert.equal(ids(["last_month"]), "6");
+  assert.equal(ids(["no_receipt", "active"]), "4");
+  const k = Object.fromEntries(exp.expenseKpis(recs, fmt, NOW).map((x) => [x.key, x.value]));
+  // Classic summary: booked = posted + approved (owed), cancelled out; pending = draft + submitted.
+  assert.deepEqual(k, { month: "148 common.currency", total: "158.00 common.currency", pending: "70.00 common.currency", owed: "30.00 common.currency" });
 });

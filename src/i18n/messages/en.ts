@@ -1070,6 +1070,18 @@ export const enMessages: Messages = {
     balanceEditHint: "Balance is managed via transactions and cannot be changed here.",
   },
   expenses: {
+    engine: {
+      payee: "Payee",
+      paidBy: "Paid by",
+      paidByCompany: "Company account",
+      booked: "Booked",
+      notCancelled: "Not cancelled",
+      noReceipt: "Without a receipt",
+      thisMonth: "Expenses this month",
+      showThisMonth: "Show this month's booked expenses",
+      showPending: "Show expenses waiting for approval",
+      showOwed: "Show expenses owed to employees",
+    },
     doc: {
       vatAccount: "Pay VAT from",
       vatFromMain: "— VAT from the main account too —",
