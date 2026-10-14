@@ -110,6 +110,33 @@ function publish(next: TrailEntry[]) {
   for (const fn of listeners) fn();
 }
 
+// Names of record pages ("/crm/<id>" → the deal's title), set by the page once it has loaded
+// the record, so crumbs show the name instead of an id.
+const recordLabels = new Map<string, string>();
+
+/** A record page names its crumb (view engine forms, prompt 17). */
+export function useRecordCrumb(label: string | null | undefined): void {
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!label) return;
+    recordLabels.set(pathname, label);
+    const trail = readTrail();
+    const next = trail.map((e) => (e.path === pathname ? { ...e, label } : e));
+    try {
+      sessionStorage.setItem(TRAIL_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // storage unavailable: the trail lives only in memory
+    }
+    publish(trail.length ? next : [...trailSnapshot]);
+  }, [label, pathname]);
+}
+
+function withRecordLabel(crumbs: Crumb[], path: string): Crumb[] {
+  const label = recordLabels.get(path);
+  if (!label || !crumbs.length) return crumbs;
+  return [...crumbs.slice(0, -1), { ...crumbs[crumbs.length - 1], label }];
+}
+
 /**
  * Crumbs of the current page that keep the path between related records: opening invoice B
  * from customer A shows "Customers › A › B"; going back to A cuts the trail at A; anything
@@ -122,7 +149,7 @@ export function useBreadcrumbTrail(): Crumb[] {
 
   useEffect(() => {
     const base = buildBreadcrumbsFromPath(pathname, t);
-    const label = base.at(-1)?.label ?? document.title ?? pathname;
+    const label = recordLabels.get(pathname) ?? base.at(-1)?.label ?? document.title ?? pathname;
     const next = nextTrail(readTrail(), { path: pathname, label }, shellNavigationPending);
     shellNavigationPending = false;
     try {
@@ -134,7 +161,7 @@ export function useBreadcrumbTrail(): Crumb[] {
   }, [pathname, t]);
 
   return useMemo(() => {
-    if (!trail.length || trail.at(-1)?.path !== pathname) return buildBreadcrumbsFromPath(pathname, t);
-    return trailCrumbs(trail, buildBreadcrumbsFromPath(trail[0].path, t));
+    if (!trail.length || trail.at(-1)?.path !== pathname) return withRecordLabel(buildBreadcrumbsFromPath(pathname, t), pathname);
+    return trailCrumbs(trail, withRecordLabel(buildBreadcrumbsFromPath(trail[0].path, t), trail[0].path));
   }, [trail, pathname, t]);
 }

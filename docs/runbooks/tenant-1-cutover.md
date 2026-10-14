@@ -180,9 +180,10 @@ table and is safe to run twice.
 GitHub → Actions → **tenant-migrations** → Run workflow (branch `main`):
 
 1. `dry_run` ticked, `tenant` = `del-groups`. The summary lists the files it would apply
-   (normally the four `20261011…` files and `20261014100000_tenant_limits`). Nothing else may be listed.
+   (normally the four `20261011…` files, `20261014100000_tenant_limits` and `20261014110000_view_favorites`).
+   Nothing else may be listed.
 2. Run again with `dry_run` unticked, `tenant` = `del-groups`. Result `migrated`, version
-   = the newest file listed in step 1 (`20261014100000` at the time of writing).
+   = the newest file listed in step 1 (`20261014110000` at the time of writing).
 
 What staff notice (all intended by earlier prompts):
 
@@ -193,6 +194,7 @@ What staff notice (all intended by earlier prompts):
 | `20261011140000_fix_is_admin_role_column` | fixes the `column "role" does not exist` error when saving CRM deals and HR advances/leaves/payrolls |
 | `20261011150000_enable_rls_on_remaining_tables` | already in production; runs again with the same result |
 | `20261014100000_tenant_limits` | adds the empty plan-limits table, the seat trigger and the storage quota policy; with no limits row (no subscription) nothing changes |
+| `20261014110000_view_favorites` | adds the empty saved-searches table of the new UI; nothing reads it while `NEW_UI` is off |
 
 Then, still in single-tenant mode:
 

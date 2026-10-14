@@ -41,7 +41,7 @@ function mapQuotation(row: Record<string, unknown>): CrmQuotation {
   };
 }
 
-function mapDeal(row: Record<string, unknown>): CrmDeal {
+export function mapDeal(row: Record<string, unknown>): CrmDeal {
   const quotations = Array.isArray(row.quotations)
     ? (row.quotations as Record<string, unknown>[]).map(mapQuotation)
     : [];
