@@ -9,6 +9,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as acc from "../src/modules/accounting/views/accounting.ts";
+import { LOCKED_LEDGER_REFERENCE_TYPES } from "../src/modules/accounting/lib/ledgerTransactionRules.ts";
 import * as prod from "../src/modules/production/views/production.ts";
 import * as pay from "../src/modules/payroll/views/payroll.ts";
 import * as hr from "../src/modules/hr/views/hr.ts";
@@ -61,6 +63,9 @@ const ROUTES = [
   ["commissions", "commissions", "CommissionsPage", "CommissionsScreen"],
   ["expenses", "expenses", "ExpensesPage", "ExpensesScreen"],
   ["production", "production", "ProductionBoardPage", "ProductionScreen"],
+  ["finance", "accounting", "FinancePage", "FinanceLedgerScreen"],
+  ["cash-bank", "accounting", "CashBankPage", "CashBankScreen"],
+  ["dashboard/payments", "accounting", "PaymentsPage", "PaymentsScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -85,6 +90,8 @@ const TEXT_FILES = [
   "src/modules/payroll/components/engineTabs.tsx",
   "src/modules/production/views/production.ts",
   "src/modules/production/components/ProductionScreen.tsx",
+  "src/modules/accounting/views/accounting.ts",
+  "src/modules/accounting/components/AccountingScreens.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -466,4 +473,41 @@ test("production: stages, the classic costing, late orders and financials only w
   const k = prod.productionKpis(recs, fmt, false).map((x) => [x.key, x.value]);
   assert.deepEqual(k, [["open", "3"], ["late", "1"], ["ready", "1"]]);
   assert.equal(prod.productionKpis(recs, fmt, true).length, 4);
+});
+
+// ── Accounting ───────────────────────────────────────────────────────────────
+
+test("accounting ledger: signed amounts, sources locked as in the classic rules, the classic totals", () => {
+  assert.deepEqual([...acc.LOCKED_SOURCES].sort(), [...LOCKED_LEDGER_REFERENCE_TYPES].sort());
+  const l = (id, extra) => acc.ledgerToRecord({ id, transaction_date: "2026-10-05", type: "INCOME", amount: 100, category: "Sales", reference_type: "sale", created_at: "", ...extra });
+  const recs = [l("1"), l("2", { type: "EXPENSE", amount: 40, reference_type: "manual_expense" }), l("3", { type: "TRANSFER", amount: 500, reference_type: null }), l("4", { transaction_date: "2026-09-10", amount: 60 })];
+  assert.deepEqual(recs.map((r) => [r.net, r.locked]), [[100, true], [-40, false], [0, false], [60, true]]);
+  const def = acc.ledgerDefinition({ fetchAll: async () => [] });
+  assert.deepEqual(validateDefinition(def), []);
+  assert.equal(def.model.readPermission, "can_view_finance");
+  const ids = (f) => recs.filter((r) => matchesFilters(r, def.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["manual"]), "23");
+  assert.equal(ids(["income", "this_month"]), "1");
+  const k = Object.fromEntries(acc.ledgerKpis(recs, fmt, NOW).map((x) => [x.key, x]));
+  assert.equal(k.income.value, "160.00 common.currency");
+  assert.equal(k.expense.value, "40.00 common.currency");
+  assert.equal(k.net.value, "120.00 common.currency");
+  assert.equal(k.month.value, "60 common.currency");
+  assert.equal(k.month.delta, 0);
+});
+
+test("accounting accounts and payments: the classic cash / bank totals and payment figures", () => {
+  const a = (id, extra) => acc.accountToRecord({ account_id: id, code: `A${id}`, name: `Acc ${id}`, type: "Kassa", ledger_balance: 100, stored_balance: 100, ...extra });
+  const accounts = [a("1"), a("2", { type: "Bank", ledger_balance: 250.5, stored_balance: 200 }), a("3", { type: "Other", ledger_balance: 999 }), a("4", { ledger_balance: -20, stored_balance: -20 })];
+  assert.equal(accounts[1].mismatch, true);
+  assert.deepEqual(validateDefinition(acc.accountsDefinition({ fetchAll: async () => [] })), []);
+  const ak = Object.fromEntries(acc.accountKpis(accounts, fmt).map((x) => [x.key, x.value]));
+  // Classic: cash = "Kassa", bank = "Bank" only; other types count in neither.
+  assert.deepEqual(ak, { cash: "80.00 common.currency", bank: "250.50 common.currency", total: "330.50 common.currency", negative: "1" });
+  const p = (id, extra) => acc.paymentToRecord({ id, payment_date: "2026-10-03", partner_name: "Nur", amount: 100, payment_type: "in", payment_method: "bank", ...extra });
+  const pays = [p("1"), p("2", { payment_type: "out", amount: 30 }), p("3", { payment_date: "2026-09-30", amount: 70 })];
+  assert.deepEqual(pays.map((r) => r.net), [100, -30, 70]);
+  assert.deepEqual(validateDefinition(acc.paymentsDefinition({ fetchAll: async () => [] })), []);
+  const pk = Object.fromEntries(acc.paymentKpis(pays, fmt, NOW).map((x) => [x.key, x.value]));
+  assert.deepEqual(pk, { in: "100.00 common.currency", out: "30.00 common.currency", count: "2" });
 });
