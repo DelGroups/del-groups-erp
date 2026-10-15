@@ -112,6 +112,20 @@ export function appForPath<I extends ShellItem, S extends ShellSection<I>>(secti
   return bestItem<I, S>(sections, pathname)?.section ?? null;
 }
 
+/** The home menu: the app launcher. "/" shows it too while the new shell is on. */
+export const SHELL_HOME = "/apps";
+const HOME_PATHS = new Set(["/", SHELL_HOME]);
+
+/**
+ * The back-to-home button of the top bar (module icon, turning into a back arrow): shown inside
+ * every module (sub-pages and sub-tabs included), never on the home menu itself, and only when
+ * the page belongs to an app.
+ */
+export function shellBackButton(pathname: string, appId: string | null): { show: boolean; href: string } {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  return { show: !!appId && !HOME_PATHS.has(path), href: SHELL_HOME };
+}
+
 /** Launcher filter: app title or any of its items (labels already translated), every word. */
 export function filterApps<A extends { title: string; itemTitles: readonly string[] }>(apps: readonly A[], query: string): A[] {
   const norm = (s: string) => s.replace(/İ/g, "i").replace(/ı/g, "i").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ə/g, "e");

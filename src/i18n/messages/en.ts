@@ -3663,6 +3663,7 @@ export const enMessages: Messages = {
     motionOtherPage: "Another page",
   },
   newShell: {
+    homeMenu: "Home menu",
     extra_polywood: "Polywood stock",
     extra_commissionReport: "Commission report",
     apps: "Apps",

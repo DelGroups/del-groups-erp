@@ -334,3 +334,33 @@
   background: var(--ds-surface);
   border-bottom: 1px solid var(--ds-border);
 }
+
+/* ── Shell back button (module icon → back arrow, prompt: shell back button) ── */
+[data-ds] .ds-shell-back {
+  color: var(--ds-text);
+  text-decoration: none;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-shell-back > span:first-child {
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-out), color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-shell-back:hover,
+[data-ds] .ds-shell-back:focus-visible {
+  background: var(--ds-surface-sunken);
+}
+[data-ds] .ds-shell-back[data-back] > span:first-child {
+  background: var(--ds-brand);
+  color: var(--ds-brand-fg);
+}
+[data-ds] .ds-tooltip {
+  z-index: 70;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-text);
+  color: var(--ds-bg);
+  font-size: var(--ds-text-xs);
+  font-weight: 500;
+  box-shadow: var(--ds-elevation-2);
+}

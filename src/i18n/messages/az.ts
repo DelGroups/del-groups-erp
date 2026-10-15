@@ -3662,6 +3662,7 @@ export const azMessages = {
     motionOtherPage: "Başqa səhifə",
   },
   newShell: {
+    homeMenu: "Ana menyu",
     extra_polywood: "Polywood qalığı",
     extra_commissionReport: "Komissiya hesabatı",
     apps: "Tətbiqlər",
