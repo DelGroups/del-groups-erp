@@ -260,6 +260,21 @@ function ExtraTab({ tab, tabs }: { tab: EmployeesPageTab; tabs: EmployeesPageTab
   const accounts = useQuery({ queryKey: ["hr", "accounts"], queryFn: fetchAccounts });
   const [createOpen, setCreateOpen] = useState(false);
   const canManage = can("can_manage_hr");
+  if (tab.ownsPage) {
+    const Component = tab.Component;
+    return (
+      <Component
+        employees={employees.data ?? []}
+        accounts={accounts.data ?? []}
+        canManageHr={canManage}
+        createOpen={createOpen}
+        setCreateOpen={setCreateOpen}
+        showError={() => undefined}
+        showSuccess={() => undefined}
+        header={<Tabs active={tab.id} tabs={tabs} />}
+      />
+    );
+  }
   return (
     <ViewScope>
       <ExtraTabBody tab={tab} tabs={tabs} employees={employees.data ?? []} accounts={accounts.data ?? []} canManage={canManage} createOpen={createOpen} setCreateOpen={setCreateOpen} createLabel={tab.createLabelKey ? t(tab.createLabelKey) : null} />

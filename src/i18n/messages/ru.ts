@@ -3841,6 +3841,24 @@ export const ruMessages: Messages = {
       },
     },
   },
+  payroll: {
+    engine: {
+      bonuses: "Премии и комиссии",
+      employerCost: "Расходы работодателя",
+      employerCostHint: "Начисленная зарплата плюс взносы работодателя в ГФСЗ и на страхование от безработицы",
+      paidAt: "Выплачено",
+      toPay: "К выплате",
+      showToPay: "Показать зарплаты к выплате",
+      showPaid: "Показать выплаченные зарплаты",
+      taxBreakdown: "Налоги и удержания",
+      description: "Примечание",
+      notDeducted: "Ещё не удержаны",
+      toDeduct: "Авансы к удержанию",
+      toDeductHint: "Выплачены, удерживаются из следующей зарплаты",
+      showNotDeducted: "Показать неудержанные авансы",
+      advanceCount: "Авансы",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Адрес не найден",

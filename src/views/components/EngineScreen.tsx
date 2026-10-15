@@ -57,7 +57,7 @@ function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashb
   const pathname = usePathname();
   const params = useSearchParams();
   const client = useQueryClient();
-  const read = useViewData(definition);
+  const read = useViewData(definition, { enabled: !given });
   const data = given ?? read;
   const [preset, setPreset] = useState<{ id: number; filters: string[] } | undefined>(undefined);
   const openId = params.get(RECORD_PARAM);

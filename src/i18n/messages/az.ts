@@ -3839,6 +3839,24 @@ export const azMessages = {
       },
     },
   },
+  payroll: {
+    engine: {
+      bonuses: "Bonus və komissiyalar",
+      employerCost: "İşəgötürən xərci",
+      employerCostHint: "Hesablanmış maaşlar üstəgəl işəgötürənin DSMF və İTS haqları",
+      paidAt: "Ödənilib",
+      toPay: "Ödəniləcək",
+      showToPay: "Ödəniləcək maaşları göstər",
+      showPaid: "Ödənilmiş maaşları göstər",
+      taxBreakdown: "Vergilər və tutulmalar",
+      description: "Qeyd",
+      notDeducted: "Hələ tutulmayıb",
+      toDeduct: "Tutulacaq avanslar",
+      toDeductHint: "Ödənilib, növbəti maaşdan tutulacaq",
+      showNotDeducted: "Tutulmamış avansları göstər",
+      advanceCount: "Avanslar",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "Bu ünvan tapılmadı",

@@ -86,9 +86,10 @@ export interface ViewData<R extends ViewRecord> {
 }
 
 /** All rows of a view (up to the model's limit). */
-export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>): ViewData<R> {
+export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>, options: { enabled?: boolean } = {}): ViewData<R> {
   const access = useViewAccess(def);
-  const allowed = access.ready && access.read;
+  // enabled: false = the screen brings its own rows (a period, a report); nothing is read here.
+  const allowed = access.ready && access.read && options.enabled !== false;
   const studio = useStudioFields(def.model.studioModel, allowed);
   const limit = def.model.limit ?? DEFAULT_LIMIT;
   const query = useQuery({

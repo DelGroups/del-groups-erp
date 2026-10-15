@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { PAYROLL_EMPLOYEE_TABS } from "@/modules/payroll/pages";
+import { PAYROLL_ENGINE_TABS } from "@/modules/payroll/pages";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import EmployeesPageClient from "./page.client";
@@ -13,5 +13,5 @@ const EmployeesScreen = dynamic(() => import("@/modules/hr/pages").then((m) => m
 export default function EmployeesNewUiSwitch() {
   const { active } = useNewUi();
   const { isEnabled } = useEnabledModules();
-  return active ? <EmployeesScreen extraTabs={isEnabled("payroll") ? PAYROLL_EMPLOYEE_TABS : []} /> : <EmployeesPageClient />;
+  return active ? <EmployeesScreen extraTabs={isEnabled("payroll") ? PAYROLL_ENGINE_TABS : []} /> : <EmployeesPageClient />;
 }

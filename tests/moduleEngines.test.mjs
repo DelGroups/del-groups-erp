@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as pay from "../src/modules/payroll/views/payroll.ts";
 import * as hr from "../src/modules/hr/views/hr.ts";
 import * as exp from "../src/modules/expenses/views/expenses.ts";
 import * as com from "../src/modules/commissions/views/commissions.ts";
@@ -77,6 +78,9 @@ const TEXT_FILES = [
   "src/modules/expenses/components/ExpensesScreen.tsx",
   "src/modules/hr/views/hr.ts",
   "src/modules/hr/components/EmployeesScreen.tsx",
+  "src/modules/payroll/views/payroll.ts",
+  "src/modules/payroll/components/PayrollEngineTabs.tsx",
+  "src/modules/payroll/components/engineTabs.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -363,7 +367,7 @@ test("expenses: approval stages, filters and the classic summary", () => {
 test("hr: the employees route keeps the classic page while NEW_UI is off, payroll tabs included", () => {
   assert.match(read("src/app/employees/page.tsx"), /if \(!isNewUiEnabled\(\)\) return <EmployeesPageClient \/>;/);
   const sw = read("src/app/employees/new-ui-switch.tsx");
-  assert.match(sw, /return active \? <EmployeesScreen extraTabs=\{isEnabled\("payroll"\) \? PAYROLL_EMPLOYEE_TABS : \[\]\} \/> : <EmployeesPageClient \/>;/);
+  assert.match(sw, /return active \? <EmployeesScreen extraTabs=\{isEnabled\("payroll"\) \? PAYROLL_ENGINE_TABS : \[\]\} \/> : <EmployeesPageClient \/>;/);
   assert.match(read("src/app/employees/page.client.tsx"), /<EmployeesPage extraTabs=\{isEnabled\("payroll"\) \? PAYROLL_EMPLOYEE_TABS : \[\]\} \/>/);
 });
 
@@ -398,4 +402,37 @@ test("hr: directory with the classic paid-leave balance, leaves, filters and car
   assert.equal(ids(["upcoming"]), "l2");
   const lk = Object.fromEntries(hr.leaveKpis(lrecs, fmt, NOW).map((x) => [x.key, x.value]));
   assert.deepEqual(lk, { pending: "1", today: "1", paid_days: "5", sick: "3" });
+});
+
+// ── Payroll ──────────────────────────────────────────────────────────────────
+
+test("payroll: runs with employer cost, the classic pay rule and cards; advances", () => {
+  const run = (id, extra) => pay.payrollToRecord({ id, employee_id: `e${id}`, employees: { full_name: `Emp ${id}`, employee_code: `E${id}` }, gross_salary: 1000, dsmf_employer: 220, its_employer: 5, net_salary: 800, status: "DRAFT", ...extra });
+  const runs = [run("1"), run("2", { status: "PAID" }), run("3", { net_salary: 0 }), run("4", { status: "weird" })];
+  assert.equal(runs[0].employer_cost, 1225);
+  assert.equal(runs[3].status, "DRAFT");
+  assert.deepEqual(runs.map(pay.canPayRun), [true, false, false, true]);
+  const def = pay.payrollDefinition({});
+  assert.deepEqual(validateDefinition(def), []);
+  assert.equal(def.model.readPermission, "can_view_hr");
+  assert.deepEqual(runs.filter((r) => matchesFilters(r, def.filters, ["to_pay"], { userId: null, now: NOW })).map((r) => r.id), ["1", "4"]);
+  const k = Object.fromEntries(pay.payrollKpis(runs, fmt).map((x) => [x.key, x.value]));
+  // Classic: rows; net of rows not paid (zero-net rows included, as the classic total); paid count.
+  assert.deepEqual(k, { rows: "4", to_pay: "1,600.00 common.currency", paid: "1", cost: "4,900.00 common.currency" });
+  const adv = [
+    { id: "a1", employee_id: "e1", employees: { full_name: "Emp 1" }, amount: 100, request_date: "2026-10-01", status: "PAID", accounts: { name: "Kassa" } },
+    { id: "a2", employee_id: "e1", amount: 50, request_date: "2026-09-01", status: "DEDUCTED" },
+    { id: "a3", employee_id: "e2", amount: 30, request_date: "2026-10-02", status: "other" },
+  ].map(pay.advanceToRecord);
+  assert.equal(adv[0].account_name, "Kassa");
+  assert.equal(adv[2].status, "PENDING");
+  assert.deepEqual(validateDefinition(pay.advancesDefinition({ fetchAll: async () => [] })), []);
+  const ak = Object.fromEntries(pay.advanceKpis(adv, fmt).map((x) => [x.key, x.value]));
+  assert.deepEqual(ak, { open: "130.00 common.currency", count: "3" });
+});
+
+test("payroll: the classic tabs stay for the classic screen, the engine tabs only in the new UI", () => {
+  assert.match(read("src/modules/payroll/components/employeesPageTabs.tsx"), /Component: PayrollTab/);
+  assert.doesNotMatch(read("src/modules/payroll/components/employeesPageTabs.tsx"), /@\/views|EngineTab/);
+  assert.match(read("src/modules/payroll/components/engineTabs.tsx"), /ownsPage: true/);
 });

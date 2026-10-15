@@ -3840,6 +3840,24 @@ export const enMessages: Messages = {
       },
     },
   },
+  payroll: {
+    engine: {
+      bonuses: "Bonuses and commissions",
+      employerCost: "Employer cost",
+      employerCostHint: "Gross salaries plus the employer's social and unemployment insurance",
+      paidAt: "Paid",
+      toPay: "Still to pay",
+      showToPay: "Show salaries still to pay",
+      showPaid: "Show paid salaries",
+      taxBreakdown: "Taxes and deductions",
+      description: "Note",
+      notDeducted: "Not deducted yet",
+      toDeduct: "Advances to deduct",
+      toDeductHint: "Paid out, deducted from the next payroll",
+      showNotDeducted: "Show advances not deducted yet",
+      advanceCount: "Advances",
+    },
+  },
   tenantStatus: {
     notFound: {
       title: "This address was not found",
