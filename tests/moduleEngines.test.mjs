@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countIf, matchesFilters, monthTotals, sumIf, validateDefinition, weeklySeries } from "../src/views/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
+import * as prod from "../src/modules/production/views/production.ts";
 import * as pay from "../src/modules/payroll/views/payroll.ts";
 import * as hr from "../src/modules/hr/views/hr.ts";
 import * as exp from "../src/modules/expenses/views/expenses.ts";
@@ -59,6 +60,7 @@ const ROUTES = [
   ["consignments", "consignment", "ConsignmentsPage", "ConsignmentsScreen"],
   ["commissions", "commissions", "CommissionsPage", "CommissionsScreen"],
   ["expenses", "expenses", "ExpensesPage", "ExpensesScreen"],
+  ["production", "production", "ProductionBoardPage", "ProductionScreen"],
 ];
 /** New files whose texts must exist in all languages, per module. */
 const TEXT_FILES = [
@@ -81,6 +83,8 @@ const TEXT_FILES = [
   "src/modules/payroll/views/payroll.ts",
   "src/modules/payroll/components/PayrollEngineTabs.tsx",
   "src/modules/payroll/components/engineTabs.tsx",
+  "src/modules/production/views/production.ts",
+  "src/modules/production/components/ProductionScreen.tsx",
 ];
 
 test("with NEW_UI off every switched route renders exactly its classic page", () => {
@@ -435,4 +439,31 @@ test("payroll: the classic tabs stay for the classic screen, the engine tabs onl
   assert.match(read("src/modules/payroll/components/employeesPageTabs.tsx"), /Component: PayrollTab/);
   assert.doesNotMatch(read("src/modules/payroll/components/employeesPageTabs.tsx"), /@\/views|EngineTab/);
   assert.match(read("src/modules/payroll/components/engineTabs.tsx"), /ownsPage: true/);
+});
+
+// ── Production ───────────────────────────────────────────────────────────────
+
+test("production: stages, the classic costing, late orders and financials only when allowed", () => {
+  const o = (id, extra) => prod.productionToRecord({ id, order_no: `P-${id}`, project_name: `Proj ${id}`, status: "Draft", production_model: "in_house_custom", total_project_price: 1000, installation_fee: 0, materials: [{ quantity: 2, unit_cost: 100 }], outsourcing: [], contractors: [], expenses: [], ...extra }, NOW);
+  const recs = [o("1"), o("2", { status: "In-Progress", expected_delivery_date: "2026-10-10" }), o("3", { status: "Ready", expected_delivery_date: "2026-10-20" }), o("4", { status: "Delivered", expected_delivery_date: "2026-10-01" })];
+  assert.deepEqual(recs.map((r) => r.next_status), ["In-Progress", "Ready", "Delivered", null]);
+  assert.deepEqual(recs.map((r) => r.is_late), [false, true, false, false]);
+  assert.equal(recs[0].total_cost, 200);
+  assert.ok(recs[0].revenue >= 0);
+  const withMoney = prod.productionDefinition({ fetchAll: async () => [] }, true);
+  const noMoney = prod.productionDefinition({ fetchAll: async () => [] }, false);
+  assert.deepEqual(validateDefinition(withMoney), []);
+  assert.deepEqual(validateDefinition(noMoney), []);
+  assert.equal(withMoney.model.readPermission, "can_view_production");
+  for (const f of ["revenue", "total_cost", "profit", "margin", "health", "project_price", "remaining_balance"]) {
+    assert.ok(withMoney.fields.some((x) => x.name === f), f);
+    assert.ok(!noMoney.fields.some((x) => x.name === f), f);
+  }
+  assert.equal(noMoney.kanban.amount, undefined);
+  const ids = (f) => recs.filter((r) => matchesFilters(r, withMoney.filters, f, { userId: null, now: NOW })).map((r) => r.id).join("");
+  assert.equal(ids(["open"]), "123");
+  assert.equal(ids(["late"]), "2");
+  const k = prod.productionKpis(recs, fmt, false).map((x) => [x.key, x.value]);
+  assert.deepEqual(k, [["open", "3"], ["late", "1"], ["ready", "1"]]);
+  assert.equal(prod.productionKpis(recs, fmt, true).length, 4);
 });
