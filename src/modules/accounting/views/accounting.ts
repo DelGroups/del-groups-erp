@@ -250,7 +250,7 @@ export function paymentToRecord(row: Record<string, unknown>): PaymentRecord {
 
 export function paymentsDefinition(fetchers: Fetchers): ViewDefinition<PaymentRecord> {
   return {
-    model: { key: PAYMENTS_VIEW_KEY, table: "partner_payments", module: "accounting", readPermission: "can_view_finance", writePermission: "can_manage_finance", select: "*", order: { field: "payment_date", dir: "desc" }, toRecord: paymentToRecord, ...fetchers },
+    model: { key: PAYMENTS_VIEW_KEY, table: "payments", module: "accounting", readPermission: "can_view_finance", writePermission: "can_manage_finance", select: "*", order: { field: "payment_date", dir: "desc" }, toRecord: paymentToRecord, ...fetchers },
     titleKey: "payments.pageTitle",
     fields: [
       { name: "payment_date", labelKey: "common.date", type: "date", readonly: true },

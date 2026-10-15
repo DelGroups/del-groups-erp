@@ -7,6 +7,8 @@ import { recordLayoutId, transitions } from "@/design-system/motion";
 import { changedValues, displayValue, fieldLabel, fieldMap, missingRequired, optionLabel, parseInput, type Formatter } from "../logic";
 import type { FieldDef, ViewDefinition, ViewRecord } from "../types";
 import { Cell } from "./ListView";
+import { Chatter } from "../chatter/Chatter";
+import { chatterEnabledFor, type ChatterModel } from "../chatter/logic";
 
 export interface FormAction {
   key: string;
@@ -35,8 +37,10 @@ export interface FormViewProps<R extends ViewRecord> {
   actions?: readonly FormAction[];
   /** Screen-specific tabs after the definition's tabs (related lists). */
   extraTabs?: readonly FormTab[];
-  /** Right-hand column: Chatter (prompt 19) or any record side panel. */
+  /** Right-hand column: the screen's own side content, shown above the record's chatter. */
   chatter?: React.ReactNode;
+  /** The record's notes, messages and activities (phase 19); on by default for tables that carry chatter. */
+  withChatter?: boolean;
 }
 
 /**
@@ -44,7 +48,9 @@ export interface FormViewProps<R extends ViewRecord> {
  * two columns, then tabs; a slot for Chatter on the right (below on narrow screens). Edits stay
  * in a draft until Save (or Ctrl/⌘+S); Discard restores the record. Required fields are checked.
  */
-export function FormView<R extends ViewRecord>({ definition: def, record, canWrite, fmt, onSave, onStatusChange, actions = [], extraTabs = [], chatter }: FormViewProps<R>) {
+export function FormView<R extends ViewRecord>({ definition: def, record, canWrite, fmt, onSave, onStatusChange, actions = [], extraTabs = [], chatter, withChatter = true }: FormViewProps<R>) {
+  const table = def.model.table;
+  const showChatter = withChatter && chatterEnabledFor(table, record.id);
   const { t } = fmt;
   const fields = useMemo(() => fieldMap(def), [def]);
   const editable = canWrite && !!onSave;
@@ -163,7 +169,12 @@ export function FormView<R extends ViewRecord>({ definition: def, record, canWri
           {tabs.length ? <Tabs tabs={tabs} label={t("views.form.tabs")} /> : null}
         </motion.section>
       </div>
-      {chatter ? <aside className="min-w-0">{chatter}</aside> : null}
+      {chatter || showChatter ? (
+        <aside className="flex min-w-0 flex-col gap-4">
+          {chatter}
+          {showChatter ? <Chatter model={table as ChatterModel} recordId={record.id} fmt={fmt} /> : null}
+        </aside>
+      ) : null}
     </form>
   );
 }
