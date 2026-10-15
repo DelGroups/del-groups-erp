@@ -3664,6 +3664,7 @@ export const ruMessages: Messages = {
     motionOtherPage: "Другая страница",
   },
   newShell: {
+    homeMenu: "Главное меню",
     extra_polywood: "Остатки Polywood",
     extra_commissionReport: "Отчёт по комиссиям",
     apps: "Приложения",

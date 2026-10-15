@@ -15,7 +15,9 @@ import {
   nextTrail,
   parseNewUiCookie,
   parseTrail,
+  shellBackButton,
   SHELL_EXTRA_ITEMS,
+  SHELL_HOME,
   shortcutModifier,
   trailCrumbs,
   TRAIL_MAX,
@@ -257,4 +259,34 @@ test("responsive visibility sits on wrappers, never on ds- buttons (their displa
       assert.ok(!(styled && responsive), `${f}: "${cls}"`);
     }
   }
+});
+
+// ── Back button (module icon → back arrow) ───────────────────────────────────
+
+test("the back-to-home button shows inside every module and never on the home menu", () => {
+  // Inside a module: its pages, sub-pages and sub-tabs.
+  for (const path of ["/sales", "/sales/123", "/dashboard/reports/financial", "/dashboard/reports/osv", "/employees?tab=leaves".split("?")[0], "/crm/", "/inventory/counts/abc"]) {
+    assert.deepEqual(shellBackButton(path, "app"), { show: true, href: SHELL_HOME }, path);
+  }
+  // The home menu itself ("/" is the launcher while the new shell is on), or a page of no app.
+  assert.equal(shellBackButton("/apps", "dashboard").show, false);
+  assert.equal(shellBackButton("/apps/", "dashboard").show, false);
+  assert.equal(shellBackButton("/", "dashboard").show, false);
+  assert.equal(shellBackButton("/settings/profile", null).show, false);
+  assert.equal(SHELL_HOME, "/apps");
+});
+
+test("the top bar uses the back button only when it should show; it is a link with a label and motion", () => {
+  const shell = read("src/components/shell/NewShell.tsx");
+  assert.match(shell, /const backButton = shellBackButton\(pathname, current\?\.id \?\? null\);/);
+  assert.match(shell, /\{current && backButton\.show \? \(\s*<ShellBackButton app=\{current\} href=\{backButton\.href\} \/>/);
+  const button = read("src/components/shell/ShellBackButton.tsx");
+  assert.match(button, /<Link\s+href=\{href\}/);
+  assert.match(button, /aria-label=/);
+  assert.match(button, /onFocus=\{\(\) => setHot\(true\)\}/);
+  assert.match(button, /\(hover: none\)/);
+  assert.match(button, /transition=\{reduced \? transitions\.instant : transitions\.fast\}/);
+  assert.match(button, /t\("newShell\.homeMenu"\)/);
+  // Only the new shell renders it: the classic layout does not import it.
+  assert.doesNotMatch(read("src/components/layout/ERPLayout.tsx"), /ShellBackButton/);
 });

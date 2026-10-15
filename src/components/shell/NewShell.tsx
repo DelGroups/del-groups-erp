@@ -40,9 +40,10 @@ import { formatBytesShort, limitState, type LimitKind } from "@/lib/limits/limit
 import { CommandPalette, DesignScope, useDesignScope, type PaletteAction } from "@/design-system/components";
 import type { PaletteGroup } from "@/design-system/logic";
 import { motionPreset, overlayVariants, transitions } from "@/design-system/motion";
-import { AI_OPEN_EVENT, collapseCrumbs, filterApps, shortcutModifier, type Crumb } from "@/lib/shell/shell";
+import { AI_OPEN_EVENT, collapseCrumbs, filterApps, shellBackButton, shortcutModifier, type Crumb } from "@/lib/shell/shell";
 import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
+import { ShellBackButton } from "./ShellBackButton";
 
 function initials(name: string): string {
   return (
@@ -551,6 +552,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const [drawerOpen, setDrawerOpen] = useState(false);
   const dsTheme = theme === "daylight" ? "light" : "dark";
   const aiEnabled = isEnabled("ai");
+  const backButton = shellBackButton(pathname, current?.id ?? null);
 
   const groups = useMemo<PaletteGroup<PaletteAction>[]>(() => {
     const go = (href: string) => () => {
@@ -583,9 +585,13 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             </div>
             <WorkspaceSwitcher />
             <span className="mx-1 hidden h-6 w-px md:block" style={{ background: "var(--ds-border)" }} aria-hidden />
-            <ShellLink href={current?.href ?? "/apps"} className="min-w-0 truncate text-[length:var(--ds-text-base)] font-semibold" style={{ color: "var(--ds-text)" }}>
-              {current?.title ?? t("newShell.apps")}
-            </ShellLink>
+            {current && backButton.show ? (
+              <ShellBackButton app={current} href={backButton.href} />
+            ) : (
+              <ShellLink href={current?.href ?? "/apps"} className="min-w-0 truncate text-[length:var(--ds-text-base)] font-semibold" style={{ color: "var(--ds-text)" }}>
+                {current?.title ?? t("newShell.apps")}
+              </ShellLink>
+            )}
 
             <div className="flex flex-1 justify-center">
               <button
