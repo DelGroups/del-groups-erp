@@ -1,7 +1,11 @@
 import { ProductionBoardPage } from "@/modules/production/pages";
+import { isNewUiEnabled } from "@/lib/features/newUi";
+import NewUiSwitch from "./page.client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <ProductionBoardPage />;
+  // NEW_UI off (production): exactly the classic page, nothing else is loaded.
+  if (!isNewUiEnabled()) return <ProductionBoardPage />;
+  return <NewUiSwitch />;
 }

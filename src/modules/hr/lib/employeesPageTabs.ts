@@ -15,6 +15,8 @@ export interface EmployeesPageTabProps {
   setCreateOpen: (open: boolean) => void;
   showError: (message: string) => void;
   showSuccess: (message: string) => void;
+  /** New UI only: the screen's tab bar, for tabs that render their own page (ownsPage). */
+  header?: ReactNode;
 }
 
 export interface EmployeesPageTab {
@@ -25,4 +27,9 @@ export interface EmployeesPageTab {
   /** i18n key of the page header button shown on this tab to users who can manage HR. */
   createLabelKey?: string;
   Component: ComponentType<EmployeesPageTabProps>;
+  /**
+   * New UI only: the tab renders its own page frame (a view-engine screen) and shows `header`;
+   * the classic screen ignores this.
+   */
+  ownsPage?: boolean;
 }

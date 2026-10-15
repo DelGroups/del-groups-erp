@@ -13,16 +13,24 @@ import { PivotView } from "./PivotView";
 import { GraphView } from "./GraphView";
 import { CalendarView } from "./CalendarView";
 
+const noHref = () => "#";
+
 export interface ViewEngineProps<R extends ViewRecord> {
   data: ViewData<R>;
   title: string;
   fmt: Formatter;
   ctx: FilterContext;
-  openHref: (record: R) => string;
+  /** Where a record opens (form); without it list rows are plain (reports). */
+  openHref?: (record: R) => string;
   /** Kanban drop (the screen calls its server action). */
   onMove?: (record: R, value: string) => void;
   /** Create button and other screen actions. */
   actions?: React.ReactNode;
+  /**
+   * Filters applied from outside (dashboard cards): each new `id` replaces the active filters
+   * and shows the list.
+   */
+  preset?: { id: number; filters: readonly string[] };
 }
 
 /**
@@ -30,12 +38,18 @@ export interface ViewEngineProps<R extends ViewRecord> {
  * graph or calendar), all fed by the same searched and filtered records. The user's default
  * favourite is applied when it loads, unless they already changed the search.
  */
-export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions }: ViewEngineProps<R>) {
+export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions, preset }: ViewEngineProps<R>) {
   const def = data.definition;
   const favorites = useFavorites(def, data.status === "ready");
   const [touched, setTouched] = useState<SearchState | null>(null);
   const fallback = useMemo(() => defaultFavorite(favorites.favorites)?.state ?? defaultSearchState(def), [favorites.favorites, def]);
   const state = touched ?? fallback;
+  const [presetId, setPresetId] = useState<number | null>(null);
+  if (preset && preset.id !== presetId) {
+    // Adjusting state while rendering (React's pattern for "state from a changed prop").
+    setPresetId(preset.id);
+    setTouched({ ...state, filters: [...preset.filters], view: def.views.includes("list") ? "list" : state.view });
+  }
   const filtered = useMemo(() => applySearch(data.records, def, state, ctx, fmt), [data.records, def, state, ctx, fmt]);
   const sorted = useMemo(() => sortRecords(filtered, def, state.sort), [filtered, def, state.sort]);
 
@@ -77,10 +91,10 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
       />
     );
   else if (state.view === "kanban" && def.kanban)
-    body = <KanbanView definition={def} records={sorted} canMove={data.canWrite && !!onMove} onMove={(r, v) => onMove?.(r, v)} openHref={openHref} fmt={fmt} />;
+    body = <KanbanView definition={def} records={sorted} canMove={data.canWrite && !!onMove} onMove={(r, v) => onMove?.(r, v)} openHref={openHref ?? noHref} fmt={fmt} />;
   else if (state.view === "pivot" && def.pivot) body = <PivotView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "graph" && def.graph) body = <GraphView definition={def} records={sorted} fmt={fmt} />;
-  else if (state.view === "calendar" && def.calendar) body = <CalendarView definition={def} records={sorted} openHref={openHref} fmt={fmt} />;
+  else if (state.view === "calendar" && def.calendar) body = <CalendarView definition={def} records={sorted} openHref={openHref ?? noHref} fmt={fmt} />;
   else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} />;
 
   return (

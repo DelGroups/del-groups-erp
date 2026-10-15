@@ -113,6 +113,13 @@ export interface ModelDef<R extends ViewRecord = ViewRecord> {
   studioModel?: string;
   /** Raw row → flat record (custom fields are added by the data layer). */
   toRecord: (row: Record<string, unknown>) => R;
+  /**
+   * The module's own reads, when it already has them (same data and rules as its classic
+   * screens). They run in the browser with the user's session, like the default reads, and
+   * replace `select`/`order`/`limit`.
+   */
+  fetchAll?: () => Promise<Record<string, unknown>[]>;
+  fetchOne?: (id: string) => Promise<Record<string, unknown> | null>;
 }
 
 export interface ListViewDef {

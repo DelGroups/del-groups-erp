@@ -7,3 +7,5 @@ export { default as FinancialReportPage } from "./components/FinancialReportPage
 export { default as GlFinancialReportsPage } from "./components/GlFinancialReportsPage";
 export { default as TrialBalancePage } from "./components/TrialBalancePage";
 export { default as PartnerReconciliationPage } from "./components/PartnerReconciliationPage";
+/** New UI (NEW_UI): accounting screens on the view engine. */
+export { FinanceLedgerScreen, CashBankScreen, PaymentsScreen } from "./components/AccountingScreens";

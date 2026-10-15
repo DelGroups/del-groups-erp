@@ -5,3 +5,5 @@ export { default as LegacyCommissionRulesPage } from "./components/LegacyCommiss
 export { default as MonthlyCommissionReportPage } from "./components/MonthlyCommissionReportPage";
 /** For the sales route: run after a sale is saved, when commissions is enabled. */
 export { recordCommissionsAfterSale } from "./lib/saleSavedHook";
+/** New UI (NEW_UI): pending commissions on the view engine. */
+export { default as CommissionsScreen } from "./components/CommissionsScreen";
