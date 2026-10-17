@@ -76,6 +76,9 @@ union all
 select 'pending', '20261017100000_inventory_count_add_product: function (add a product to an open count)',
        case when to_regprocedure('public.inventory_count_add_product(uuid,uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261017120000_invoice_payment_date: function (invoice payments keep the chosen date)',
+       case when to_regprocedure('public.apply_invoice_payment_date(uuid,uuid,date)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

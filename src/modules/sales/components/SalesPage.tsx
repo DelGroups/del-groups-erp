@@ -504,6 +504,7 @@ export default function SalesPage() {
               accountId: payload.accountId,
               method: payload.method,
               notes: payload.notes,
+              paymentDate: payload.paymentDate,
               currentPaid: Number(paymentSale.paid_amount || 0),
               totalAmount: Number(paymentSale.total_amount || 0),
               existingPayments: paymentSale.payments ?? [],

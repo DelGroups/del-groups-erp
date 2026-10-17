@@ -2128,6 +2128,8 @@ export const ruMessages: Messages = {
       maxAmount: "Максимальная сумма оплаты: {amount} AZN",
       selectAccount: "Выберите кассу или банковский счёт",
       paymentFailed: "Оплата не была зарегистрирована",
+      date: "Дата оплаты",
+      futureDate: "Дата оплаты не может быть в будущем",
     },
     salesView: {
       title: "Счёт продажи",

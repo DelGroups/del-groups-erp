@@ -447,6 +447,7 @@ export default function PurchasesPage() {
               accountId: payload.accountId,
               method: payload.method,
               notes: payload.notes,
+              paymentDate: payload.paymentDate,
               currentPaid: paymentPurchase.paid_amount,
               totalAmount: paymentPurchase.total_amount,
               currentDebt: paymentPurchase.debt_amount,

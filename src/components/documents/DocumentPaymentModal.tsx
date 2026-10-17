@@ -13,6 +13,7 @@ import {
   PAYMENT_ACCOUNT_REQUIRED_MESSAGE,
 } from "@/lib/forms/paymentValidation";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { todayLocalDate, validatePaymentDate } from "@/lib/forms/paymentDate";
 import { allocateOfficialPaymentSplit } from "@/lib/finance/vatEngine";
 import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -32,6 +33,8 @@ export interface DocumentPaymentPayload {
   accountId: string;
   method: string;
   notes?: string;
+  /** YYYY-MM-DD, today or earlier. */
+  paymentDate: string;
   treasurySplits?: TreasuryPaymentSplit[];
 }
 
@@ -77,6 +80,7 @@ export default function DocumentPaymentModal({
   const [method, setMethod] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentDate, setPaymentDate] = useState(() => todayLocalDate());
   const [saving, setSaving] = useState(false);
   const [useSplitTreasury, setUseSplitTreasury] = useState(false);
 
@@ -107,6 +111,7 @@ export default function DocumentPaymentModal({
 
     setAmount(remainingAmount > 0 ? remainingAmount.toFixed(2) : "");
     setNotes("");
+    setPaymentDate(todayLocalDate());
     setUseSplitTreasury(canSplitTreasury);
   }, [isOpen, remainingAmount, canSplitTreasury]);
 
@@ -152,17 +157,25 @@ export default function DocumentPaymentModal({
     vatAccountId,
   ]);
 
+  const today = todayLocalDate();
+  const paymentDateIssue = validatePaymentDate(paymentDate, today);
+
   const paymentPreflightHint = paymentPreflightIssue
     ? paymentPreflightIssue === "vat_account_required"
       ? t("official.vatAccountRequired")
       : preflightMessage(t, paymentPreflightIssue)
-    : undefined;
+    : paymentDateIssue
+      ? paymentDateIssue === "date_in_future"
+        ? t("modals.payment.futureDate")
+        : t("modals.payment.date")
+      : undefined;
+  const blockingIssue = paymentPreflightIssue ?? paymentDateIssue;
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (paymentPreflightIssue) {
+    if (blockingIssue) {
       showToastError(paymentPreflightHint || t("common.error"));
       return;
     }
@@ -211,6 +224,7 @@ export default function DocumentPaymentModal({
         accountId: accountId.trim(),
         method,
         notes: notes.trim() || undefined,
+        paymentDate,
         treasurySplits: splits,
       });
       setSaving(false);
@@ -235,6 +249,7 @@ export default function DocumentPaymentModal({
       accountId: accountId.trim(),
       method,
       notes: notes.trim() || undefined,
+      paymentDate,
     });
     setSaving(false);
 
@@ -298,6 +313,18 @@ export default function DocumentPaymentModal({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="app-input w-full"
+            />
+          </label>
+
+          <label className="block space-y-1 text-xs">
+            <span className="font-semibold text-app">{t("modals.payment.date")}</span>
+            <input
+              type="date"
+              max={today}
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              className="app-input w-full"
+              required
             />
           </label>
 
@@ -413,7 +440,7 @@ export default function DocumentPaymentModal({
             </button>
             <button
               type="submit"
-              disabled={saving || Boolean(paymentPreflightIssue)}
+              disabled={saving || Boolean(blockingIssue)}
               title={paymentPreflightHint}
               className="btn-primary flex items-center gap-1 text-xs disabled:opacity-50"
             >

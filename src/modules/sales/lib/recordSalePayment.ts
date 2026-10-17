@@ -16,6 +16,8 @@ export interface RecordSalePaymentInput {
   accountId: string;
   method: string;
   notes?: string;
+  /** YYYY-MM-DD; the RPC uses today when missing. */
+  paymentDate?: string;
   currentPaid: number;
   totalAmount: number;
   existingPayments: SalePayment[];
@@ -53,6 +55,7 @@ async function processOneSalePayment(
       method: split.method,
       notes: split.notes || `Satış fakturası ${input.docNo} — ${split.method}`,
       payment_id: split.paymentId,
+      payment_date: input.paymentDate,
     },
   });
 

@@ -2126,6 +2126,8 @@ export const azMessages = {
       maxAmount: "Maksimum ödənilə bilən məbləğ: {amount} AZN",
       selectAccount: "Kassa və ya bank hesabı seçin",
       paymentFailed: "Ödəniş qeydə alınmadı",
+      date: "Ödəniş tarixi",
+      futureDate: "Ödəniş tarixi gələcəkdə ola bilməz",
     },
     salesView: {
       title: "Satış fakturası",

@@ -85,6 +85,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/view_favorites.sql | tee "$RUNNER_TEMP/view_favorites.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/view_favorites.txt"
 
+      # Invoice payments keep the date the user picked (sales list payment dialog).
+      - name: Invoice payment date checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/invoice_payment_date.sql | tee "$RUNNER_TEMP/invoice_payment_date.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/invoice_payment_date.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true
