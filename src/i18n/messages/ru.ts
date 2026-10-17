@@ -2692,6 +2692,10 @@ export const ruMessages: Messages = {
     saveSaved: "Сохранено · {time}",
     saveFailed: "Не сохранено",
     saveRetry: "Повторить",
+    notInListTitle: "Нет в этой инвентаризации",
+    notInListHint: "На момент начала подсчёта этих товаров не было на складе. Добавьте товар, чтобы ввести найденное количество.",
+    addToCount: "Добавить в подсчёт",
+    productAdded: "{name} добавлен в подсчёт",
   },
   metricIntake: {
     title: "Режим приёмки",

@@ -13,6 +13,7 @@ import {
   Flag,
   Loader2,
   Play,
+  Plus,
   RefreshCw,
   Save,
   Search,
@@ -35,6 +36,7 @@ import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
 import {
+  addInventoryCountProductAction,
   deleteInventoryCountAction,
   fetchInventoryCountAction,
   markUncountedAsZeroAction,
@@ -44,6 +46,7 @@ import {
   scanInventoryCountAction,
   startInventoryCountAction,
   saveInventoryCountProgressAction,
+  searchInventoryCountProductsAction,
   submitInventoryCountAction,
   type InventoryCountLineInput,
 } from "../actions/inventoryCount";
@@ -52,6 +55,12 @@ import {
   type InventoryCountDetail,
   type InventoryCountLine,
 } from "../lib/inventoryCountTypes";
+import {
+  catalogIlikePattern,
+  matchesCountQuery,
+  productsMissingFromCount,
+  type InventoryCountProductHit,
+} from "../lib/inventoryCountSearch";
 
 const PAGE_SIZE = 100;
 const EPS = 0.0005;
@@ -476,19 +485,49 @@ export default function InventoryCountDetailPage() {
   }, [lines, isPosted]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return lines.filter((line) => {
       if (filter === "uncounted" && line.actual_qty !== null) return false;
       if (filter === "variance" && !hasVariance(line)) return false;
       if (filter === "drift" && Math.abs(line.drift_qty) <= EPS) return false;
-      if (!q) return true;
-      return (
-        line.product_name.toLowerCase().includes(q) ||
-        (line.product_code || "").toLowerCase().includes(q) ||
-        (line.barcode || "").toLowerCase().includes(q)
-      );
+      return matchesCountQuery(line, query);
     });
   }, [lines, query, filter]);
+
+  // Products with no stock when counting started are not in the list; while
+  // counting, the search box also looks them up in the catalog so they can be added.
+  const [catalog, setCatalog] = useState<{ query: string; hits: InventoryCountProductHit[] }>({ query: "", hits: [] });
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const catalogSearchable = editable && catalogIlikePattern(query) !== null;
+  useEffect(() => {
+    if (!catalogSearchable) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const result = await searchInventoryCountProductsAction(query);
+      if (!cancelled) setCatalog({ query, hits: result.success ? result.data || [] : [] });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [catalogSearchable, query]);
+  const missingProducts = useMemo(
+    () => (catalogSearchable && catalog.query === query ? productsMissingFromCount(catalog.hits, lines) : []),
+    [catalogSearchable, catalog, query, lines]
+  );
+
+  const handleAddProduct = async (product: InventoryCountProductHit) => {
+    setAddingId(product.id);
+    const result = await addInventoryCountProductAction(countId, product.id);
+    setAddingId(null);
+    if (!result.success || !result.data) {
+      showError(result.success ? t("common.error") : result.error);
+      return;
+    }
+    patchLine(result.data);
+    setFilter("all");
+    setPage(0);
+    showSuccess(t("inventoryCount.productAdded", { name: product.name }));
+  };
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -1016,6 +1055,43 @@ export default function InventoryCountDetailPage() {
               </tbody>
             </table>
           </div>
+
+          {editable && missingProducts.length > 0 ? (
+            <div className="mt-3 rounded-[var(--erp-radius-md)] border border-dashed border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-3">
+              <p className="mb-2 text-xs font-semibold text-app">{t("inventoryCount.notInListTitle")}</p>
+              <p className="mb-3 text-[11px] text-app-muted">{t("inventoryCount.notInListHint")}</p>
+              <ul className="divide-y divide-app">
+                {missingProducts.map((product) => (
+                  <li key={product.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-app" title={product.name}>
+                        {product.name}
+                      </p>
+                      <p className="truncate text-[11px] text-app-muted">
+                        {[product.code, product.is_metric ? null : product.unit, product.is_metric ? t("inventoryCount.metricHint") : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      appearance="outline"
+                      color="secondary"
+                      disabled={addingId !== null}
+                      onClick={() => void handleAddProduct(product)}
+                    >
+                      {addingId === product.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5" />
+                      )}
+                      {t("inventoryCount.addToCount")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {filtered.length > PAGE_SIZE ? (
             <div className="mt-2 flex items-center justify-end gap-2 text-xs">

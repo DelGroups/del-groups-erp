@@ -11,6 +11,7 @@ import type {
   InventoryCountStatus,
   WarehouseCategoryPath,
 } from "../lib/inventoryCountTypes";
+import { catalogIlikePattern, type InventoryCountProductHit } from "../lib/inventoryCountSearch";
 
 export type InventoryCountActionResult<T = void> =
   | { success: true; data?: T }
@@ -301,6 +302,65 @@ export async function scanInventoryCountAction(
       success: true,
       data: { line: mapLine(data as Record<string, unknown>), piece_length: numOrNull(scan.piece_length) },
     };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Products from the catalog matching the search box. The count list only holds
+ * products that had stock when counting started, so this is how a product with
+ * zero book stock is found and added.
+ */
+export async function searchInventoryCountProductsAction(
+  query: string
+): Promise<InventoryCountActionResult<InventoryCountProductHit[]>> {
+  try {
+    await requirePermissionAction("can_writeoff_inventory");
+    const pattern = catalogIlikePattern(query);
+    if (!pattern) return { success: true, data: [] };
+    const { data, error } = await (await db())
+      .from("products")
+      .select("id, code, name, unit, inventory_mode, is_service, is_composite")
+      .or(`name.ilike.${pattern},code.ilike.${pattern},barcode.ilike.${pattern}`)
+      .order("name")
+      .limit(30);
+    if (error) return { success: false, error: error.message };
+    return {
+      success: true,
+      data: ((data || []) as Record<string, unknown>[])
+        .filter((row) => !row.is_service && !row.is_composite)
+        .map((row) => ({
+          id: row.id as string,
+          code: (row.code as string) || null,
+          name: row.name as string,
+          unit: (row.unit as string) || null,
+          is_metric: row.inventory_mode === "polywood",
+        })),
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** Adds a catalog product to an in-progress count; returns its line. */
+export async function addInventoryCountProductAction(
+  countId: string,
+  productId: string
+): Promise<InventoryCountActionResult<InventoryCountLine>> {
+  try {
+    await requirePermissionAction("can_writeoff_inventory");
+    const added = await callRpc<{ line_id: string }>("inventory_count_add_product", {
+      p_count_id: countId,
+      p_product_id: productId,
+    });
+    const { data, error } = await (await db())
+      .from("inventory_count_items")
+      .select("*")
+      .eq("id", added.line_id)
+      .single();
+    if (error || !data) return { success: false, error: error?.message || "Sətir tapılmadı" };
+    return { success: true, data: mapLine(data as Record<string, unknown>) };
   } catch (err) {
     return fail(err);
   }
