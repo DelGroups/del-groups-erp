@@ -2691,6 +2691,10 @@ export const enMessages: Messages = {
     saveSaved: "Saved · {time}",
     saveFailed: "Not saved",
     saveRetry: "Retry",
+    notInListTitle: "Not in this count",
+    notInListHint: "These products had no stock in this warehouse when counting started. Add one to enter the quantity you found.",
+    addToCount: "Add to count",
+    productAdded: "{name} added to the count",
   },
   metricIntake: {
     title: "Metric intake mode",

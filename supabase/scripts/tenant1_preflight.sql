@@ -73,6 +73,9 @@ union all
 select 'pending', '20261014110000_view_favorites: table (saved searches of the new UI)',
        case when to_regclass('public.view_favorites') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261017100000_inventory_count_add_product: function (add a product to an open count)',
+       case when to_regprocedure('public.inventory_count_add_product(uuid,uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

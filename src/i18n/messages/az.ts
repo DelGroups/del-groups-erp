@@ -2689,6 +2689,10 @@ export const azMessages = {
     saveSaved: "Saxlanıldı · {time}",
     saveFailed: "Saxlanmadı",
     saveRetry: "Yenidən cəhd et",
+    notInListTitle: "Bu sayımda yoxdur",
+    notInListHint: "Sayım başlayanda bu məhsulların anbarda qalığı yox idi. Tapdığınız miqdarı daxil etmək üçün siyahıya əlavə edin.",
+    addToCount: "Sayıma əlavə et",
+    productAdded: "{name} sayıma əlavə edildi",
   },
   metricIntake: {
     title: "Metrik qəbul rejimi",
