@@ -76,6 +76,12 @@ union all
 select 'pending', '20261017100000_inventory_count_add_product: function (add a product to an open count)',
        case when to_regprocedure('public.inventory_count_add_product(uuid,uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261017110000_inventory_count_start_all_category_products: category count lists every product of the category',
+       case when exists (
+         select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = 'inventory_count_start' and p.prosrc like '%WITH scope AS%'
+       ) then 'yes' else 'no' end
+union all
 select 'pending', '20261017120000_invoice_payment_date: function (invoice payments keep the chosen date)',
        case when to_regprocedure('public.apply_invoice_payment_date(uuid,uuid,date)') is null then 'missing' else 'present' end
 union all
