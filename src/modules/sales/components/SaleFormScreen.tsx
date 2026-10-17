@@ -268,6 +268,7 @@ function SaleForm({ id }: { id: string }) {
               accountId: payload.accountId,
               method: payload.method,
               notes: payload.notes,
+              paymentDate: payload.paymentDate,
               currentPaid: Number(sale.paid_amount || 0),
               totalAmount: Number(sale.total_amount || 0),
               existingPayments: sale.payments ?? [],

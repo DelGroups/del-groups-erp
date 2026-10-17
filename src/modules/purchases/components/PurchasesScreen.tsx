@@ -220,6 +220,7 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
               accountId: payload.accountId,
               method: payload.method,
               notes: payload.notes,
+              paymentDate: payload.paymentDate,
               currentPaid: purchase.paid_amount,
               totalAmount: purchase.total_amount,
               currentDebt: purchase.debt_amount,

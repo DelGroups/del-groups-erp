@@ -2128,6 +2128,8 @@ export const enMessages: Messages = {
       maxAmount: "Maximum payable amount: {amount} AZN",
       selectAccount: "Select a cash or bank account",
       paymentFailed: "Payment was not recorded",
+      date: "Payment date",
+      futureDate: "The payment date cannot be in the future",
     },
     salesView: {
       title: "Sales invoice",

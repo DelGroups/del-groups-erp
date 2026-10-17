@@ -82,6 +82,9 @@ select 'pending', '20261017110000_inventory_count_start_all_category_products: c
           where n.nspname = 'public' and p.proname = 'inventory_count_start' and p.prosrc like '%WITH scope AS%'
        ) then 'yes' else 'no' end
 union all
+select 'pending', '20261017120000_invoice_payment_date: function (invoice payments keep the chosen date)',
+       case when to_regprocedure('public.apply_invoice_payment_date(uuid,uuid,date)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
