@@ -56,9 +56,9 @@ import {
   type InventoryCountLine,
 } from "../lib/inventoryCountTypes";
 import {
-  catalogIlikePattern,
+  countCatalogState,
+  markCatalogHits,
   matchesCountQuery,
-  productsMissingFromCount,
   type InventoryCountProductHit,
 } from "../lib/inventoryCountSearch";
 
@@ -495,11 +495,12 @@ export default function InventoryCountDetailPage() {
     });
   }, [lines, query, filter]);
 
-  // Products with no stock when counting started are not in the list; while
-  // counting, the search box also looks them up in the catalog so they can be added.
+  // While counting, the search box also looks the text up in the product catalog;
+  // the list above the table marks what is already counted and adds the rest.
   const [catalog, setCatalog] = useState<{ query: string; hits: InventoryCountProductHit[] }>({ query: "", hits: [] });
   const [addingId, setAddingId] = useState<string | null>(null);
-  const catalogSearchable = editable && catalogIlikePattern(query) !== null;
+  const catalogState = countCatalogState(editable, query, catalog.query);
+  const catalogSearchable = catalogState === "loading" || catalogState === "ready";
   useEffect(() => {
     if (!catalogSearchable) return;
     let cancelled = false;
@@ -512,9 +513,9 @@ export default function InventoryCountDetailPage() {
       window.clearTimeout(timer);
     };
   }, [catalogSearchable, query]);
-  const missingProducts = useMemo(
-    () => (catalogSearchable && catalog.query === query ? productsMissingFromCount(catalog.hits, lines) : []),
-    [catalogSearchable, catalog, query, lines]
+  const catalogHits = useMemo(
+    () => (catalogState === "ready" ? markCatalogHits(catalog.hits, lines) : []),
+    [catalogState, catalog, lines]
   );
 
   const handleAddProduct = async (product: InventoryCountProductHit) => {
@@ -528,7 +529,9 @@ export default function InventoryCountDetailPage() {
     patchLine(result.data);
     setFilter("all");
     setPage(0);
-    showSuccess(t("inventoryCount.productAdded", { name: product.name }));
+    const text = t("inventoryCount.productAdded", { name: product.name });
+    setLastScan({ lineId: result.data.id, text });
+    showSuccess(text);
   };
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -636,8 +639,8 @@ export default function InventoryCountDetailPage() {
     if (!(await flushAll())) return;
     const result = await scanInventoryCountAction(countId, code);
     if (!result.success || !result.data) {
-      // Not a barcode or product code: search the list by what was typed, so the
-      // product can be found and added below the table.
+      // Not a barcode or product code: put the text in the search box, so the
+      // product can be found and added from the catalog list above the table.
       if (!result.success && result.error.startsWith(PRODUCT_NOT_FOUND)) {
         setQuery(code.trim());
         setPage(0);
@@ -944,6 +947,66 @@ export default function InventoryCountDetailPage() {
             </div>
           </div>
 
+          {/* Catalog matches for the search box: add a product that is not in the count */}
+          {catalogState !== "hidden" ? (
+            <section
+              aria-label={t("inventoryCount.notInListTitle")}
+              className="mb-3 rounded-[var(--erp-radius-md)] border border-dashed border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-3"
+            >
+              <p className="text-xs font-semibold text-app">{t("inventoryCount.notInListTitle")}</p>
+              <p className="mb-2 text-[11px] text-app-muted">{t("inventoryCount.notInListHint")}</p>
+              {catalogState === "short" ? (
+                <p className="py-1.5 text-xs text-app-muted">{t("inventoryCount.catalogTypeMore")}</p>
+              ) : catalogState === "loading" ? (
+                <p className="flex items-center gap-2 py-1.5 text-xs text-app-muted">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("inventoryCount.catalogSearching")}
+                </p>
+              ) : catalogHits.length === 0 ? (
+                <p className="py-1.5 text-xs text-app-muted">{t("inventoryCount.catalogNoMatches", { query: query.trim() })}</p>
+              ) : (
+                <ul className="max-h-64 divide-y divide-app overflow-y-auto">
+                  {catalogHits.map((product) => (
+                    <li key={product.id} className="flex items-center justify-between gap-3 py-1.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-app" title={product.name}>
+                          {product.name}
+                        </p>
+                        <p className="truncate text-[11px] text-app-muted">
+                          {[product.code, product.is_metric ? null : product.unit, product.is_metric ? t("inventoryCount.metricHint") : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      {product.inCount ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          <Check className="h-3.5 w-3.5" />
+                          {t("inventoryCount.inCount")}
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          appearance="outline"
+                          color="secondary"
+                          className="shrink-0"
+                          disabled={addingId !== null}
+                          onClick={() => void handleAddProduct(product)}
+                        >
+                          {addingId === product.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5" />
+                          )}
+                          {t("inventoryCount.addToCount")}
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : null}
+
           {/* Counting grid */}
           <div
             ref={containerRef}
@@ -1065,43 +1128,6 @@ export default function InventoryCountDetailPage() {
               </tbody>
             </table>
           </div>
-
-          {editable && missingProducts.length > 0 ? (
-            <div className="mt-3 rounded-[var(--erp-radius-md)] border border-dashed border-[color:var(--erp-border-default)] bg-[color:var(--erp-bg-panel)] p-3">
-              <p className="mb-2 text-xs font-semibold text-app">{t("inventoryCount.notInListTitle")}</p>
-              <p className="mb-3 text-[11px] text-app-muted">{t("inventoryCount.notInListHint")}</p>
-              <ul className="divide-y divide-app">
-                {missingProducts.map((product) => (
-                  <li key={product.id} className="flex items-center justify-between gap-3 py-1.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-app" title={product.name}>
-                        {product.name}
-                      </p>
-                      <p className="truncate text-[11px] text-app-muted">
-                        {[product.code, product.is_metric ? null : product.unit, product.is_metric ? t("inventoryCount.metricHint") : null]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      appearance="outline"
-                      color="secondary"
-                      disabled={addingId !== null}
-                      onClick={() => void handleAddProduct(product)}
-                    >
-                      {addingId === product.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="h-3.5 w-3.5" />
-                      )}
-                      {t("inventoryCount.addToCount")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
 
           {filtered.length > PAGE_SIZE ? (
             <div className="mt-2 flex items-center justify-end gap-2 text-xs">
