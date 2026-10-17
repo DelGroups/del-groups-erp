@@ -550,3 +550,148 @@ Do:
 
 Done when: a visitor can sign up, get a trial ERP with sample data and see pricing that matches the plans in the control panel.
 ```
+
+---
+
+## فاز ۸: نسخه دسکتاپ ویندوز با کار آفلاین
+
+برنامه کامل در [`Offline-Desktop-App-Plan.md`](Offline-Desktop-App-Plan.md). قبل از پرامپت ۲۷ تصمیم‌های بخش ۱۲ آن سند را بگیرید. پرامپت ۲۶ به فاز دیگری وابسته نیست؛ پرامپت ۲۷ به بعد بعد از فاز ۲ (و ترجیحاً پرامپت ۱۶) اجرا شوند.
+
+### پرامپت ۲۶: برنامه ویندوز (آنلاین)
+
+```text
+Task: ship Del Groups ERP as an installable Windows desktop app that works online. No offline data yet.
+
+Read docs/Offline-Desktop-App-Plan.md fully (Persian), especially sections 3, 9 and 11.
+
+Do:
+- Add a desktop/ folder with an Electron app (TypeScript). The main process starts the Next.js
+  standalone server (next.config: output "standalone") on 127.0.0.1 with a random free port and opens
+  a window on it. Keep contextIsolation on, nodeIntegration off, a minimal typed preload API.
+- First run asks for the company address (default erp.del-groups.com) and loads runtime config from
+  /api/public-config of that host. Never bundle secrets or the service-role key in the app.
+- When the network is down, show a clear offline screen (i18n az/en/ru) instead of a browser error.
+- electron-builder NSIS installer, per-user install, product name and icon from src/lib/brand.ts.
+- electron-updater auto-update from GitHub Releases of this repo.
+- A separate GitHub Actions workflow that builds the installer only on tags desktop-v*. Merging to
+  main must not build the installer or change the current server deploy.
+- Code signing: wire the config to read a certificate from CI secrets if present; build unsigned
+  otherwise and say so in the PR.
+- docs: desktop/README.md (how to build, release, sign).
+
+Done when: the installer installs on Windows 10/11, the app logs in and works like the web version,
+shows the offline screen when the network is cut, and updates itself from a newer tagged release.
+```
+
+### پرامپت ۲۷: زیرساخت همگام‌سازی و خواندن آفلاین
+
+```text
+Task: local SQLite on the desktop app, filled by PowerSync from Supabase, read-only offline for
+customers, suppliers, products, prices, barcodes and stock levels. Behind DESKTOP_OFFLINE_ENABLED (off).
+
+Read docs/Offline-Desktop-App-Plan.md sections 3, 5, 7 and 8.
+
+Do:
+- docker-compose for a self-hosted PowerSync Open Edition service (Postgres bucket storage) for the
+  Hetzner server, as a file plus deployment notes; do not deploy it.
+- One migration: publication for the offline tables (and whatever logical replication needs).
+  Test it on a Supabase branch or local DB, never on production.
+- Add an `offline` section to the module manifest type (read tables, allowed commands, onlineOnly
+  routes) and fill it for the modules above. The registry generates the PowerSync sync rules from it.
+- Sync rules must never give a user more rows than RLS does: buckets by user, role and allowed
+  warehouses. Add an automated test that compares synced rows with RLS results for sample roles.
+  HR and payroll are never synced.
+- Encrypted SQLite on the device; key kept with Electron safeStorage.
+- A shared read hook (e.g. useOfflineQuery) that reads SQLite in the desktop app and keeps the
+  current path on the web. Use it on the customer, product and stock list pages only.
+- Status bar: online / offline / syncing with last sync time (i18n).
+
+Done when: with the network cut, the desktop app still shows customers, products, prices and the last
+known stock per warehouse, only for what the user may see, and catches up after reconnecting.
+```
+
+### پرامپت ۲۸: صف دستورها (Outbox) و صفحه مشکلات همگام‌سازی
+
+```text
+Task: the write path for offline work, as described in sections 3.3, 6 and 7 of
+docs/Offline-Desktop-App-Plan.md. Behind DESKTOP_OFFLINE_ENABLED.
+
+Do:
+- Migration: sync_commands (id, tenant/device/user, command name, payload jsonb, idempotency_key unique,
+  base row_version, status, error code/message, created/applied times) and devices (registered
+  desktop installs, can be disabled by an admin).
+- API route /api/sync/commands: authenticates the user token, runs commands in device order,
+  is idempotent, dispatches each command name to a handler that calls the existing Postgres
+  functions (never writes tables directly), returns applied/rejected with a reason code.
+- Client: PowerSync upload queue -> this API; commands for one record stop after a rejection,
+  others continue. Server time is authoritative.
+- row_version + updated_at on tables edited offline (one migration per table), with field-level
+  merge for simple records as in section 6.2.
+- "Sync issues" page: rejected commands with the reason and actions (edit and resend, discard
+  draft); a badge on the app icon/status bar.
+- Offline session: works up to N hours without connection (setting, default 72), then locks until
+  online; device list in settings with remote disable + local wipe on next connect.
+- Tests: idempotency, ordering, every conflict type in section 6.2, lock after N hours.
+
+Done when: a command created offline is applied exactly once after reconnecting, and every rejection
+shows up on the Sync issues page with a clear reason.
+```
+
+### پرامپت ۲۹: فروش آفلاین
+
+```text
+Task: sales work offline per sections 5.1 and 5.2 of docs/Offline-Desktop-App-Plan.md.
+Behind DESKTOP_OFFLINE_ENABLED.
+
+Do:
+- Offline draft sales invoices/orders saved in SQLite with uuid and a provisional number
+  OFF-<device code>-<local no>; command sales.save_draft -> save_sales_invoice_draft.
+- "Post" while offline queues sales.request_post -> post_sales_invoice_draft on the server; the
+  official number, stock movement and journal come only from the server and sync back.
+- Printed offline documents say "provisional / pro-forma" with the provisional number (i18n).
+- Estimated local stock = last server stock minus this device's unsynced sales, with "as of" time;
+  company setting for selling above estimated stock: allow / warn (default) / block.
+- Cash received offline is a pending cash receipt finalised by post_cash_transaction on sync;
+  card/bank payments are disabled offline.
+- Server rejections (not enough stock, credit limit, closed period, price below minimum) land on
+  the Sync issues page with actions: reduce qty, replace item, keep as backorder, discard.
+- Tests: two devices selling the last unit offline, reconnect order, number assignment, pending cash.
+
+Done when: a salesperson can create and "post" invoices with the internet off, and after reconnecting
+they get official numbers, correct stock and journals, or a clear issue to resolve.
+```
+
+### پرامپت ۳۰: آفلاین برای ماژول بعدی (برای هر ماژول تکرار شود)
+
+```text
+Task: make the <MODULE> module work offline, per its row in section 5.1 of
+docs/Offline-Desktop-App-Plan.md (order: CRM + to-do, expenses, inventory counts, purchases/receipts).
+
+Do:
+- Fill the module manifest `offline` section; read tables go through the sync rules generator and
+  the RLS comparison test.
+- Commands for what the plan allows offline, each mapped to existing server functions; anything the
+  plan marks online-only is disabled offline with an explanation (i18n).
+- File attachments (e.g. expense receipts) go to a local upload queue and upload on reconnect.
+- Conflict handling per section 6; tests for the module's own business-rule rejections.
+
+Done when: the module's offline scope from the plan works with the network cut and syncs cleanly.
+```
+
+### پرامپت ۳۱: سخت‌سازی و آماده‌سازی برای مستأجرها
+
+```text
+Task: harden the offline desktop app before offering it to other tenants
+(sections 7, 8 and 10 of docs/Offline-Desktop-App-Plan.md).
+
+Do:
+- Playwright tests that cut and restore the network mid-work (create, edit, post, reconnect, retry
+  mid-request) for every offline module.
+- Admin page: devices, queue sizes, oldest unsynced command, rejection rates per tenant.
+- Sync API version check: an outdated desktop app keeps its queue and is asked to update.
+- Tenant provisioning (prompt 9) creates a PowerSync instance and publication only for tenants whose
+  plan includes "Desktop Offline"; the plan/limits from prompt 12 get that feature.
+- Re-check the PowerSync Open Edition licence for SaaS use and note the result in the PR.
+
+Done when: offline can be switched on per tenant from the control panel and the reliability tests pass in CI.
+```
