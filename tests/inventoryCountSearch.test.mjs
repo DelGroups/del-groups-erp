@@ -50,3 +50,12 @@ test("the add-product migration only accepts in-progress counts and stockable pr
   assert.match(sql, /is_service.*is_composite/s);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.inventory_count_add_product\(UUID, UUID\) FROM PUBLIC, anon/);
 });
+
+test("a scan that matches no code falls back to the name search", () => {
+  const source = readFileSync(
+    new URL("../src/modules/inventory/components/InventoryCountDetailPage.tsx", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /result\.error\.startsWith\(PRODUCT_NOT_FOUND\)/);
+  assert.match(source, /setQuery\(code\.trim\(\)\)/);
+});

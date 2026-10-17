@@ -2695,6 +2695,7 @@ export const enMessages: Messages = {
     notInListHint: "These products had no stock in this warehouse when counting started. Add one to enter the quantity you found.",
     addToCount: "Add to count",
     productAdded: "{name} added to the count",
+    scanNotFound: "No product has the code {code}. It was searched by name instead: add it from below the table.",
   },
   metricIntake: {
     title: "Metric intake mode",

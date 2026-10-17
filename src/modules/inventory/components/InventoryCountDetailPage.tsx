@@ -63,6 +63,8 @@ import {
 } from "../lib/inventoryCountSearch";
 
 const PAGE_SIZE = 100;
+/** Start of the scan action's error when no product matches the code (see inventory_count_scan). */
+const PRODUCT_NOT_FOUND = "Məhsul tapılmadı";
 const EPS = 0.0005;
 /** Quiet period after the last keystroke before unsaved counts are sent. */
 const AUTOSAVE_MS = 1200;
@@ -634,6 +636,14 @@ export default function InventoryCountDetailPage() {
     if (!(await flushAll())) return;
     const result = await scanInventoryCountAction(countId, code);
     if (!result.success || !result.data) {
+      // Not a barcode or product code: search the list by what was typed, so the
+      // product can be found and added below the table.
+      if (!result.success && result.error.startsWith(PRODUCT_NOT_FOUND)) {
+        setQuery(code.trim());
+        setPage(0);
+        showError(t("inventoryCount.scanNotFound", { code: code.trim() }));
+        return;
+      }
       showError(result.success ? t("common.error") : result.error);
       return;
     }

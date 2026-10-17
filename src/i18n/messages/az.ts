@@ -2693,6 +2693,7 @@ export const azMessages = {
     notInListHint: "Sayım başlayanda bu məhsulların anbarda qalığı yox idi. Tapdığınız miqdarı daxil etmək üçün siyahıya əlavə edin.",
     addToCount: "Sayıma əlavə et",
     productAdded: "{name} sayıma əlavə edildi",
+    scanNotFound: "{code} kodlu məhsul tapılmadı. Adına görə axtarıldı: cədvəlin altından sayıma əlavə edin.",
   },
   metricIntake: {
     title: "Metrik qəbul rejimi",
