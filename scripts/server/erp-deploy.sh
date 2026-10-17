@@ -13,6 +13,14 @@ PROJECT=del-groups-erp
 CONTAINER=del-groups-erp-erp-1
 COMPOSE=(docker compose -p "$PROJECT" --env-file .env.production -f docker-compose.prod.yml)
 SCHEMA_CHECK_BLOCKING=0
+# Docker build cache older than this is deleted before every build. Without it the
+# cache fills the disk (27 GB of 38 GB on 2026-10-17) and the build fails with
+# "no space left on device". Recent layers stay, so builds remain fast.
+BUILD_CACHE_MAX_AGE=24h
+
+prune_build_cache() {
+    docker builder prune -f --filter "until=$BUILD_CACHE_MAX_AGE" >/dev/null 2>&1 || true
+}
 
 main() {
     exec 9>/run/lock/del-groups-erp-deploy.lock
@@ -31,6 +39,8 @@ main() {
         exit 1
     fi
     cp -p "$APP_DIR/.env.production" "$staging/.env.production"
+
+    prune_build_cache
 
     echo "==> building image"
     (cd "$staging" && "${COMPOSE[@]}" build --quiet </dev/null)
@@ -63,6 +73,7 @@ main() {
     for _ in $(seq 1 45); do
         if [ "$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER")" = healthy ]; then
             docker image prune -f >/dev/null
+            prune_build_cache
             echo "==> deploy ok"
             return 0
         fi
