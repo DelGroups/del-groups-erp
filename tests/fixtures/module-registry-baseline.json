@@ -518,6 +518,10 @@
     {
       "prefix": "/todo",
       "permission": "can_view_dashboard"
+    },
+    {
+      "prefix": "/documents",
+      "permission": "can_view_dashboard"
     }
   ],
   "navPathPermissions": {
@@ -570,7 +574,8 @@
     "/settings/studio": "can_manage_settings",
     "/settings/audit": "can_manage_settings",
     "/calendar": "can_view_dashboard",
-    "/todo": "can_view_dashboard"
+    "/todo": "can_view_dashboard",
+    "/documents": "can_view_dashboard"
   },
   "permissionMatrix": [
     {

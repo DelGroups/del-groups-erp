@@ -547,6 +547,7 @@ const en = {
       studio: "Studio",
       calendar: "Calendar",
       todo: "To-do",
+      documents: "Documents",
     },
   },
   billingEmail: {
@@ -1129,6 +1130,7 @@ const az: Messages = {
       studio: "Studio",
       calendar: "Təqvim",
       todo: "Tapşırıqlar",
+      documents: "Sənədlər",
     },
   },
   billingEmail: {
@@ -1709,6 +1711,7 @@ const ru: Messages = {
       studio: "Studio",
       calendar: "Календарь",
       todo: "Задачи",
+      documents: "Документы",
     },
   },
   billingEmail: {
