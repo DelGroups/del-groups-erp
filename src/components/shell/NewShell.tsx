@@ -44,6 +44,7 @@ import { AI_OPEN_EVENT, collapseCrumbs, filterApps, shellBackButton, shortcutMod
 import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
 import { ShellBackButton } from "./ShellBackButton";
+import { MyActivitiesButton } from "./MyActivitiesButton";
 
 function initials(name: string): string {
   return (
@@ -623,6 +624,9 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             </div>
             <div className="hidden md:block">
               <NotificationsButton items={notifications} />
+            </div>
+            <div>
+              <MyActivitiesButton />
             </div>
             {aiEnabled ? (
               <span className="hidden md:block">

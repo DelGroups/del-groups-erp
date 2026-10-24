@@ -4,6 +4,7 @@
 -- Leaves test rows behind: run it on a throwaway database only.
 --
 -- Three users: an admin (A), a user without CRM access (B) and a non-admin with CRM access (C).
+-- Covers messages, activities, activity types, followers, attachments and tracked fields.
 -- The record is a CRM deal, whose own policies let A and C read it and hide it from B.
 
 insert into public.roles (id, name, permissions, description, created_at, is_system, scopes) values
@@ -73,8 +74,53 @@ begin
   begin
     insert into public.activities (res_model, res_id, activity_type, summary, due_date) values ('deals', '00000000-0000-0000-00c4-0000000000d1', 'lunch', 'x', current_date);
     raise exception 'FAIL unknown activity type';
-  exception when check_violation then null;
+  exception when foreign_key_violation then null;
   end;
+
+  -- Admins add activity types; a new type can be used at once.
+  insert into public.activity_types (code, name, icon, default_days) values ('site_visit', 'Site visit', 'meeting', 2);
+  insert into public.activities (res_model, res_id, activity_type, summary, due_date)
+  values ('deals', '00000000-0000-0000-00c4-0000000000d1', 'site_visit', 'Measure the showroom', current_date + 2);
+
+  -- Authors and assignees follow the record automatically.
+  select count(*) into v_count from public.mail_followers
+   where res_model = 'deals' and res_id = '00000000-0000-0000-00c4-0000000000d1'
+     and user_id in ('00000000-0000-0000-00c4-00000000000a', '00000000-0000-0000-00c4-00000000000c');
+  if v_count <> 2 then raise exception 'FAIL author and assignee do not both follow: %', v_count; end if;
+
+  -- A file on A's note must be stored under the deal.
+  insert into public.mail_attachments (message_id, storage_path, file_name, mime_type, size_bytes)
+  values (v_id, 'deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf', 'plan.pdf', 'application/pdf', 1200);
+  if (select res_model || '/' || res_id from public.mail_attachments where file_name = 'plan.pdf') <> 'deals/00000000-0000-0000-00c4-0000000000d1' then
+    raise exception 'FAIL attachment record not copied from the message';
+  end if;
+  begin
+    insert into public.mail_attachments (message_id, storage_path, file_name) values (v_id, 'sales/00000000-0000-0000-00c4-0000000000d1/x.pdf', 'x.pdf');
+    raise exception 'FAIL attachment stored under another record';
+  exception when invalid_parameter_value then null;
+  end;
+  if not public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf') then raise exception 'FAIL admin cannot see the file path'; end if;
+  if public.chatter_path_visible('deals/not-a-uuid/plan.pdf') or public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1') then
+    raise exception 'FAIL malformed file path visible';
+  end if;
+
+  -- Changing a tracked field writes a log line with the old and new value.
+  update public.deals set title = 'Chatter test deal (renamed)' where id = '00000000-0000-0000-00c4-0000000000d1';
+  if not exists (
+    select 1 from public.mail_messages
+     where res_model = 'deals' and res_id = '00000000-0000-0000-00c4-0000000000d1' and kind = 'log'
+       and body like 'tracking:%'
+       and (substr(body, 10)::jsonb -> 0 ->> 'f') = 'title'
+       and (substr(body, 10)::jsonb -> 0 ->> 'n') = 'Chatter test deal (renamed)'
+  ) then
+    raise exception 'FAIL no tracking line for the title change';
+  end if;
+  -- An untracked change writes nothing.
+  select count(*) into v_count from public.mail_messages where res_id = '00000000-0000-0000-00c4-0000000000d1' and body like 'tracking:%';
+  update public.deals set notes = 'untracked' where id = '00000000-0000-0000-00c4-0000000000d1';
+  if (select count(*) from public.mail_messages where res_id = '00000000-0000-0000-00c4-0000000000d1' and body like 'tracking:%') <> v_count then
+    raise exception 'FAIL untracked field wrote a log line';
+  end if;
   select count(*) into v_count from public.chatter_users() where full_name in ('Aysel Admin', 'Cavid CRM');
   if v_count <> 2 then raise exception 'FAIL assignee list incomplete: %', v_count; end if;
 end $$;
@@ -101,6 +147,16 @@ begin
   begin
     insert into public.activities (res_model, res_id, summary, due_date) values ('deals', '00000000-0000-0000-00c4-0000000000d1', 'sneaky', current_date);
     raise exception 'FAIL user without access scheduled an activity';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into v_count from public.mail_followers where res_id = '00000000-0000-0000-00c4-0000000000d1';
+  if v_count <> 0 then raise exception 'FAIL user without access sees % followers', v_count; end if;
+  select count(*) into v_count from public.mail_attachments where res_id = '00000000-0000-0000-00c4-0000000000d1';
+  if v_count <> 0 then raise exception 'FAIL user without access sees % attachments', v_count; end if;
+  if public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf') then raise exception 'FAIL user without access sees the file path'; end if;
+  begin
+    insert into public.mail_followers (res_model, res_id, user_id) values ('deals', '00000000-0000-0000-00c4-0000000000d1', '00000000-0000-0000-00c4-00000000000b');
+    raise exception 'FAIL user without access followed the record';
   exception when insufficient_privilege then null;
   end;
   update public.activities set summary = 'hijacked' where res_id = '00000000-0000-0000-00c4-0000000000d1';
@@ -145,6 +201,41 @@ begin
   delete from public.activities where summary = 'Prepare drawings';
   get diagnostics v_count = row_count;
   if v_count <> 0 then raise exception 'FAIL deleted an activity of someone else'; end if;
+
+  -- Activity types: readable, but only admins change them.
+  if not exists (select 1 from public.activity_types where code = 'site_visit') then raise exception 'FAIL CRM user cannot read activity types'; end if;
+  begin
+    insert into public.activity_types (code, name) values ('party', 'Party');
+    raise exception 'FAIL non-admin added an activity type';
+  exception when insufficient_privilege then null;
+  end;
+  update public.activity_types set name = 'renamed' where code = 'site_visit';
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then raise exception 'FAIL non-admin changed an activity type'; end if;
+
+  -- Followers: C sees them, cannot remove A (A followed on their own), can leave and come back.
+  select count(*) into v_count from public.mail_followers where res_id = '00000000-0000-0000-00c4-0000000000d1';
+  if v_count < 2 then raise exception 'FAIL CRM user sees % followers', v_count; end if;
+  delete from public.mail_followers where res_id = '00000000-0000-0000-00c4-0000000000d1' and user_id = '00000000-0000-0000-00c4-00000000000a';
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then raise exception 'FAIL removed another user''s follow'; end if;
+  delete from public.mail_followers where res_id = '00000000-0000-0000-00c4-0000000000d1' and user_id = '00000000-0000-0000-00c4-00000000000c';
+  get diagnostics v_count = row_count;
+  if v_count <> 1 then raise exception 'FAIL could not unfollow'; end if;
+  insert into public.mail_followers (res_model, res_id, user_id) values ('deals', '00000000-0000-0000-00c4-0000000000d1', '00000000-0000-0000-00c4-00000000000c');
+
+  -- C sees A's file, but cannot attach files to A's note or remove A's file.
+  select count(*) into v_count from public.mail_attachments where res_id = '00000000-0000-0000-00c4-0000000000d1';
+  if v_count <> 1 then raise exception 'FAIL CRM user sees % of 1 attachments', v_count; end if;
+  begin
+    insert into public.mail_attachments (message_id, storage_path, file_name)
+    select id, 'deals/00000000-0000-0000-00c4-0000000000d1/c.pdf', 'c.pdf' from public.mail_messages where author_name = 'Aysel Admin' and kind = 'note' limit 1;
+    raise exception 'FAIL attached a file to someone else''s note';
+  exception when insufficient_privilege then null;
+  end;
+  delete from public.mail_attachments where file_name = 'plan.pdf';
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then raise exception 'FAIL deleted someone else''s file'; end if;
 end $$;
 commit;
 
@@ -169,9 +260,26 @@ begin;
 set local role anon;
 do $$
 begin
-  perform 1 from public.mail_messages;
-  raise exception 'FAIL anon can read messages';
-exception when insufficient_privilege then null;
+  begin
+    perform 1 from public.mail_messages;
+    raise exception 'FAIL anon can read messages';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform 1 from public.mail_followers;
+    raise exception 'FAIL anon can read followers';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform 1 from public.mail_attachments;
+    raise exception 'FAIL anon can read attachments';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform 1 from public.activity_types;
+    raise exception 'FAIL anon can read activity types';
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 commit;
 

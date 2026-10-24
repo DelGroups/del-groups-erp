@@ -20,9 +20,68 @@ export function chatterEnabledFor(table: string | null | undefined, id: string |
   return !!table && !!id && (CHATTER_MODELS as readonly string[]).includes(table) && UUID.test(id);
 }
 
+/** Built-in activity types (translated by code); admins add more in public.activity_types. */
 export const ACTIVITY_TYPES = ["todo", "call", "meeting"] as const;
-export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+export type BuiltInActivityType = (typeof ACTIVITY_TYPES)[number];
+/** Code of a row in public.activity_types. */
+export type ActivityType = string;
+export const ACTIVITY_ICONS = ["todo", "call", "meeting", "email", "document"] as const;
+export type ActivityIcon = (typeof ACTIVITY_ICONS)[number];
 export type MessageKind = "note" | "message" | "log";
+
+export interface ActivityTypeRow {
+  code: string;
+  name: string | null;
+  icon: ActivityIcon;
+  default_days: number;
+  sequence: number;
+  active: boolean;
+}
+
+/** The built-in rows, used until the table answers. */
+export const DEFAULT_ACTIVITY_TYPES: ActivityTypeRow[] = [
+  { code: "todo", name: null, icon: "todo", default_days: 0, sequence: 10, active: true },
+  { code: "call", name: null, icon: "call", default_days: 1, sequence: 20, active: true },
+  { code: "meeting", name: null, icon: "meeting", default_days: 3, sequence: 30, active: true },
+];
+
+export function isBuiltInType(code: string): code is BuiltInActivityType {
+  return (ACTIVITY_TYPES as readonly string[]).includes(code);
+}
+
+/** Label of an activity type: its own name, else the translated built-in, else the code. */
+export function activityTypeLabel(code: string, types: readonly Pick<ActivityTypeRow, "code" | "name">[], t: (key: string) => string): string {
+  const row = types.find((x) => x.code === code);
+  if (row?.name) return row.name;
+  return isBuiltInType(code) ? t(`views.chatter.type.${code}`) : code;
+}
+
+/** Active types in their order, for the composer. */
+export function selectableTypes<T extends Pick<ActivityTypeRow, "active" | "sequence" | "code">>(types: readonly T[]): T[] {
+  return types.filter((x) => x.active).sort((a, b) => a.sequence - b.sequence || a.code.localeCompare(b.code));
+}
+
+/** "YYYY-MM-DD" a number of days after now (local calendar). */
+export function dueIn(days: number, now: Date): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + Math.max(0, Math.trunc(days)));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** A new activity type from the settings form, or an error key (same limits as the table). */
+export function checkActivityType(
+  input: { code: string; name: string; icon: string; default_days: number | string },
+  existing: readonly string[],
+): { ok: true; value: Pick<ActivityTypeRow, "code" | "name" | "icon" | "default_days"> } | { ok: false; error: string } {
+  const code = input.code.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_]{1,31}$/.test(code)) return { ok: false, error: "views.chatter.typesAdmin.errors.code" };
+  if (existing.includes(code)) return { ok: false, error: "views.chatter.typesAdmin.errors.exists" };
+  const name = input.name.trim();
+  if (!name || name.length > 60) return { ok: false, error: "views.chatter.typesAdmin.errors.name" };
+  if (!(ACTIVITY_ICONS as readonly string[]).includes(input.icon)) return { ok: false, error: "views.chatter.errors.type" };
+  const days = Number(input.default_days);
+  if (!Number.isInteger(days) || days < 0 || days > 365) return { ok: false, error: "views.chatter.typesAdmin.errors.days" };
+  return { ok: true, value: { code, name, icon: input.icon as ActivityIcon, default_days: days } };
+}
 
 export interface ChatterMessage {
   id: string;
@@ -32,6 +91,21 @@ export interface ChatterMessage {
   author_name: string | null;
   created_at: string;
   edited_at: string | null;
+  mail_attachments?: ChatterAttachment[];
+}
+
+export interface ChatterAttachment {
+  id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+}
+
+export interface Follower {
+  id: string;
+  user_id: string;
+  added_by: string | null;
 }
 
 export interface Activity {
@@ -101,8 +175,12 @@ export interface ActivityInput {
   note?: string;
 }
 
-export function checkActivity(input: ActivityInput): { ok: true; value: Required<Omit<ActivityInput, "note">> & { note: string | null; activity_type: ActivityType } } | { ok: false; error: string } {
-  if (!(ACTIVITY_TYPES as readonly string[]).includes(input.activity_type)) return { ok: false, error: "views.chatter.errors.type" };
+/** `types` are the codes the user may pick (active rows of public.activity_types). */
+export function checkActivity(
+  input: ActivityInput,
+  types: readonly string[] = ACTIVITY_TYPES,
+): { ok: true; value: Required<Omit<ActivityInput, "note">> & { note: string | null; activity_type: ActivityType } } | { ok: false; error: string } {
+  if (!types.includes(input.activity_type)) return { ok: false, error: "views.chatter.errors.type" };
   const summary = input.summary.trim();
   if (!summary) return { ok: false, error: "views.chatter.errors.summary" };
   if (summary.length > SUMMARY_MAX) return { ok: false, error: "views.chatter.errors.tooLong" };
@@ -111,11 +189,107 @@ export function checkActivity(input: ActivityInput): { ok: true; value: Required
   return { ok: true, value: { activity_type: input.activity_type as ActivityType, summary, due_date: input.due_date, assigned_to: input.assigned_to || null, note: note ? note.slice(0, 5000) : null } };
 }
 
-/** A system log line ("activity_done:call:Follow-up call") as data, or null for other text. */
-export function parseLog(body: string): { event: "activity_done"; type: ActivityType | null; summary: string } | null {
-  const m = /^activity_done:([a-z]+):([\s\S]*)$/.exec(body);
-  if (!m) return null;
-  return { event: "activity_done", type: (ACTIVITY_TYPES as readonly string[]).includes(m[1]) ? (m[1] as ActivityType) : null, summary: m[2] };
+export interface TrackedChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+export type LogLine = { event: "activity_done"; type: ActivityType; summary: string } | { event: "tracking"; changes: TrackedChange[] };
+
+/**
+ * A system log line as data, or null for other text:
+ * "activity_done:call:Follow-up call" (an activity was completed) or
+ * "tracking:[{"f":"stage","o":"NEW","n":"WON"}]" (tracked fields changed, chatter_track_changes()).
+ */
+export function parseLog(body: string): LogLine | null {
+  const done = /^activity_done:([a-z][a-z0-9_]*):([\s\S]*)$/.exec(body);
+  if (done) return { event: "activity_done", type: done[1], summary: done[2] };
+  if (!body.startsWith("tracking:")) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(body.slice("tracking:".length));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(raw)) return null;
+  const changes = raw
+    .filter((x): x is { f: string; o?: unknown; n?: unknown } => !!x && typeof x === "object" && typeof (x as { f?: unknown }).f === "string")
+    .map((x) => ({ field: x.f, from: x.o ?? null, to: x.n ?? null }));
+  return changes.length ? { event: "tracking", changes } : null;
+}
+
+/** Fields that write a tracking line, per table (must match the chatter_track_changes triggers in the migration). */
+export const TRACKED_FIELDS: Partial<Record<ChatterModel, readonly string[]>> = {
+  sales: ["status", "grand_total", "paid_amount", "due_date", "warehouse_slip_status"],
+  purchases: ["status", "grand_total", "paid_amount", "due_date", "warehouse_slip_status"],
+  customers: ["name", "phone", "address", "voen", "default_price_tier"],
+  deals: ["title", "stage", "expected_value", "assigned_to"],
+};
+const TRACKED_USER_FIELDS = new Set(["assigned_to"]);
+
+/** A tracked value for display: empty as "—", user ids as names, everything else as stored. */
+export function trackedValue(field: string, value: unknown, users: readonly { id: string; full_name: string }[]): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (TRACKED_USER_FIELDS.has(field) && typeof value === "string") return users.find((u) => u.id === value)?.full_name ?? "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+// ── Attachments ──────────────────────────────────────────────────────────────
+
+export const ATTACHMENT_BUCKET = "chatter-attachments";
+export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+export const ATTACHMENT_MAX_FILES = 5;
+
+/** Storage path of a file on a record: "<model>/<record id>/<unique>-<safe name>" (the bucket's policies read the first two parts). */
+export function attachmentPath(model: ChatterModel, recordId: string, fileName: string, unique: string): string {
+  const base = fileName.split(/[\\/]/).pop() ?? "";
+  const dot = base.lastIndexOf(".");
+  const ext = dot > 0 ? base.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10) : "";
+  const stem = (dot > 0 ? base.slice(0, dot) : base)
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `${model}/${recordId}/${unique}-${stem || "file"}${ext ? `.${ext}` : ""}`;
+}
+
+/** Files to attach, or an error key: at most 5, none empty, each up to 10 MB (the bucket's limit). */
+export function checkFiles(files: readonly { size: number }[]): { ok: true } | { ok: false; error: string } {
+  if (files.length > ATTACHMENT_MAX_FILES) return { ok: false, error: "views.chatter.errors.tooManyFiles" };
+  for (const f of files) {
+    if (f.size <= 0) return { ok: false, error: "views.chatter.errors.emptyFile" };
+    if (f.size > ATTACHMENT_MAX_BYTES) return { ok: false, error: "views.chatter.errors.fileTooBig" };
+  }
+  return { ok: true };
+}
+
+/** "512 B", "14 KB", "2.4 MB". */
+export function fileSize(bytes: number | null | undefined): string {
+  if (!bytes || bytes < 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── My activities ────────────────────────────────────────────────────────────
+
+/** Where a record opens in the new UI, for the "My activities" list (null: no screen of its own yet). */
+export function recordHref(model: string, id: string): string | null {
+  switch (model) {
+    case "deals":
+      return `/crm/${id}`;
+    case "sales":
+      return `/sales/${id}`;
+    case "purchases":
+      return `/purchases?record=${id}`;
+    case "customers":
+      return `/customers?record=${id}`;
+    default:
+      return null;
+  }
 }
 
 /** Two letters for an author's avatar. */

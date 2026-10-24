@@ -8,18 +8,30 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  ACTIVITY_ICONS,
   activityState,
+  activityTypeLabel,
+  attachmentPath,
   canChangeActivity,
   canDeleteActivity,
   chatterEnabledFor,
   CHATTER_MODELS,
   checkActivity,
+  checkActivityType,
+  checkFiles,
   checkMessage,
   counts,
   daysUntil,
+  DEFAULT_ACTIVITY_TYPES,
+  dueIn,
+  fileSize,
   initials,
   parseLog,
+  recordHref,
+  selectableTypes,
   sortActivities,
+  TRACKED_FIELDS,
+  trackedValue,
 } from "../src/views/chatter/logic.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
 
@@ -38,12 +50,22 @@ test("the client's chatter tables are exactly the migration's, and every one exi
   for (const table of CHATTER_MODELS) assert.match(schema, new RegExp(`create table if not exists public\\.${table} \\(\\s*id uuid not null`), table);
 });
 
-test("only one migration for chatter, RLS on both tables, visibility follows the record", () => {
+test("only one migration for chatter, RLS on every table, visibility follows the record", () => {
   assert.equal(readdirSync(join(root, "supabase/migrations")).filter((f) => f.startsWith("20261015100000")).length, 1);
   const sql = read(MIGRATION);
-  assert.match(sql, /alter table public\.mail_messages enable row level security;/);
-  assert.match(sql, /alter table public\.activities enable row level security;/);
-  assert.equal((sql.match(/using \(public\.chatter_record_visible\(res_model, res_id\)\)/g) ?? []).length, 2);
+  for (const table of ["mail_messages", "activities", "activity_types", "mail_followers", "mail_attachments"]) {
+    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security;`), table);
+  }
+  // messages, activities, followers and attachments are read with the record.
+  assert.equal((sql.match(/using \(public\.chatter_record_visible\(res_model, res_id\)\)/g) ?? []).length, 4);
+  // Files: the bucket is private and its policies follow the record path.
+  assert.match(sql, /values \('chatter-attachments', 'chatter-attachments', false, 10485760\)/);
+  assert.equal((sql.match(/bucket_id = 'chatter-attachments' and public\.chatter_path_visible\(name\)/g) ?? []).length, 2);
+  // Activity types are changed by admins only; chatter_follow is internal.
+  assert.match(sql, /create policy activity_types_write on public\.activity_types\s+for all to authenticated\s+using \(public\.is_admin\(\)\)\s+with check \(public\.is_admin\(\)\)/);
+  assert.match(sql, /revoke all on function public\.chatter_follow\(text, uuid, uuid\) from public, anon, authenticated;/);
+  // Tracking never blocks the business write.
+  assert.match(sql, /exception when others then\s+return null;/);
   assert.match(sql, /security invoker/);
   assert.match(sql, /kind in \('note', 'message'\) and public\.chatter_record_visible/);
   assert.doesNotMatch(sql, /grant [^;]* to anon/);
@@ -87,7 +109,7 @@ test("message and activity input checks mirror the table's limits", () => {
 
 test("system log lines, initials and who may change an activity", () => {
   assert.deepEqual(parseLog("activity_done:call:Follow-up: price"), { event: "activity_done", type: "call", summary: "Follow-up: price" });
-  assert.equal(parseLog("activity_done:odd:x").type, null);
+  assert.equal(parseLog("activity_done:site_visit:x").type, "site_visit");
   assert.equal(parseLog("hello"), null);
   assert.equal(initials("Aysel Məmmədova"), "AM");
   assert.equal(initials("leyla"), "L");
@@ -113,13 +135,98 @@ test("every view-engine form shows the record's chatter; only new-UI screens ren
   }
 });
 
+test("activity types: labels, order, default due dates and the settings form's checks", () => {
+  const t = (k) => `T(${k})`;
+  const types = [...DEFAULT_ACTIVITY_TYPES, { code: "site_visit", name: "Site visit", icon: "meeting", default_days: 2, sequence: 15, active: true }, { code: "old", name: "Old", icon: "todo", default_days: 0, sequence: 5, active: false }];
+  assert.equal(activityTypeLabel("call", types, t), "T(views.chatter.type.call)");
+  assert.equal(activityTypeLabel("site_visit", types, t), "Site visit");
+  assert.equal(activityTypeLabel("gone", types, t), "gone");
+  assert.deepEqual(selectableTypes(types).map((x) => x.code), ["todo", "site_visit", "call", "meeting"]);
+  assert.equal(dueIn(0, NOW), "2026-10-15");
+  assert.equal(dueIn(20, NOW), "2026-11-04");
+  assert.equal(dueIn(-3, NOW), "2026-10-15");
+  // A custom type passes once it is among the allowed codes.
+  assert.equal(checkActivity({ activity_type: "site_visit", summary: "x", due_date: "2026-10-20", assigned_to: null }).ok, false);
+  assert.equal(checkActivity({ activity_type: "site_visit", summary: "x", due_date: "2026-10-20", assigned_to: null }, ["todo", "site_visit"]).ok, true);
+  const codes = types.map((x) => x.code);
+  assert.deepEqual(checkActivityType({ code: " Site_Check ", name: " Site check ", icon: "meeting", default_days: "2" }, codes), { ok: true, value: { code: "site_check", name: "Site check", icon: "meeting", default_days: 2 } });
+  assert.equal(checkActivityType({ code: "site_visit", name: "x", icon: "todo", default_days: 0 }, codes).ok, false);
+  assert.equal(checkActivityType({ code: "9lives", name: "x", icon: "todo", default_days: 0 }, codes).ok, false);
+  assert.equal(checkActivityType({ code: "ok_code", name: " ", icon: "todo", default_days: 0 }, codes).ok, false);
+  assert.equal(checkActivityType({ code: "ok_code", name: "x", icon: "rocket", default_days: 0 }, codes).ok, false);
+  assert.equal(checkActivityType({ code: "ok_code", name: "x", icon: "todo", default_days: "1.5" }, codes).ok, false);
+  assert.equal(checkActivityType({ code: "ok_code", name: "x", icon: "todo", default_days: 366 }, codes).ok, false);
+  // Icons and built-in rows match the table's check and seed.
+  const sql = read(MIGRATION);
+  assert.match(sql, new RegExp(`icon in \\(${ACTIVITY_ICONS.map((i) => `'${i}'`).join(", ")}\\)`));
+  for (const row of DEFAULT_ACTIVITY_TYPES) assert.match(sql, new RegExp(`\\('${row.code}', null, '${row.icon}', ${row.default_days}, ${row.sequence}\\)`), row.code);
+});
+
+test("tracking lines: parsed, shown, and the tracked fields match the migration", () => {
+  assert.deepEqual(parseLog('tracking:[{"f":"stage","o":"NEW","n":"WON"},{"f":"expected_value","o":null,"n":1200}]'), {
+    event: "tracking",
+    changes: [
+      { field: "stage", from: "NEW", to: "WON" },
+      { field: "expected_value", from: null, to: 1200 },
+    ],
+  });
+  assert.equal(parseLog("tracking:not json"), null);
+  assert.equal(parseLog("tracking:[]"), null);
+  assert.equal(parseLog('tracking:{"f":"x"}'), null);
+  const users = [{ id: "u1", full_name: "Aysel" }];
+  assert.equal(trackedValue("assigned_to", "u1", users), "Aysel");
+  assert.equal(trackedValue("assigned_to", "u9", users), "—");
+  assert.equal(trackedValue("stage", null, users), "—");
+  assert.equal(trackedValue("grand_total", 1500.5, users), "1500.5");
+  const sql = read(MIGRATION);
+  for (const [table, fields] of Object.entries(TRACKED_FIELDS)) {
+    assert.ok(sql.includes(`('${table}', array[${fields.map((f) => `'${f}'`).join(", ")}])`), table);
+  }
+});
+
+test("attachments: safe storage paths under the record, limits and sizes", () => {
+  const path = attachmentPath("deals", ID, "Plan (v2) ünvan.PDF", "abc");
+  assert.equal(path, `deals/${ID}/abc-Plan-v2-unvan.pdf`);
+  assert.equal(attachmentPath("sales", ID, ".env", "u"), `sales/${ID}/u-env`);
+  assert.equal(attachmentPath("sales", ID, "../../etc/passwd", "u"), `sales/${ID}/u-passwd`);
+  assert.equal(attachmentPath("sales", ID, "файл.png", "u"), `sales/${ID}/u-file.png`);
+  assert.deepEqual(checkFiles([{ size: 10 }, { size: 10 * 1024 * 1024 }]), { ok: true });
+  assert.equal(checkFiles([{ size: 0 }]).ok, false);
+  assert.equal(checkFiles([{ size: 10 * 1024 * 1024 + 1 }]).ok, false);
+  assert.equal(checkFiles(Array.from({ length: 6 }, () => ({ size: 1 }))).ok, false);
+  assert.equal(fileSize(512), "512 B");
+  assert.equal(fileSize(14 * 1024), "14 KB");
+  assert.equal(fileSize(2.5 * 1024 * 1024), "2.5 MB");
+  assert.equal(fileSize(null), "");
+});
+
+test("My activities links open the record's new-UI screen", () => {
+  assert.equal(recordHref("deals", ID), `/crm/${ID}`);
+  assert.equal(recordHref("sales", ID), `/sales/${ID}`);
+  assert.equal(recordHref("purchases", ID), `/purchases?record=${ID}`);
+  assert.equal(recordHref("customers", ID), `/customers?record=${ID}`);
+  assert.equal(recordHref("payrolls", ID), null);
+  assert.match(read("src/components/shell/NewShell.tsx"), /<MyActivitiesButton \/>/);
+  // The customers page shows chatter and follows ?record= only with the new UI on.
+  const customers = read("src/app/customers/page.client.tsx");
+  assert.match(customers, /const withChatter = newUi && Boolean\(editingCustomerId\);/);
+  assert.match(customers, /if \(!newUi \|\| openedFromLink\.current/);
+  assert.match(read("src/views/chatter/RecordChatter.tsx"), /if \(!active \|\| !recordId/);
+  // The activity types page is an admin settings tab shown only with the new UI.
+  assert.match(read("src/components/settings/SettingsTabs.tsx"), /id: "activity-types",[\s\S]*?adminOnly: true,\s+newUiOnly: true,/);
+});
+
 test("every chatter text exists in az, en and ru", () => {
   const keys = new Set();
-  for (const f of ["src/views/chatter/Chatter.tsx", "src/views/chatter/logic.ts"]) {
+  for (const f of ["src/views/chatter/Chatter.tsx", "src/views/chatter/logic.ts", "src/components/shell/MyActivitiesButton.tsx", "src/app/settings/activity-types/page.client.tsx", "src/components/settings/SettingsTabs.tsx"]) {
     for (const m of read(f).matchAll(/["'`](views\.chatter\.[A-Za-z0-9_.]+[A-Za-z0-9_])["'`]/g)) keys.add(m[1]);
   }
   for (const x of ["todo", "call", "meeting"]) keys.add(`views.chatter.type.${x}`);
   for (const x of ["overdue", "today", "planned", "done"]) keys.add(`views.chatter.state.${x}`);
+  for (const x of ["overdue", "today", "planned"]) keys.add(`views.chatter.mine.${x}`);
+  for (const x of ACTIVITY_ICONS) keys.add(`views.chatter.typesAdmin.icons.${x}`);
+  for (const x of CHATTER_MODELS) keys.add(`views.chatter.models.${x}`);
+  for (const fields of Object.values(TRACKED_FIELDS)) for (const x of fields) keys.add(`views.chatter.tracked.${x}`);
   const get = (messages, key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), messages);
   assert.ok(keys.size > 35);
   for (const [name, messages] of [["az", azMessages], ["en", enMessages], ["ru", ruMessages]]) {

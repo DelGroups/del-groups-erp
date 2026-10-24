@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Blocks, Boxes, Building2, CreditCard, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { Blocks, Boxes, Building2, CalendarClock, CreditCard, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -11,6 +11,7 @@ import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { billingPageEnabled } from "@/lib/billing/overview";
 import type { ModuleId } from "@/modules/types";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 
 interface SettingsTab {
   id: string;
@@ -21,6 +22,8 @@ interface SettingsTab {
   /** Hidden when the tenant does not have this module. */
   module?: ModuleId;
   adminOnly?: boolean;
+  /** Shown only while the new UI (NEW_UI) is on for this user. */
+  newUiOnly?: boolean;
 }
 
 const SETTINGS_TABS: SettingsTab[] = [
@@ -132,6 +135,15 @@ const SETTINGS_TABS: SettingsTab[] = [
     adminOnly: true,
   },
   {
+    id: "activity-types",
+    titleKey: "views.chatter.typesAdmin.tab",
+    path: "/settings/activity-types",
+    icon: CalendarClock,
+    permission: "can_manage_settings",
+    adminOnly: true,
+    newUiOnly: true,
+  },
+  {
     id: "audit",
     titleKey: "settings.auditTab",
     path: "/settings/audit",
@@ -147,10 +159,12 @@ export default function SettingsTabs({ activeTab }: { activeTab: string }) {
   const { can, isAdmin } = useAuth();
   const { t } = useI18n();
   const { isEnabled } = useEnabledModules();
+  const { active: newUi } = useNewUi();
   const tabs = SETTINGS_TABS.filter(
     (tab) =>
       can(tab.permission) &&
       (!tab.adminOnly || isAdmin) &&
+      (!tab.newUiOnly || newUi) &&
       isEnabled(tab.module) &&
       (isBarcodeModuleEnabled() || tab.id !== "barcode") &&
       (BILLING_TAB || tab.id !== "billing")
