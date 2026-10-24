@@ -13,8 +13,8 @@ import { publicConfigScript, toPublicTenantConfig } from "@/lib/tenant/config";
 import { getServerTenant } from "@/lib/tenant/server";
 import ReadOnlyBanner from "@/components/tenant/ReadOnlyBanner";
 import { NewUiProvider, type NewUiServerValue } from "@/components/shell/NewUiProvider";
-import { isNewUiEnabled } from "@/lib/features/newUi";
-import { NEW_UI_COOKIE, parseNewUiCookie } from "@/lib/shell/shell";
+import { isNewUiEnabled, newUiAudienceSetting } from "@/lib/features/newUi";
+import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
 import LimitBanner from "@/components/limits/LimitBanner";
@@ -129,8 +129,10 @@ export default async function RootLayout({
  */
 async function newUiServerValue(): Promise<NewUiServerValue> {
   if (!isNewUiEnabled()) return { available: false, preferred: false, brand: null };
-  const preferred = parseNewUiCookie((await cookies()).get(NEW_UI_COOKIE)?.value);
-  if (!preferred) return { available: true, preferred: false, brand: null };
+  // NEW_UI_AUDIENCE=all: the new shell is everyone's default until they switch back (cookie "0").
+  const audience = parseNewUiAudience(newUiAudienceSetting());
+  const preferred = parseNewUiCookie((await cookies()).get(NEW_UI_COOKIE)?.value, audience);
+  if (!preferred) return { available: true, preferred: false, brand: null, audience };
   const client = await createSupabaseServerClient();
-  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]) };
+  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]), audience };
 }

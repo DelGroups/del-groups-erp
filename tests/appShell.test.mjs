@@ -12,7 +12,9 @@ import {
   collapseCrumbs,
   filterApps,
   newShellActive,
+  newShellCanToggle,
   nextTrail,
+  parseNewUiAudience,
   parseNewUiCookie,
   parseTrail,
   shellBackButton,
@@ -45,6 +47,38 @@ test("the new shell shows only with NEW_UI on, the user's choice, and an admin",
   for (const [input, want] of cases) assert.equal(newShellActive(input), want, JSON.stringify(input));
   assert.equal(parseNewUiCookie("1"), true);
   for (const v of ["0", "", "true", null, undefined]) assert.equal(parseNewUiCookie(v), false);
+  // The default audience is "admins": unchanged behaviour, only admins switch.
+  assert.equal(newShellActive({ available: true, preferred: true, authReady: true, isAdmin: false, audience: "admins", signedIn: true }), false);
+  assert.equal(newShellCanToggle({ available: true, isAdmin: false, audience: "admins", signedIn: true }), false);
+  assert.equal(newShellCanToggle({ available: true, isAdmin: true }), true);
+  assert.equal(newShellCanToggle({ available: false, isAdmin: true, audience: "all" }), false);
+});
+
+test("NEW_UI_AUDIENCE: admins by default; all = every signed-in user by default, and anyone can switch back", () => {
+  for (const v of [undefined, null, "", "admins", "ALL-users", "everyone"]) assert.equal(parseNewUiAudience(v), "admins", String(v));
+  for (const v of ["all", " ALL ", "All"]) assert.equal(parseNewUiAudience(v), "all", v);
+  // "all": no cookie = new shell; "0" (switched back) = classic; "1" = new shell.
+  assert.equal(parseNewUiCookie(undefined, "all"), true);
+  assert.equal(parseNewUiCookie("", "all"), true);
+  assert.equal(parseNewUiCookie("0", "all"), false);
+  assert.equal(parseNewUiCookie("1", "all"), true);
+  assert.equal(parseNewUiCookie(undefined, "admins"), false);
+  const all = { available: true, preferred: true, authReady: true, audience: "all" };
+  assert.equal(newShellActive({ ...all, isAdmin: false, signedIn: true }), true);
+  assert.equal(newShellActive({ ...all, isAdmin: true, signedIn: true }), true);
+  assert.equal(newShellActive({ ...all, isAdmin: false, signedIn: false }), false);
+  assert.equal(newShellActive({ ...all, preferred: false, isAdmin: false, signedIn: true }), false);
+  assert.equal(newShellActive({ ...all, available: false, isAdmin: true, signedIn: true }), false);
+  assert.equal(newShellCanToggle({ available: true, isAdmin: false, audience: "all", signedIn: true }), true);
+  assert.equal(newShellCanToggle({ available: true, isAdmin: false, audience: "all", signedIn: false }), false);
+  // The server reads the audience only while NEW_UI is on and passes it to the cookie default.
+  const layout = read("src/app/layout.tsx");
+  assert.match(layout, /const audience = parseNewUiAudience\(newUiAudienceSetting\(\)\);/);
+  assert.match(layout, /parseNewUiCookie\(\(await cookies\(\)\)\.get\(NEW_UI_COOKIE\)\?\.value, audience\)/);
+  assert.ok(layout.indexOf("if (!isNewUiEnabled())") < layout.indexOf("parseNewUiAudience("));
+  // Both shells offer the switch to whoever may toggle; the classic one says "back" with "all".
+  assert.match(read("src/components/layout/AppTopBar.tsx"), /newShellAudience === "all" \? t\("newShell\.backToNew"\) : t\("newShell\.tryNew"\)/);
+  for (const [name, messages] of [["az", azMessages], ["en", enMessages], ["ru", ruMessages]]) assert.equal(typeof messages.newShell.backToNew, "string", name);
 });
 
 test("with NEW_UI off nothing is read and nothing changes", () => {

@@ -10,22 +10,44 @@
 
 // ── Flag ─────────────────────────────────────────────────────────────────────
 
-/** Cookie with the admin's choice ("1" = new shell). Ignored unless NEW_UI is on. */
+/** Cookie with the user's choice ("1" = new shell, "0" = classic). Ignored unless NEW_UI is on. */
 export const NEW_UI_COOKIE = "erp_new_ui";
 export const NEW_UI_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-export function parseNewUiCookie(value: string | null | undefined): boolean {
-  return value === "1";
+/**
+ * Who gets the new shell while NEW_UI is on (server setting NEW_UI_AUDIENCE):
+ *   admins  (default) only admins who turn it on, as before;
+ *   all     every signed-in user by default; anyone can switch back to the classic shell.
+ */
+export type NewUiAudience = "admins" | "all";
+
+export function parseNewUiAudience(value: string | null | undefined): NewUiAudience {
+  return (value ?? "").trim().toLowerCase() === "all" ? "all" : "admins";
+}
+
+/** The user's choice: an explicit "1" / "0", otherwise the audience's default. */
+export function parseNewUiCookie(value: string | null | undefined, audience: NewUiAudience = "admins"): boolean {
+  if (value === "1") return true;
+  if (value === "0") return false;
+  return audience === "all";
 }
 
 /**
- * The new shell is shown when the deployment has NEW_UI on, the user turned it on, and the
- * user is an admin. While sign-in is still loading the choice is trusted (only admins can set
- * the cookie), so admins do not see the classic shell flash first.
+ * The new shell is shown when the deployment has NEW_UI on and the user's choice is the new
+ * shell; with the "admins" audience the user must also be an admin, with "all" any signed-in
+ * user. While sign-in is still loading the choice is trusted, so nobody sees the classic shell
+ * flash first.
  */
-export function newShellActive(input: { available: boolean; preferred: boolean; authReady: boolean; isAdmin: boolean }): boolean {
+export function newShellActive(input: { available: boolean; preferred: boolean; authReady: boolean; isAdmin: boolean; audience?: NewUiAudience; signedIn?: boolean }): boolean {
   if (!input.available || !input.preferred) return false;
-  return input.authReady ? input.isAdmin : true;
+  if (!input.authReady) return true;
+  return input.audience === "all" ? input.signedIn !== false : input.isAdmin;
+}
+
+/** Whether the user may switch between the shells: admins, or every signed-in user with "all". */
+export function newShellCanToggle(input: { available: boolean; isAdmin: boolean; audience?: NewUiAudience; signedIn?: boolean }): boolean {
+  if (!input.available) return false;
+  return input.audience === "all" ? input.signedIn !== false : input.isAdmin;
 }
 
 /** Window event the new shell's AI button sends; the AI assistant widget opens on it. */

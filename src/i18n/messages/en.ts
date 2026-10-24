@@ -3704,6 +3704,7 @@ export const enMessages: Messages = {
     themeDark: "Dark theme",
     classic: "Classic interface",
     tryNew: "Try the new interface",
+    backToNew: "Back to the new interface",
     signOut: "Sign out",
     menu: "Menu",
     mobileNav: "Main navigation",

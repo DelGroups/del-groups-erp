@@ -3705,6 +3705,7 @@ export const ruMessages: Messages = {
     themeDark: "Тёмная тема",
     classic: "Классический интерфейс",
     tryNew: "Попробовать новый интерфейс",
+    backToNew: "Вернуться к новому интерфейсу",
     signOut: "Выйти",
     menu: "Меню",
     mobileNav: "Основная навигация",

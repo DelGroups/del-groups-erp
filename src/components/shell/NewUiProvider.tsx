@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { NEW_UI_COOKIE, NEW_UI_COOKIE_MAX_AGE, newShellActive } from "@/lib/shell/shell";
+import { NEW_UI_COOKIE, NEW_UI_COOKIE_MAX_AGE, newShellActive, newShellCanToggle, type NewUiAudience } from "@/lib/shell/shell";
 
 export interface NewUiServerValue {
   /** NEW_UI is on for this deployment (server env). */
@@ -12,20 +12,23 @@ export interface NewUiServerValue {
   preferred: boolean;
   /** Tenant brand colour for the new UI (system_settings.ui_brand), or null. */
   brand: string | null;
+  /** Who gets the new shell (NEW_UI_AUDIENCE): admins who opt in, or everyone by default. */
+  audience?: NewUiAudience;
 }
 
 interface NewUiValue {
   available: boolean;
   preferred: boolean;
   brand: string | null;
+  audience: NewUiAudience;
   /** The new shell is shown to this user right now. */
   active: boolean;
-  /** This user may switch (NEW_UI on and admin). */
+  /** This user may switch (NEW_UI on and admin; every signed-in user with audience "all"). */
   canToggle: boolean;
   setPreferred: (on: boolean) => void;
 }
 
-const OFF: NewUiValue = { available: false, preferred: false, brand: null, active: false, canToggle: false, setPreferred: () => undefined };
+const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, setPreferred: () => undefined };
 const NewUiContext = createContext<NewUiValue>(OFF);
 
 /**
@@ -34,7 +37,7 @@ const NewUiContext = createContext<NewUiValue>(OFF);
  * is a cookie, so the first paint already has the right shell. Must sit inside AuthProvider.
  */
 export function NewUiProvider({ value, children }: { value: NewUiServerValue; children: React.ReactNode }) {
-  const { ready, loading, isAdmin } = useAuth();
+  const { ready, loading, isAdmin, user } = useAuth();
   const router = useRouter();
   const [preferred, setPreferredState] = useState(value.available && value.preferred);
 
@@ -50,15 +53,18 @@ export function NewUiProvider({ value, children }: { value: NewUiServerValue; ch
 
   const ctx = useMemo<NewUiValue>(() => {
     if (!value.available) return OFF;
+    const audience = value.audience ?? "admins";
+    const signedIn = !!user;
     return {
       available: true,
       preferred,
       brand: value.brand,
-      active: newShellActive({ available: true, preferred, authReady: ready && !loading, isAdmin }),
-      canToggle: isAdmin,
+      audience,
+      active: newShellActive({ available: true, preferred, authReady: ready && !loading, isAdmin, audience, signedIn }),
+      canToggle: newShellCanToggle({ available: true, isAdmin, audience, signedIn }),
       setPreferred,
     };
-  }, [value.available, value.brand, preferred, ready, loading, isAdmin, setPreferred]);
+  }, [value.available, value.brand, value.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
 
   return <NewUiContext.Provider value={ctx}>{children}</NewUiContext.Provider>;
 }
