@@ -36,7 +36,11 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 do $$
 declare v_id uuid; n int;
 begin
-  if (select count(*) from public.modules) <> 18 then raise exception 'FAIL modules seed: %', (select count(*) from public.modules); end if;
+  -- The 18 modules of the first control-plane migration are seeded; later modules add their own row.
+  if (select count(*) from public.modules where id in ('core', 'accounting', 'inventory', 'contracts', 'sales', 'purchases', 'polywood', 'production',
+      'expenses', 'hr', 'tax-az', 'payroll', 'crm', 'consignment', 'commissions', 'barcode', 'ai', 'studio')) <> 18 then
+    raise exception 'FAIL modules seed: %', (select count(*) from public.modules);
+  end if;
   insert into public.tenants (name, slug) values ('Acme MMC', 'acme') returning id into v_id;
   if (select created_by from public.tenants where id = v_id) <> '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL created_by'; end if;
   update public.tenants set status = 'trial', name = 'Acme' where id = v_id;
