@@ -39,6 +39,10 @@ as $$
 $$;
 
 -- True when the current user may read the record (the record table's RLS decides).
+-- The policies call this once per row, and a thread's rows all belong to one record, so a
+-- "yes" is remembered for the rest of the transaction (one API request) per user and record:
+-- reading 200 messages costs one look-up of the record, not 200. Only "yes" is remembered, so
+-- a record created later in the same transaction is still found.
 create or replace function public.chatter_record_visible(p_model text, p_record uuid)
 returns boolean
 language plpgsql
@@ -48,19 +52,29 @@ set search_path = ''
 as $$
 declare
   v_found boolean;
+  v_key text;
 begin
   if p_model is null or p_record is null or not (p_model = any (public.chatter_models())) then
     return false;
+  end if;
+  v_key := 'chatter_visible.' || p_model || '_' || replace(p_record::text, '-', '') || '_' || coalesce(replace(auth.uid()::text, '-', ''), 'none');
+  if current_setting(v_key, true) = 't' then
+    return true;
   end if;
   if to_regclass('public.' || quote_ident(p_model)) is null then
     return false;
   end if;
   execute format('select exists (select 1 from public.%I where id = $1)', p_model) into v_found using p_record;
+  if v_found then
+    perform set_config(v_key, 't', true);
+  end if;
   return coalesce(v_found, false);
 end;
 $$;
 
--- Names of active users, for the assignee picker and authors (profiles may be private to admins).
+-- Names of active users, for the assignee picker. Only the name: e-mail addresses stay private
+-- (profiles may be readable by admins only); a user without a name comes back with an empty
+-- name and the UI shows a neutral label.
 create or replace function public.chatter_users()
 returns table (id uuid, full_name text)
 language sql
@@ -68,7 +82,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select p.id, coalesce(nullif(btrim(p.full_name), ''), p.email, '')
+  select p.id, coalesce(nullif(btrim(p.full_name), ''), '')
     from public.profiles p
    where coalesce(p.is_active, true)
    order by 2;
@@ -178,7 +192,8 @@ create index if not exists mail_attachments_message_idx on public.mail_attachmen
 comment on table public.mail_attachments is
   'Files on a chatter message, in the private chatter-attachments bucket under <res_model>/<res_id>/ (phase 19).';
 
--- True when a storage path "<res_model>/<res_id>/<file>" belongs to a record the user can read.
+-- True when a storage path "<res_model>/<res_id>/<message id>/<file>" belongs to a record the
+-- user can read.
 create or replace function public.chatter_path_visible(p_path text)
 returns boolean
 language plpgsql
@@ -197,9 +212,39 @@ begin
 end;
 $$;
 
+-- True when the user may upload to a storage path: "<res_model>/<res_id>/<message id>/<file>"
+-- where the message is the user's own note or message on that record. So every file belongs
+-- to a message (no hidden uploads under a record).
+create or replace function public.chatter_upload_allowed(p_path text)
+returns boolean
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  v_uuid constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+  v_id text := split_part(p_path, '/', 2);
+  v_message text := split_part(p_path, '/', 3);
+begin
+  if v_id !~* v_uuid or v_message !~* v_uuid or split_part(p_path, '/', 4) = '' or split_part(p_path, '/', 5) <> '' then
+    return false;
+  end if;
+  return exists (
+    select 1 from public.mail_messages m
+     where m.id = v_message::uuid
+       and m.res_model = split_part(p_path, '/', 1)
+       and m.res_id = v_id::uuid
+       and m.author_id = auth.uid()
+       and m.kind <> 'log'
+  );
+end;
+$$;
+
 -- ── Triggers ───────────────────────────────────────────────────────────────
 
 -- The author's display name is stored with the message (profiles may be private to admins).
+-- Only the name, never the e-mail address; without a name the UI shows a neutral label.
 create or replace function public.mail_messages_set_author()
 returns trigger
 language plpgsql
@@ -208,7 +253,7 @@ set search_path = ''
 as $$
 begin
   if tg_op = 'INSERT' then
-    new.author_name := (select coalesce(nullif(btrim(p.full_name), ''), p.email) from public.profiles p where p.id = new.author_id);
+    new.author_name := (select nullif(btrim(p.full_name), '') from public.profiles p where p.id = new.author_id);
   elsif new.body is distinct from old.body then
     new.edited_at := now();
   end if;
@@ -229,31 +274,41 @@ drop trigger if exists mail_messages_set_author on public.mail_messages;
 create trigger mail_messages_set_author before insert or update on public.mail_messages
   for each row execute function public.mail_messages_set_author();
 
--- Marking an activity done records who did it and writes a log line on the record's chatter.
+-- Who completed an activity is always set here, never taken from the client: the signed-in
+-- user when it becomes done (on insert or update, with a log line on the record's chatter),
+-- unchanged while it stays done, cleared when it is reopened. Server code without a user
+-- (service role) may still give done_by itself.
 create or replace function public.activities_track_done()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_was_done boolean := tg_op = 'UPDATE' and old.done_at is not null;
 begin
   new.updated_at := now();
-  new.res_model := old.res_model;
-  new.res_id := old.res_id;
-  new.created_by := old.created_by;
-  if new.done_at is not null and old.done_at is null then
-    new.done_by := auth.uid();
+  if tg_op = 'UPDATE' then
+    new.res_model := old.res_model;
+    new.res_id := old.res_id;
+    new.created_by := old.created_by;
+  end if;
+  if new.done_at is null then
+    new.done_by := null;
+  elsif v_was_done then
+    new.done_at := old.done_at;
+    new.done_by := old.done_by;
+  else
+    new.done_by := coalesce(auth.uid(), new.done_by);
     insert into public.mail_messages (res_model, res_id, kind, body, author_id)
     values (new.res_model, new.res_id, 'log', 'activity_done:' || new.activity_type || ':' || new.summary, auth.uid());
-  elsif new.done_at is null then
-    new.done_by := null;
   end if;
   return new;
 end;
 $$;
 
 drop trigger if exists activities_track_done on public.activities;
-create trigger activities_track_done before update on public.activities
+create trigger activities_track_done before insert or update on public.activities
   for each row execute function public.activities_track_done();
 
 -- Adds a follower once (no-op for a missing user).
@@ -313,8 +368,9 @@ begin
   if new.res_model is null then
     raise exception 'message not found' using errcode = 'P0002';
   end if;
-  if split_part(new.storage_path, '/', 1) <> new.res_model or split_part(new.storage_path, '/', 2) <> new.res_id::text then
-    raise exception 'attachment path must start with %/%/', new.res_model, new.res_id using errcode = '22023';
+  if split_part(new.storage_path, '/', 1) <> new.res_model or split_part(new.storage_path, '/', 2) <> new.res_id::text
+     or split_part(new.storage_path, '/', 3) <> new.message_id::text then
+    raise exception 'attachment path must start with %/%/%/', new.res_model, new.res_id, new.message_id using errcode = '22023';
   end if;
   return new;
 end;
@@ -357,7 +413,9 @@ end;
 $$;
 
 -- Tracked fields per table. Only columns that exist are used, and tables that are not installed
--- (module not present) are skipped.
+-- (module not present) are skipped. The trigger fires only when an update names a tracked column
+-- and one of them really changes (UPDATE OF ... WHEN ...), so other updates of these tables
+-- (bulk recalculations, payment totals of untracked columns) never run the function.
 do $track$
 declare
   v_spec record;
@@ -381,8 +439,11 @@ begin
     execute format('drop trigger if exists chatter_track_changes on public.%I', v_spec.tbl);
     if v_fields is not null then
       execute format(
-        'create trigger chatter_track_changes after update on public.%I for each row execute function public.chatter_track_changes(%s)',
-        v_spec.tbl, (select string_agg(quote_literal(f), ', ') from unnest(v_fields) f)
+        'create trigger chatter_track_changes after update of %s on public.%I for each row when (%s) execute function public.chatter_track_changes(%s)',
+        (select string_agg(quote_ident(f), ', ') from unnest(v_fields) f),
+        v_spec.tbl,
+        (select string_agg(format('old.%1$I is distinct from new.%1$I', f), ' or ') from unnest(v_fields) f),
+        (select string_agg(quote_literal(f), ', ') from unnest(v_fields) f)
       );
     end if;
   end loop;
@@ -501,13 +562,15 @@ grant select, insert, update, delete on table public.activity_types to authentic
 grant all on table public.mail_messages, public.activities, public.mail_followers, public.mail_attachments, public.activity_types to service_role;
 revoke all on function public.chatter_users() from public, anon;
 grant execute on function public.chatter_users() to authenticated;
-grant execute on function public.chatter_models(), public.chatter_record_visible(text, uuid), public.chatter_path_visible(text) to authenticated;
+grant execute on function public.chatter_models(), public.chatter_record_visible(text, uuid), public.chatter_path_visible(text), public.chatter_upload_allowed(text) to authenticated;
 revoke all on function public.chatter_follow(text, uuid, uuid) from public, anon, authenticated;
 
 -- ── Storage: private bucket for chatter files ──────────────────────────────
 
--- Files live under <res_model>/<res_id>/<uuid>-<name>. Reading and uploading follow the record's
--- access; only the uploader deletes. Skipped where the storage schema is absent (plain Postgres).
+-- Files live under <res_model>/<res_id>/<message id>/<uuid>-<name>. Reading follows the record's
+-- access; uploading needs the user's own message on that record (chatter_upload_allowed), so
+-- no file exists without a message; the uploader or an admin deletes. Skipped where the
+-- storage schema is absent (plain Postgres).
 do $storage$
 begin
   if to_regclass('storage.buckets') is null or to_regclass('storage.objects') is null then
@@ -522,9 +585,9 @@ begin
     using (bucket_id = 'chatter-attachments' and public.chatter_path_visible(name))$p$;
   execute 'drop policy if exists chatter_attachments_insert on storage.objects';
   execute $p$create policy chatter_attachments_insert on storage.objects for insert to authenticated
-    with check (bucket_id = 'chatter-attachments' and public.chatter_path_visible(name))$p$;
+    with check (bucket_id = 'chatter-attachments' and public.chatter_path_visible(name) and public.chatter_upload_allowed(name))$p$;
   execute 'drop policy if exists chatter_attachments_delete on storage.objects';
   execute $p$create policy chatter_attachments_delete on storage.objects for delete to authenticated
-    using (bucket_id = 'chatter-attachments' and owner = auth.uid())$p$;
+    using (bucket_id = 'chatter-attachments' and (owner = auth.uid() or public.is_admin()))$p$;
 end;
 $storage$;

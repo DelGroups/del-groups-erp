@@ -205,7 +205,7 @@ function Followers({ model, recordId, fmt, onError }: { model: ChatterModel; rec
   const users = useChatterUsers(open);
   const list = followers.data ?? [];
   const mine = list.find((f) => f.user_id === user?.id);
-  const name = (id: string) => users.data?.find((u) => u.id === id)?.full_name ?? "—";
+  const name = (id: string) => users.data?.find((u) => u.id === id)?.full_name || t("views.chatter.unnamedUser");
   const addable = (users.data ?? []).filter((u) => !list.some((f) => f.user_id === u.id));
   const selectId = useId();
   return (
@@ -262,7 +262,7 @@ function Followers({ model, recordId, fmt, onError }: { model: ChatterModel; rec
                 <option value="">{t("views.chatter.addFollower")}</option>
                 {addable.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name}
+                    {u.full_name || t("views.chatter.unnamedUser")}
                   </option>
                 ))}
               </select>
@@ -451,7 +451,7 @@ function ActivityComposer({
             <option value="">—</option>
             {(users.data ?? []).map((u) => (
               <option key={u.id} value={u.id}>
-                {u.full_name}
+                {u.full_name || t("views.chatter.unnamedUser")}
               </option>
             ))}
           </select>
@@ -565,7 +565,7 @@ function LogRow({ message: m, fmt, types, time }: { message: ChatterMessage; fmt
   const { t } = fmt;
   const log = parseLog(m.body);
   const users = useChatterUsers(log?.event === "tracking");
-  const name = m.author_name ?? t("views.chatter.system");
+  const name = m.author_name ?? (m.author_id ? t("views.chatter.unnamedUser") : t("views.chatter.system"));
   return (
     <div className="flex items-start gap-2 text-[length:var(--ds-text-xs)] ds-muted">
       {log?.event === "tracking" ? (
@@ -622,7 +622,7 @@ function MessageRow({
       </span>
       <div className="min-w-0 flex-1">
         <header className="flex flex-wrap items-baseline gap-x-2">
-          <span className="font-semibold">{m.author_name ?? "—"}</span>
+          <span className="font-semibold">{m.author_name ?? t("views.chatter.unnamedUser")}</span>
           {m.kind === "note" ? <span className="ds-chip" style={{ background: "var(--ds-warning-soft)", color: "var(--ds-text)" }}>{t("views.chatter.noteBadge")}</span> : null}
           <time dateTime={m.created_at} className="ds-subtle text-[length:var(--ds-text-xs)]">
             {time}

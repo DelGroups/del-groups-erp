@@ -101,22 +101,24 @@ export function FormView<R extends ViewRecord>({ definition: def, record, canWri
     ...extraTabs,
   ];
 
+  // The side column (screen content and chatter) sits outside the record's <form>: the chatter
+  // has forms of its own, and posting a note must never submit (save) the record.
   return (
-    <form
-      ref={formRef}
-      onSubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-      onKeyDown={(e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <form
+        ref={formRef}
+        onSubmit={(e) => {
           e.preventDefault();
           void save();
-        }
-      }}
-      className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]"
-    >
-      <div className="flex min-w-0 flex-col gap-3">
+        }}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+            e.preventDefault();
+            void save();
+          }
+        }}
+        className="flex min-w-0 flex-col gap-3"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {editable && dirty ? (
@@ -168,14 +170,14 @@ export function FormView<R extends ViewRecord>({ definition: def, record, canWri
           <FieldGrid key={version} names={def.form.fields} fields={fields} record={current} editable={editable} errors={errors} onChange={set} fmt={fmt} />
           {tabs.length ? <Tabs tabs={tabs} label={t("views.form.tabs")} /> : null}
         </motion.section>
-      </div>
+      </form>
       {chatter || showChatter ? (
         <aside className="flex min-w-0 flex-col gap-4">
           {chatter}
           {showChatter ? <Chatter model={table as ChatterModel} recordId={record.id} fmt={fmt} /> : null}
         </aside>
       ) : null}
-    </form>
+    </div>
   );
 }
 

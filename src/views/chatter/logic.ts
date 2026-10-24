@@ -231,7 +231,7 @@ const TRACKED_USER_FIELDS = new Set(["assigned_to"]);
 /** A tracked value for display: empty as "—", user ids as names, everything else as stored. */
 export function trackedValue(field: string, value: unknown, users: readonly { id: string; full_name: string }[]): string {
   if (value === null || value === undefined || value === "") return "—";
-  if (TRACKED_USER_FIELDS.has(field) && typeof value === "string") return users.find((u) => u.id === value)?.full_name ?? "—";
+  if (TRACKED_USER_FIELDS.has(field) && typeof value === "string") return users.find((u) => u.id === value)?.full_name || "—";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
@@ -242,8 +242,12 @@ export const ATTACHMENT_BUCKET = "chatter-attachments";
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const ATTACHMENT_MAX_FILES = 5;
 
-/** Storage path of a file on a record: "<model>/<record id>/<unique>-<safe name>" (the bucket's policies read the first two parts). */
-export function attachmentPath(model: ChatterModel, recordId: string, fileName: string, unique: string): string {
+/**
+ * Storage path of a file on a message: "<model>/<record id>/<message id>/<unique>-<safe name>".
+ * The bucket's policies read the first three parts: the record decides who may read the file,
+ * and only the message's author may upload under it.
+ */
+export function attachmentPath(model: ChatterModel, recordId: string, messageId: string, fileName: string, unique: string): string {
   const base = fileName.split(/[\\/]/).pop() ?? "";
   const dot = base.lastIndexOf(".");
   const ext = dot > 0 ? base.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10) : "";
@@ -253,7 +257,7 @@ export function attachmentPath(model: ChatterModel, recordId: string, fileName: 
     .replace(/[^A-Za-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
-  return `${model}/${recordId}/${unique}-${stem || "file"}${ext ? `.${ext}` : ""}`;
+  return `${model}/${recordId}/${messageId}/${unique}-${stem || "file"}${ext ? `.${ext}` : ""}`;
 }
 
 /** Files to attach, or an error key: at most 5, none empty, each up to 10 MB (the bucket's limit). */

@@ -3782,6 +3782,7 @@ export const ruMessages: Messages = {
       files: "Файлы",
       removeFile: "Убрать {name}",
       download: "Открыть {name}",
+      unnamedUser: "Пользователь без имени",
       system: "Система",
       logChanged: "{name} изменил(а):",
       tracked: {

@@ -149,25 +149,32 @@ async function check(result: Result): Promise<void> {
 }
 
 /**
- * A message with its files: the message first (so the files hang under its id), then each file
- * uploaded and recorded. If a file fails, the files already stored are removed and the error
- * is shown; the message itself stays.
+ * A message with its files: the message first (files are stored under its id, which the bucket
+ * policy requires), then every file uploaded, then one insert of their rows. If anything fails,
+ * the rows and files of this message are removed again, so no row points at a missing file and
+ * no file is left without a row; the message itself stays and the error is shown.
  */
 async function postMessage(model: ChatterModel, recordId: string, v: { kind: "note" | "message"; body: string; files: readonly File[] }): Promise<void> {
   const { data, error } = await db.from("mail_messages").insert({ res_model: model, res_id: recordId, kind: v.kind, body: v.body }).select("id").single();
   if (error) throw new Error(error.message);
   const messageId = (data as { id: string }).id;
-  const stored: string[] = [];
+  if (!v.files.length) return;
+  const stored: { path: string; file: File }[] = [];
   try {
     for (const file of v.files) {
-      const path = attachmentPath(model, recordId, file.name, crypto.randomUUID());
+      const path = attachmentPath(model, recordId, messageId, file.name, crypto.randomUUID());
       const up = await db.storage.from(ATTACHMENT_BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
       if (up.error) throw new Error(up.error.message);
-      stored.push(path);
-      await check(db.from("mail_attachments").insert({ message_id: messageId, storage_path: path, file_name: file.name.slice(0, 255), mime_type: file.type || null, size_bytes: file.size }));
+      stored.push({ path, file });
     }
+    await check(
+      db.from("mail_attachments").insert(
+        stored.map(({ path, file }) => ({ message_id: messageId, storage_path: path, file_name: file.name.slice(0, 255), mime_type: file.type || null, size_bytes: file.size }))
+      )
+    );
   } catch (err) {
-    if (stored.length) await db.storage.from(ATTACHMENT_BUCKET).remove(stored);
+    await db.from("mail_attachments").delete().eq("message_id", messageId);
+    if (stored.length) await db.storage.from(ATTACHMENT_BUCKET).remove(stored.map((s) => s.path));
     throw err;
   }
 }

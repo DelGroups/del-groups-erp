@@ -128,6 +128,9 @@ test("every view-engine form shows the record's chatter; only new-UI screens ren
   const form = read("src/views/components/FormView.tsx");
   assert.match(form, /const showChatter = withChatter && chatterEnabledFor\(table, record\.id\);/);
   assert.match(form, /<Chatter model=\{table as ChatterModel\} recordId=\{record\.id\} fmt=\{fmt\} \/>/);
+  // The chatter (with its own forms) is outside the record's <form>: posting never saves the record.
+  const formEnd = form.indexOf("</form>");
+  assert.ok(formEnd > 0 && formEnd < form.indexOf("<Chatter model="), "chatter must come after </form>");
   // The classic layout and classic pages never import the view engine.
   assert.doesNotMatch(read("src/components/layout/ERPLayout.tsx"), /@\/views/);
   for (const page of ["src/modules/sales/components/SalesPage.tsx", "src/modules/crm/components/CrmPipelinePage.tsx", "src/modules/purchases/components/PurchasesPage.tsx"]) {
@@ -182,14 +185,25 @@ test("tracking lines: parsed, shown, and the tracked fields match the migration"
   for (const [table, fields] of Object.entries(TRACKED_FIELDS)) {
     assert.ok(sql.includes(`('${table}', array[${fields.map((f) => `'${f}'`).join(", ")}])`), table);
   }
+  // Fires only for updates of tracked columns that really change.
+  assert.match(sql, /'create trigger chatter_track_changes after update of %s on public\.%I for each row when \(%s\)/);
+  // No e-mail addresses in names shown to other users.
+  assert.doesNotMatch(sql, /p\.email/);
 });
 
-test("attachments: safe storage paths under the record, limits and sizes", () => {
-  const path = attachmentPath("deals", ID, "Plan (v2) ünvan.PDF", "abc");
-  assert.equal(path, `deals/${ID}/abc-Plan-v2-unvan.pdf`);
-  assert.equal(attachmentPath("sales", ID, ".env", "u"), `sales/${ID}/u-env`);
-  assert.equal(attachmentPath("sales", ID, "../../etc/passwd", "u"), `sales/${ID}/u-passwd`);
-  assert.equal(attachmentPath("sales", ID, "файл.png", "u"), `sales/${ID}/u-file.png`);
+test("attachments: safe storage paths under the record and message, limits and sizes", () => {
+  const M = "00000000-0000-0000-00c4-0000000000e1";
+  const path = attachmentPath("deals", ID, M, "Plan (v2) ünvan.PDF", "abc");
+  assert.equal(path, `deals/${ID}/${M}/abc-Plan-v2-unvan.pdf`);
+  assert.equal(attachmentPath("sales", ID, M, ".env", "u"), `sales/${ID}/${M}/u-env`);
+  assert.equal(attachmentPath("sales", ID, M, "../../etc/passwd", "u"), `sales/${ID}/${M}/u-passwd`);
+  assert.equal(attachmentPath("sales", ID, M, "файл.png", "u"), `sales/${ID}/${M}/u-file.png`);
+  // Uploads need the user's own message on the record; files are not left without rows.
+  const sql = read(MIGRATION);
+  assert.match(sql, /with check \(bucket_id = 'chatter-attachments' and public\.chatter_path_visible\(name\) and public\.chatter_upload_allowed\(name\)\)/);
+  assert.match(sql, /m\.author_id = auth\.uid\(\)\s+and m\.kind <> 'log'/);
+  const data = read("src/views/chatter/data.ts");
+  assert.match(data, /await db\.from\("mail_attachments"\)\.delete\(\)\.eq\("message_id", messageId\);/);
   assert.deepEqual(checkFiles([{ size: 10 }, { size: 10 * 1024 * 1024 }]), { ok: true });
   assert.equal(checkFiles([{ size: 0 }]).ok, false);
   assert.equal(checkFiles([{ size: 10 * 1024 * 1024 + 1 }]).ok, false);

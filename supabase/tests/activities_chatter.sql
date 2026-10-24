@@ -90,16 +90,26 @@ begin
 
   -- A file on A's note must be stored under the deal.
   insert into public.mail_attachments (message_id, storage_path, file_name, mime_type, size_bytes)
-  values (v_id, 'deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf', 'plan.pdf', 'application/pdf', 1200);
+  values (v_id, 'deals/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/plan.pdf', 'plan.pdf', 'application/pdf', 1200);
   if (select res_model || '/' || res_id from public.mail_attachments where file_name = 'plan.pdf') <> 'deals/00000000-0000-0000-00c4-0000000000d1' then
     raise exception 'FAIL attachment record not copied from the message';
   end if;
   begin
-    insert into public.mail_attachments (message_id, storage_path, file_name) values (v_id, 'sales/00000000-0000-0000-00c4-0000000000d1/x.pdf', 'x.pdf');
+    insert into public.mail_attachments (message_id, storage_path, file_name) values (v_id, 'sales/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/x.pdf', 'x.pdf');
     raise exception 'FAIL attachment stored under another record';
   exception when invalid_parameter_value then null;
   end;
-  if not public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf') then raise exception 'FAIL admin cannot see the file path'; end if;
+  begin
+    insert into public.mail_attachments (message_id, storage_path, file_name) values (v_id, 'deals/00000000-0000-0000-00c4-0000000000d1/00000000-0000-0000-00c4-0000000000d1/y.pdf', 'y.pdf');
+    raise exception 'FAIL attachment stored under another message';
+  exception when invalid_parameter_value then null;
+  end;
+  if not public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/plan.pdf') then raise exception 'FAIL admin cannot see the file path'; end if;
+  -- Uploads only under the user's own message on that record.
+  if not public.chatter_upload_allowed('deals/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/new.pdf') then raise exception 'FAIL author cannot upload under their message'; end if;
+  if public.chatter_upload_allowed('deals/00000000-0000-0000-00c4-0000000000d1/new.pdf') then raise exception 'FAIL upload without a message allowed'; end if;
+  if public.chatter_upload_allowed('sales/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/new.pdf') then raise exception 'FAIL upload under the wrong record allowed'; end if;
+  if public.chatter_upload_allowed('deals/00000000-0000-0000-00c4-0000000000d1/' || v_id || '/a/b.pdf') then raise exception 'FAIL nested upload path allowed'; end if;
   if public.chatter_path_visible('deals/not-a-uuid/plan.pdf') or public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1') then
     raise exception 'FAIL malformed file path visible';
   end if;
@@ -121,6 +131,17 @@ begin
   if (select count(*) from public.mail_messages where res_id = '00000000-0000-0000-00c4-0000000000d1' and body like 'tracking:%') <> v_count then
     raise exception 'FAIL untracked field wrote a log line';
   end if;
+  -- An activity created as done is done by the creator, whatever done_by says.
+  insert into public.activities (res_model, res_id, activity_type, summary, due_date, done_at, done_by)
+  values ('deals', '00000000-0000-0000-00c4-0000000000d1', 'todo', 'Already done', current_date, now(), '00000000-0000-0000-00c4-00000000000c');
+  if (select done_by from public.activities where summary = 'Already done') <> '00000000-0000-0000-00c4-00000000000a' then
+    raise exception 'FAIL done_by taken from the client on insert';
+  end if;
+  if not exists (select 1 from public.mail_messages where kind = 'log' and body = 'activity_done:todo:Already done') then
+    raise exception 'FAIL no log line for an activity created as done';
+  end if;
+  if exists (select 1 from public.chatter_users() where full_name like '%@%') then raise exception 'FAIL chatter_users shows e-mail addresses'; end if;
+  if exists (select 1 from public.mail_messages where author_name like '%@%') then raise exception 'FAIL author name is an e-mail address'; end if;
   select count(*) into v_count from public.chatter_users() where full_name in ('Aysel Admin', 'Cavid CRM');
   if v_count <> 2 then raise exception 'FAIL assignee list incomplete: %', v_count; end if;
 end $$;
@@ -153,7 +174,8 @@ begin
   if v_count <> 0 then raise exception 'FAIL user without access sees % followers', v_count; end if;
   select count(*) into v_count from public.mail_attachments where res_id = '00000000-0000-0000-00c4-0000000000d1';
   if v_count <> 0 then raise exception 'FAIL user without access sees % attachments', v_count; end if;
-  if public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/plan.pdf') then raise exception 'FAIL user without access sees the file path'; end if;
+  if exists (select 1 from public.mail_attachments a where public.chatter_path_visible(a.storage_path)) then raise exception 'FAIL user without access sees a file path'; end if;
+  if public.chatter_path_visible('deals/00000000-0000-0000-00c4-0000000000d1/00000000-0000-0000-00c4-0000000000d1/plan.pdf') then raise exception 'FAIL user without access sees the file path'; end if;
   begin
     insert into public.mail_followers (res_model, res_id, user_id) values ('deals', '00000000-0000-0000-00c4-0000000000d1', '00000000-0000-0000-00c4-00000000000b');
     raise exception 'FAIL user without access followed the record';
@@ -193,6 +215,18 @@ begin
   if not exists (select 1 from public.mail_messages where kind = 'log' and body = 'activity_done:call:Follow-up call' and author_id = '00000000-0000-0000-00c4-00000000000c') then
     raise exception 'FAIL no log line for the completed activity';
   end if;
+  -- Once done, who did it stays: rewriting done_by is ignored.
+  update public.activities set done_by = '00000000-0000-0000-00c4-00000000000a', done_at = now() - interval '3 days' where summary = 'Follow-up call';
+  if (select done_by from public.activities where summary = 'Follow-up call') <> '00000000-0000-0000-00c4-00000000000c' then raise exception 'FAIL done_by rewritten'; end if;
+  if (select count(*) from public.mail_messages where body = 'activity_done:call:Follow-up call') <> 1 then raise exception 'FAIL a second done log line was written'; end if;
+  -- C can upload under their own new note only.
+  insert into public.mail_messages (res_model, res_id, kind, body) values ('deals', '00000000-0000-0000-00c4-0000000000d1', 'note', 'Photos follow');
+  if not public.chatter_upload_allowed('deals/00000000-0000-0000-00c4-0000000000d1/' || (select id from public.mail_messages where body = 'Photos follow') || '/p.jpg') then
+    raise exception 'FAIL CRM user cannot upload under their own note';
+  end if;
+  if public.chatter_upload_allowed('deals/00000000-0000-0000-00c4-0000000000d1/' || (select id from public.mail_messages where author_name = 'Aysel Admin' and kind = 'note' limit 1) || '/p.jpg') then
+    raise exception 'FAIL CRM user can upload under someone else''s note';
+  end if;
 
   -- C did not create or get the to-do, and is not admin: cannot change or delete it.
   update public.activities set summary = 'renamed' where summary = 'Prepare drawings';
@@ -229,7 +263,7 @@ begin
   if v_count <> 1 then raise exception 'FAIL CRM user sees % of 1 attachments', v_count; end if;
   begin
     insert into public.mail_attachments (message_id, storage_path, file_name)
-    select id, 'deals/00000000-0000-0000-00c4-0000000000d1/c.pdf', 'c.pdf' from public.mail_messages where author_name = 'Aysel Admin' and kind = 'note' limit 1;
+    select id, 'deals/00000000-0000-0000-00c4-0000000000d1/' || id || '/c.pdf', 'c.pdf' from public.mail_messages where author_name = 'Aysel Admin' and kind = 'note' limit 1;
     raise exception 'FAIL attached a file to someone else''s note';
   exception when insufficient_privilege then null;
   end;

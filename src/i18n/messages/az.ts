@@ -3780,6 +3780,7 @@ export const azMessages = {
       files: "Fayllar",
       removeFile: "{name} sil",
       download: "{name} aç",
+      unnamedUser: "Adsız istifadəçi",
       system: "Sistem",
       logChanged: "{name} dəyişdi:",
       tracked: {
