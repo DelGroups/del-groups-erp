@@ -177,6 +177,10 @@ export interface CalendarViewDef {
   title: string;
   /** Colour by the option colour of this selection field. */
   colorField?: string;
+  /** Colour of a record when no option colour applies (e.g. one colour per person). */
+  colorOf?: (record: ViewRecord) => string | undefined;
+  /** Boolean field: such events sit in an all-day row above the hour grid. */
+  allDayField?: string;
   defaultMinutes?: number;
 }
 
