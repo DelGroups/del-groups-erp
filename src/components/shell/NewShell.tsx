@@ -16,6 +16,7 @@ import {
   Grid3X3,
   Languages,
   LayoutGrid,
+  ListTodo,
   LogOut,
   Menu,
   Moon,
@@ -45,6 +46,7 @@ import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
 import { ShellBackButton } from "./ShellBackButton";
 import { MyActivitiesButton } from "./MyActivitiesButton";
+import { ReminderAlerts } from "@/modules/calendar";
 
 function initials(name: string): string {
   return (
@@ -277,6 +279,7 @@ function useQuickActions() {
     isEnabled("sales") ? { id: "invoice", label: t("shell.createInvoice"), href: "/sales/new", icon: FilePlus } : null,
     { id: "customer", label: t("shell.addCustomer"), href: "/customers", icon: UserPlus },
     isEnabled("expenses") ? { id: "expense", label: t("shell.addExpense"), href: "/expenses", icon: Receipt } : null,
+    isEnabled("todo") ? { id: "todo", label: t("shell.newTodo"), href: "/todo?capture=1", icon: ListTodo } : null,
   ].filter((a): a is { id: string; label: string; href: string; icon: typeof FilePlus } => a !== null);
 }
 
@@ -688,6 +691,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
       </div>
 
       <DesignScope theme={dsTheme} brand={brand}>
+        <ReminderAlerts />
         <nav aria-label={t("newShell.mobileNav")} className="fixed inset-x-0 bottom-0 z-30 md:hidden" style={{ background: "var(--ds-surface)", borderTop: "1px solid var(--ds-border)", paddingBottom: "env(safe-area-inset-bottom)" }}>
           <ul className="grid h-16 grid-cols-5 items-end pb-1.5">
             <li>

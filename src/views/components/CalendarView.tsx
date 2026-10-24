@@ -37,7 +37,8 @@ export function CalendarView<R extends ViewRecord>({ definition: def, records, o
   const today = now ? dayKey(new Date(now)) : null;
   const titleField = fields.get(cal.title)!;
   const colorField = cal.colorField ? fields.get(cal.colorField) : undefined;
-  const colorOf = (r: R) => (colorField ? colorField.options?.find((o) => o.value === r[colorField.name])?.color : undefined) ?? "var(--ds-brand)";
+  const colorOf = (r: R) => (colorField ? colorField.options?.find((o) => o.value === r[colorField.name])?.color : undefined) ?? cal.colorOf?.(r) ?? "var(--ds-brand)";
+  const isAllDay = (e: CalendarEvent<R>) => !!cal.allDayField && e.record[cal.allDayField] === true;
   const heading = new Intl.DateTimeFormat(fmt.locale, mode === "day" ? { dateStyle: "full" } : { month: "long", year: "numeric" }).format(anchor);
   const weekday = (d: Date) => new Intl.DateTimeFormat(fmt.locale, { weekday: "short" }).format(d);
   const time = (d: Date) => new Intl.DateTimeFormat(fmt.locale, { hour: "2-digit", minute: "2-digit" }).format(d);
@@ -145,7 +146,17 @@ export function CalendarView<R extends ViewRecord>({ definition: def, records, o
           </div>
         </div>
       ) : (
-        <TimeGrid days={days} events={events} today={today} now={now} weekday={weekday} time={time} render={(e) => <EventChip event={e} href={openHref(e.record)} title={displayValue(titleField, e.record, fmt)} color={colorOf(e.record)} time={`${time(e.start)}–${time(e.end)}`} />} />
+        <TimeGrid
+          days={days}
+          events={events}
+          today={today}
+          now={now}
+          weekday={weekday}
+          time={time}
+          isAllDay={isAllDay}
+          allDayLabel={fmt.t("views.calendar.allDay")}
+          render={(e) => <EventChip event={e} href={openHref(e.record)} title={displayValue(titleField, e.record, fmt)} color={colorOf(e.record)} time={isAllDay(e) ? fmt.t("views.calendar.allDay") : `${time(e.start)}–${time(e.end)}`} compact={isAllDay(e)} />}
+        />
       )}
     </div>
   );
@@ -157,6 +168,8 @@ function TimeGrid<R extends ViewRecord>({
   today,
   now,
   weekday,
+  isAllDay,
+  allDayLabel,
   render,
 }: {
   days: Date[];
@@ -165,10 +178,20 @@ function TimeGrid<R extends ViewRecord>({
   now: number | null;
   weekday: (d: Date) => string;
   time: (d: Date) => string;
+  isAllDay: (e: CalendarEvent<R>) => boolean;
+  allDayLabel: string;
   render: (e: CalendarEvent<R>) => React.ReactNode;
 }) {
+  // All-day events go in their own row; the hour grid holds the timed ones.
+  const timed = new Map<string, CalendarEvent<R>[]>();
+  const allDay = new Map<string, CalendarEvent<R>[]>();
+  for (const [key, list] of events) {
+    timed.set(key, list.filter((e) => !isAllDay(e)));
+    allDay.set(key, list.filter(isAllDay));
+  }
+  const hasAllDay = [...allDay.values()].some((l) => l.length > 0);
   // 08:00–18:00, widened to the earliest and latest event shown.
-  const all = days.flatMap((d) => events.get(dayKey(d)) ?? []);
+  const all = days.flatMap((d) => timed.get(dayKey(d)) ?? []);
   const first = Math.min(8, ...all.map((e) => e.start.getHours()));
   const last = Math.max(18, ...all.map((e) => Math.min(24, e.end.getHours() + (e.end.getMinutes() ? 1 : 0))));
   const hours = Array.from({ length: last - first }, (_, i) => first + i);
@@ -186,6 +209,18 @@ function TimeGrid<R extends ViewRecord>({
             </span>
           </div>
         ))}
+        {hasAllDay ? (
+          <>
+            <span className="self-center pr-2 text-right ds-subtle text-[length:var(--ds-text-xs)]">{allDayLabel}</span>
+            {days.map((d) => (
+              <div key={dayKey(d)} className="flex flex-col gap-0.5 border-l border-t p-0.5" style={{ borderColor: "var(--ds-border)" }}>
+                {(allDay.get(dayKey(d)) ?? []).map((e) => (
+                  <div key={e.record.id}>{render(e)}</div>
+                ))}
+              </div>
+            ))}
+          </>
+        ) : null}
         <div className="relative" style={{ height: hours.length * HOUR_PX }}>
           {hours.map((h) => (
             <span key={h} className="absolute right-2 -translate-y-1/2 ds-mono ds-subtle text-[length:var(--ds-text-xs)]" style={{ top: (h - first) * HOUR_PX }}>
@@ -194,7 +229,7 @@ function TimeGrid<R extends ViewRecord>({
           ))}
         </div>
         {days.map((d) => {
-          const list = events.get(dayKey(d)) ?? [];
+          const list = timed.get(dayKey(d)) ?? [];
           const isToday = dayKey(d) === today;
           return (
             <div key={dayKey(d)} className="relative border-l" style={{ height: hours.length * HOUR_PX, borderColor: "var(--ds-border)", backgroundImage: `repeating-linear-gradient(to bottom, var(--ds-border) 0 1px, transparent 1px ${HOUR_PX}px)` }}>

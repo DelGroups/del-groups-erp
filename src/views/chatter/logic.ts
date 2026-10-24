@@ -1,14 +1,13 @@
 /**
  * Chatter and activities (phase 19), pure parts: which records carry chatter, the due-date state
  * of an activity, ordering, input checks and the system log lines. The table list must match
- * public.chatter_models() in supabase/migrations/20261015100000_activities_chatter.sql (a test
- * compares them).
+ * the newest public.chatter_models() in supabase/migrations (a test compares them).
  */
 
 export const CHATTER_MODELS = [
   "accounts", "contracts", "customers", "deals", "employee_advances", "employee_leaves", "employees",
   "expenses", "inventory_counts", "inventory_initial_balances", "inventory_writeoffs", "payments",
-  "payrolls", "production_orders", "products", "purchases", "sales", "sales_commissions", "suppliers",
+  "payrolls", "production_orders", "products", "purchases", "sales", "sales_commissions", "suppliers", "todo_tasks",
   "transactions", "warehouse_slips",
 ] as const;
 export type ChatterModel = (typeof CHATTER_MODELS)[number];
@@ -291,6 +290,8 @@ export function recordHref(model: string, id: string): string | null {
       return `/purchases?record=${id}`;
     case "customers":
       return `/customers?record=${id}`;
+    case "todo_tasks":
+      return `/todo?record=${id}`;
     default:
       return null;
   }

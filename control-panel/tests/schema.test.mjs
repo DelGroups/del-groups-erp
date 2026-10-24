@@ -99,8 +99,10 @@ test("seeded modules are the ERP's modules (src/modules/*/manifest.ts)", () => {
     .filter((d) => d.isDirectory() && existsSync(new URL(`${d.name}/manifest.ts`, modulesDir)))
     .map((d) => readFileSync(new URL(`${d.name}/manifest.ts`, modulesDir), "utf8").match(/id:\s*"([a-z-]+)"/)[1])
     .sort();
-  const start = sql.indexOf("insert into public.modules");
-  const seed = sql.slice(start, sql.indexOf("on conflict", start));
-  const seeded = [...seed.matchAll(/\('([a-z-]+)', '/g)].map((m) => m[1]).sort();
-  assert.deepEqual(seeded, erp);
+  // The first migration seeds the original modules; modules added later get their own migration.
+  const seeded = [];
+  for (const [, seed] of sql.matchAll(/insert into public\.modules[^;]*?values([\s\S]*?)on conflict/g)) {
+    seeded.push(...[...seed.matchAll(/\('([a-z-]+)', '/g)].map((m) => m[1]));
+  }
+  assert.deepEqual(seeded.sort(), erp);
 });

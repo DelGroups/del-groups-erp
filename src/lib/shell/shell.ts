@@ -83,6 +83,9 @@ export interface Access {
 export const SHELL_EXTRA_ITEMS = [
   { section: "inventory", path: "/polywood", titleKey: "newShell.extra_polywood", module: "polywood", icon: "Layers" },
   { section: "hr", path: "/comissions/report", titleKey: "newShell.extra_commissionReport", module: "commissions", icon: "FileBarChart" },
+  { section: "crm", path: "/calendar", titleKey: "newShell.extra_calendar", module: "calendar", icon: "CalendarDays" },
+  { section: "dashboard", path: "/todo", titleKey: "newShell.extra_todo", module: "todo", icon: "ListTodo" },
+  { section: "dashboard", path: "/documents", titleKey: "newShell.extra_documents", module: "documents", icon: "FolderOpen" },
 ] as const;
 
 /** Sections with the extra items appended to their section (sections that do not exist are skipped). */

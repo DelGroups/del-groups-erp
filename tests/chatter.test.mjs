@@ -42,12 +42,18 @@ const NOW = new Date(2026, 9, 15, 12);
 const ID = "00000000-0000-0000-00c4-0000000000d1";
 
 test("the client's chatter tables are exactly the migration's, and every one exists", () => {
-  const sql = read(MIGRATION);
-  const block = /select array\[([\s\S]*?)\]::text\[\]/.exec(sql)[1];
+  // Later migrations (new modules) redefine chatter_models(); the newest definition counts.
+  const migrations = readdirSync(join(root, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort();
+  const definitions = migrations.map((f) => read(`supabase/migrations/${f}`)).filter((sql) => /function public\.chatter_models\(\)/.test(sql));
+  const block = /select array\[([\s\S]*?)\]::text\[\]/.exec(definitions.at(-1))[1];
   const fromSql = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
   assert.deepEqual([...CHATTER_MODELS].sort(), fromSql.sort());
-  const schema = [read("supabase/baseline/03_tables.sql"), ...readdirSync(join(root, "supabase/modules"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => read(`supabase/modules/${d.name}/install.sql`))].join("\n");
-  for (const table of CHATTER_MODELS) assert.match(schema, new RegExp(`create table if not exists public\\.${table} \\(\\s*id uuid not null`), table);
+  const schema = [
+    read("supabase/baseline/03_tables.sql"),
+    ...readdirSync(join(root, "supabase/modules"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => read(`supabase/modules/${d.name}/install.sql`)),
+    ...migrations.map((f) => read(`supabase/migrations/${f}`)),
+  ].join("\n");
+  for (const table of CHATTER_MODELS) assert.match(schema, new RegExp(`create table if not exists public\\.${table} \\(\\s*id uuid (not null|primary key)`), table);
 });
 
 test("only one migration for chatter, RLS on every table, visibility follows the record", () => {

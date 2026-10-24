@@ -32,6 +32,9 @@ import taxAz from "./tax-az/manifest";
 import barcode from "./barcode/manifest";
 import ai from "./ai/manifest";
 import studio from "./studio/manifest";
+import calendar from "./calendar/manifest";
+import todo from "./todo/manifest";
+import documents from "./documents/manifest";
 
 export { defineModule } from "./types";
 export type { ModuleId, ModuleManifest } from "./types";
@@ -55,6 +58,9 @@ export const MODULES: readonly ModuleManifest[] = [
   barcode,
   ai,
   studio,
+  calendar,
+  todo,
+  documents,
 ];
 
 // ── Validation ──────────────────────────────────────────────────────────────
