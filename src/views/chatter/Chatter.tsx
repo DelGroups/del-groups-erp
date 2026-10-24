@@ -26,7 +26,7 @@ import { useToast } from "@/design-system/components";
 import { listItemVariants, motionPreset } from "@/design-system/motion";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { Formatter } from "../logic";
-import { attachmentUrl, useActivities, useActivityTypes, useChatterActions, useChatterUsers, useFollowers, useMessages } from "./data";
+import { attachmentUrl, useNow, useActivities, useActivityTypes, useChatterActions, useChatterUsers, useFollowers, useMessages } from "./data";
 import {
   activityState,
   activityTypeLabel,
@@ -78,7 +78,7 @@ export function Chatter({ model, recordId, fmt }: { model: ChatterModel; recordI
   const types = useActivityTypes().data ?? [];
   const actions = useChatterActions(model, recordId);
   const [mode, setMode] = useState<Mode>(null);
-  const [now] = useState(() => new Date());
+  const now = useNow();
   const userId = user?.id ?? null;
   const fail = (err: unknown) => toast(t("common.error"), err instanceof Error ? err.message : undefined, "error");
 
@@ -544,12 +544,22 @@ function Attachments({ files, fmt, onError }: { files: readonly ChatterAttachmen
             type="button"
             className="ds-chip flex items-center gap-1"
             aria-label={t("views.chatter.download", { name: f.file_name })}
-            onClick={() =>
+            onClick={() => {
+              // Opened now, while the click still counts as the user's (Safari blocks a window
+              // opened after the await); filled with the signed link once it arrives.
+              const win = window.open("about:blank", "_blank");
+              if (win) win.opener = null;
               attachmentUrl(f.storage_path).then(
-                (url) => window.open(url, "_blank", "noopener,noreferrer"),
-                onError,
-              )
-            }
+                (url) => {
+                  if (win) win.location.href = url;
+                  else window.location.assign(url);
+                },
+                (err) => {
+                  win?.close();
+                  onError(err);
+                },
+              );
+            }}
           >
             <Paperclip className="h-3 w-3" aria-hidden />
             <span className="max-w-48 truncate">{f.file_name}</span>

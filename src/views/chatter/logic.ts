@@ -223,7 +223,7 @@ export function parseLog(body: string): LogLine | null {
 export const TRACKED_FIELDS: Partial<Record<ChatterModel, readonly string[]>> = {
   sales: ["status", "grand_total", "paid_amount", "due_date", "warehouse_slip_status"],
   purchases: ["status", "grand_total", "paid_amount", "due_date", "warehouse_slip_status"],
-  customers: ["name", "phone", "address", "voen", "default_price_tier"],
+  customers: ["full_name", "phone", "address", "voen", "default_price_tier"],
   deals: ["title", "stage", "expected_value", "assigned_to"],
 };
 const TRACKED_USER_FIELDS = new Set(["assigned_to"]);

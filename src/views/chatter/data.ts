@@ -5,6 +5,7 @@
  * session: row level security decides what each user sees and may write (messages and
  * activities follow the record they belong to).
  */
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase as typedClient } from "@/lib/supabase";
@@ -67,6 +68,19 @@ export function useChatterUsers(enabled: boolean) {
       return (data ?? []) as { id: string; full_name: string }[];
     },
   });
+}
+
+/**
+ * The current time, moving on every minute, for due-date states (overdue / today / planned):
+ * screens and the top bar stay open for hours and must notice when the day changes.
+ */
+export function useNow(intervalMs = 60_000): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return now;
 }
 
 /** Activity types (built-in and admin-defined), all of them; the composer shows the active ones. */

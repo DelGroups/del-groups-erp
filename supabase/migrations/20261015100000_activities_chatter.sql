@@ -425,7 +425,7 @@ begin
     select * from (values
       ('sales', array['status', 'grand_total', 'paid_amount', 'due_date', 'warehouse_slip_status']),
       ('purchases', array['status', 'grand_total', 'paid_amount', 'due_date', 'warehouse_slip_status']),
-      ('customers', array['name', 'phone', 'address', 'voen', 'default_price_tier']),
+      ('customers', array['full_name', 'phone', 'address', 'voen', 'default_price_tier']),
       ('deals', array['title', 'stage', 'expected_value', 'assigned_to'])
     ) as s (tbl, fields)
   loop

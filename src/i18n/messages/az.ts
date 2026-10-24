@@ -3789,7 +3789,7 @@ export const azMessages = {
         paid_amount: "Ödənilib",
         due_date: "Son tarix",
         warehouse_slip_status: "Anbar qaiməsi",
-        name: "Ad",
+        full_name: "Ad",
         phone: "Telefon",
         address: "Ünvan",
         voen: "VÖEN",

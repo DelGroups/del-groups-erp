@@ -3790,7 +3790,7 @@ export const enMessages: Messages = {
         paid_amount: "Paid",
         due_date: "Due date",
         warehouse_slip_status: "Warehouse slip",
-        name: "Name",
+        full_name: "Name",
         phone: "Phone",
         address: "Address",
         voen: "Tax ID (VÖEN)",

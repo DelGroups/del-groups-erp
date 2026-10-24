@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import { CalendarClock } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useDesignScope } from "@/design-system/components";
-import { useActivityTypes, useMyActivities } from "@/views/chatter/data";
+import { useActivityTypes, useMyActivities, useNow } from "@/views/chatter/data";
 import { activityState, activityTypeLabel, counts, recordHref, type ActivityState } from "@/views/chatter/logic";
 import { markShellNavigation } from "./useShell";
 
@@ -22,7 +21,7 @@ export function MyActivitiesButton() {
   const { t } = useI18n();
   const { user } = useAuth();
   const { portalContainer } = useDesignScope();
-  const [now] = useState(() => new Date());
+  const now = useNow();
   const mine = useMyActivities(user?.id ?? null);
   const types = useActivityTypes().data ?? [];
   const list = mine.data ?? [];

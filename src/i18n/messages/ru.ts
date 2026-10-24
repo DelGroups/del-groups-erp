@@ -3791,7 +3791,7 @@ export const ruMessages: Messages = {
         paid_amount: "Оплачено",
         due_date: "Срок оплаты",
         warehouse_slip_status: "Складская накладная",
-        name: "Название",
+        full_name: "Название",
         phone: "Телефон",
         address: "Адрес",
         voen: "ИНН (VÖEN)",
