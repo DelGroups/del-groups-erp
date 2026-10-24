@@ -136,7 +136,7 @@ test("one migration; RLS on every table; folder rules; private bucket; storage l
   assert.match(sql, /and split_part\(storage_path, '\/', 1\) = folder_id::text/);
   assert.match(sql, /values \('documents', 'documents', false, 52428800\)/);
   // System folders are read-only for everyone, checked before the admin shortcut.
-  assert.ok(sql.indexOf("return not p_write;") < sql.indexOf("if public.is_admin() then\n    return true;"));
+  assert.ok(sql.indexOf("return not p_write;") < sql.search(/if public\.is_admin\(\) then\s+return true;/));
   // Policies call auth.uid() once per statement.
   assert.doesNotMatch(sql.slice(sql.indexOf("-- ── Row level security")), /(?<!select )auth\.uid\(\)/);
   // The plan's storage limit counts every bucket and blocks uploads at 100 % (prompt 12).
