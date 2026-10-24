@@ -97,6 +97,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/activities_chatter.sql | tee "$RUNNER_TEMP/activities_chatter.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/activities_chatter.txt"
 
+      # Documents (phase 23): folder rules by role and user, files, requests, system folders.
+      - name: Documents checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/documents.sql | tee "$RUNNER_TEMP/documents.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/documents.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true
