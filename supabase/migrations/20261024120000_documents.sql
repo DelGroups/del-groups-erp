@@ -140,7 +140,10 @@ declare
   v_user uuid := (select auth.uid());
   v_rules uuid;
 begin
-  if v_user is null or p_folder is null or not exists (select 1 from public.document_folders f where f.id = p_folder) then
+  -- No existence check: a folder inserted by the current statement (INSERT … RETURNING applies
+  -- the select policy) is not visible here yet and has no rules of its own; files still need an
+  -- existing folder (foreign key).
+  if v_user is null or p_folder is null then
     return false;
   end if;
   -- System folders are listed by the server with each module's own permission check; nobody
