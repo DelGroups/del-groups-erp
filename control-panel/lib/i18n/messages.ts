@@ -546,6 +546,7 @@ const en = {
       ai: "AI assistant",
       studio: "Studio",
       calendar: "Calendar",
+      todo: "To-do",
     },
   },
   billingEmail: {
@@ -1127,6 +1128,7 @@ const az: Messages = {
       ai: "AI köməkçisi",
       studio: "Studio",
       calendar: "Təqvim",
+      todo: "Tapşırıqlar",
     },
   },
   billingEmail: {
@@ -1706,6 +1708,7 @@ const ru: Messages = {
       ai: "ИИ-помощник",
       studio: "Studio",
       calendar: "Календарь",
+      todo: "Задачи",
     },
   },
   billingEmail: {

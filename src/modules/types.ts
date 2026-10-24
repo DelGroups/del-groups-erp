@@ -28,6 +28,7 @@ export const MODULE_IDS = [
   "ai",
   "studio",
   "calendar",
+  "todo",
 ] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 

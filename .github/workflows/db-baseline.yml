@@ -102,6 +102,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/calendar.sql | tee "$RUNNER_TEMP/calendar.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/calendar.txt"
+      # To-do (phase 22): tasks only for their members, personal stages, done stage, chatter.
+      - name: To-do checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/todo.sql | tee "$RUNNER_TEMP/todo.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/todo.txt"
 
       - name: Server log on failure
         if: failure()

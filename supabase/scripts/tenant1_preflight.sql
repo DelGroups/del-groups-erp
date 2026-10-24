@@ -92,6 +92,10 @@ select 'pending', '20261024100000_calendar: tables (calendar of the new UI)',
        case when to_regclass('public.calendar_events') is null or to_regclass('public.calendar_attendees') is null
               or to_regclass('public.calendar_reminders') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261024110000_todo: tables (to-do of the new UI)',
+       case when to_regclass('public.todo_tasks') is null or to_regclass('public.todo_task_members') is null
+              or to_regclass('public.todo_stages') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
