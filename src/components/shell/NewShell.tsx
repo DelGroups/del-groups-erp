@@ -16,6 +16,7 @@ import {
   Grid3X3,
   Languages,
   LayoutGrid,
+  ListTodo,
   LogOut,
   Menu,
   Moon,
@@ -277,6 +278,7 @@ function useQuickActions() {
     isEnabled("sales") ? { id: "invoice", label: t("shell.createInvoice"), href: "/sales/new", icon: FilePlus } : null,
     { id: "customer", label: t("shell.addCustomer"), href: "/customers", icon: UserPlus },
     isEnabled("expenses") ? { id: "expense", label: t("shell.addExpense"), href: "/expenses", icon: Receipt } : null,
+    isEnabled("todo") ? { id: "todo", label: t("shell.newTodo"), href: "/todo?capture=1", icon: ListTodo } : null,
   ].filter((a): a is { id: string; label: string; href: string; icon: typeof FilePlus } => a !== null);
 }
 

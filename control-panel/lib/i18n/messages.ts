@@ -545,6 +545,7 @@ const en = {
       barcode: "Barcode",
       ai: "AI assistant",
       studio: "Studio",
+      todo: "To-do",
     },
   },
   billingEmail: {
@@ -1125,6 +1126,7 @@ const az: Messages = {
       barcode: "Barkod",
       ai: "AI köməkçisi",
       studio: "Studio",
+      todo: "Tapşırıqlar",
     },
   },
   billingEmail: {
@@ -1703,6 +1705,7 @@ const ru: Messages = {
       barcode: "Штрихкоды",
       ai: "ИИ-помощник",
       studio: "Studio",
+      todo: "Задачи",
     },
   },
   billingEmail: {

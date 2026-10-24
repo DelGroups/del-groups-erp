@@ -97,6 +97,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/activities_chatter.sql | tee "$RUNNER_TEMP/activities_chatter.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/activities_chatter.txt"
 
+      # To-do (phase 22): tasks only for their members, personal stages, done stage, chatter.
+      - name: To-do checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/todo.sql | tee "$RUNNER_TEMP/todo.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/todo.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

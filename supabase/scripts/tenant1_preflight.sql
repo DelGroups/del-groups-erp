@@ -88,6 +88,10 @@ union all
 select 'pending', '20261017120000_invoice_payment_date: function (invoice payments keep the chosen date)',
        case when to_regprocedure('public.apply_invoice_payment_date(uuid,uuid,date)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261024110000_todo: tables (to-do of the new UI)',
+       case when to_regclass('public.todo_tasks') is null or to_regclass('public.todo_task_members') is null
+              or to_regclass('public.todo_stages') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
