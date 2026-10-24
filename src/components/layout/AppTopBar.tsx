@@ -40,8 +40,8 @@ export default function AppTopBar() {
   const sidebarMenu = useSidebarMenu();
   const setCommandPaletteOpen = useShellStore((s) => s.setCommandPaletteOpen);
   const { theme, setTheme } = useTheme();
-  // NEW_UI on and an admin: offer the new shell (prompt 16). Hidden otherwise.
-  const { canToggle: canTryNewShell, setPreferred: setNewShell } = useNewUi();
+  // NEW_UI on and an admin (or everyone with NEW_UI_AUDIENCE=all): offer the new shell. Hidden otherwise.
+  const { canToggle: canTryNewShell, setPreferred: setNewShell, audience: newShellAudience } = useNewUi();
 
   const crumbs = useMemo(
     () => buildBreadcrumbsFromPath(pathname, t),
@@ -137,7 +137,7 @@ export default function AppTopBar() {
           className="hidden h-9 items-center gap-1.5 rounded-lg border border-app px-3 text-xs font-semibold text-app transition-colors hover:bg-app-card-hover sm:inline-flex"
         >
           <LayoutGrid className="h-3.5 w-3.5" />
-          {t("newShell.tryNew")}
+          {newShellAudience === "all" ? t("newShell.backToNew") : t("newShell.tryNew")}
         </button>
       ) : null}
 

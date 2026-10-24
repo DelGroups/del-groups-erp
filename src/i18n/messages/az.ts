@@ -3710,6 +3710,7 @@ export const azMessages = {
     themeDark: "Tünd tema",
     classic: "Klassik interfeys",
     tryNew: "Yeni interfeysi sına",
+    backToNew: "Yeni interfeysə qayıt",
     signOut: "Çıxış",
     menu: "Menyu",
     mobileNav: "Əsas naviqasiya",
