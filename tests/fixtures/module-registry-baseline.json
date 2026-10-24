@@ -512,6 +512,14 @@
       "exact": true
     },
     {
+      "prefix": "/calendar",
+      "permission": "can_view_dashboard"
+    },
+    {
+      "prefix": "/todo",
+      "permission": "can_view_dashboard"
+    },
+    {
       "prefix": "/documents",
       "permission": "can_view_dashboard"
     }
@@ -565,6 +573,8 @@
     "/settings/ai": "can_manage_settings",
     "/settings/studio": "can_manage_settings",
     "/settings/audit": "can_manage_settings",
+    "/calendar": "can_view_dashboard",
+    "/todo": "can_view_dashboard",
     "/documents": "can_view_dashboard"
   },
   "permissionMatrix": [

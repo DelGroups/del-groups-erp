@@ -25,6 +25,9 @@ import {
 import { useToast } from "@/design-system/components";
 import { listItemVariants, motionPreset } from "@/design-system/motion";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useQuery } from "@tanstack/react-query";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
+import { checkEvent, planMeetingEvent, recordPartner, REMINDER_CHOICES } from "@/modules/calendar";
 import type { Formatter } from "../logic";
 import { attachmentUrl, useNow, useActivities, useActivityTypes, useChatterActions, useChatterUsers, useFollowers, useMessages } from "./data";
 import {
@@ -117,7 +120,24 @@ export function Chatter({ model, recordId, fmt }: { model: ChatterModel; recordI
         />
       ) : null}
       {mode === "activity" ? (
-        <ActivityComposer fmt={fmt} types={types} busy={actions.schedule.isPending} onCancel={() => setMode(null)} onSubmit={(v) => actions.schedule.mutate(v, { onSuccess: () => setMode(null), onError: fail })} />
+        <ActivityComposer
+          model={model}
+          recordId={recordId}
+          fmt={fmt}
+          types={types}
+          busy={actions.schedule.isPending}
+          onCancel={() => setMode(null)}
+          onSubmit={(v, plan) =>
+            actions.schedule.mutate(v, {
+              onSuccess: (activityId) => {
+                // A meeting: its calendar event (made by the database) gets the time and people.
+                if (plan && userId) void planMeetingEvent(activityId, userId, plan).catch(fail);
+                setMode(null);
+              },
+              onError: fail,
+            })
+          }
+        />
       ) : null}
 
       <div>
@@ -379,21 +399,28 @@ function MessageComposer({ kind, fmt, busy, onCancel, onSubmit }: { kind: "messa
   );
 }
 
+type MeetingPlan = Parameters<typeof planMeetingEvent>[2];
+
 function ActivityComposer({
+  model,
+  recordId,
   fmt,
   types,
   busy,
   onCancel,
   onSubmit,
 }: {
+  model: ChatterModel;
+  recordId: string;
   fmt: Formatter;
   types: readonly ActivityTypeRow[];
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (v: { activity_type: ActivityType; summary: string; due_date: string; assigned_to: string | null; note: string | null }) => void;
+  onSubmit: (v: { activity_type: ActivityType; summary: string; due_date: string; assigned_to: string | null; note: string | null }, plan: MeetingPlan | null) => void;
 }) {
   const { t } = fmt;
   const { user } = useAuth();
+  const { isEnabled } = useEnabledModules();
   const users = useChatterUsers(true);
   const base = useId();
   const choices = selectableTypes(types);
@@ -402,7 +429,11 @@ function ActivityComposer({
   const [due, setDue] = useState(() => dueIn(choices[0]?.default_days ?? 0, new Date()));
   const [assignee, setAssignee] = useState<string>(user?.id ?? "");
   const [note, setNote] = useState("");
+  const [meeting, setMeeting] = useState<MeetingState>({ startTime: "10:00", endTime: "11:00", allDay: false, colleagues: [], withPartner: true, reminder: "15" });
   const [error, setError] = useState<string | null>(null);
+  // Meetings are planned in the calendar when the tenant has it (phase 20).
+  const isMeeting = isEnabled("calendar") && types.find((x) => x.code === type)?.icon === "meeting";
+  const partner = useQuery({ queryKey: ["chatter", model, recordId, "partner"], enabled: isMeeting, staleTime: 5 * 60_000, queryFn: () => recordPartner(model, recordId) });
   const pick = (row: ActivityTypeRow) => {
     setType(row.code);
     setDue(dueIn(row.default_days, new Date()));
@@ -421,8 +452,17 @@ function ActivityComposer({
           setError(t(checked.error));
           return;
         }
+        let plan: MeetingPlan | null = null;
+        if (isMeeting) {
+          const event = checkEvent({ title: checked.value.summary, date: due, startTime: meeting.startTime, endTime: meeting.endTime, allDay: meeting.allDay, location: "", description: checked.value.note ?? "", privacy: "public", recurrence: "" });
+          if (!event.ok) {
+            setError(t(event.error));
+            return;
+          }
+          plan = { value: event.value, users: meeting.colleagues, partner: meeting.withPartner ? (partner.data ?? null) : null, reminders: meeting.reminder === "" ? [] : [Number(meeting.reminder)] };
+        }
         setError(null);
-        onSubmit(checked.value);
+        onSubmit(checked.value, plan);
       }}
     >
       <div role="radiogroup" aria-label={t("views.chatter.activityType")} className="flex flex-wrap gap-2">
@@ -461,6 +501,15 @@ function ActivityComposer({
         <span className="ds-label">{t("views.chatter.activityNote")}</span>
         <textarea id={`${base}-note`} className="ds-input min-h-16 py-2" value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
+      {isMeeting ? (
+        <MeetingFields
+          value={meeting}
+          onChange={setMeeting}
+          users={(users.data ?? []).filter((u) => u.id !== user?.id)}
+          partnerName={partner.data ? partner.data.display_name || "—" : null}
+          fmt={fmt}
+        />
+      ) : null}
       {error ? (
         <p role="alert" className="text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-danger-strong)" }}>
           {error}
@@ -475,6 +524,83 @@ function ActivityComposer({
         </button>
       </div>
     </form>
+  );
+}
+
+interface MeetingState {
+  startTime: string;
+  endTime: string;
+  allDay: boolean;
+  colleagues: string[];
+  withPartner: boolean;
+  reminder: string;
+}
+
+/** A meeting's calendar part (phase 20): time, colleagues, the record's customer, a reminder. */
+function MeetingFields({
+  value,
+  onChange,
+  users,
+  partnerName,
+  fmt,
+}: {
+  value: MeetingState;
+  onChange: (v: MeetingState) => void;
+  users: readonly { id: string; full_name: string }[];
+  partnerName: string | null;
+  fmt: Formatter;
+}) {
+  const { t } = fmt;
+  const base = useId();
+  const set = <K extends keyof MeetingState>(key: K, v: MeetingState[K]) => onChange({ ...value, [key]: v });
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-[var(--ds-radius-md)] border p-3" style={{ borderColor: "var(--ds-border)" }}>
+      <legend className="ds-label px-1">{t("views.chatter.meeting.title")}</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1" htmlFor={`${base}-start`}>
+          <span className="ds-label">{t("views.chatter.meeting.start")}</span>
+          <input id={`${base}-start`} type="time" className="ds-input" disabled={value.allDay} value={value.startTime} onChange={(e) => set("startTime", e.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1" htmlFor={`${base}-end`}>
+          <span className="ds-label">{t("views.chatter.meeting.end")}</span>
+          <input id={`${base}-end`} type="time" className="ds-input" disabled={value.allDay} value={value.endTime} onChange={(e) => set("endTime", e.target.value)} />
+        </label>
+      </div>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" checked={value.allDay} onChange={(e) => set("allDay", e.target.checked)} />
+        <span>{t("views.chatter.meeting.allDay")}</span>
+      </label>
+      {users.length ? (
+        <div className="flex flex-col gap-1">
+          <span className="ds-label">{t("views.chatter.meeting.colleagues")}</span>
+          <div className="flex max-h-32 flex-col gap-1 overflow-y-auto">
+            {users.map((u) => (
+              <label key={u.id} className="flex items-center gap-2">
+                <input type="checkbox" checked={value.colleagues.includes(u.id)} onChange={(e) => set("colleagues", e.target.checked ? [...value.colleagues, u.id] : value.colleagues.filter((x) => x !== u.id))} />
+                <span>{u.full_name || t("views.chatter.unnamedUser")}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {partnerName ? (
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={value.withPartner} onChange={(e) => set("withPartner", e.target.checked)} />
+          <span>{t("views.chatter.meeting.invitePartner", { name: partnerName })}</span>
+        </label>
+      ) : null}
+      <label className="flex flex-col gap-1" htmlFor={`${base}-reminder`}>
+        <span className="ds-label">{t("views.chatter.meeting.reminder")}</span>
+        <select id={`${base}-reminder`} className="ds-input" value={value.reminder} onChange={(e) => set("reminder", e.target.value)}>
+          <option value="">{t("calendar.reminder.none")}</option>
+          {REMINDER_CHOICES.map((m) => (
+            <option key={m} value={String(m)}>
+              {t(`calendar.reminder.m${m}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </fieldset>
   );
 }
 

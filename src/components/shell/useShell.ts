@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { FileBarChart, FolderOpen, Layers, type LucideIcon } from "lucide-react";
+import { CalendarDays, FileBarChart, FolderOpen, Layers, ListTodo, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -23,7 +23,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/documents": FolderOpen };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen };
 
 export interface ShellApp {
   id: string;
