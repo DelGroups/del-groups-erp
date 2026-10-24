@@ -240,7 +240,6 @@ function SaleForm({ id }: { id: string }) {
                 {t("official.remainingSplit", { base: debt.remainingBase.toFixed(2), vat: debt.remainingVat.toFixed(2) })}
               </p>
             ) : null}
-            <p className="ds-subtle text-[length:var(--ds-text-xs)]">{t("crm.engine.chatterSoon")}</p>
           </section>
         }
       />

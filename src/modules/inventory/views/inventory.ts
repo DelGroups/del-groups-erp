@@ -355,7 +355,7 @@ export function intakeToRecord(row: Record<string, unknown>): IntakeRecord {
 
 export function intakeDefinition(fetchers: Fetchers): ViewDefinition<IntakeRecord> {
   return {
-    model: { key: INTAKE_VIEW_KEY, table: "initial_balance_documents", module: "inventory", readPermission: "can_manage_products", writePermission: "can_manage_products", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: intakeToRecord, ...fetchers },
+    model: { key: INTAKE_VIEW_KEY, table: "inventory_initial_balances", module: "inventory", readPermission: "can_manage_products", writePermission: "can_manage_products", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: intakeToRecord, ...fetchers },
     titleKey: "initialBalance.listTitle",
     fields: [
       { name: "document_number", labelKey: "initialBalance.docNo", type: "char", searchable: true, readonly: true },

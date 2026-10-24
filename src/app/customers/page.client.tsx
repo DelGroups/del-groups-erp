@@ -1,7 +1,7 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -26,6 +26,8 @@ import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/com
 import CustomFieldsSection, { draftFromValues, type CustomFieldDraft } from "@/components/studio/CustomFieldsSection";
 import { useStudioFields } from "@/components/studio/useStudioFields";
 import { buildCustomFieldValues, formatFieldValue } from "@/lib/studio/fields";
+import { useNewUi } from "@/components/shell/NewUiProvider";
+import { RecordChatter } from "@/views/chatter/RecordChatter";
 
 export default function CustomersPage() {
   const { t } = useI18n();
@@ -228,6 +230,23 @@ export default function CustomersPage() {
     setIsModalOpen(true);
   };
 
+  // New UI: the customer's chatter in the edit dialog, and "?record=<id>" (from My activities) opens it.
+  const { active: newUi } = useNewUi();
+  const withChatter = newUi && Boolean(editingCustomerId);
+  const openedFromLink = useRef(false);
+  useEffect(() => {
+    if (!newUi || openedFromLink.current || !customers.length) return;
+    const id = new URLSearchParams(window.location.search).get("record");
+    const customer = id ? customers.find((c) => c.id === id) : undefined;
+    if (!customer) return;
+    const timer = window.setTimeout(() => {
+      openedFromLink.current = true;
+      openEditModal(customer);
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once, when the list has loaded
+  }, [newUi, customers]);
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -378,7 +397,7 @@ export default function CustomersPage() {
       {/* Modal Add Customer */}
       {isModalOpen && (
         <div className="app-modal-overlay">
-          <div className="app-modal w-full max-w-md">
+          <div className={`app-modal w-full ${withChatter ? "max-h-[92vh] max-w-2xl overflow-y-auto" : "max-w-md"}`}>
             <div className="app-modal-header flex justify-between items-center">
               <h3 className="font-bold text-app">
                 {editingCustomerId ? t("common.edit") : t("customers.addModalTitle")}
@@ -554,6 +573,7 @@ export default function CustomersPage() {
                 </button>
               </div>
             </form>
+            {withChatter ? <RecordChatter model="customers" recordId={editingCustomerId} className="border-t border-app p-4" /> : null}
           </div>
         </div>
       )}

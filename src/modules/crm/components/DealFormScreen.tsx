@@ -190,7 +190,6 @@ function DealForm({ id }: { id: string }) {
               <dt className="ds-muted">{t("crm.engine.fields.salesperson")}</dt>
               <dd>{(data.record.salesperson as string | null) || "—"}</dd>
             </dl>
-            <p className="mt-2 ds-subtle text-[length:var(--ds-text-xs)]">{t("crm.engine.chatterSoon")}</p>
           </section>
         }
       />

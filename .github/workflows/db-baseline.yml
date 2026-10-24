@@ -91,6 +91,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/invoice_payment_date.sql | tee "$RUNNER_TEMP/invoice_payment_date.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/invoice_payment_date.txt"
 
+      # Activities and chatter (phase 19): RLS follows the record, authors and logs protected.
+      - name: Activities and chatter checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/activities_chatter.sql | tee "$RUNNER_TEMP/activities_chatter.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/activities_chatter.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true
