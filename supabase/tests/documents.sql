@@ -137,7 +137,7 @@ begin
   insert into public.document_requests (folder_id, title, requested_user_id, due_date)
   select id, 'Signed budget', '00000000-0000-0000-00cd-00000000000b', current_date + 3 from public.document_folders where name = '2026';
   begin
-    insert into public.document_requests (folder_id, title) select id, 'Nobody', null from public.document_folders where name = '2026';
+    insert into public.document_requests (folder_id, title, requested_user_id) select id, 'Nobody', null from public.document_folders where name = '2026';
     raise exception 'FAIL request without a person';
   exception when check_violation then null;
   end;
