@@ -260,7 +260,7 @@ function fakeApi({ healthyAfter = 2, failMigrationAt = null } = {}) {
     async runQuery(_ref, query) {
       calls.queries.push(query);
       if (query.startsWith("select id from storage.buckets")) {
-        return ["ai-assistant", "contract-attachments", "crm-assets", "product-images"].map((id) => ({ id }));
+        return ["ai-assistant", "chatter-attachments", "contract-attachments", "crm-assets", "product-images"].map((id) => ({ id }));
       }
       return [];
     },
