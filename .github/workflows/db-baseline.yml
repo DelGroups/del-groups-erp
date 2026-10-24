@@ -97,6 +97,11 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/activities_chatter.sql | tee "$RUNNER_TEMP/activities_chatter.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/activities_chatter.txt"
 
+      # Calendar (phase 20): public/private events, organizer rights, answers, reminders, meetings.
+      - name: Calendar checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/calendar.sql | tee "$RUNNER_TEMP/calendar.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/calendar.txt"
       # To-do (phase 22): tasks only for their members, personal stages, done stage, chatter.
       - name: To-do checks
         run: |

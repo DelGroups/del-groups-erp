@@ -46,6 +46,7 @@ import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
 import { ShellBackButton } from "./ShellBackButton";
 import { MyActivitiesButton } from "./MyActivitiesButton";
+import { ReminderAlerts } from "@/modules/calendar";
 
 function initials(name: string): string {
   return (
@@ -690,6 +691,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
       </div>
 
       <DesignScope theme={dsTheme} brand={brand}>
+        <ReminderAlerts />
         <nav aria-label={t("newShell.mobileNav")} className="fixed inset-x-0 bottom-0 z-30 md:hidden" style={{ background: "var(--ds-surface)", borderTop: "1px solid var(--ds-border)", paddingBottom: "env(safe-area-inset-bottom)" }}>
           <ul className="grid h-16 grid-cols-5 items-end pb-1.5">
             <li>

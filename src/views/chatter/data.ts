@@ -221,9 +221,13 @@ export function useChatterActions(model: ChatterModel, recordId: string) {
     onSettled,
   });
   const unfollow = useMutation({ mutationFn: (followerId: string) => check(db.from("mail_followers").delete().eq("id", followerId)), onSettled });
+  // Returns the new activity's id (a meeting's calendar event hangs off it).
   const schedule = useMutation({
-    mutationFn: (v: { activity_type: string; summary: string; due_date: string; assigned_to: string | null; note: string | null }) =>
-      check(db.from("activities").insert({ res_model: model, res_id: recordId, ...v })),
+    mutationFn: async (v: { activity_type: string; summary: string; due_date: string; assigned_to: string | null; note: string | null }): Promise<string> => {
+      const { data, error } = await db.from("activities").insert({ res_model: model, res_id: recordId, ...v }).select("id").single();
+      if (error) throw new Error(error.message);
+      return (data as { id: string }).id;
+    },
     onSettled,
   });
   const setDone = useMutation({
