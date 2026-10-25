@@ -400,7 +400,9 @@ test("with NEW_UI off /crm renders exactly the classic pipeline and /crm/<id> is
   assert.match(form, /if \(!isNewUiEnabled\(\) \|\| !isValidUuid\(id\)\) notFound\(\);/);
   // The engine is loaded lazily, and only for users of the new shell.
   const sw = read("src/app/crm/page.client.tsx");
-  assert.match(sw, /return active \? <CrmDealsScreen \/> : <CrmPipelinePage \/>;/);
+  assert.match(sw, /if \(!active\) return <CrmPipelinePage \/>;/);
+  // NEW_CRM (prompt 21) only chooses between the two new-shell screens.
+  assert.match(sw, /return newCrm \? <CrmPipelineScreen \/> : <CrmDealsScreen \/>;/);
   assert.match(sw, /dynamic\(\(\) => import\("@\/modules\/crm\/pages"\)/);
   // The classic pipeline does not import the engine.
   assert.doesNotMatch(read("src/modules/crm/components/CrmPipelinePage.tsx"), /@\/views|DealsScreen/);

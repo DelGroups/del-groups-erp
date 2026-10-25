@@ -112,6 +112,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/documents.sql | tee "$RUNNER_TEMP/documents.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/documents.txt"
+      # CRM pipeline (prompt 21): teams, stages, stage sync with the classic code, won/lost, targets.
+      - name: CRM pipeline checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/crm_pipeline.sql | tee "$RUNNER_TEMP/crm_pipeline.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/crm_pipeline.txt"
 
       - name: Server log on failure
         if: failure()
