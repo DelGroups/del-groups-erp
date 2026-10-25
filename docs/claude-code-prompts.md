@@ -538,7 +538,7 @@ Done when: the module installs on a tenant from the control panel and works end 
 
 **مدل نقش در کد:** نقش‌های سیستمی `Admin` و `Manager` هستند و بقیه نقش‌های سفارشی‌اند. «ادمین به بالا» در کد یعنی `isAdminRole()` در فرانت و `public.user_is_admin()` در دیتابیس؛ نقشی بالاتر از Admin داخل هر شرکت وجود ندارد. `resolvePermissionPath()` برای ادمین همیشه true برمی‌گرداند، پس یک مجوز جدید `dashboard.view_financials` به‌طور پیش‌فرض فقط برای ادمین باز است و ادمین بعداً می‌تواند آن را به نقش دیگری (مثلاً Manager) بدهد.
 
-**تصمیم‌ها (پیشنهاد داخل پرانتز). Del در ۲۰۲۶-۱۰-۲۵ تصمیم‌های ۱، ۲، ۳، ۵ و ۶ را تأیید کرد؛ ۴ منتظر دیدن ماکت است:**
+**تصمیم‌ها (پیشنهاد داخل پرانتز). Del در ۲۰۲۶-۱۰-۲۵ همه را تأیید کرد؛ ماکت‌ها در فایل‌های پروژه، پوشه home-widgets:**
 
 1. آیا نقش Manager هم اعداد مالی را ببیند؟ (خیر؛ فقط Admin. مجوز `dashboard.view_financials` وجود دارد و ادمین می‌تواند بعداً به Manager بدهد.)
 2. بستن نشت فعلی (اعداد مالی زیر کاشی‌های Launcher و داشبورد قدیمی برای غیرادمین) فوراً و بدون فلگ منتشر شود؟ (بله؛ این محدودسازی است نه قابلیت جدید، و الان با `NEW_UI_AUDIENCE=all` همه کارکنان آن را می‌بینند.)
@@ -550,6 +550,8 @@ Done when: the module installs on a tenant from the control panel and works end 
 ```text
 Before starting, check the list of available skills. Use every skill that fits this task.
 At the end, say which skills you used, or that none fit.
+This task is mostly visual: use the design and motion skills (for example frontend-design and the
+motion-graphics skill) for every widget, so the home looks polished in light and dark.
 
 Task: turn the home page of the new UI into a customisable widget dashboard, and make sales and
 financial figures visible to admins only. Branch: saas/home-widgets. Open a draft PR.
@@ -640,6 +642,15 @@ Steps:
    missing (e.g. CRM targets before PR #63 merges), register it but keep it hidden, and list it in the PR.
    Personal (everyone, filtered by module and permission):
    - Greeting with today's date and the company name.
+   - Clock: large live time (Asia/Baku by default, from the company profile when it has a time zone),
+     date in the user's locale, optional analogue face; size S or M.
+   - Calendar: month grid with today highlighted and dots on days that have the user's events or
+     due activities (calendar module when enabled, a plain month grid otherwise); click a day opens
+     that day in the calendar.
+   - Weather: current temperature, condition icon and a 3-day forecast for the company city
+     (default Baku; the user can pick another city in the widget settings). Fetch on the server
+     from Open-Meteo (no API key, no personal data sent), cache 30 minutes per city, show the
+     last value with its time if the fetch fails. Draw our own icons with lucide, no external images.
    - Quick actions: new sale, new purchase, new customer, new task, new expense (only the ones the
      user may create).
    - My activities: overdue / today / planned, click opens the record.
