@@ -3935,6 +3935,7 @@ export const ruMessages: Messages = {
     kpi_finance: "Касса и банк",
     kpi_hr: "Сотрудники",
     kpi_settings: "Активные пользователи",
+    kpi_activitiesToday: "Мои дела на сегодня",
   },
   views: {
     chatter: {

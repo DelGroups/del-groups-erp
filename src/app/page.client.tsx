@@ -15,6 +15,7 @@ import { fetchDashboardData } from "@/lib/dashboard/fetchDashboard";
 import { reconcileCustomerArBalancesAction } from "@/lib/actions/customerAr";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { canViewFinancials } from "@/lib/auth/permissionMatrix";
 import type { DashboardData } from "@/types/database.types";
 import { supabase } from "@/lib/supabase";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
@@ -56,15 +57,17 @@ const emptyDashboard: DashboardData = {
 
 function ManagementDashboardPage() {
   const { t } = useI18n();
-  const { can } = useAuth();
+  const { can, profile } = useAuth();
+  // Money figures only for users who may see them (prompt 24b); the data is not even loaded otherwise.
+  const financials = canViewFinancials(profile);
   const canReconcileAr =
     can("can_manage_finance") || can("can_edit_sales") || can("can_manage_settings");
   const companyName = useCompanyProfile().displayName;
   // Widgets of modules the tenant does not have are hidden.
   const { isEnabled } = useEnabledModules();
-  const showSales = isEnabled("sales");
-  const showPurchases = isEnabled("purchases");
-  const showAccounting = isEnabled("accounting");
+  const showSales = financials && isEnabled("sales");
+  const showPurchases = financials && isEnabled("purchases");
+  const showAccounting = financials && isEnabled("accounting");
   const showInventory = isEnabled("inventory");
   const [loading, setLoading] = useState(true);
   const [reconcilingAr, setReconcilingAr] = useState(false);
@@ -73,10 +76,10 @@ function ManagementDashboardPage() {
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    const dashboard = await fetchDashboardData();
+    const dashboard = await fetchDashboardData({ financials });
     setData(dashboard);
     setLoading(false);
-  }, []);
+  }, [financials]);
 
   useEffect(() => {
     void loadDashboard();
@@ -195,6 +198,7 @@ function ManagementDashboardPage() {
             </Alert>
           ) : null}
 
+          {financials ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             {showSales ? (
               <KpiCard
@@ -248,6 +252,7 @@ function ManagementDashboardPage() {
               />
             ) : null}
           </div>
+          ) : null}
 
           {showAccounting ? (
             <Panel title={t("dashboard.monthlyTrendTitle")} subtitle={t("dashboard.monthlyTrendSubtitle")}>

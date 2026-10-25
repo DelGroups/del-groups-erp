@@ -316,7 +316,7 @@ export function buildNavSections(
 export interface PermissionMatrixGroup {
   id: string;
   title: string;
-  permissions: { key: string; label: string; legacyKey: PermissionKey }[];
+  permissions: { key: string; label: string; labelKey?: string; legacyKey: PermissionKey }[];
   hasWarehouseScope?: boolean;
   hasAccountScope?: boolean;
 }
@@ -332,7 +332,7 @@ export function buildPermissionMatrix(modules: readonly ModuleManifest[]): Permi
       .flatMap((m) => m.matrix)
       .filter((p) => p.group === group.id)
       .sort((a, b) => a.order - b.order)
-      .map((p) => ({ key: p.key, label: p.label, legacyKey: p.legacyKey })),
+      .map((p) => ({ key: p.key, label: p.label, ...(p.labelKey ? { labelKey: p.labelKey } : {}), legacyKey: p.legacyKey })),
   })).filter((group) => group.permissions.length > 0);
 }
 

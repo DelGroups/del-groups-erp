@@ -47,33 +47,47 @@ async function fetchRecentTransactionsForDashboard() {
   return fallback.data || [];
 }
 
-export async function fetchDashboardData(): Promise<DashboardData> {
+const EMPTY = Promise.resolve({ data: [] as Record<string, unknown>[], error: null });
+
+/**
+ * The classic dashboard's data. `financials` (canViewFinancials, prompt 24b): without it the
+ * money queries (sales, purchases, transactions, customer balances, the AR check) are not run
+ * at all, so no amount reaches the browser; only the low-stock panel's products are read.
+ */
+export async function fetchDashboardData(options: { financials: boolean } = { financials: false }): Promise<DashboardData> {
   const monthRange = getDateRangeBounds("month");
   const now = new Date();
+  const money = options.financials;
 
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const trendStart = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
 
   const [salesRes, purchasesRes, transactions, trendTxRes, productsRes, customersRes, arCheck, procurementRes] =
     await Promise.all([
-    supabase
-      .from("sales")
-      .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance, status")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("purchases")
-      .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount, status")
-      .order("created_at", { ascending: false }),
-    fetchRecentTransactionsForDashboard(),
-    supabase
-      .from("transactions")
-      .select("type, amount, created_at")
-      .gte("created_at", `${trendStart}T00:00:00`),
+    money
+      ? supabase
+          .from("sales")
+          .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance, status")
+          .order("created_at", { ascending: false })
+      : EMPTY,
+    money
+      ? supabase
+          .from("purchases")
+          .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount, status")
+          .order("created_at", { ascending: false })
+      : EMPTY,
+    money ? fetchRecentTransactionsForDashboard() : Promise.resolve([] as Record<string, unknown>[]),
+    money
+      ? supabase
+          .from("transactions")
+          .select("type, amount, created_at")
+          .gte("created_at", `${trendStart}T00:00:00`)
+      : EMPTY,
     supabase
       .from("products")
-      .select("id, code, name, stock, min_stock, min_stock_level, is_service, unit, category, buy_price, sell_price"),
-    supabase.from("customers").select("balance"),
-    checkCustomerArDiscrepancies(),
+      .select("id, code, name, stock, min_stock, min_stock_level, is_service, unit, category"),
+    money ? supabase.from("customers").select("balance") : EMPTY,
+    money ? checkCustomerArDiscrepancies() : Promise.resolve({ success: true as const, discrepancies: [] }),
     supabase.from("system_settings").select("value").eq("key", PROCUREMENT_CONFIG_KEY).maybeSingle(),
   ]);
 

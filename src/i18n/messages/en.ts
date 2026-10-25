@@ -3934,6 +3934,7 @@ export const enMessages: Messages = {
     kpi_finance: "Cash and bank",
     kpi_hr: "Employees",
     kpi_settings: "Active users",
+    kpi_activitiesToday: "My activities today",
   },
   views: {
     chatter: {

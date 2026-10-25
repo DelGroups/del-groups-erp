@@ -590,6 +590,12 @@
           "key": "view",
           "label": "Ana səhifəni görmək",
           "legacyKey": "can_view_dashboard"
+        },
+        {
+          "key": "view_financials",
+          "label": "Ana səhifədə maliyyə rəqəmlərini görmək",
+          "labelKey": "home.permissionViewFinancials",
+          "legacyKey": "can_view_financials"
         }
       ]
     },

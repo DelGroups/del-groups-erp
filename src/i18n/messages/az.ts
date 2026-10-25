@@ -3933,6 +3933,7 @@ export const azMessages = {
     kpi_finance: "Kassa və bank",
     kpi_hr: "İşçilər",
     kpi_settings: "Aktiv istifadəçilər",
+    kpi_activitiesToday: "Bu gün mənim fəaliyyətlərim",
   },
   views: {
     chatter: {
