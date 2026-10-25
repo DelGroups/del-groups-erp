@@ -6,9 +6,14 @@ import { useNewUi } from "@/components/shell/NewUiProvider";
 
 // The view engine is loaded only by users of the new shell.
 const CrmDealsScreen = dynamic(() => import("@/modules/crm/pages").then((m) => m.CrmDealsScreen), { ssr: false });
+const CrmPipelineScreen = dynamic(() => import("@/modules/crm/pages").then((m) => m.CrmPipelineScreen), { ssr: false });
 
-/** With NEW_UI on: the deals view engine in the new shell, the classic pipeline otherwise. */
-export default function CrmNewUiSwitch() {
+/**
+ * With NEW_UI on: in the new shell the new CRM pipeline (NEW_CRM on) or the deals view engine;
+ * the classic pipeline otherwise.
+ */
+export default function CrmNewUiSwitch({ newCrm }: { newCrm: boolean }) {
   const { active } = useNewUi();
-  return active ? <CrmDealsScreen /> : <CrmPipelinePage />;
+  if (!active) return <CrmPipelinePage />;
+  return newCrm ? <CrmPipelineScreen /> : <CrmDealsScreen />;
 }

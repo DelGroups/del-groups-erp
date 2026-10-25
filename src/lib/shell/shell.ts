@@ -86,7 +86,19 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "crm", path: "/calendar", titleKey: "newShell.extra_calendar", module: "calendar", icon: "CalendarDays" },
   { section: "dashboard", path: "/todo", titleKey: "newShell.extra_todo", module: "todo", icon: "ListTodo" },
   { section: "dashboard", path: "/documents", titleKey: "newShell.extra_documents", module: "documents", icon: "FolderOpen" },
+  // New CRM (prompt 21): only while NEW_CRM is on.
+  { section: "crm", path: "/crm/leads", titleKey: "newShell.extra_crmLeads", module: "crm", icon: "Inbox", flag: "newCrm" },
+  { section: "crm", path: "/crm/reports", titleKey: "newShell.extra_crmReports", module: "crm", icon: "ChartColumn", flag: "newCrm" },
+  { section: "crm", path: "/crm/config", titleKey: "newShell.extra_crmConfig", module: "crm", icon: "SlidersHorizontal", flag: "newCrm" },
 ] as const;
+
+/** The extra items of the features that are on (items without a flag always). */
+export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean }): E[] {
+  return extras.filter((e) => {
+    const flag = "flag" in e ? (e as { flag?: string }).flag : undefined;
+    return !flag || (flag === "newCrm" && flags.newCrm);
+  });
+}
 
 /** Sections with the extra items appended to their section (sections that do not exist are skipped). */
 export function withExtraItems<I extends ShellItem, S extends ShellSection<I>>(

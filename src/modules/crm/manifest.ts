@@ -1,6 +1,10 @@
 import { defineModule } from "../types";
 
-/** Deals pipeline and quotations. Customers and suppliers belong to core. */
+/**
+ * Deals pipeline and quotations. Customers and suppliers belong to core. With NEW_CRM on, the new
+ * shell shows the new pipeline (teams, stages, leads, won/lost, reports, targets, prompt 21);
+ * its pages are reached from the new shell only (SHELL_EXTRA_ITEMS), so the classic menu is unchanged.
+ */
 export default defineModule({
   id: "crm",
   name: "CRM",
@@ -17,6 +21,8 @@ export default defineModule({
   ],
   routes: [
     { prefix: "/crm", permission: "can_view_crm" },
+    // New CRM (prompt 21, NEW_CRM): teams, stages, lost reasons and targets.
+    { prefix: "/crm/config", permission: "can_manage_settings" },
     { prefix: "/settings/crm", permission: "can_manage_settings" },
   ],
   aiTools: [],

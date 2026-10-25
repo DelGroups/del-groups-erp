@@ -37,6 +37,7 @@ function mapQuotation(row: Record<string, unknown>): CrmQuotation {
     items_json: mapItems(row.items_json),
     notes: (row.notes as string) || null,
     production_order_id: (row.production_order_id as string) || null,
+    sale_id: (row.sale_id as string) || null,
     created_at: (row.created_at as string) || null,
   };
 }

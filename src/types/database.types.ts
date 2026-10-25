@@ -1745,6 +1745,8 @@ export interface CrmQuotation {
   items_json: QuotationItem[];
   notes: string | null;
   production_order_id: string | null;
+  /** Draft sales invoice made from the quotation (new CRM, prompt 21). */
+  sale_id?: string | null;
   created_at: string | null;
 }
 

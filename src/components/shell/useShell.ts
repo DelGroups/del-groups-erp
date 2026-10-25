@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FileBarChart, FolderOpen, Layers, ListTodo, type LucideIcon } from "lucide-react";
+import { CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getNavItemPermission, getRequiredPermission } from "@/lib/auth/routePermissions";
@@ -16,6 +17,7 @@ import {
   parseTrail,
   trailCrumbs,
   SHELL_EXTRA_ITEMS,
+  extraItemsFor,
   TRAIL_STORAGE_KEY,
   visibleSections,
   withExtraItems,
@@ -23,7 +25,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal };
 
 export interface ShellApp {
   id: string;
@@ -40,11 +42,12 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
   const { can, isAdmin } = useAuth();
   const { isEnabled } = useEnabledModules();
   const pathname = usePathname();
+  const { newCrm } = useNewUi();
 
   const sections = useMemo(
     () =>
       visibleSections<NavItem, NavSection>(
-        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, SHELL_EXTRA_ITEMS, (e) => ({
+        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm }), (e) => ({
           path: e.path,
           titleKey: e.titleKey,
           module: e.module as NavItem["module"],
@@ -58,7 +61,7 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
           can: (p) => can(p as Parameters<typeof can>[0]),
         }
       ),
-    [can, isAdmin, isEnabled]
+    [can, isAdmin, isEnabled, newCrm]
   );
 
   const apps = useMemo<ShellApp[]>(

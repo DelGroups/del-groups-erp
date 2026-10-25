@@ -14,6 +14,8 @@ export interface NewUiServerValue {
   brand: string | null;
   /** Who gets the new shell (NEW_UI_AUDIENCE): admins who opt in, or everyone by default. */
   audience?: NewUiAudience;
+  /** NEW_CRM is on (server env): the new CRM pipeline replaces the deals screens in the new shell. */
+  newCrm?: boolean;
 }
 
 interface NewUiValue {
@@ -25,10 +27,12 @@ interface NewUiValue {
   active: boolean;
   /** This user may switch (NEW_UI on and admin; every signed-in user with audience "all"). */
   canToggle: boolean;
+  /** NEW_CRM is on; only matters while `active`. */
+  newCrm: boolean;
   setPreferred: (on: boolean) => void;
 }
 
-const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, setPreferred: () => undefined };
+const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, newCrm: false, setPreferred: () => undefined };
 const NewUiContext = createContext<NewUiValue>(OFF);
 
 /**
@@ -62,9 +66,10 @@ export function NewUiProvider({ value, children }: { value: NewUiServerValue; ch
       audience,
       active: newShellActive({ available: true, preferred, authReady: ready && !loading, isAdmin, audience, signedIn }),
       canToggle: newShellCanToggle({ available: true, isAdmin, audience, signedIn }),
+      newCrm: value.newCrm === true,
       setPreferred,
     };
-  }, [value.available, value.brand, value.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
+  }, [value.available, value.brand, value.audience, value.newCrm, preferred, ready, loading, isAdmin, user, setPreferred]);
 
   return <NewUiContext.Provider value={ctx}>{children}</NewUiContext.Provider>;
 }

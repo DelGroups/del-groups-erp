@@ -459,6 +459,10 @@
       "permission": "can_manage_warehouses"
     },
     {
+      "prefix": "/crm/config",
+      "permission": "can_manage_settings"
+    },
+    {
       "prefix": "/crm",
       "permission": "can_view_crm"
     },

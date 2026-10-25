@@ -100,6 +100,11 @@ select 'pending', '20261024120000_documents: tables (documents of the new UI)',
        case when to_regclass('public.documents') is null or to_regclass('public.document_folders') is null
               or to_regclass('public.document_requests') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261025100000_crm_pipeline: tables and deals.stage_id (new CRM pipeline)',
+       case when to_regclass('public.crm_stages') is null or to_regclass('public.crm_teams') is null
+              or not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'deals' and column_name = 'stage_id')
+            then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
