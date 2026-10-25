@@ -532,6 +532,165 @@ Done when: the module installs on a tenant from the control panel and works end 
 
 ---
 
+### پرامپت ۲۴ب: صفحه اصلی ویجتی و محدود کردن اطلاعات مالی به ادمین
+
+**وضعیت امروز (بررسی کد، ۲۰۲۶-۱۰-۲۵):** در UI جدید صفحه اصلی همان App Launcher است (`src/app/apps/page.client.tsx`) با عرض حداکثر `max-w-5xl`، برای همین چپ و راست صفحه خالی است. زیر کاشی‌ها عدد زنده نشان داده می‌شود (`/api/shell/kpis`): «فروش این ماه» به آذن، تعداد فروش‌ها و موجودی کل حساب‌ها. این اعداد به هر کاربری که RLS اجازه خواندن جدول را بدهد نشان داده می‌شود، نه فقط ادمین. داشبورد قدیمی (`ManagementDashboardPage`) هم درآمد، هزینه و سود را به هر کسی که `can_view_dashboard` دارد نشان می‌دهد.
+
+**مدل نقش در کد:** نقش‌های سیستمی `Admin` و `Manager` هستند و بقیه نقش‌های سفارشی‌اند. «ادمین به بالا» در کد یعنی `isAdminRole()` در فرانت و `public.user_is_admin()` در دیتابیس؛ نقشی بالاتر از Admin داخل هر شرکت وجود ندارد. `resolvePermissionPath()` برای ادمین همیشه true برمی‌گرداند، پس یک مجوز جدید `dashboard.view_financials` به‌طور پیش‌فرض فقط برای ادمین باز است و ادمین بعداً می‌تواند آن را به نقش دیگری (مثلاً Manager) بدهد.
+
+**تصمیم‌هایی که Del باید تأیید کند (پیشنهاد پیش‌فرض داخل پرانتز):**
+
+1. آیا نقش Manager هم اعداد مالی را ببیند؟ (خیر؛ فقط Admin. مجوز `dashboard.view_financials` وجود دارد و ادمین می‌تواند بعداً به Manager بدهد.)
+2. بستن نشت فعلی (اعداد مالی زیر کاشی‌های Launcher و داشبورد قدیمی برای غیرادمین) فوراً و بدون فلگ منتشر شود؟ (بله؛ این محدودسازی است نه قابلیت جدید، و الان با `NEW_UI_AUDIENCE=all` همه کارکنان آن را می‌بینند.)
+3. تعداد فروش‌ها (نه مبلغ) هم برای غیرادمین مخفی شود؟ (بله؛ زیر کاشی Trade برای غیرادمین عدد شخصی نشان داده شود: فعالیت‌های امروز خودش.)
+4. چیدمان: سه ستون (چپ: ویجت‌های شخصی، وسط: اپ‌ها، راست: ویجت‌های مدیریتی و گزارش) و کل عرض صفحه؟ (بله. در موبایل یک ستون.)
+5. ادمین بتواند یک چیدمان پیش‌فرض برای کل شرکت ذخیره کند که کاربران جدید با آن شروع کنند؟ (بله، در همین فاز.)
+6. کاشی اپ‌ها قابل حذف از صفحه اصلی باشد؟ (خیر؛ جابجا می‌شود ولی حذف نمی‌شود، چون تنها راه رسیدن به ماژول‌هاست.)
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: turn the home page of the new UI into a customisable widget dashboard, and make sales and
+financial figures visible to admins only. Branch: saas/home-widgets. Open a draft PR.
+
+Today: with the new shell active, src/app/page.client.tsx renders the App Launcher
+(src/app/apps/page.client.tsx, max-w-5xl, so the left and right of wide screens are empty).
+Launcher tiles show live figures from src/app/api/shell/kpis/route.ts (sales this month in AZN,
+number of sales, sum of account balances) to ANY user whose RLS lets them read those tables.
+The old dashboard (ManagementDashboardPage, same file) shows revenue/expenses/profit to anyone with
+can_view_dashboard. Roles: "Admin" and "Manager" are system roles (src/types/database.types.ts),
+isAdminRole() in the app, public.user_is_admin() in SQL; resolvePermissionPath() always returns
+true for admins (src/lib/auth/permissionMatrix.ts).
+
+Rule for this task: "financial widget" = any figure with money amounts or sales/purchase counts
+(sales, purchases, revenue, expenses, profit, cash/bank balances, receivables, payables, inventory
+value, targets, pipeline value). Only users with permission dashboard.view_financials see them;
+admins always have it, nobody else has it by default. Enforce it on the server and in the
+database, never only by hiding UI.
+
+Steps:
+
+1. Close the current leak (ships without a flag, it only removes figures):
+   - Add permission dashboard.view_financials ("View financial figures on the home page") to the
+     dashboard module manifest so it appears in the role matrix (src/modules, buildPermissionMatrix).
+     Add a helper canViewFinancials(profile) in src/lib/auth next to userHasGranularPermission.
+   - /api/shell/kpis: compute dashboard (sales total), trade (sales count) and finance (balances)
+     only when canViewFinancials is true; otherwise do not run those queries and return no figure
+     for them. For non-admins the trade tile shows the user's own activities due today instead.
+   - ManagementDashboardPage: render the money KPI cards, the monthly trend and recent transactions
+     only for canViewFinancials; the low stock panel stays for everyone with inventory access.
+   - Unit tests for both (admin sees, Manager and custom role do not, override grant does).
+
+2. Database (two migration files, check `ls supabase/migrations` and open PRs for free prefixes;
+   20261025100000 is taken by the CRM PR #63, so start at 20261025110000):
+   a) home_layouts: one row per user (user_id pk default auth.uid(), layout jsonb with size check
+      like view_favorites, updated_at), RLS own row only; plus tenant default layout: a row in
+      company settings or a home_layout_defaults table (single row) readable by all authenticated,
+      writable only when public.user_is_admin(). Safe to re-run; only the new home reads it.
+   b) home_financial_summary(p_from date, p_to date) and any other aggregate RPCs the financial
+      widgets need: security definer, `set search_path = public`, first line raises 'forbidden'
+      unless public.user_is_admin() or the user's role grants dashboard.view_financials. Do the
+      sums in SQL (the sales loader caps at 1,000 rows, so never add up rows in the browser).
+      Exclude cancelled/void/draft documents the same way src/lib/shell/kpis.ts does.
+   Test both migrations on a local or branch database, never on production. In the PR say which
+   file Del runs first.
+
+3. Widget framework (src/lib/home/ for pure logic, src/components/home/ for UI):
+   - A typed registry: id, title i18n key, category (personal | operations | management), allowed
+     sizes (S = 1 column cell, M, L = full column width with chart), required module
+     (useEnabledModules), required permission path, financial: boolean, default column and order.
+   - Pure functions with tests: sanitizeLayout(layout, user context) drops unknown widgets,
+     widgets of disabled modules, widgets the user may not see, and duplicates; mergeWithDefaults
+     (user layout -> tenant default -> built-in default); moveWidget(layout, id, column, index).
+   - Data: GET /api/home/widgets/[id] runs the widget's loader with the user's own Supabase
+     session and returns 403 for a financial widget when canViewFinancials is false. Each widget
+     loads on its own (Skeleton while loading, EmptyState on no data, error card on failure) so
+     one slow widget does not block the page. Refresh on focus and every 60 s, like the old page.
+   - Put the whole new home behind a NEW_HOME flag in src/lib/features (default off, audience
+     admins|all like NEW_UI_AUDIENCE). With NEW_HOME off, the launcher stays exactly as today.
+
+4. Layout and editing:
+   - Full width (remove max-w-5xl on the home only). xl and up: three columns (start 3/12,
+     centre 6/12, end 3/12; use logical start/end, not left/right).
+     md: two columns. Mobile: one column in the saved order.
+   - Default layout: start column = personal widgets, centre = Apps (the existing AppGrid, pinned:
+     movable but not removable) + Quick actions, end column = management widgets for users who
+     may see them, operations widgets for everyone else.
+   - A "Customise" button switches to edit mode: drag handle on each widget (motion Reorder per
+     column; moving to another column through the widget menu and by dragging between columns),
+     remove (x), size picker, "Add widget" panel (Radix Dialog as a side sheet) listing only
+     widgets the user may add, grouped by category, with a small preview. Save, Cancel, Reset to
+     default. Admins also get "Save as company default".
+   - Keyboard: every move is possible without a mouse (Move up / Move down / Move to column in
+     the widget menu), with aria-live announcements. Respect prefers-reduced-motion through
+     motionPreset() from src/design-system/motion.ts.
+   - References: dashboards/dashboards-sidebar-stat-cards, dashboards/dashboards-kanban-board-with-drag-and-drop
+     (drag feel only), dashboards/dashboards-analytics-overview-with-range-chips,
+     dashboards/dashboards-chart-card-with-legend, dashboards/dashboards-activity-feed-panel,
+     dashboards/dashboards-approvals-queue-with-detail-drawer, dashboards/dashboards-week-schedule-grid,
+     dashboards/dashboards-inventory-replenishment-cockpit, stats/stats-metric-cards-with-sparkline-bars,
+     stats/stats-four-metric-row, stats/stats-goal-progress-bars, stats/stats-conversion-funnel-steps,
+     stats/stats-leaderboard-with-rank-movement, stats/stats-week-over-week-delta-table,
+     stats/stats-count-up-metrics-on-view, stats/stats-ring-gauge-trio. Reuse MetricCard, ChartCard,
+     RingGauge, FunnelSteps, GoalProgress, CountUp, Skeleton and EmptyState from src/design-system
+     before building anything new.
+
+5. Widgets. Build every widget whose data exists on main; for a widget whose module or table is
+   missing (e.g. CRM targets before PR #63 merges), register it but keep it hidden, and list it in the PR.
+   Personal (everyone, filtered by module and permission):
+   - Greeting with today's date and the company name.
+   - Quick actions: new sale, new purchase, new customer, new task, new expense (only the ones the
+     user may create).
+   - My activities: overdue / today / planned, click opens the record.
+   - Today's agenda from the calendar.
+   - My to-dos (due today and overdue, tick to finish).
+   - Pending approvals assigned to me (expenses today; other approval types when they exist).
+   - Saved views (view_favorites) as shortcuts.
+   - Recent documents.
+   Operations (no money amounts):
+   - Low stock list with "reorder" link.
+   - Open production orders by status.
+   - Who is away today (HR leaves).
+   - My CRM pipeline: number of my deals per stage.
+   Management (financial, dashboard.view_financials only):
+   - Sales this month with delta vs last month and a sparkline (sales count shown here, not on tiles).
+   - Revenue vs expenses trend with range chips 30 d / 90 d / 12 m.
+   - Net profit this month.
+   - Purchases this month.
+   - Cash and bank balances per account (respect allowed_financial_accounts scope).
+   - Receivables with ageing buckets (0-30, 31-60, 61-90, 90+) and top debtors.
+   - Payables due in the next 14 days.
+   - Top 5 customers and top 5 products by revenue (leaderboard with rank movement).
+   - Sales by salesperson this month.
+   - Expenses by category this month.
+   - Inventory value (stock x cost; sheet products are stored in metres, use the per-metre cost).
+   - Week-over-week table: sales, purchases, expenses, new customers.
+   - Sales target progress and pipeline value funnel (hidden until CRM targets exist).
+   - Customer balance discrepancy alert (move the existing AR warning here).
+   All amounts in AZN with formatFigure; counts animate with CountUp.
+
+6. i18n: every string (widget titles, empty states, edit mode, permission label) in az, en, ru.
+
+7. Tests: registry/sanitize/merge/move unit tests; API test that a non-admin gets 403 on every
+   financial widget and that the RPC raises forbidden; component test that a Manager's default
+   layout contains no financial widget. Then npm run lint, npm test, npm run build.
+
+Rules: no Odoo code or texts; no SQL on production; NEW_HOME off by default; step 1 is the only
+behaviour change visible after merge. Keep the PR on this task; list unrelated problems in the PR.
+
+PR description: what changed in plain words, screenshots of the home as Admin and as a non-admin
+user (light and dark, desktop and mobile), how it was tested, and the manual steps for Del in order:
+run migration a, run migration b, set NEW_HOME=true and NEW_HOME_AUDIENCE=admins on the server,
+check, then NEW_HOME_AUDIENCE=all.
+
+Done when: an admin sees and arranges sales/finance widgets; a non-admin never receives a money
+figure from any page or API on the home (checked in the network tab); every user can add, remove,
+resize and move widgets with mouse and keyboard, and the layout survives reload and another device.
+```
+
+---
+
 ## فاز ۷: آماده‌سازی فروش
 
 ### پرامپت ۲۵: سایت معرفی، ثبت‌نام و شرکت دمو
