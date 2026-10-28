@@ -69,25 +69,25 @@ export async function fetchDashboardData(options: { financials: boolean } = { fi
           .from("sales")
           .select("id, doc_no, doc_date, created_at, customer_name, total_amount, remaining_balance, status")
           .order("created_at", { ascending: false })
-      : EMPTY,
+      : (EMPTY as never),
     money
       ? supabase
           .from("purchases")
           .select("id, invoice_number, doc_date, created_at, supplier_id, total_amount, debt_amount, status")
           .order("created_at", { ascending: false })
-      : EMPTY,
-    money ? fetchRecentTransactionsForDashboard() : Promise.resolve([] as Record<string, unknown>[]),
+      : (EMPTY as never),
+    money ? fetchRecentTransactionsForDashboard() : (Promise.resolve([]) as never),
     money
       ? supabase
           .from("transactions")
           .select("type, amount, created_at")
           .gte("created_at", `${trendStart}T00:00:00`)
-      : EMPTY,
+      : (EMPTY as never),
     supabase
       .from("products")
       .select("id, code, name, stock, min_stock, min_stock_level, is_service, unit, category"),
-    money ? supabase.from("customers").select("balance") : EMPTY,
-    money ? checkCustomerArDiscrepancies() : Promise.resolve({ success: true as const, discrepancies: [] }),
+    money ? supabase.from("customers").select("balance") : (EMPTY as never),
+    money ? checkCustomerArDiscrepancies() : (Promise.resolve({ success: true, discrepancies: [] }) as never),
     supabase.from("system_settings").select("value").eq("key", PROCUREMENT_CONFIG_KEY).maybeSingle(),
   ]);
 

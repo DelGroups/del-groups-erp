@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import PageLayout from "@/components/layout/PageLayout";
 import { ERPPage } from "@/components/layout/ERPLayout";
 import Panel from "@/components/ui/panel";
@@ -278,11 +279,16 @@ function ManagementDashboardPage() {
   );
 }
 
+// The widget home is loaded only by users who get it (NEW_HOME, prompt 24b).
+const HomeDashboard = dynamic(() => import("@/components/home/HomeDashboard"), { ssr: false });
+
 /**
  * Home: with the new shell on, the first screen is the app launcher (every module as a tile,
- * the user picks one), like the ERP's own home. With it off, the management dashboard as before.
+ * the user picks one), or the widget home for users who get NEW_HOME. With the new shell off,
+ * the management dashboard as before.
  */
 export default function HomePage() {
-  const { active } = useNewUi();
-  return active ? <AppsPageClient /> : <ManagementDashboardPage />;
+  const { active, newHome } = useNewUi();
+  if (!active) return <ManagementDashboardPage />;
+  return newHome ? <HomeDashboard /> : <AppsPageClient />;
 }

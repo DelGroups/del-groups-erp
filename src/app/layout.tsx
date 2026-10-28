@@ -15,6 +15,7 @@ import ReadOnlyBanner from "@/components/tenant/ReadOnlyBanner";
 import { NewUiProvider, type NewUiServerValue } from "@/components/shell/NewUiProvider";
 import { isNewUiEnabled, newUiAudienceSetting } from "@/lib/features/newUi";
 import { isNewCrmEnabled } from "@/lib/features/newCrm";
+import { isNewHomeEnabled, newHomeAudience } from "@/lib/features/newHome";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
@@ -133,8 +134,9 @@ async function newUiServerValue(): Promise<NewUiServerValue> {
   // NEW_UI_AUDIENCE=all: the new shell is everyone's default until they switch back (cookie "0").
   const audience = parseNewUiAudience(newUiAudienceSetting());
   const newCrm = isNewCrmEnabled();
+  const newHome = { enabled: isNewHomeEnabled(), audience: newHomeAudience() };
   const preferred = parseNewUiCookie((await cookies()).get(NEW_UI_COOKIE)?.value, audience);
-  if (!preferred) return { available: true, preferred: false, brand: null, audience, newCrm };
+  if (!preferred) return { available: true, preferred: false, brand: null, audience, newCrm, newHome };
   const client = await createSupabaseServerClient();
-  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]), audience, newCrm };
+  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]), audience, newCrm, newHome };
 }

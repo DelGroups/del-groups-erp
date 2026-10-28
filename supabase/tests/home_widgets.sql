@@ -42,11 +42,14 @@ on conflict (id) do nothing;
 insert into public.purchases (id, invoice_number, total_amount, debt_amount, status, due_date, posted_at) values
   ('00000000-0000-0000-00db-0000000006a1', 'HT-P1', 80, 80, 'posted', current_date + 5, now())
 on conflict (id) do nothing;
-insert into public.transactions (id, type, amount, category, transaction_date) values
-  ('00000000-0000-0000-00db-0000000007a1', 'Məxaric', 25, 'Home test', current_date)
+insert into public.accounts (id, code, name, balance) values
+  ('00000000-0000-0000-00db-0000000009a1', 'HT-CASH', 'Home test cash', 500)
+on conflict do nothing;
+insert into public.transactions (id, type, amount, category, transaction_date, account_id) values
+  ('00000000-0000-0000-00db-0000000007a1', 'Məxaric', 25, 'Home test', current_date, '00000000-0000-0000-00db-0000000009a1')
 on conflict (id) do nothing;
 insert into public.products (id, code, name, stock, buy_price, is_service, inventory_mode, full_sheet_length_m) values
-  ('00000000-0000-0000-00db-0000000008a1', 'HT-NORMAL', 'Home test normal', 10, 2, false, null, null),
+  ('00000000-0000-0000-00db-0000000008a1', 'HT-NORMAL', 'Home test normal', 10, 2, false, 'standard', 4),
   ('00000000-0000-0000-00db-0000000008a2', 'HT-SHEET', 'Home test sheet', 8, 100, false, 'polywood', 4)
 on conflict (id) do nothing;
 
