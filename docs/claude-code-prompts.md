@@ -798,7 +798,8 @@ Steps:
      submit RPC still works. Same for any other document table that lacks created_by and is
      listed below; one migration file per table change.
    - Migration prefixes: check `ls supabase/migrations` and the open PRs first (PR #65 uses
-     20261025110000+; other threads from 2026-10-28 may add more). Suggested start: 20261028130000.
+     20261025110000+, PR #66 uses 20261028130000, PR #68 uses 20261028181000 and 20261028182000).
+     Use 20261028140000 (and 20261028141000, 142000... if more files are needed).
      Test on a local or branch database, never on production.
 
 6. Lists in scope (classic + new UI each; skip a list that does not exist and say so in the PR):
