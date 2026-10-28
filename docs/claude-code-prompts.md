@@ -702,6 +702,137 @@ resize and move widgets with mouse and keyboard, and the layout survives reload 
 
 ---
 
+### پرامپت ۲۴ج: انتخاب ستون در لیست فاکتورها و سندها، و ستون‌های تاریخ و کاربر
+
+**درخواست Del (۲۰۲۶-۱۰-۲۸، مورد ۶):** در لیست فاکتورها و سندها بتوان ستون اضافه یا کم کرد. همه جا ستون‌های تاریخ صدور سند، تاریخ فاکتور، نام فروشنده و نام کاربر سازنده سند نشان داده شود.
+
+**وضعیت امروز (بررسی کد، ۲۰۲۶-۱۰-۲۸):**
+- هر لیست دو نسخه دارد: UI قدیمی (مثلاً `SalesPage.tsx`، `PurchasesPage.tsx` با ستون‌های ثابت) و UI جدید روی موتور View (`src/views/components/ListView.tsx` که فقط `def.list.columns` ثابت را نشان می‌دهد). هیچ‌کدام انتخاب ستون ندارند. تنها نمونه موجود، صفحه محصولات قدیمی است (`ColumnVisibilityPanel` و `src/lib/products/columns.ts`، ذخیره در localStorage).
+- «تاریخ فاکتور» همان `doc_date` است که کاربر انتخاب می‌کند (و با مورد ۴، تاریخ قبل هم مجاز می‌شود). «تاریخ صدور سند» زمان واقعی ثبت در سیستم است (`created_at`). بعد از مجاز شدن تاریخ قبل، این دو ستون با هم فرق دارند و هر دو لازم‌اند.
+- فاکتور فروش: `seller_id`/`seller_name`، `issued_by` و `created_by` در جدول هست؛ ولی نام سازنده فقط در صفحه جزئیات خوانده می‌شود، نه در لیست.
+- فاکتور خرید: ستون `created_by` ندارد؛ فقط `responsible_id`/`responsible_name`. برای سندهای قدیمی سازنده را می‌شود از `audit_logs` (اگر insert ثبت شده) پیدا کرد، وگرنه «—».
+- سندهای دیگر: `warehouse_slips`، `payments`، `transactions` ستون `created_by` دارند؛ برای بقیه (هزینه‌ها، انبارگردانی، موجودی اولیه، ضایعات، امانی، انتقال) Claude Code باید بررسی کند.
+
+**تصمیم‌هایی که پیشنهاد شده (اگر Del مخالف بود قبل از اجرا عوض شود):**
+1. انتخاب ستون‌ها برای هر کاربر جدا و روی همان مرورگر ذخیره شود (localStorage، مثل صفحه محصولات). نیازی به جدول جدید نیست.
+2. چهار ستون جدید به‌طور پیش‌فرض روشن باشند، ولی کل قابلیت پشت فلگ `LIST_COLUMNS` (پیش‌فرض خاموش) برود تا Del اول خودش ببیند و بعد روشن کند.
+3. «فروشنده» در فاکتور خرید معنی ندارد (تأمین‌کننده جداست)، پس آنجا ستون «مسئول» نشان داده شود. در سندهای امانی ستون `sales_rep_name`.
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: let users show/hide columns in every invoice and document list, in both the classic UI
+and the new UI (view engine), and add four standard columns everywhere: Issued at (when the
+document was created in the system), Invoice/document date, Salesperson, Created by.
+Branch: saas/list-columns. Open a draft PR.
+
+Today:
+- Classic lists have fixed <Th> columns: src/modules/sales/components/SalesPage.tsx,
+  src/modules/purchases/components/PurchasesPage.tsx and the other list pages listed below.
+- New UI lists use src/views/components/ListView.tsx, which renders def.list.columns only
+  (src/views/types.ts ListViewDef). Definitions: src/modules/*/views/*.ts.
+- The only column picker is the classic products page: src/components/products/ColumnVisibilityPanel.tsx
+  + src/lib/products/columns.ts (localStorage). Generalise it, don't copy it.
+- sales has created_by, issued_by, seller_id, seller_name, created_at, doc_date. Creator and issuer
+  names are resolved only in fetchSaleById (src/modules/sales/lib/fetchSales.ts), not in the list.
+- purchases has no created_by column; it has responsible_id/responsible_name, created_at, doc_date.
+- warehouse_slips, payments, transactions have created_by. Check every other document table.
+
+Definitions (use them in every list):
+- "Issued at" = created_at (date and time, in the user's locale). Not editable.
+- "Document date" = the business date of the document (doc_date, payment_date, transaction_date,
+  expense_date, count_date, writeoff_date...). Label it "Invoice date" on invoices.
+- "Salesperson" = sales: issued_by name, else seller_name (same rule as mapSaleToInvoicePrint);
+  purchases: responsible_name with the label "Responsible"; consignment: sales_rep_name.
+  Lists that have no such person: leave the column out of that list.
+- "Created by" = the profile name of created_by. Never show a raw uuid; unknown -> "—".
+
+Steps:
+
+1. Shared column model (src/lib/lists/columns.ts, pure, with unit tests):
+   - ListColumnDef { key, labelKey (i18n), defaultVisible, required?: boolean (cannot be hidden,
+     e.g. document number), numeric?: boolean }.
+   - loadColumnPrefs(listKey, userId, defs) / saveColumnPrefs(...): localStorage key
+     `${PRODUCT_SLUG}-cols-${listKey}-${userId}`, stores visible keys AND order; unknown keys are
+     dropped, new columns appear with their defaultVisible, required columns are always visible,
+     at least one column stays visible. try/catch around every storage call (private mode).
+   - resetColumnPrefs. Move src/lib/products/columns.ts onto this model without changing what the
+     products page shows.
+
+2. One picker component (src/components/lists/ColumnPicker.tsx), used by classic and new UI:
+   Radix Popover (or DropdownMenu with checkbox items) from a "Columns" button with the Columns3
+   icon, a checkbox per column, drag handle or Move up/Move down to reorder (motion Reorder,
+   motionPreset() for reduced motion), "Reset to default". Keyboard accessible, aria labels, RTL
+   safe (use start/end), light and dark via design tokens. Reference for the look only:
+   any table/settings popover under docs/ui-library/vibeprompts/ that fits; do not paste its JS.
+
+3. New UI (view engine):
+   - Extend ListViewDef with optional `optional?: readonly string[]` (extra columns the user may
+     turn on, off by default) and keep `columns` as the default visible set.
+   - ListView: render the user's visible/ordered columns; the picker sits at the end of the header
+     row (like an "optional columns" toggler). Group rows, sums row and sorting must keep working
+     with any column set. Persist per view key (SALES_VIEW_KEY, PURCHASES_VIEW_KEY, ...) with the
+     column model from step 1. Also store the column set inside a saved favourite's state
+     (view_favorites.state already is jsonb), so a saved view brings its columns back; old
+     favourites without columns use the user's prefs.
+   - Add fields to the definitions where missing: created_at ("Issued at"), created_by_name
+     ("Created by"), the salesperson field. Every field in a definition should be available in the
+     picker unless it is internal.
+
+4. Classic UI: in each list page below, replace the fixed <Th>/<Td> pairs with a column array
+   (key -> header, cell renderer, numeric) filtered by the prefs, so header, body, skeleton
+   column count and CSV export follow the same visible set. Keep the select checkbox and actions
+   column fixed. Keep the current columns as the default set plus the four new ones.
+
+5. Data:
+   - Sales list: add created_by and issued_by names to fetchSalesListWithMeta in ONE batched
+     profiles lookup for the page (no per-row query). If RLS on profiles stops non-admins from
+     reading other users' names, add a small security definer RPC
+     profile_display_names(p_ids uuid[]) returning (id, full_name) only, set search_path = public,
+     for authenticated users. Same helper for every list.
+   - Purchases: migration adding purchases.created_by uuid references auth.users default auth.uid(),
+     plus a BEFORE INSERT trigger that forces created_by := auth.uid() when auth.uid() is not null
+     (like sales_invoice_issuer_audit). Backfill old rows from audit_logs (table_name='purchases',
+     action insert, record_id) where such rows exist; leave the rest null ("—"). Check the purchase
+     submit RPC still works. Same for any other document table that lacks created_by and is
+     listed below; one migration file per table change.
+   - Migration prefixes: check `ls supabase/migrations` and the open PRs first (PR #65 uses
+     20261025110000+; other threads from 2026-10-28 may add more). Suggested start: 20261028130000.
+     Test on a local or branch database, never on production.
+
+6. Lists in scope (classic + new UI each; skip a list that does not exist and say so in the PR):
+   sales invoices, purchase invoices, sales returns / purchase returns if they exist, payments
+   (PaymentsPage), finance transactions (FinancePage, accounting views), cash/bank documents,
+   expenses, warehouse slips, stock transfers, inventory counts, initial balances, damaged goods /
+   write-offs, consignment documents, contracts. Products keep their own columns (step 1 only).
+
+7. Feature flag: LIST_COLUMNS in src/lib/features (default off). Off = every list looks exactly as
+   today (no picker, no new columns). On = picker + the four columns visible by default.
+
+8. i18n: every label (Columns, Reset to default, Issued at, Invoice date, Document date,
+   Salesperson, Responsible, Created by, Move up/down) in az, en, ru.
+
+9. Tests: column model (merge with new defs, required columns, order, corrupted storage), ListView
+   renders the chosen columns and sums still match, classic SalesPage header/body column counts
+   match, salesperson/creator name resolution, migration trigger sets created_by. Then
+   npm run lint, npm test, npm run build.
+
+Rules: no Odoo code or texts; no SQL on production; flag off by default; keep the PR on this
+task and list unrelated problems in the PR (for example the 1,000-row sales loader cap).
+
+PR description: what changed in plain words, screenshots of the sales and purchases lists with the
+picker open (classic and new UI, light and dark), how it was tested, and Del's manual steps in
+order: run the migration file(s) on production in the listed order, set LIST_COLUMNS=true on the
+server, check the lists.
+
+Done when: on every list in scope a user can hide, show and reorder columns, the choice survives a
+reload, and Issued at, Invoice/document date, Salesperson (where it applies) and Created by show
+real names and dates, also for documents created before this change where the data exists.
+```
+
+---
+
 ## فاز ۷: آماده‌سازی فروش
 
 ### پرامپت ۲۵: سایت معرفی، ثبت‌نام و شرکت دمو
