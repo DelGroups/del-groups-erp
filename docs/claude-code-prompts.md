@@ -860,6 +860,202 @@ real names and dates, also for documents created before this change where the da
 
 ---
 
+### پرامپت IMP: ماژول واردات (İdxal) و قیمت تمام‌شده
+
+**هدف:** پرونده واردات برای خرید ارزی: تبدیل به مانات با نرخ CBAR، حمل، حقوق و یغیم گمرکی، ƏDV گمرکی ۱۸٪ (به 1410، نه روی قیمت کالا)، حمل داخلی و کارگر؛ تقسیم هر هزینه روی هر محصول با روش خودش (پیش‌فرض از تنظیمات، قابل تغییر در هر پرونده)؛ بدهی و پرداخت چندحسابی برای هر طرف حساب؛ ورود به چند انبار با برگه چاپی تحویل انبار؛ همه سندهای دفتر کل. پشت فلگ `NEW_IMPORTS`.
+
+**تصمیم‌ها:** Del در ۲۰۲۶-۱۰-۲۹ همه پیشنهادها را تأیید کرد: ماژول جدا (فرم خرید عادی دست نمی‌خورد)، نرخ CBAR خودکار با امکان نرخ دستی، حساب‌های جدید 1360 کالای در راه و 4960/6260 اختلاف نرخ ارز، ارزها USD/EUR/TRY/CNY/RUB، مجوزهای `imports.manage` و `imports.approve` (پیش‌فرض فقط ادمین)، هزینه دیررس: سهم کالای موجود به انبار و سهم فروخته‌شده به 5100، گمرک و کارگزار به‌عنوان طرف حساب، قیمت فروش پیشنهادی فقط به‌عنوان پیشنهاد. در هر مرحله تا بسته‌شدن پرونده می‌شود هزینه اضافه یا پرداخت کرد.
+
+**ترتیب:** IMP-1، بعد از merge آن IMP-2، بعد IMP-3.
+
+#### IMP-1: داده، نرخ ارز و محاسبه قیمت تمام‌شده
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: build the data model, exchange rates and landed-cost calculator for a new Imports module
+("İdxal"). This prompt does NOT post anything to stock or the general ledger; that is IMP-2.
+Branch: saas/imports-core. Open a draft PR. Follow every rule in CLAUDE.md (read the relevant
+guide in node_modules/next/dist/docs/ first; middleware is src/proxy.ts).
+
+Context from the codebase (verify before relying on it):
+- Purchases: purchases / purchase_items, per-line currency (AZN|USD|EUR) and exchange_rate,
+  RPCs save_purchase_invoice_draft / post_purchase_invoice_draft. Do not change the purchase flow.
+- Stock: products (sheet products have inventory_mode and full_sheet_length_m; stock kept in
+  metres), warehouses, warehouse_stocks, stock_movements, create_inventory_batch (FIFO).
+- GL: chart_of_accounts, post_journal_entry(jsonb), resolve_coa_id(code). Existing codes include
+  1100, 1300, 1410 (Əvəzləşdirilən ƏDV), 2100, 2150, 5100, 4950, 6250.
+- Partners: suppliers / partners tables; cash and bank accounts in accounts.
+- Feature flags live in src/lib/features/ (see newCrm.ts). Permissions: resolvePermissionPath(),
+  isAdminRole(), public.user_is_admin().
+
+1. Feature flag NEW_IMPORTS (off by default) + permissions imports.view, imports.manage,
+   imports.approve. Admin has all by default. Amounts are hidden from users without
+   dashboard.view_financials (if that permission exists on main; otherwise admin only).
+2. Migration (one file, unique prefix: run `ls supabase/migrations` and check open PRs; suggested
+   20261030100000_imports_core.sql):
+   - currencies (code PK, name, symbol, is_active); seed AZN, USD, EUR, TRY, CNY, RUB.
+   - exchange_rates (currency_code, rate_date, rate_to_azn numeric(18,6), source 'cbar'|'manual',
+     unique (currency_code, rate_date, source)).
+   - import_shipments: number (IMP-YYYY-NNNN via document_number_counters), supplier/partner id,
+     currency_code, invoice_no, invoice_date, invoice_rate, incoterm, customs_declaration_no,
+     customs_declaration_date, customs_rate, default_warehouse_id, status
+     (draft|confirmed|cleared|partially_received|received|closed|cancelled), notes, created_by,
+     timestamps, custom_fields jsonb.
+   - import_shipment_lines: product_id, qty_purchase_unit, purchase_unit, qty_stock_unit
+     (metres for sheet products = sheets × full_sheet_length_m), unit_price_fc, weight_kg,
+     volume_m3, hs_code, duty_rate_pct, warehouse_id (nullable = header default).
+   - import_cost_lines: cost_type (freight_international|insurance|customs_duty|customs_fee|
+     customs_vat|broker|freight_local|labour|storage|other), partner_id, description, amount,
+     currency_code, rate_to_azn, vat_amount_azn, is_capitalized boolean, split_method
+     (by_value|by_quantity|by_weight|by_volume|chargeable_weight|equal|per_line_duty|manual),
+     is_estimate boolean, added_at_status text,
+     paid_now boolean, cash_account_id.
+   - import_cost_allocations (cost_line_id, shipment_line_id, amount_azn) as the stored result.
+   - RLS on every new table using the existing helpers (copy the pattern from
+     20261011150000_enable_rls_on_remaining_tables.sql). Tenant scoping as the other tables do.
+3. CBAR rates: a server-side fetcher for https://www.cbar.az/currencies/DD.MM.YYYY.xml that upserts
+   exchange_rates (source 'cbar'), called on demand from the form ("Get CBAR rate" for a date) and
+   cached. A manual rate can always override per document. No secrets needed. Handle the site
+   being down with a clear message, never a silent 1.0.
+4. Pure calculator in src/lib/imports/landedCost.ts (no DB access), fully unit-tested:
+   - convert every amount to AZN with its rate;
+   - customs value = goods value + capitalized freight_international + insurance (configurable);
+   - customs_duty per line = line customs value × duty_rate_pct (per_line_duty);
+   - customs_vat suggestion = 18% × (customs value + duty) — rate from a setting, default 18;
+   - VAT amounts are never capitalized;
+   - allocate each capitalized cost by its split_method; by_weight/by_volume fall back to by_value
+     when data is missing and return a warning; chargeable_weight uses per line
+     max(weight_kg, volume_m3 × factor), factor a setting (default 333 kg/m³ for road/sea);
+     manual takes amounts typed per line and must sum to the cost;
+   - default split_method per cost_type comes from an admin settings page (import cost types:
+     name, default method, default capitalized, default VAT rate, default partner); the user can
+     change it on each cost line;
+   - rounding: allocate in cents, give the remainder to the largest line so sums match exactly;
+   - output per line: landed total, landed unit cost per purchase unit and per stock unit (metre),
+     and optional suggested sale price for a given margin %.
+   Include the worked example from the plan as a test: 100 sheets × 25 USD at 1.70, freight 400 USD,
+   duty 5%, customs fee 30 AZN, local freight 200 (+36 VAT), labour 100 → landed 5,506.50 AZN,
+   13.77 AZN per metre for 4 m sheets, customs VAT 931.77.
+   Add a multi-product test (the mockup's case): plywood 100 sheets × 25 USD, 30 kg/sheet, duty 5%;
+   MDF 50 sheets × 18 USD, 35 kg, duty 10%; edge band 20 rolls × 40 USD (200 m/roll), 5 kg, duty 5%;
+   rate 1.70; freight 600 USD by weight; customs fee 30 by value; local freight 300 (+54 VAT) by
+   weight; labour 150 by piece count → landed 5,416.63 / 2,246.64 / 1,479.63 (total 9,142.90),
+   13.54 / 11.23 / 0.37 AZN per metre, duty 244.05 / 189.80 / 69.05, customs VAT 1,559.32.
+   Every cost is allocated per line by its own method; never one flat percentage for the file.
+5. UI (new shell, view engine like the other SaaS modules, App Launcher tile "İdxal" only when the
+   flag is on and the user has imports.view): list view with status, supplier, currency, totals,
+   created by, dates; form with header, product lines, cost lines, a live "Landed cost" panel
+   (an allocation table with one row per product and one column per cost, showing landed total,
+   unit cost and cost per metre, + totals: goods, capitalized costs, recoverable VAT, landed total)
+   and a weight column on product lines, and
+   attachments using the existing documents/attachments pattern. Draft save only in this prompt.
+   Every string through src/i18n (az, en, ru).
+6. npm run lint, npm test, npm run build must pass. PR description: what changed, how tested, the
+   exact migration to run on the test project first (ligzyakoovmymbkwzkia), and that nothing
+   changes for staff while NEW_IMPORTS is off. Never run SQL against production.
+```
+
+
+#### IMP-2: تأیید، پرداخت، ورود به انبار و سندهای حسابداری
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: make Imports shipments post to payables, cash, stock and the general ledger. Builds on
+IMP-1 (merged). Branch: saas/imports-posting. Open a draft PR. Follow CLAUDE.md.
+
+1. Migration (unique prefix, suggested 20261030110000_imports_posting.sql):
+   - chart_of_accounts: 1360 "Yolda olan mallar (idxal)" asset, 4960 "Məzənnə fərqi gəliri" revenue,
+     6260 "Məzənnə fərqi xərci" expense. First check these codes are free; if taken, pick free ones
+     and say so in the PR.
+   - import_receipts (shipment_id, receipt_date, created_by) and import_receipt_lines
+     (shipment_line_id, warehouse_id, qty_stock_unit, unit_cost_azn).
+   - payable fields: store original currency amount and booking rate on each payable so IMP-3 can
+     compute exchange differences.
+2. SECURITY DEFINER RPCs, each idempotent (idempotency_key), respecting accounting_periods locks,
+   checking imports.approve / imports.manage server-side:
+   - confirm_import_shipment(id): Dr 1360 / Cr 2100 (supplier) for goods at invoice rate; for each
+     cost line Dr 1360 (capitalized part) + Dr 1410 (vat_amount_azn) / Cr 2100 (its partner) or
+     Cr 1100 + post_cash_transaction when paid_now. customs_vat lines: Dr 1410 / Cr 2100 (customs
+     partner) or 1100. Status → confirmed.
+   - receive_import_shipment(id, lines jsonb): partial or full, one or many warehouses per call.
+     Uses the latest allocation; writes stock_movements (reference_type 'import'), updates
+     warehouse_stocks and products.stock, create_inventory_batch(product, receipt, 'import',
+     landed unit cost per stock unit, qty). GL: Dr 1300 / Cr 1360. Status partially_received /
+     received.
+   - apply_late_import_cost(cost_line_id): for a cost added or changed after receipt, split its
+     effect per product into the share still in stock (adjust remaining FIFO batches' unit_cost,
+     Dr 1300) and the share already consumed (Dr 5100), Cr 1360. Estimate → actual differences use
+     the same path.
+   - pay_import_payable(payable_id, payment_date, note, splits jsonb): one payment can be split
+     across several company cash/bank/card accounts (e.g. part from Kassa, the rest from a bank
+     account). One journal entry: Dr 2100 (partner) / Cr each chosen account's COA for its amount,
+     plus one cash/bank transaction per split through the existing payments/transactions path.
+     Reject when the splits exceed the open balance. Partial payments leave the rest open.
+     Back-dated payments allowed, but never before the payable's document date.
+   - add_import_cost(shipment_id, cost jsonb): allowed in every status except closed/cancelled
+     (closed: admin can reopen). Before receipt it only changes the allocation; after a full or
+     partial receipt it posts through apply_late_import_cost automatically. A new cost can be paid
+     at once (splits) or left as a payable.
+   - close_import_shipment(id): only when every cost is actual and the shipment's 1360 balance is 0.
+   - cancel/reverse: reverse every journal entry of the shipment via the existing reversal
+     mechanism; blocked once any received stock has been consumed.
+3. UI: Confirm, Receive (dialog: per line qty and warehouse, split one line across warehouses,
+   sheets shown in sheets and metres), Close, Cancel. "+ Add cost" and "Pay" stay available in
+   every status until the file is closed. Pay: the "Pay" button on each partner row
+   opens a modal dialog (Radix Dialog) with the open balance, payment date, note, and a list of
+   split rows (account select + amount) with "+ add another account", live "this payment" and
+   "remaining after payment" totals, an overpay error, and for foreign-currency payables a note
+   that the exchange difference is booked automatically. Layout as in the mockup "Import file form
+   mockup" (Del has the link).
+   Warehouse receiving sheet (print/PDF, same approach as PurchasePrintTemplate): from the Receive
+   dialog and from each receipt, one A4 page per destination warehouse, az/en/ru. Header: company,
+   file number, receipt number, supplier, invoice no, customs declaration no, date, warehouse.
+   Table: #, product code, name, barcode, expected quantity in purchase unit (sheets/rolls) and in
+   stock unit (metres), empty "Received" and "Note" columns for handwriting. NO prices or costs on
+   this sheet. Footer: total lines, "Handed over by" and "Received by" name/signature/date, and a QR
+   code of the receipt number. After the count, the keeper's actual quantities are entered in the
+   Receive dialog; differences are shown before posting.
+   A "Journal" tab listing every entry of the shipment, and the chatter/activity feed if available.
+4. Tests: SQL tests in supabase/tests for each RPC (balanced entries, idempotency, period lock,
+   partial receipt into two warehouses, late cost with half the stock sold → split between 1300
+   and 5100, reversal) plus unit tests for any TS logic.
+5. npm run lint, npm test, npm run build. PR description: migration order, what Del must run on the
+   test project first, and that the flag stays off.
+```
+
+
+#### IMP-3: اختلاف نرخ ارز، گزارش‌ها و چاپ
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: exchange differences and reports for the Imports module. Builds on IMP-2 (merged).
+Branch: saas/imports-reports. Open a draft PR. Follow CLAUDE.md.
+
+1. Exchange differences: when a foreign-currency payable is paid, the payment amount in the
+   foreign currency is entered with the payment-date rate (CBAR or manual). Book Dr 2100 at the
+   booking rate, Cr 1100 at the payment rate, and the difference to 4960 (gain) or 6260 (loss).
+   Partial payments keep a running foreign-currency balance. Supplier prepayments before the
+   invoice are supported (debit balance on 2100) and are settled against the invoice at the
+   prepayment rate.
+2. Reports (view engine, filters, column chooser, export):
+   - Shipments: goods, capitalized costs, recoverable VAT, landed total, landed cost per unit, status.
+   - Landed cost per product over time (to compare suppliers and shipments).
+   - Import VAT register for the ƏDV return: declaration no/date, customs value, duty, customs VAT,
+     plus VAT on local services, per month.
+   - Open payables per partner in original currency and AZN.
+   - Goods in transit (1360 balance per shipment) for the accountant's month-end check.
+3. Print: shipment cost sheet (A4, az/en/ru) with the landed-cost table, using the existing print
+   templates.
+4. Tests for the exchange-difference maths and report queries. npm run lint, npm test,
+   npm run build. PR description as usual; flag stays off.
+```
+
 ## فاز ۷: آماده‌سازی فروش
 
 ### پرامپت ۲۵: سایت معرفی، ثبت‌نام و شرکت دمو
