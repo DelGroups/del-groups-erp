@@ -905,7 +905,11 @@ export const PERMISSION_MODULES = [
   {
     id: "dashboard",
     title: "Əsas Panel",
-    permissions: [{ key: "can_view_dashboard", label: "Ana səhifəni görmək" }],
+    permissions: [
+      { key: "can_view_dashboard", label: "Ana səhifəni görmək" },
+      // Money amounts and sales/purchase counts on the home page (prompt 24b); admins always.
+      { key: "can_view_financials", label: "Ana səhifədə maliyyə rəqəmlərini görmək" },
+    ],
   },
   {
     id: "sales",

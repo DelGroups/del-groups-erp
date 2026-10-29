@@ -7,6 +7,7 @@ import {
   type PermissionMatrix,
 } from "@/lib/auth/permissionMatrix";
 import type { RoleScopes } from "@/types/database.types";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface LookupOption {
   id: string;
@@ -32,6 +33,7 @@ export default function GranularPermissionEditor({
   onMatrixChange,
   onScopesChange,
 }: Props) {
+  const { t } = useI18n();
   const [openModules, setOpenModules] = useState<Record<string, boolean>>({
     production: true,
     finance: true,
@@ -123,7 +125,7 @@ export default function GranularPermissionEditor({
                         onChange={() => togglePermission(module.id, perm.key)}
                         className="mt-0.5 h-3.5 w-3.5 rounded border-app text-app-accent"
                       />
-                      <span>{perm.label}</span>
+                      <span>{perm.labelKey ? t(perm.labelKey) : perm.label}</span>
                     </label>
                   ))}
                 </div>

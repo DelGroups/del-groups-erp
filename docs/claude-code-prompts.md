@@ -702,6 +702,164 @@ resize and move widgets with mouse and keyboard, and the layout survives reload 
 
 ---
 
+### پرامپت ۲۴ج: انتخاب ستون در لیست فاکتورها و سندها، و ستون‌های تاریخ و کاربر
+
+**درخواست Del (۲۰۲۶-۱۰-۲۸، مورد ۶):** در لیست فاکتورها و سندها بتوان ستون اضافه یا کم کرد. همه جا ستون‌های تاریخ صدور سند، تاریخ فاکتور، نام فروشنده و نام کاربر سازنده سند نشان داده شود.
+
+**وضعیت امروز (بررسی کد، ۲۰۲۶-۱۰-۲۸):**
+- هر لیست دو نسخه دارد: UI قدیمی (مثلاً `SalesPage.tsx`، `PurchasesPage.tsx` با ستون‌های ثابت) و UI جدید روی موتور View (`src/views/components/ListView.tsx` که فقط `def.list.columns` ثابت را نشان می‌دهد). هیچ‌کدام انتخاب ستون ندارند. تنها نمونه موجود، صفحه محصولات قدیمی است (`ColumnVisibilityPanel` و `src/lib/products/columns.ts`، ذخیره در localStorage).
+- «تاریخ فاکتور» همان `doc_date` است که کاربر انتخاب می‌کند (و با مورد ۴، تاریخ قبل هم مجاز می‌شود). «تاریخ صدور سند» زمان واقعی ثبت در سیستم است (`created_at`). بعد از مجاز شدن تاریخ قبل، این دو ستون با هم فرق دارند و هر دو لازم‌اند.
+- فاکتور فروش: `seller_id`/`seller_name`، `issued_by` و `created_by` در جدول هست؛ ولی نام سازنده فقط در صفحه جزئیات خوانده می‌شود، نه در لیست.
+- فاکتور خرید: ستون `created_by` ندارد؛ فقط `responsible_id`/`responsible_name`. برای سندهای قدیمی سازنده را می‌شود از `audit_logs` (اگر insert ثبت شده) پیدا کرد، وگرنه «—».
+- سندهای دیگر: `warehouse_slips`، `payments`، `transactions` ستون `created_by` دارند؛ برای بقیه (هزینه‌ها، انبارگردانی، موجودی اولیه، ضایعات، امانی، انتقال) Claude Code باید بررسی کند.
+
+**تصمیم‌ها (Del در ۲۰۲۶-۱۰-۲۹ هر سه را تأیید کرد):** تاریخ صدور سند = زمان واقعی ثبت در سیستم. تاریخ فاکتور/سند = تاریخی که کاربر تنظیم می‌کند (ممکن است امروز فاکتور یا سند پرداخت/دریافتی را بزند که چند روز قبل اتفاق افتاده). هر کاربر بتواند همه فیلدها را در لیست ببیند و به سلیقه خودش انتخاب کند کدام نمایش داده شود. خروجی همه لیست‌ها و گزارش‌ها فایل اکسل (.xlsx) باشد نه CSV (Del، ۲۰۲۶-۱۰-۲۹؛ این بخش بدون فلگ منتشر می‌شود چون فقط فرمت فایل عوض می‌شود).
+1. انتخاب ستون‌ها برای هر کاربر جدا و روی همان مرورگر ذخیره شود (localStorage، مثل صفحه محصولات). نیازی به جدول جدید نیست.
+2. چهار ستون جدید به‌طور پیش‌فرض روشن باشند، ولی کل قابلیت پشت فلگ `LIST_COLUMNS` (پیش‌فرض خاموش) برود تا Del اول خودش ببیند و بعد روشن کند.
+3. «فروشنده» در فاکتور خرید معنی ندارد (تأمین‌کننده جداست)، پس آنجا ستون «مسئول» نشان داده شود. در سندهای امانی ستون `sales_rep_name`.
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: let users show/hide columns in every invoice and document list, in both the classic UI
+and the new UI (view engine), and add four standard columns everywhere: Issued at (when the
+document was created in the system), Invoice/document date, Salesperson, Created by.
+Branch: saas/list-columns. Open a draft PR.
+
+Today:
+- Classic lists have fixed <Th> columns: src/modules/sales/components/SalesPage.tsx,
+  src/modules/purchases/components/PurchasesPage.tsx and the other list pages listed below.
+- New UI lists use src/views/components/ListView.tsx, which renders def.list.columns only
+  (src/views/types.ts ListViewDef). Definitions: src/modules/*/views/*.ts.
+- The only column picker is the classic products page: src/components/products/ColumnVisibilityPanel.tsx
+  + src/lib/products/columns.ts (localStorage). Generalise it, don't copy it.
+- sales has created_by, issued_by, seller_id, seller_name, created_at, doc_date. Creator and issuer
+  names are resolved only in fetchSaleById (src/modules/sales/lib/fetchSales.ts), not in the list.
+- purchases has no created_by column; it has responsible_id/responsible_name, created_at, doc_date.
+- warehouse_slips, payments, transactions have created_by. Check every other document table.
+
+Definitions (use them in every list):
+- "Issued at" = created_at (date and time, in the user's locale). Not editable. It is when the
+  document was really entered, which can be days after the document date (approved by Del).
+- "Document date" = the business date of the document (doc_date, payment_date, transaction_date,
+  expense_date, count_date, writeoff_date...). Label it "Invoice date" on invoices.
+- "Salesperson" = sales: issued_by name, else seller_name (same rule as mapSaleToInvoicePrint);
+  purchases: responsible_name with the label "Responsible"; consignment: sales_rep_name.
+  Lists that have no such person: leave the column out of that list.
+- "Created by" = the profile name of created_by. Never show a raw uuid; unknown -> "—".
+
+Steps:
+
+1. Shared column model (src/lib/lists/columns.ts, pure, with unit tests):
+   - ListColumnDef { key, labelKey (i18n), defaultVisible, required?: boolean (cannot be hidden,
+     e.g. document number), numeric?: boolean }.
+   - loadColumnPrefs(listKey, userId, defs) / saveColumnPrefs(...): localStorage key
+     `${PRODUCT_SLUG}-cols-${listKey}-${userId}`, stores visible keys AND order; unknown keys are
+     dropped, new columns appear with their defaultVisible, required columns are always visible,
+     at least one column stays visible. try/catch around every storage call (private mode).
+   - resetColumnPrefs. Move src/lib/products/columns.ts onto this model without changing what the
+     products page shows.
+
+2. One picker component (src/components/lists/ColumnPicker.tsx), used by classic and new UI:
+   Radix Popover (or DropdownMenu with checkbox items) from a "Columns" button with the Columns3
+   icon, a checkbox per column, drag handle or Move up/Move down to reorder (motion Reorder,
+   motionPreset() for reduced motion), "Reset to default". Keyboard accessible, aria labels, RTL
+   safe (use start/end), light and dark via design tokens. Reference for the look only:
+   any table/settings popover under docs/ui-library/vibeprompts/ that fits; do not paste its JS.
+
+3. New UI (view engine):
+   - Extend ListViewDef with optional `optional?: readonly string[]` (extra columns the user may
+     turn on, off by default) and keep `columns` as the default visible set.
+   - ListView: render the user's visible/ordered columns; the picker sits at the end of the header
+     row (like an "optional columns" toggler). Group rows, sums row and sorting must keep working
+     with any column set. Persist per view key (SALES_VIEW_KEY, PURCHASES_VIEW_KEY, ...) with the
+     column model from step 1. Also store the column set inside a saved favourite's state
+     (view_favorites.state already is jsonb), so a saved view brings its columns back; old
+     favourites without columns use the user's prefs.
+   - Add fields to the definitions where missing: created_at ("Issued at"), created_by_name
+     ("Created by"), the salesperson field. Every field in a definition must be available in the
+     picker unless it is internal.
+
+4. Classic UI: in each list page below, replace the fixed <Th>/<Td> pairs with a column array
+   (key -> header, cell renderer, numeric) filtered by the prefs, so header, body, skeleton
+   column count and CSV export follow the same visible set. Keep the select checkbox and actions
+   column fixed. Keep the current columns as the default set plus the four new ones.
+   Offer every useful field of the document in the picker (VAT, due date, payment type, currency,
+   note, warehouse, official, status...), hidden by default, so each user builds their own list.
+
+5. Data:
+   - Sales list: add created_by and issued_by names to fetchSalesListWithMeta in ONE batched
+     profiles lookup for the page (no per-row query). If RLS on profiles stops non-admins from
+     reading other users' names, add a small security definer RPC
+     profile_display_names(p_ids uuid[]) returning (id, full_name) only, set search_path = public,
+     for authenticated users. Same helper for every list.
+   - Purchases: migration adding purchases.created_by uuid references auth.users default auth.uid(),
+     plus a BEFORE INSERT trigger that forces created_by := auth.uid() when auth.uid() is not null
+     (like sales_invoice_issuer_audit). Backfill old rows from audit_logs (table_name='purchases',
+     action insert, record_id) where such rows exist; leave the rest null ("—"). Check the purchase
+     submit RPC still works. Same for any other document table that lacks created_by and is
+     listed below; one migration file per table change.
+   - Migration prefixes: check `ls supabase/migrations` and the open PRs first (PR #65 uses
+     20261025110000+, PR #66 uses 20261028130000, PR #68 uses 20261028181000 and 20261028182000).
+     Use 20261028140000 (and 20261028141000, 142000... if more files are needed).
+     Test on a local or branch database, never on production.
+
+6. Lists in scope (classic + new UI each; skip a list that does not exist and say so in the PR):
+   sales invoices, purchase invoices, sales returns / purchase returns if they exist, payments
+   (PaymentsPage), finance transactions (FinancePage, accounting views), cash/bank documents,
+   expenses, warehouse slips, stock transfers, inventory counts, initial balances, damaged goods /
+   write-offs, consignment documents, contracts. Products keep their own columns (step 1 only).
+
+7. Feature flag: LIST_COLUMNS in src/lib/features (default off). Off = every list looks exactly as
+   today (no picker, no new columns). On = picker + the four columns visible by default.
+
+7b. Excel export everywhere (Del, 2026-10-29: list exports must be .xlsx, never .csv). This part
+   ships WITHOUT the flag, it only changes the file format:
+   - One helper src/lib/export/exportXlsx.ts (pure row building + a thin writer) built on the
+     "xlsx" package already in package.json and on the new UI's exportRows / exportFileName
+     (src/views/logic.ts, ViewEngine.tsx exportExcel). Real cell types: numbers as numbers (2
+     decimals for money), dates as Excel dates, not text; header row bold and frozen; column
+     widths from content; sheet name max 31 chars; file name "<list>-<yyyy-mm-dd>.xlsx";
+     RTL-safe headers in the user's language.
+   - Replace every CSV export in the app with it: grep for text/csv, .csv, downloadCSV,
+     handleDownloadCSV, toCsv (today at least SalesPage, ExpensesPage, ExpenseMonthlyReport,
+     settings/backup and any other list or report). Bulk "Export selected" too. Keep CSV only
+     where a file is IMPORTED (product bulk import, polywood import, initial setup); those read
+     .csv and .xlsx and stay as they are. If settings/backup is a machine backup, not a list
+     export, say so in the PR and leave its format.
+   - Export uses the columns the user sees (visible + order from step 1 when LIST_COLUMNS is on,
+     today's columns when off), and all filtered rows, not only the current page. The new UI
+     exportExcel must stop using def.list.columns and use the user's columns.
+   - The npm "xlsx" 0.18.5 has known advisories on READING files (prototype pollution, ReDoS).
+     Writing is not affected, but say in the PR whether to move to the maintained SheetJS build
+     or exceljs; do not change the import code in this PR.
+   - Tests: numbers and dates keep their types, column order follows prefs, no CSV export left
+     (a test or lint rule that fails on new "text/csv" downloads).
+
+8. i18n: every label (Columns, Reset to default, Issued at, Invoice date, Document date,
+   Salesperson, Responsible, Created by, Move up/down) in az, en, ru.
+
+9. Tests: column model (merge with new defs, required columns, order, corrupted storage), ListView
+   renders the chosen columns and sums still match, classic SalesPage header/body column counts
+   match, salesperson/creator name resolution, migration trigger sets created_by. Then
+   npm run lint, npm test, npm run build.
+
+Rules: no Odoo code or texts; no SQL on production; flag off by default; keep the PR on this
+task and list unrelated problems in the PR (for example the 1,000-row sales loader cap).
+
+PR description: what changed in plain words, screenshots of the sales and purchases lists with the
+picker open (classic and new UI, light and dark), how it was tested, and Del's manual steps in
+order: run the migration file(s) on production in the listed order, set LIST_COLUMNS=true on the
+server, check the lists and open one Excel export from each.
+
+Done when: on every list in scope a user can hide, show and reorder columns, the choice survives a
+reload, and Issued at, Invoice/document date, Salesperson (where it applies) and Created by show
+real names and dates, also for documents created before this change where the data exists.
+```
+
+---
+
 ### پرامپت IMP: ماژول واردات (İdxal) و قیمت تمام‌شده
 
 **هدف:** پرونده واردات برای خرید ارزی: تبدیل به مانات با نرخ CBAR، حمل، حقوق و یغیم گمرکی، ƏDV گمرکی ۱۸٪ (به 1410، نه روی قیمت کالا)، حمل داخلی و کارگر؛ تقسیم هر هزینه روی هر محصول با روش خودش (پیش‌فرض از تنظیمات، قابل تغییر در هر پرونده)؛ بدهی و پرداخت چندحسابی برای هر طرف حساب؛ ورود به چند انبار با برگه چاپی تحویل انبار؛ همه سندهای دفتر کل. پشت فلگ `NEW_IMPORTS`.
@@ -915,4 +1073,120 @@ Do:
 - A demo tenant with realistic fake data (never Del Groups data), reset nightly.
 
 Done when: a visitor can sign up, get a trial ERP with sample data and see pricing that matches the plans in the control panel.
+```
+
+---
+
+## اصلاحات خارج از فازها
+
+### پرامپت F1: فاکتور و پرداخت با تاریخ قبل
+
+**درخواست Del (۲۰۲۶-۱۰-۲۸):** همه کاربران بتوانند فاکتور با تاریخ قبل بزنند؛ پرداخت با تاریخ قبل ممکن باشد، از جمله از منوی سه‌نقطه در لیست فاکتورها؛ تاریخ پرداخت نباید قبل از تاریخ فاکتور باشد. **(۲۰۲۶-۱۰-۲۹):** فقط ادمین اجازه دارد فاکتور را حتی بعد از ثبت قطعی (posted) تغییر دهد؛ بقیه کاربران بعد از ثبت نمی‌توانند.
+
+**وضعیت امروز (بررسی کد روی main، ۲۰۲۶-۱۰-۲۸):**
+
+- فیلد تاریخ فاکتور در فرم فروش، خرید و Polywood برای همه باز است و فقط بعد از ثبت قطعی (posted) قفل می‌شود. ولی ثبت حسابداری فاکتور تاریخ فاکتور را نمی‌گیرد: `post_sale_invoice_gl_journal` تاریخی به `create_journal_entry` نمی‌دهد و سند حسابداری با تاریخ امروز ثبت می‌شود. پرداخت‌هایی که داخل خود فرم فاکتور وارد می‌شوند (`post_cash_transaction`) هم تاریخ امروز می‌گیرند و ردیف پرداخت فرم اصلاً فیلد تاریخ ندارد (`SalePayment` فقط id, account_id, method, amount دارد). پس فاکتور «۱۰ روز پیش» در گزارش‌ها و دفتر کل امروز دیده می‌شود.
+- پنجره پرداخت (`DocumentPaymentModal`، همان که منوی سه‌نقطه در لیست فروش و خرید باز می‌کند) از PR #55 فیلد تاریخ دارد با `max=today` و بدون حداقل. سرور (`process_invoice_payment_event`، migration `20261017120000`) تاریخ را می‌پذیرد ولی چک نمی‌کند که قبل از تاریخ فاکتور نباشد. اگر Del هنوز در سه‌نقطه نمی‌تواند تاریخ قبل بزند، Claude Code باید اول دقیقاً همان مسیر را روی دیتابیس تست بازسازی کند و علت را پیدا کند.
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: let every user create invoices with a past date and record invoice payments with a past date,
+and make sure every accounting and stock record of a backdated document carries the document's date,
+not today's. Branch: saas/backdated-invoices-payments. Open a PR.
+
+This is a fix Del asked for, so it ships without a feature flag. It must not change anything for
+invoices dated today.
+
+Findings from a code read on main (verify each before changing it):
+- Invoice date input: src/modules/sales/components/InvoiceForm.tsx (docDate, disabled only when
+  documentLocked = posted), src/modules/purchases/components/PurchaseForm.tsx,
+  src/modules/polywood/components/MixedDimensionalInvoiceForm.tsx. doc_date is saved by
+  save_sales_invoice_draft / save_purchase_invoice_draft / process_sales_invoice_event.
+- The sales GL journal is posted by post_sale_invoice_gl_journal (20260910170000), which calls
+  create_journal_entry without a date, so create_journal_entry falls back to NOW(). Check the purchase
+  journal, the COGS journal (post_sale_cogs_journal), the FIFO/stock movements
+  (handle_sales_posted_inventory, process_sale_fifo_cogs, purchase stock entry) and the payments booked
+  inside post_sales_invoice_draft / post_purchase_invoice_draft / process_sales_invoice_event through
+  post_cash_transaction: all of them appear to use the current date.
+- Payment rows inside the invoice form have no date (SalePayment in src/types/database.types.ts).
+- The payment dialog src/components/documents/DocumentPaymentModal.tsx (opened from the three-dot
+  menu in SalesPage / PurchasesPage via DocumentListActions, and from SaleFormScreen in the new UI) has
+  a date with max=today and no min. Client check: src/lib/forms/paymentDate.ts. Server:
+  process_invoice_payment_event + apply_invoice_payment_date (20261017120000_invoice_payment_date.sql).
+- Accounting periods: is_accounting_period_closed() rejects ledger movements dated in a closed period.
+  Keep that guard; it must now check the document's date.
+
+Do:
+1. Reproduce first, on the test database (never production): as a non-admin user with invoice rights,
+   create a sales invoice and a purchase invoice dated 10 days ago with a payment inside the form, then
+   open the sales and purchase lists, three-dot menu, Payment, and pay an invoice with a date 5 days ago.
+   Write down exactly what is blocked or wrongly dated (UI, RPC error, or record date) in the PR.
+2. Invoice date: any user who may create or edit the invoice may pick a past date (no admin check).
+   Posted invoices stay locked for everyone except admins (step 3b). Show a small inline note under the date when it is before today
+   ("This invoice is dated in the past; its accounting entries use this date"), not a blocking dialog.
+3. Backdated posting: make the sales and purchase posting paths pass the document date through to every
+   record they create: journal entries (date + entry_date), COGS journal, stock movements / FIFO batch
+   dates, and cash transactions for payments made inside the form. Keep the time-of-day trick from
+   apply_invoice_payment_date (date + current time) so ordering within a day stays stable. Reuse one
+   helper instead of copying the date logic into each function.
+3b. Admin-only edit of posted invoices (Del, 2026-10-29: only an admin may change a document even after
+   it is posted). Sales, purchase and Polywood invoices:
+   - Admins (isAdminRole() in the UI, public.user_is_admin() in the database) see an "Edit" action on a
+     posted invoice (detail page, invoice form, and the three-dot menu of the lists in old and new UI).
+     Nobody else sees it, and the database refuses it for non-admins too (the UI check alone is not
+     enough). Add a permission key (e.g. sales.edit_posted / purchases.edit_posted) that is true only for
+     admins by default, following how resolvePermissionPath() treats admins.
+   - Clicking it asks for a reason (required) and warns that stock, cost and accounting entries will be
+     reversed and posted again. All fields become editable, including the invoice date.
+   - Saving does it in one database transaction (new RPCs, e.g. amend_posted_sales_invoice /
+     amend_posted_purchase_invoice): reverse every effect of the old version the way
+     cancel_sales_invoice_atomic / cancel_purchase_invoice_atomic do (storno journals via
+     reverse_journal_entry, stock and FIFO given back, never DELETE ledger rows), then post the new
+     version with its own date (step 3). Reuse the reversal code from 20261005130000_cancel_invoice_atomic.sql
+     instead of copying it. Keep the same id and invoice number.
+   - Payments already recorded against the invoice stay as they are (they are separate cash events).
+     Refuse the change if the new total is below the amount already paid, or if a payment would end up
+     dated before the new invoice date; tell the admin which payment blocks it.
+   - Refuse it when the old or the new date is in a closed accounting period (is_accounting_period_closed).
+   - Keep a history: who changed it, when, the reason, and the old values (doc_date, totals, lines), shown
+     in the invoice's chatter/activity log if the document has one, otherwise in a small "Changes" list on
+     the detail page. Log it with log_erp_event too.
+   - The same rule applies to cancelling: keep the existing permission checks of the cancel RPCs, do not
+     loosen them.
+4. Payments inside the invoice form: add an optional date per payment row, default = invoice date,
+   allowed range invoice date .. today. Send it in the payload; the RPC uses it for the cash transaction
+   and journal entry and stores it as `date` in sales.payments, like process_invoice_payment_event does.
+5. Payment dialog (DocumentPaymentModal) for sales and purchases: pass the invoice doc_date in as a prop,
+   set min = invoice date and max = today, default = today (or the invoice date if that is later).
+   Extend validatePaymentDate with "before_document_date" and a translated message (az, en, ru) such as
+   "The payment date cannot be earlier than the invoice date (dd.mm.yyyy)". Make sure the three-dot path
+   in both lists passes the full invoice (with doc_date), not a list row that lacks it.
+6. Server rule, in one new migration: process_invoice_payment_event (and the in-form payment path)
+   rejects a payment date earlier than sales.doc_date / purchases.doc_date with a clear Azerbaijani
+   message, and still rejects a future date. Start from the latest definition of each function
+   (20261017120000 for the payment RPC) and change only what this task needs. Pick a unique version
+   prefix (suggested 20261028130000; check `ls supabase/migrations` and open PRs first).
+7. Customer and supplier payments (src/components/payments/PaymentFormModal.tsx) already have a date;
+   check that a past date reaches the transaction and journal entry, and fix it only if it does not.
+8. Tests: unit tests for validatePaymentDate (past ok, future blocked, before invoice date blocked) and for
+   the date default; an SQL test or a test script on the test database that posts a backdated sales and
+   purchase invoice with a payment and checks journal_entries.entry_date, transactions.transaction_date
+   and the stock movement date all equal the invoice date; a payment before the invoice date is rejected;
+   a backdated document inside a closed period is rejected with the period-closed message.
+   Also: a non-admin cannot amend a posted invoice (RPC refuses); an admin amendment of quantity, price
+   and date leaves stock, FIFO, GL 1300 and the customer/supplier balance equal to what a fresh posting of
+   the new version would give; an amendment that drops the total below the paid amount is refused.
+
+Do not change: invoice numbering, the closed-period guard itself, inventory count dates (another task).
+
+PR description: what changed in plain words, the reproduction result from step 1, how it was tested,
+and the manual step for Del: run the new migration on the test project first, then on production in the
+SQL Editor, before or right after merging. Existing invoices are not re-dated; say so.
+
+Done when: only an admin can change a posted invoice and every effect is reversed and re-posted
+correctly with a history entry; a normal user can save and post an invoice dated in the past, its journal, stock and cash
+records carry that date, and a payment from the three-dot menu can be dated any day from the invoice
+date to today but not earlier.
 ```

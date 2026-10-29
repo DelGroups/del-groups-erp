@@ -117,6 +117,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/crm_pipeline.sql | tee "$RUNNER_TEMP/crm_pipeline.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/crm_pipeline.txt"
+      # Widget home (prompt 24b): own layouts, admin-only company default, financial functions refuse non-financial users.
+      - name: Home widgets checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/home_widgets.sql | tee "$RUNNER_TEMP/home_widgets.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/home_widgets.txt"
 
       - name: Server log on failure
         if: failure()

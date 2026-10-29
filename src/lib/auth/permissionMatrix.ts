@@ -22,6 +22,8 @@ export type PermissionMatrix = Record<string, Record<string, boolean>>;
 export type GranularPermissionDef = {
   key: string;
   label: string;
+  /** i18n key of the label; `label` is the fallback. */
+  labelKey?: string;
   legacyKey?: PermissionKey;
 };
 
@@ -203,6 +205,20 @@ export function userHasGranularPermission(
 ): boolean {
   const access = resolveEffectiveAccess(profile);
   return resolvePermissionPath(access, path);
+}
+
+/** Matrix path of the home page's money figures (prompt 24b). */
+export const VIEW_FINANCIALS_PATH = "dashboard.view_financials";
+
+/**
+ * May this user see money amounts and sales/purchase counts on the home page (launcher tiles,
+ * old dashboard, financial widgets)? Admins always; anyone else only when their role or their
+ * own overrides grant dashboard.view_financials. The database checks the same rule
+ * (public.can_view_financials()).
+ */
+export function canViewFinancials(profile: UserProfile | null | undefined): boolean {
+  if (!profile) return false;
+  return userHasGranularPermission(profile, VIEW_FINANCIALS_PATH);
 }
 
 export function userHasLegacyPermission(
