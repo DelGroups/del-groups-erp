@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import SalesDocumentStatusBadge from "./SalesDocumentStatusBadge";
 import {
   isSalesDraft,
+  isSalesPosted,
   normalizeSalesDocumentStatus,
   type SalesDocumentStatus,
 } from "@/lib/invoices/invoiceStatus";
@@ -92,6 +93,8 @@ export default function SalesPage() {
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const canCreateInvoice = can("can_create_invoice");
   const canEditSales = can("can_edit_sales");
+  // Fix F1: a posted invoice is changed by admins only (can_edit_posted_sales; the database checks it).
+  const canEditPostedSales = can("can_edit_posted_sales");
   const canDeleteSales = can("can_delete_sales");
 
   const loadData = useCallback(async () => {
@@ -427,7 +430,9 @@ export default function SalesPage() {
                             onEdit={
                               canEditSales && isSalesDraft(sale.status)
                                 ? () => router.push(`/sales/new?draft=${sale.id}`)
-                                : undefined
+                                : canEditPostedSales && isSalesPosted(sale.status)
+                                  ? () => router.push(`/sales/new?draft=${sale.id}&amend=1`)
+                                  : undefined
                             }
                             onPayment={() => void openPayment(sale)}
                             onEQaimeExport={(format) => exportEQaime(sale, format)}
@@ -495,6 +500,7 @@ export default function SalesPage() {
           isOfficial={paymentSale.is_official === true}
           documentSubtotalAmount={Number(paymentSale.subtotal_amount ?? paymentSale.subtotal ?? 0)}
           documentVatAmount={Number(paymentSale.vat_amount ?? paymentSale.vat_total ?? 0)}
+          documentDate={paymentSale.doc_date}
           onSubmit={async (payload) => {
             const result = await recordSalePaymentAction({
               saleId: paymentSale.id,

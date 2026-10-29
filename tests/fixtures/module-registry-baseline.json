@@ -626,6 +626,12 @@
           "key": "delete",
           "label": "Satışları silmək",
           "legacyKey": "can_delete_sales"
+        },
+        {
+          "key": "edit_posted",
+          "label": "Təsdiqlənmiş satış fakturasını dəyişmək",
+          "labelKey": "invoice.amend.permissionSales",
+          "legacyKey": "can_edit_posted_sales"
         }
       ]
     },
@@ -652,6 +658,12 @@
           "key": "delete",
           "label": "Alışları silmək",
           "legacyKey": "can_delete_purchases"
+        },
+        {
+          "key": "edit_posted",
+          "label": "Təsdiqlənmiş alış fakturasını dəyişmək",
+          "labelKey": "invoice.amend.permissionPurchases",
+          "legacyKey": "can_edit_posted_purchases"
         }
       ]
     },

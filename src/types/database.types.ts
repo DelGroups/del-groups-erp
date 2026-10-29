@@ -71,6 +71,8 @@ export interface SalePayment {
   account_id: string;
   method: string;
   amount: number;
+  /** YYYY-MM-DD, from the invoice date to today; missing = the invoice date (fix F1). */
+  date?: string;
 }
 
 export interface SaleTotals {
@@ -260,6 +262,7 @@ export function toSalePaymentsJson(payments: SalePayment[]): Json {
     account_id: p.account_id,
     method: p.method,
     amount: p.amount,
+    ...(p.date ? { date: p.date } : {}),
   }));
 }
 
@@ -919,6 +922,8 @@ export const PERMISSION_MODULES = [
       { key: "can_create_invoice", label: "Satış fakturası yaratmaq" },
       { key: "can_edit_sales", label: "Satışları redaktə etmək" },
       { key: "can_delete_sales", label: "Satışları silmək" },
+      // Fix F1: change a posted invoice (reversed and posted again). Admins always; nobody else by default.
+      { key: "can_edit_posted_sales", label: "Təsdiqlənmiş satış fakturasını dəyişmək" },
     ],
   },
   {
@@ -929,6 +934,7 @@ export const PERMISSION_MODULES = [
       { key: "can_create_purchase", label: "Alış fakturası yaratmaq" },
       { key: "can_edit_purchases", label: "Alışları redaktə etmək" },
       { key: "can_delete_purchases", label: "Alışları silmək" },
+      { key: "can_edit_posted_purchases", label: "Təsdiqlənmiş alış fakturasını dəyişmək" },
     ],
   },
   {

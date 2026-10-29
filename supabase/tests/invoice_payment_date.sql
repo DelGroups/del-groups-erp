@@ -23,8 +23,9 @@ insert into public.customers (id, full_name) values
   ('00000000-0000-0000-00bd-0000000000e1', 'Pay date customer')
 on conflict do nothing;
 
-insert into public.sales (id, doc_no, customer_id, total_amount, paid_amount, remaining_balance, payments) values
-  ('00000000-0000-0000-00bd-0000000000f1', 'PD-1', '00000000-0000-0000-00bd-0000000000e1', 300, 0, 300, '[]')
+-- Dated before the payments below: a payment may not be earlier than its invoice (fix F1).
+insert into public.sales (id, doc_no, customer_id, total_amount, paid_amount, remaining_balance, payments, doc_date) values
+  ('00000000-0000-0000-00bd-0000000000f1', 'PD-1', '00000000-0000-0000-00bd-0000000000e1', 300, 0, 300, '[]', current_date - 10)
 on conflict do nothing;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-00bd-000000000001","role":"authenticated"}', false);
@@ -50,12 +51,13 @@ begin
   if (v_result->>'success')::boolean is not true then raise exception 'FAIL payment not recorded: %', v_result; end if;
 
   select * into v_tx from public.transactions where id = (v_result->>'transaction_id')::uuid;
-  if v_tx.transaction_date::date <> v_past then
+  -- Back-dated rows carry the payment date in Baku time (document_timestamp).
+  if (v_tx.transaction_date at time zone 'Asia/Baku')::date <> v_past then
     raise exception 'FAIL transaction_date % <> %', v_tx.transaction_date, v_past;
   end if;
 
   select * into v_je from public.journal_entries where id = (v_result->>'journal_entry_id')::uuid;
-  if v_je.entry_date <> v_past or v_je.date::date <> v_past then
+  if v_je.entry_date <> v_past or (v_je.date at time zone 'Asia/Baku')::date <> v_past then
     raise exception 'FAIL journal entry dated % / %, expected %', v_je.entry_date, v_je.date, v_past;
   end if;
 

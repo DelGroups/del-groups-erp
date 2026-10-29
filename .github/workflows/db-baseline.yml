@@ -128,6 +128,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/inventory_count_integrity.sql | tee "$RUNNER_TEMP/inventory_count_integrity.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/inventory_count_integrity.txt"
+      # Backdated invoices and payments, admin edit of posted invoices (fix F1).
+      - name: Backdated invoices checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/backdated_invoices.sql | tee "$RUNNER_TEMP/backdated_invoices.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/backdated_invoices.txt"
 
       - name: Server log on failure
         if: failure()

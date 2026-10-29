@@ -117,6 +117,9 @@ union all
 select 'pending', '20261028182000_inventory_count_backdate_admin_edit: functions (backdated counts, unpost)',
        case when to_regprocedure('public.inventory_count_today()') is null or to_regprocedure('public.inventory_count_unpost(uuid,text,uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261029100000_backdated_invoices_payments: invoice date on every record, admin edit of posted invoices',
+       case when to_regprocedure('public.document_timestamp()') is null or to_regclass('public.invoice_amendments') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

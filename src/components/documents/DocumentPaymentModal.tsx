@@ -13,7 +13,7 @@ import {
   PAYMENT_ACCOUNT_REQUIRED_MESSAGE,
 } from "@/lib/forms/paymentValidation";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { todayLocalDate, validatePaymentDate } from "@/lib/forms/paymentDate";
+import { defaultPaymentDate, formatDayMonthYear, todayLocalDate, validatePaymentDate } from "@/lib/forms/paymentDate";
 import { allocateOfficialPaymentSplit } from "@/lib/finance/vatEngine";
 import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -33,7 +33,7 @@ export interface DocumentPaymentPayload {
   accountId: string;
   method: string;
   notes?: string;
-  /** YYYY-MM-DD, today or earlier. */
+  /** YYYY-MM-DD, from the invoice date to today. */
   paymentDate: string;
   treasurySplits?: TreasuryPaymentSplit[];
 }
@@ -52,6 +52,8 @@ interface DocumentPaymentModalProps {
   isOfficial?: boolean;
   documentSubtotalAmount?: number;
   documentVatAmount?: number;
+  /** Invoice date (YYYY-MM-DD): the earliest allowed payment date. */
+  documentDate?: string | null;
   onSubmit: (payload: DocumentPaymentPayload) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -69,6 +71,7 @@ export default function DocumentPaymentModal({
   isOfficial = false,
   documentSubtotalAmount = 0,
   documentVatAmount = 0,
+  documentDate = null,
   onSubmit,
 }: DocumentPaymentModalProps) {
   const { t } = useI18n();
@@ -80,7 +83,7 @@ export default function DocumentPaymentModal({
   const [method, setMethod] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [paymentDate, setPaymentDate] = useState(() => todayLocalDate());
+  const [paymentDate, setPaymentDate] = useState(() => defaultPaymentDate(documentDate));
   const [saving, setSaving] = useState(false);
   const [useSplitTreasury, setUseSplitTreasury] = useState(false);
 
@@ -111,9 +114,9 @@ export default function DocumentPaymentModal({
 
     setAmount(remainingAmount > 0 ? remainingAmount.toFixed(2) : "");
     setNotes("");
-    setPaymentDate(todayLocalDate());
+    setPaymentDate(defaultPaymentDate(documentDate));
     setUseSplitTreasury(canSplitTreasury);
-  }, [isOpen, remainingAmount, canSplitTreasury]);
+  }, [isOpen, remainingAmount, canSplitTreasury, documentDate]);
 
   const numericAmount = parseFloat(amount) || 0;
   const splitAmounts = useMemo(() => {
@@ -158,7 +161,8 @@ export default function DocumentPaymentModal({
   ]);
 
   const today = todayLocalDate();
-  const paymentDateIssue = validatePaymentDate(paymentDate, today);
+  const minDate = documentDate ? documentDate.slice(0, 10) : undefined;
+  const paymentDateIssue = validatePaymentDate(paymentDate, today, minDate);
 
   const paymentPreflightHint = paymentPreflightIssue
     ? paymentPreflightIssue === "vat_account_required"
@@ -167,7 +171,9 @@ export default function DocumentPaymentModal({
     : paymentDateIssue
       ? paymentDateIssue === "date_in_future"
         ? t("modals.payment.futureDate")
-        : t("modals.payment.date")
+        : paymentDateIssue === "before_document_date" && minDate
+          ? t("modals.payment.beforeDocumentDate", { date: formatDayMonthYear(minDate) })
+          : t("modals.payment.date")
       : undefined;
   const blockingIssue = paymentPreflightIssue ?? paymentDateIssue;
 
@@ -320,6 +326,7 @@ export default function DocumentPaymentModal({
             <span className="font-semibold text-app">{t("modals.payment.date")}</span>
             <input
               type="date"
+              min={minDate}
               max={today}
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}

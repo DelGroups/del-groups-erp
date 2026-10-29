@@ -10,6 +10,7 @@ import { SkeletonList, TypeToConfirmDialog, useToast } from "@/design-system/com
 import { formatFigure } from "@/design-system/logic";
 import { useAuth } from "@/components/auth/AuthProvider";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
+import { purchaseDocumentDate } from "../lib/purchaseDates";
 import WarehouseResendModal from "@/components/documents/WarehouseResendModal";
 import DeliveryTimeModal from "@/components/documents/DeliveryTimeModal";
 import WarehouseSlipPrintTemplate from "@/components/warehouse/WarehouseSlipPrintTemplate";
@@ -140,7 +141,8 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
     }
   };
   const actions: FormAction[] = [
-    ...(can("can_edit_purchases")
+    // Drafts: anyone who may edit purchases. Posted: admins only (fix F1).
+    ...((isDraft ? can("can_edit_purchases") : can("can_edit_posted_purchases"))
       ? [{ key: "edit", label: isDraft ? t("sales.engine.actions.editDraft") : t("common.edit"), primary: isDraft, icon: <PencilLine className="h-4 w-4" aria-hidden />, onClick: () => (isDraft ? router.push(`/purchases/new?draft=${purchase.id}`) : setMode("edit")) }]
       : []),
     ...(record.remaining > 0 ? [{ key: "pay", label: t("purchases.engine.registerPayment"), primary: !isDraft, icon: <Banknote className="h-4 w-4" aria-hidden />, onClick: () => setPaying(true) }] : []),
@@ -211,6 +213,7 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
           isOfficial={purchase.is_official === true}
           documentSubtotalAmount={Number(purchase.subtotal_amount ?? purchase.total_amount ?? 0)}
           documentVatAmount={Number(purchase.vat_amount ?? 0)}
+          documentDate={purchaseDocumentDate(purchase)}
           onSubmit={async (payload) => {
             const result = await recordPurchasePaymentAction({
               purchaseId: purchase.id,
