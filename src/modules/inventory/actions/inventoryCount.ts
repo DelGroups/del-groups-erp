@@ -2,6 +2,7 @@
 
 import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { isAdminRole } from "@/types/database.types";
 import type {
   CreateInventoryCountInput,
   InventoryCountDetail,
@@ -9,8 +10,10 @@ import type {
   InventoryCountLine,
   InventoryCountOption,
   InventoryCountStatus,
+  UpdateInventoryCountHeaderInput,
   WarehouseCategoryPath,
 } from "../lib/inventoryCountTypes";
+import { checkCountDate, countToday, type CountDateProblem } from "../lib/inventoryCountDates";
 import { catalogIlikePattern, type InventoryCountProductHit } from "../lib/inventoryCountSearch";
 
 export type InventoryCountActionResult<T = void> =
@@ -67,8 +70,19 @@ function mapDocument(row: Record<string, unknown>): InventoryCountDocument {
     submitted_at: (row.submitted_at as string) || null,
     posted_at: (row.posted_at as string) || null,
     created_at: row.created_at as string,
+    book_as_of: (row.book_as_of as string) || null,
+    post_revision: num(row.post_revision),
+    unposted_at: (row.unposted_at as string) || null,
+    unpost_reason: (row.unpost_reason as string) || null,
   };
 }
+
+/** i18n keys of the date rule errors; the pages translate them (inventoryCount.dateErrors.*). */
+const DATE_ERROR: Record<CountDateProblem, string> = {
+  invalid: "inventoryCount.dateErrors.invalid",
+  future: "inventoryCount.dateErrors.future",
+  past_admin_only: "inventoryCount.dateErrors.pastAdminOnly",
+};
 
 function mapLine(row: Record<string, unknown>): InventoryCountLine {
   return {
@@ -181,8 +195,8 @@ export async function fetchInventoryCountWarehousesAction(): Promise<
 }
 
 /**
- * Category/subcategory paths that have stock in the warehouse, aggregated in
- * the database (get_warehouse_active_categories) — products never reach the client.
+ * Category/subcategory paths of every stockable product (with or without stock), aggregated
+ * in the database (get_warehouse_active_categories) — products never reach the client.
  */
 export async function fetchWarehouseCategoriesAction(
   warehouseId: string
@@ -214,6 +228,9 @@ export async function createInventoryCountAction(
   try {
     const { user, profile } = await requirePermissionAction("can_writeoff_inventory");
     if (!input.warehouse_id) return { success: false, error: "Anbar seçilməyib" };
+    // The service role passes the database's date trigger, so the rule is checked here too.
+    const dateProblem = checkCountDate(input.count_date, { today: countToday(), isAdmin: isAdminRole(profile?.role) });
+    if (dateProblem) return { success: false, error: DATE_ERROR[dateProblem] };
     const client = (await db());
 
     const categoryName = input.category_name?.trim() || null;
@@ -248,6 +265,37 @@ export async function createInventoryCountAction(
       .single();
     if (error || !data) return { success: false, error: error?.message || "Sənəd yaradılmadı" };
     return { success: true, data: { id: data.id as string } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Changes date, responsible and notes. Draft: anyone who may count (a past date for admins only);
+ * counting and review: admins only. A new date while counting re-reads the expected quantities.
+ */
+export async function updateInventoryCountHeaderAction(
+  countId: string,
+  input: UpdateInventoryCountHeaderInput
+): Promise<InventoryCountActionResult> {
+  try {
+    const { user, profile } = await requirePermissionAction("can_writeoff_inventory");
+    const dateProblem = checkCountDate(input.count_date, { today: countToday(), isAdmin: isAdminRole(profile?.role) });
+    if (dateProblem) {
+      // An unchanged past date (a count created yesterday) stays allowed; only a change is checked.
+      const { data } = await (await db()).from("inventory_counts").select("count_date").eq("id", countId).maybeSingle();
+      if (dateProblem !== "past_admin_only" || data?.count_date !== input.count_date) {
+        return { success: false, error: DATE_ERROR[dateProblem] };
+      }
+    }
+    await callRpc("inventory_count_update_header", {
+      p_count_id: countId,
+      p_count_date: input.count_date,
+      p_responsible: input.responsible_name ?? null,
+      p_notes: input.notes ?? null,
+      p_actor: user.id,
+    });
+    return { success: true };
   } catch (err) {
     return fail(err);
   }
@@ -473,6 +521,29 @@ export async function postInventoryCountAction(
       surplus_value: number;
       shortage_value: number;
     }>("inventory_count_post", { p_count_id: countId, p_actor: user.id });
+    return { success: true, data };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Admins only: reverses a posted count (stock, FIFO layers, polywood pieces, ledger) and
+ * returns it to review, so it can be corrected and posted again. A reason is required.
+ */
+export async function unpostInventoryCountAction(
+  countId: string,
+  reason: string
+): Promise<InventoryCountActionResult<{ document_number: string }>> {
+  try {
+    const { user, profile } = await requirePermissionAction("can_writeoff_inventory");
+    if (!isAdminRole(profile?.role)) throw new ActionAuthError("İcazəniz yoxdur");
+    if (!reason.trim()) return { success: false, error: "inventoryCount.unpostReasonRequired" };
+    const data = await callRpc<{ document_number: string }>("inventory_count_unpost", {
+      p_count_id: countId,
+      p_reason: reason.trim(),
+      p_actor: user.id,
+    });
     return { success: true, data };
   } catch (err) {
     return fail(err);

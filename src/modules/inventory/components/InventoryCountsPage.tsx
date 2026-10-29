@@ -9,6 +9,8 @@ import PageHeader from "@/components/ui/page-header";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 import { Modal } from "@/components/ui/modal";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -17,6 +19,7 @@ import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/com
 import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/cn";
 import {
   createInventoryCountAction,
@@ -32,13 +35,19 @@ import {
   type InventoryCountStatus,
   type WarehouseCategoryPath,
 } from "../lib/inventoryCountTypes";
+import { countToday, isBackdated } from "../lib/inventoryCountDates";
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** "Backdated · <date>" next to a count whose book quantities are taken at the end of a past day. */
+export function BackdatedBadge({ date }: { date: string }) {
+  const { t } = useI18n();
+  return <Badge variant="warning">{t("inventoryCount.backdatedBadge", { date })}</Badge>;
+}
 
 /**
  * Mounted only while open, so every opening starts from a clean form.
  * Scope cascades Anbar → Kateqoriya → Alt kateqoriya; each list is built from
- * get_warehouse_active_categories, i.e. only what has stock in that warehouse.
+ * get_warehouse_active_categories: every category with stockable products, stocked or not.
+ * The date is today for everyone; admins may pick a past date (backdated count) after a warning.
  */
 export function CreateCountModal({
   onClose,
@@ -48,6 +57,8 @@ export function CreateCountModal({
   onCreated: (id: string) => void;
 }) {
   const { t } = useI18n();
+  const { isAdmin } = useAuth();
+  const today = countToday();
   const [warehouses, setWarehouses] = useState<InventoryCountOption[]>([]);
   const [warehouseId, setWarehouseId] = useState("");
   const [paths, setPaths] = useState<WarehouseCategoryPath[]>([]);
@@ -55,6 +66,8 @@ export function CreateCountModal({
   const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [countDate, setCountDate] = useState(today);
+  const [confirmBackdate, setConfirmBackdate] = useState(false);
+  const backdated = isBackdated(countDate, today);
   const [responsible, setResponsible] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -117,6 +130,11 @@ export function CreateCountModal({
   );
 
   const handleCreate = async () => {
+    if (backdated && !confirmBackdate) {
+      setConfirmBackdate(true);
+      return;
+    }
+    setConfirmBackdate(false);
     setSaving(true);
     setError(null);
     const result = await createInventoryCountAction({
@@ -129,7 +147,8 @@ export function CreateCountModal({
     });
     setSaving(false);
     if (!result.success || !result.data) {
-      setError(result.success ? null : result.error);
+      // Date rule errors come back as i18n keys.
+      setError(result.success ? null : result.error.startsWith("inventoryCount.") ? t(result.error) : result.error);
       return;
     }
     onCreated(result.data.id);
@@ -204,7 +223,19 @@ export function CreateCountModal({
         ) : null}
         <div>
           <label className="erp-label">{t("inventoryCount.countDate")}</label>
-          <Input type="date" value={countDate} onChange={(e) => setCountDate(e.target.value)} />
+          <Input
+            type="date"
+            value={countDate}
+            max={today}
+            readOnly={!isAdmin}
+            aria-describedby="count-date-hint"
+            onChange={(e) => setCountDate(e.target.value || today)}
+          />
+          {!isAdmin ? (
+            <p id="count-date-hint" className="mt-1 text-xs text-app-muted">
+              {t("inventoryCount.dateTodayOnly")}
+            </p>
+          ) : null}
         </div>
         <div>
           <label className="erp-label">{t("inventoryCount.responsible")}</label>
@@ -219,8 +250,31 @@ export function CreateCountModal({
             className="app-input w-full resize-none text-sm"
           />
         </div>
+        {backdated ? (
+          <Alert variant="warning" className="sm:col-span-2" id="count-date-hint">
+            {t("inventoryCount.backdatedWarning")}
+          </Alert>
+        ) : null}
         {error ? <p className="text-sm text-rose-600 sm:col-span-2">{error}</p> : null}
       </div>
+      <Modal
+        open={confirmBackdate}
+        onOpenChange={(next) => (next || saving ? undefined : setConfirmBackdate(false))}
+        title={t("inventoryCount.backdatedConfirmTitle")}
+        className="max-w-md"
+        footer={
+          <>
+            <Button appearance="outline" color="secondary" onClick={() => setConfirmBackdate(false)} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button color="warning" onClick={() => void handleCreate()} loading={saving}>
+              {t("inventoryCount.create")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-app">{t("inventoryCount.backdatedConfirm", { date: countDate })}</p>
+      </Modal>
     </Modal>
   );
 }
@@ -343,7 +397,11 @@ export default function InventoryCountsPage() {
                       {row.document_number}
                     </Link>
                   </Td>
-                  <Td>{row.count_date}</Td>
+                  <Td>
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {row.book_as_of ? <BackdatedBadge date={row.count_date} /> : row.count_date}
+                    </span>
+                  </Td>
                   <Td>{row.warehouse_name || "—"}</Td>
                   <Td>
                     {row.category_name

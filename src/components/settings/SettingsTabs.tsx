@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Blocks, Boxes, Building2, CalendarClock, CreditCard, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { Blocks, Boxes, ClipboardCheck, Building2, CalendarClock, CreditCard, Database, Landmark, Percent, Barcode, KanbanSquare, Scale, ScrollText, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -142,6 +142,15 @@ const SETTINGS_TABS: SettingsTab[] = [
     permission: "can_manage_settings",
     adminOnly: true,
     newUiOnly: true,
+  },
+  {
+    id: "stock-integrity",
+    module: "inventory",
+    titleKey: "settings.stockIntegrityTab",
+    path: "/settings/stock-integrity",
+    icon: ClipboardCheck,
+    permission: "can_manage_settings",
+    adminOnly: true,
   },
   {
     id: "audit",

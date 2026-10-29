@@ -111,6 +111,12 @@ union all
 select 'pending', '20261025120000_home_financial_rpcs: functions (widget home figures)',
        case when to_regprocedure('public.can_view_financials()') is null or to_regprocedure('public.home_financial_summary(date,date)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261028181000_product_stock_integrity: functions (stock trigger per warehouse, Settings > Stock integrity)',
+       case when to_regprocedure('public.adjust_warehouse_stock(uuid,uuid,numeric)') is null or to_regprocedure('public.stock_integrity_report()') is null then 'missing' else 'present' end
+union all
+select 'pending', '20261028182000_inventory_count_backdate_admin_edit: functions (backdated counts, unpost)',
+       case when to_regprocedure('public.inventory_count_today()') is null or to_regprocedure('public.inventory_count_unpost(uuid,text,uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

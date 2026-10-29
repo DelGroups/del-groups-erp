@@ -1,6 +1,7 @@
 "use server";
 
 import { syncPolywoodProductStockFromPieces } from "@/lib/inventory/polywoodStock";
+import { adjustProductStockAtWarehouse } from "@/lib/inventory/warehouseProductStock";
 import { isFullSheetLength } from "@/lib/polywood/constants";
 import { isMetricProduct, resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
@@ -380,12 +381,22 @@ export async function postInitialBalanceDocumentAction(
           .update({ stock: newStock, buy_price: newBuy })
           .eq("id", productId);
 
+        // This warehouse's row holds its own pieces, not the product total.
+        const { data: warehousePieces } = await admin
+          .from("polywood_pieces")
+          .select("length_m")
+          .eq("product_id", productId)
+          .eq("warehouse_id", warehouseId)
+          .eq("status", "available");
+        const warehouseLengths = (warehousePieces || []).map((piece) => Number(piece.length_m) || 0);
+        const warehouseMetres = Math.round(warehouseLengths.reduce((sum, len) => sum + len, 0) * 1000) / 1000;
+
         await admin.from("warehouse_stocks").upsert(
           {
             product_id: productId,
             warehouse_id: warehouseId,
-            current_stock: newStock,
-            piece_lengths: pieceLengths,
+            current_stock: warehouseMetres,
+            piece_lengths: warehouseLengths.sort((x, y) => y - x),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "product_id,warehouse_id" }
@@ -424,20 +435,9 @@ export async function postInitialBalanceDocumentAction(
         const newStock = oldStock + qty;
         const newBuy = calcWeightedBuyPrice(oldStock, oldBuy, qty, unitCost, newStock);
 
-        await admin
-          .from("products")
-          .update({ stock: newStock, buy_price: newBuy })
-          .eq("id", productId);
-
-        await admin.from("warehouse_stocks").upsert(
-          {
-            product_id: productId,
-            warehouse_id: warehouseId,
-            current_stock: newStock,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "product_id,warehouse_id" }
-        );
+        // The warehouse row and the product total move together; the row used to get the total.
+        await adjustProductStockAtWarehouse(admin, productId, warehouseId, qty);
+        await admin.from("products").update({ buy_price: newBuy }).eq("id", productId);
 
         await recordStockMovement(admin, {
           productId,

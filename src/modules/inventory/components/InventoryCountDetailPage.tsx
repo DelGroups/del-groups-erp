@@ -12,6 +12,7 @@ import {
   Eraser,
   Flag,
   Loader2,
+  PencilLine,
   Play,
   Plus,
   RefreshCw,
@@ -25,11 +26,14 @@ import PageHeader from "@/components/ui/page-header";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import BarcodeScanField from "@/components/documents/BarcodeScanField";
 import { ResizableTh } from "@/components/ui/table";
 import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
+import { BackdatedBadge } from "./InventoryCountsPage";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import { useToast } from "@/hooks/useToast";
@@ -48,6 +52,8 @@ import {
   saveInventoryCountProgressAction,
   searchInventoryCountProductsAction,
   submitInventoryCountAction,
+  unpostInventoryCountAction,
+  updateInventoryCountHeaderAction,
   type InventoryCountLineInput,
 } from "../actions/inventoryCount";
 import {
@@ -61,6 +67,7 @@ import {
   matchesCountQuery,
   type InventoryCountProductHit,
 } from "../lib/inventoryCountSearch";
+import { countToday } from "../lib/inventoryCountDates";
 
 const PAGE_SIZE = 100;
 /** Start of the scan action's error when no product matches the code (see inventory_count_scan). */
@@ -79,7 +86,7 @@ const COUNT_GRID_COLUMNS: TableColumnSpecs = {
   value: { width: 160, minWidth: 110 },
 };
 
-type LineFilter = "all" | "uncounted" | "variance" | "drift";
+type LineFilter = "all" | "withBook" | "uncounted" | "variance" | "drift";
 
 function fmtQty(value: number | null | undefined, digits = 3): string {
   if (value === null || value === undefined) return "—";
@@ -325,7 +332,7 @@ export default function InventoryCountDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const countId = params.id;
-  const { can } = useAuth();
+  const { can, isAdmin } = useAuth();
   const canPost = can("can_post_inventory_count");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
@@ -334,6 +341,9 @@ export default function InventoryCountDetailPage() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<PendingConfirm>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [unpostOpen, setUnpostOpen] = useState(false);
+  const [unpostReason, setUnpostReason] = useState("");
+  const [headerForm, setHeaderForm] = useState<{ count_date: string; responsible_name: string; notes: string } | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LineFilter>("all");
   const [page, setPage] = useState(0);
@@ -468,8 +478,12 @@ export default function InventoryCountDetailPage() {
 
   const lines = useMemo(() => doc?.lines ?? [], [doc]);
   const status = doc?.status ?? "draft";
-  const editable = status === "in_progress";
+  // Counting: scanner, catalog and quantities. Review: admins still edit quantities (fix F2).
+  const counting = status === "in_progress";
+  const editable = counting || (status === "review" && isAdmin);
   const isPosted = status === "posted";
+  // Header: anyone in draft; admins while counting or in review; nobody once posted.
+  const canEditHeader = status === "draft" || (isAdmin && (status === "in_progress" || status === "review"));
 
   const summary = useMemo(() => {
     let counted = 0;
@@ -488,6 +502,7 @@ export default function InventoryCountDetailPage() {
 
   const filtered = useMemo(() => {
     return lines.filter((line) => {
+      if (filter === "withBook" && Math.abs(line.expected_qty) <= EPS) return false;
       if (filter === "uncounted" && line.actual_qty !== null) return false;
       if (filter === "variance" && !hasVariance(line)) return false;
       if (filter === "drift" && Math.abs(line.drift_qty) <= EPS) return false;
@@ -499,7 +514,7 @@ export default function InventoryCountDetailPage() {
   // the list above the table marks what is already counted and adds the rest.
   const [catalog, setCatalog] = useState<{ query: string; hits: InventoryCountProductHit[] }>({ query: "", hits: [] });
   const [addingId, setAddingId] = useState<string | null>(null);
-  const catalogState = countCatalogState(editable, query, catalog.query);
+  const catalogState = countCatalogState(counting, query, catalog.query);
   const catalogSearchable = catalogState === "loading" || catalogState === "ready";
   useEffect(() => {
     if (!catalogSearchable) return;
@@ -602,6 +617,11 @@ export default function InventoryCountDetailPage() {
     if (!action) return;
     if (action === "post") {
       setBusy(true);
+      // An admin may have changed quantities in review: they must reach the server first.
+      if (!(await flushAll())) {
+        setBusy(false);
+        return;
+      }
       const result = await postInventoryCountAction(countId);
       setBusy(false);
       if (!result.success) {
@@ -621,6 +641,40 @@ export default function InventoryCountDetailPage() {
       }
     );
     if (ok) setConfirm(null);
+  };
+
+  const translateError = (error: string) => (error.startsWith("inventoryCount.") ? t(error) : error);
+
+  const handleUnpost = async () => {
+    if (!unpostReason.trim()) {
+      showError(t("inventoryCount.unpostReasonRequired"));
+      return;
+    }
+    setBusy(true);
+    const result = await unpostInventoryCountAction(countId, unpostReason);
+    setBusy(false);
+    if (!result.success) {
+      showError(translateError(result.error));
+      return;
+    }
+    setUnpostOpen(false);
+    setUnpostReason("");
+    showSuccess(t("inventoryCount.unposted", { docNo: result.data?.document_number || doc?.document_number || "" }));
+    await load();
+  };
+
+  const handleSaveHeader = async () => {
+    if (!headerForm) return;
+    setBusy(true);
+    const result = await updateInventoryCountHeaderAction(countId, headerForm);
+    setBusy(false);
+    if (!result.success) {
+      showError(translateError(result.error));
+      return;
+    }
+    setHeaderForm(null);
+    showSuccess(t("inventoryCount.headerSaved"));
+    await load();
   };
 
   const handleDelete = async () => {
@@ -693,6 +747,29 @@ export default function InventoryCountDetailPage() {
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
+      {canEditHeader ? (
+        <Button
+          appearance="outline"
+          color="secondary"
+          disabled={busy}
+          onClick={() =>
+            setHeaderForm({
+              count_date: doc.count_date,
+              responsible_name: doc.responsible_name || "",
+              notes: doc.notes || "",
+            })
+          }
+        >
+          <PencilLine className="h-4 w-4" />
+          {t("inventoryCount.editHeader")}
+        </Button>
+      ) : null}
+      {isPosted && isAdmin ? (
+        <Button appearance="outline" color="danger" onClick={() => setUnpostOpen(true)} disabled={busy}>
+          <Undo2 className="h-4 w-4" />
+          {t("inventoryCount.unpost")}
+        </Button>
+      ) : null}
       {status !== "posted" ? (
         <Button appearance="outline" color="danger" onClick={() => setDeleteOpen(true)} disabled={busy}>
           <Trash2 className="h-4 w-4" />
@@ -736,6 +813,7 @@ export default function InventoryCountDetailPage() {
       ) : null}
       {status === "review" ? (
         <>
+          {isAdmin ? <SaveIndicator state={saveState} onRetry={() => void flushAll()} /> : null}
           <Button
             appearance="outline"
             color="secondary"
@@ -765,8 +843,12 @@ export default function InventoryCountDetailPage() {
         <ArrowLeft className="h-3.5 w-3.5" />
         {t("inventoryCount.back")}
       </Link>
-      <div className="mb-1">
+      <div className="mb-1 flex flex-wrap items-center gap-1.5">
         <InventoryCountStatusBadge status={status} />
+        {doc.book_as_of ? <BackdatedBadge date={doc.count_date} /> : null}
+        {doc.post_revision > 0 ? (
+          <Badge variant="neutral">{t("inventoryCount.revisionBadge", { revision: doc.post_revision + 1 })}</Badge>
+        ) : null}
       </div>
 
       <PageHeader
@@ -845,7 +927,7 @@ export default function InventoryCountDetailPage() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
               <span className="flex items-center gap-2 text-app">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                {t("inventoryCount.reviewInfo")}
+                {isAdmin ? t("inventoryCount.adminReviewEdit") : t("inventoryCount.reviewInfo")}
               </span>
               {summary.drift > 0 ? (
                 <Button size="sm" appearance="outline" color="warning" onClick={() => setConfirm("resync")} disabled={busy}>
@@ -854,6 +936,15 @@ export default function InventoryCountDetailPage() {
                 </Button>
               ) : null}
             </div>
+          ) : null}
+
+          {status === "review" && doc.unposted_at ? (
+            <Alert variant="danger" className="mb-4">
+              {t("inventoryCount.unpostedInfo", {
+                date: doc.unposted_at.slice(0, 16).replace("T", " "),
+                reason: doc.unpost_reason || "",
+              })}
+            </Alert>
           ) : null}
 
           {isPosted ? (
@@ -865,7 +956,7 @@ export default function InventoryCountDetailPage() {
 
           {/* Toolbar: scanner (left) · search + segmented filter (right), bottom-aligned */}
           <div className="mb-4 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            {editable ? (
+            {counting ? (
               <BarcodeScanField
                 onScan={handleScan}
                 autoFocus
@@ -906,6 +997,7 @@ export default function InventoryCountDetailPage() {
                 {(
                   [
                     ["all", t("inventoryCount.filterAll"), lines.length],
+                    ["withBook", t("inventoryCount.filterWithBook"), lines.filter((line) => Math.abs(line.expected_qty) > EPS).length],
                     ["uncounted", t("inventoryCount.filterUncounted"), summary.uncounted],
                     ["variance", t("inventoryCount.filterVariance"), lines.filter(hasVariance).length],
                     ...(summary.drift > 0 ? [["drift", t("inventoryCount.filterDrift"), summary.drift]] : []),
@@ -1188,6 +1280,102 @@ export default function InventoryCountDetailPage() {
               ? t("inventoryCount.resyncConfirm")
               : t("inventoryCount.markUncountedZeroConfirm", { count: summary.uncounted })}
         </p>
+      </Modal>
+
+      <Modal
+        open={unpostOpen}
+        onOpenChange={(next) => (next || busy ? undefined : setUnpostOpen(false))}
+        title={t("inventoryCount.unpostTitle")}
+        className="max-w-md"
+        footer={
+          <>
+            <Button appearance="outline" color="secondary" onClick={() => setUnpostOpen(false)} disabled={busy}>
+              {t("common.cancel")}
+            </Button>
+            <Button color="danger" onClick={() => void handleUnpost()} loading={busy} disabled={!unpostReason.trim()}>
+              {t("inventoryCount.unpost")}
+            </Button>
+          </>
+        }
+      >
+        <Alert variant="danger" className="mb-3">
+          {t("inventoryCount.unpostWarning")}
+        </Alert>
+        <label className="erp-label" htmlFor="unpost-reason">
+          {t("inventoryCount.unpostReason")}
+        </label>
+        <textarea
+          id="unpost-reason"
+          rows={3}
+          value={unpostReason}
+          onChange={(e) => setUnpostReason(e.target.value)}
+          placeholder={t("inventoryCount.unpostReasonPlaceholder")}
+          className="app-input w-full resize-none text-sm"
+        />
+      </Modal>
+
+      <Modal
+        open={headerForm !== null}
+        onOpenChange={(next) => (next || busy ? undefined : setHeaderForm(null))}
+        title={t("inventoryCount.editHeaderTitle")}
+        className="max-w-md"
+        footer={
+          <>
+            <Button appearance="outline" color="secondary" onClick={() => setHeaderForm(null)} disabled={busy}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={() => void handleSaveHeader()} loading={busy}>
+              {t("common.save")}
+            </Button>
+          </>
+        }
+      >
+        {headerForm ? (
+          <div className="grid gap-3">
+            <div>
+              <label className="erp-label" htmlFor="header-date">
+                {t("inventoryCount.countDate")}
+              </label>
+              <Input
+                id="header-date"
+                type="date"
+                value={headerForm.count_date}
+                max={countToday()}
+                readOnly={!isAdmin}
+                onChange={(e) => setHeaderForm({ ...headerForm, count_date: e.target.value || headerForm.count_date })}
+              />
+              {headerForm.count_date < countToday() ? (
+                <Alert variant="warning" className="mt-2">
+                  {t("inventoryCount.backdatedConfirm", { date: headerForm.count_date })}
+                </Alert>
+              ) : !isAdmin ? (
+                <p className="mt-1 text-xs text-app-muted">{t("inventoryCount.dateTodayOnly")}</p>
+              ) : null}
+            </div>
+            <div>
+              <label className="erp-label" htmlFor="header-responsible">
+                {t("inventoryCount.responsible")}
+              </label>
+              <Input
+                id="header-responsible"
+                value={headerForm.responsible_name}
+                onChange={(e) => setHeaderForm({ ...headerForm, responsible_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="erp-label" htmlFor="header-notes">
+                {t("inventoryCount.notes")}
+              </label>
+              <textarea
+                id="header-notes"
+                rows={2}
+                value={headerForm.notes}
+                onChange={(e) => setHeaderForm({ ...headerForm, notes: e.target.value })}
+                className="app-input w-full resize-none text-sm"
+              />
+            </div>
+          </div>
+        ) : null}
       </Modal>
 
       <ConfirmDeleteModal

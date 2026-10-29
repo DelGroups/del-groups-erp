@@ -24,6 +24,18 @@ export interface InventoryCountDocument {
   submitted_at: string | null;
   posted_at: string | null;
   created_at: string;
+  /** Set for a backdated count: book quantities are taken at this moment (end of count_date in Baku). */
+  book_as_of: string | null;
+  /** Times the count was unposted by an admin; a re-post books a new ledger entry. */
+  post_revision: number;
+  unposted_at: string | null;
+  unpost_reason: string | null;
+}
+
+export interface UpdateInventoryCountHeaderInput {
+  count_date: string;
+  responsible_name?: string;
+  notes?: string;
 }
 
 export interface InventoryCountLine {

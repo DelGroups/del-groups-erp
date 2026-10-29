@@ -33,9 +33,9 @@ export default defineModule({
     { path: "/warehouses", label: "nav.items.warehouses", icon: "Warehouse", section: "inventory", order: 60 },
     { path: "/dashboard/warehouse/slips", label: "nav.items.warehouseSlips", icon: "ClipboardList", section: "inventory", order: 70 },
     { path: "/products/damaged-goods", label: "nav.items.damagedGoods", icon: "Trash2", section: "inventory", order: 80 },
-    { path: "/dashboard/reports/inventory-turnover", label: "nav.items.inventoryTurnover", icon: "Package", section: "reports", order: 50 },
-  ],
+    { path: "/dashboard/reports/inventory-turnover", label: "nav.items.inventoryTurnover", icon: "Package", section: "reports", order: 50 },  ],
   routes: [
+    { prefix: "/settings/stock-integrity", permission: "can_manage_settings" },
     { prefix: "/inventory-audit", permission: "can_writeoff_inventory" },
     { prefix: "/inventory/counts", permission: "can_writeoff_inventory" },
     { prefix: "/inventory/transfers", permission: "can_manage_warehouses" },
