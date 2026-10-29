@@ -14,6 +14,8 @@
 6. لیست کشویی دسته‌بندی‌ها در فرم انبارگردانی فقط دسته‌هایی را نشان می‌دهد که الان موجودی دارند.
 7. **تاریخ انبارگردانی الان برای همه آزاد است** ولی موجودی دفتری همیشه موجودی امروز است، پس انبارگردانی با تاریخ قبل الان عملاً غلط حساب می‌شود.
 
+**نتیجه اجرای اسکریپت روی پروداکشن (Del، ۲۰۲۶-۱۰-۲۹):** ۳۰۵ محصول ردیف موجودی بدون انبار دارند (۱۷۱ تا با موجودی غیرصفر و ۱۳۴ تا با موجودی صفر)، یک محصول پلی‌وود ناهمخوان است (`PW-469-PD`: موجودی محصول ۴ متر، تکه‌های موجود ۱۲ متر) و سه مورد خدمت/ترکیبی هستند که عمداً کنار گذاشته می‌شوند. هیچ مورد `total_mismatch`، `no_stock_row`، `subcategory_lost`، `no_category`، کد یا بارکد تکراری پیدا نشد. نتیجه‌گیری: علت ۱ (محصولِ با موجودی صفر در انبارگردانی کل انبار نمی‌آید) و علت ۳ (ردیف بدون انبار فقط در انبار پیش‌فرض دیده می‌شود) در داده‌ی واقعی تأیید شد؛ ۱۳۴ محصول با موجودی صفر دقیقاً همانی هستند که در لیست محصولات دیده می‌شوند و در انبارگردانی نیستند. علت‌های ۲ (تریگر) و ۵ (زیرگروه) در داده‌ی فعلی اثری نگذاشته‌اند، ولی کد آن‌ها همچنان باید اصلاح شود تا خراب نشوند. چون یک انبار پیش‌فرض وجود دارد (کد `null_row_no_default` نیامد)، انتقال ردیف‌های بدون انبار به آن امن است و همان چیزی است که انبارگردانی الان فرض می‌کند.
+
 **اسکریپت بررسی (فقط خواندنی، روی پروداکشن بی‌خطر):** `supabase/scripts/product_integrity_check.sql` در همین PR. Del آن را در SQL Editor اجرا می‌کند تا معلوم شود کدام محصولات و به کدام علت از انبارگردانی جا مانده‌اند. نتیجه را قبل از اجرای پرامپت به Claude بدهید تا اگر علت دیگری بود به پرامپت اضافه شود.
 
 **تصمیم‌ها (پیشنهاد داخل پرانتز، منتظر تأیید Del):**
@@ -21,7 +23,7 @@
 1. انبارگردانی کل انبار همه محصولات قابل‌انبار را بیاورد، حتی با موجودی صفر؟ (بله. سطرهای شمرده‌نشده هیچ‌وقت اصلاح نمی‌شوند، پس ضرری ندارد. یک فیلتر «فقط دارای موجودی» در صفحه شمارش اضافه می‌شود.)
 2. برای انبارگردانی با تاریخ قبل، موجودی دفتری «در پایان آن روز» از روی حرکات انبار حساب شود؟ (بله. موجودی امروز منهای حرکات بعد از آن روز. فروش‌ها و خریدهای بعد از آن تاریخ سر جایشان می‌مانند و سند حسابداری با همان تاریخ ثبت می‌شود.)
 3. ویرایش انبارگردانی ثبت‌شده (posted) چطور باشد؟ (ادمین دکمه «ویرایش» می‌زند، سیستم اثر آن را کامل برمی‌گرداند (استورنو: حرکات انبار، لایه‌های FIFO، تکه‌های پلی‌وود، سند حسابداری)، سند به حالت «بازبینی» برمی‌گردد، ادمین اصلاح می‌کند و دوباره ثبت می‌کند. اگر کالای مازاد آن انبارگردانی بعداً فروخته شده باشد، برگرداندن رد می‌شود با پیام روشن.)
-4. اصلاح داده‌های خراب فعلی (ردیف‌های بدون انبار، اختلاف جمع انبارها با کل) خودکار باشد؟ (نه. یک صفحه «یکپارچگی موجودی» فقط برای ادمین که اول پیش‌نمایش می‌دهد و ادمین برای هر مورد یا همه با هم «اصلاح» می‌زند.)
+4. اصلاح داده‌های خراب فعلی (ردیف‌های بدون انبار، اختلاف جمع انبارها با کل؛ ۳۰۵ مورد بدون انبار الان وجود دارد) خودکار باشد؟ (نه. یک صفحه «یکپارچگی موجودی» فقط برای ادمین که اول پیش‌نمایش می‌دهد و ادمین برای هر مورد یا همه با هم «اصلاح» می‌زند.)
 
 ```text
 Before starting, check the list of available skills. Use every skill that fits this task.
@@ -80,8 +82,10 @@ Part A: product and stock integrity (migration 1)
                            rows are what was counted); show before/after; write a stock_movements row with
                            reference_type 'stock_integrity_fix' only when a warehouse row changes
     subcategory_lost    -> copy sub_categories.name into products.subcategory
-    polywood_mismatch   -> set products.stock and the warehouse rows to the available pieces' metres
-  Kinds that need a human (duplicate_code, duplicate_barcode, no_category, polywood_no_pieces,
+    (polywood_mismatch is NOT auto-fixed: the production check shows PW-469-PD with products.stock 4 m but
+     12 m of available pieces, and only the shop floor knows which is right. List it for review; the fix is
+     an inventory count, which the count RPCs already handle by pieces.)
+  Kinds that need a human (polywood_mismatch, duplicate_code, duplicate_barcode, no_category, polywood_no_pieces,
   category_text_differs) are listed with a link to the product, never auto-fixed. No ledger entries for
   these fixes (they correct cached totals, not value); say so on the page. Every fix goes to audit_logs.
 
