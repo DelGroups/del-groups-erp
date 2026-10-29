@@ -713,7 +713,7 @@ resize and move widgets with mouse and keyboard, and the layout survives reload 
 - فاکتور خرید: ستون `created_by` ندارد؛ فقط `responsible_id`/`responsible_name`. برای سندهای قدیمی سازنده را می‌شود از `audit_logs` (اگر insert ثبت شده) پیدا کرد، وگرنه «—».
 - سندهای دیگر: `warehouse_slips`، `payments`، `transactions` ستون `created_by` دارند؛ برای بقیه (هزینه‌ها، انبارگردانی، موجودی اولیه، ضایعات، امانی، انتقال) Claude Code باید بررسی کند.
 
-**تصمیم‌ها (Del در ۲۰۲۶-۱۰-۲۹ هر سه را تأیید کرد):** تاریخ صدور سند = زمان واقعی ثبت در سیستم. تاریخ فاکتور/سند = تاریخی که کاربر تنظیم می‌کند (ممکن است امروز فاکتور یا سند پرداخت/دریافتی را بزند که چند روز قبل اتفاق افتاده). هر کاربر بتواند همه فیلدها را در لیست ببیند و به سلیقه خودش انتخاب کند کدام نمایش داده شود.
+**تصمیم‌ها (Del در ۲۰۲۶-۱۰-۲۹ هر سه را تأیید کرد):** تاریخ صدور سند = زمان واقعی ثبت در سیستم. تاریخ فاکتور/سند = تاریخی که کاربر تنظیم می‌کند (ممکن است امروز فاکتور یا سند پرداخت/دریافتی را بزند که چند روز قبل اتفاق افتاده). هر کاربر بتواند همه فیلدها را در لیست ببیند و به سلیقه خودش انتخاب کند کدام نمایش داده شود. خروجی همه لیست‌ها و گزارش‌ها فایل اکسل (.xlsx) باشد نه CSV (Del، ۲۰۲۶-۱۰-۲۹؛ این بخش بدون فلگ منتشر می‌شود چون فقط فرمت فایل عوض می‌شود).
 1. انتخاب ستون‌ها برای هر کاربر جدا و روی همان مرورگر ذخیره شود (localStorage، مثل صفحه محصولات). نیازی به جدول جدید نیست.
 2. چهار ستون جدید به‌طور پیش‌فرض روشن باشند، ولی کل قابلیت پشت فلگ `LIST_COLUMNS` (پیش‌فرض خاموش) برود تا Del اول خودش ببیند و بعد روشن کند.
 3. «فروشنده» در فاکتور خرید معنی ندارد (تأمین‌کننده جداست)، پس آنجا ستون «مسئول» نشان داده شود. در سندهای امانی ستون `sales_rep_name`.
@@ -814,6 +814,29 @@ Steps:
 7. Feature flag: LIST_COLUMNS in src/lib/features (default off). Off = every list looks exactly as
    today (no picker, no new columns). On = picker + the four columns visible by default.
 
+7b. Excel export everywhere (Del, 2026-10-29: list exports must be .xlsx, never .csv). This part
+   ships WITHOUT the flag, it only changes the file format:
+   - One helper src/lib/export/exportXlsx.ts (pure row building + a thin writer) built on the
+     "xlsx" package already in package.json and on the new UI's exportRows / exportFileName
+     (src/views/logic.ts, ViewEngine.tsx exportExcel). Real cell types: numbers as numbers (2
+     decimals for money), dates as Excel dates, not text; header row bold and frozen; column
+     widths from content; sheet name max 31 chars; file name "<list>-<yyyy-mm-dd>.xlsx";
+     RTL-safe headers in the user's language.
+   - Replace every CSV export in the app with it: grep for text/csv, .csv, downloadCSV,
+     handleDownloadCSV, toCsv (today at least SalesPage, ExpensesPage, ExpenseMonthlyReport,
+     settings/backup and any other list or report). Bulk "Export selected" too. Keep CSV only
+     where a file is IMPORTED (product bulk import, polywood import, initial setup); those read
+     .csv and .xlsx and stay as they are. If settings/backup is a machine backup, not a list
+     export, say so in the PR and leave its format.
+   - Export uses the columns the user sees (visible + order from step 1 when LIST_COLUMNS is on,
+     today's columns when off), and all filtered rows, not only the current page. The new UI
+     exportExcel must stop using def.list.columns and use the user's columns.
+   - The npm "xlsx" 0.18.5 has known advisories on READING files (prototype pollution, ReDoS).
+     Writing is not affected, but say in the PR whether to move to the maintained SheetJS build
+     or exceljs; do not change the import code in this PR.
+   - Tests: numbers and dates keep their types, column order follows prefs, no CSV export left
+     (a test or lint rule that fails on new "text/csv" downloads).
+
 8. i18n: every label (Columns, Reset to default, Issued at, Invoice date, Document date,
    Salesperson, Responsible, Created by, Move up/down) in az, en, ru.
 
@@ -828,7 +851,7 @@ task and list unrelated problems in the PR (for example the 1,000-row sales load
 PR description: what changed in plain words, screenshots of the sales and purchases lists with the
 picker open (classic and new UI, light and dark), how it was tested, and Del's manual steps in
 order: run the migration file(s) on production in the listed order, set LIST_COLUMNS=true on the
-server, check the lists.
+server, check the lists and open one Excel export from each.
 
 Done when: on every list in scope a user can hide, show and reorder columns, the choice survives a
 reload, and Issued at, Invoice/document date, Salesperson (where it applies) and Created by show
