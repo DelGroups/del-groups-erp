@@ -89,6 +89,8 @@ export interface ModuleMatrixPermission {
   /** Key inside the group, e.g. "view" → "sales.view". */
   key: string;
   label: string;
+  /** i18n key of the label (az/en/ru); `label` is the fallback. */
+  labelKey?: string;
   /** Flat permission it grants. */
   legacyKey: PermissionKey;
   /** Position inside the group (ascending). */

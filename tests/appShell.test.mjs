@@ -95,7 +95,8 @@ test("with NEW_UI off nothing is read and nothing changes", () => {
 
 test("the home page opens the app launcher in the new shell and the dashboard otherwise", () => {
   const home = read("src/app/page.client.tsx");
-  assert.match(home, /export default function HomePage\(\) \{\s*const \{ active \} = useNewUi\(\);\s*return active \? <AppsPageClient \/> : <ManagementDashboardPage \/>;/);
+  // The widget home (NEW_HOME, prompt 24b) replaces the launcher only for users who get it.
+  assert.match(home, /export default function HomePage\(\) \{\s*const \{ active, newHome \} = useNewUi\(\);\s*if \(!active\) return <ManagementDashboardPage \/>;\s*return newHome \? <HomeDashboard \/> : <AppsPageClient \/>;/);
 });
 
 // ── Apps ─────────────────────────────────────────────────────────────────────

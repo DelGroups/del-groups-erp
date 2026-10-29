@@ -8,6 +8,7 @@ export default defineModule({
   depends: [],
   permissions: [
     "can_view_dashboard",
+    "can_view_financials",
     "can_view_products",
     "can_manage_products",
     "can_view_customers",
@@ -22,6 +23,15 @@ export default defineModule({
   ],
   matrix: [
     { group: "dashboard", key: "view", label: "Ana səhifəni görmək", legacyKey: "can_view_dashboard", order: 10 },
+    // Prompt 24b: money amounts and sales/purchase counts on the home page. Admins always have it.
+    {
+      group: "dashboard",
+      key: "view_financials",
+      label: "Ana səhifədə maliyyə rəqəmlərini görmək",
+      labelKey: "home.permissionViewFinancials",
+      legacyKey: "can_view_financials",
+      order: 20,
+    },
     { group: "inventory", key: "view", label: "Məhsulları görmək", legacyKey: "can_view_products", order: 10 },
     { group: "inventory", key: "manage", label: "Məhsulları idarə etmək", legacyKey: "can_manage_products", order: 20 },
     { group: "inventory", key: "add_stock", label: "Stok əlavə etmək", legacyKey: "can_manage_products", order: 30 },

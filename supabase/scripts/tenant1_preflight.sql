@@ -105,6 +105,12 @@ select 'pending', '20261025100000_crm_pipeline: tables and deals.stage_id (new C
               or not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'deals' and column_name = 'stage_id')
             then 'missing' else 'present' end
 union all
+select 'pending', '20261025110000_home_layouts: tables (widget home)',
+       case when to_regclass('public.home_layouts') is null or to_regclass('public.home_layout_defaults') is null then 'missing' else 'present' end
+union all
+select 'pending', '20261025120000_home_financial_rpcs: functions (widget home figures)',
+       case when to_regprocedure('public.can_view_financials()') is null or to_regprocedure('public.home_financial_summary(date,date)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

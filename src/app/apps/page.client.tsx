@@ -65,7 +65,7 @@ export default function AppsPageClient() {
           renderExtra={(app) =>
             KPI_APPS.has(app.id as AppKpiId) ? (
               <span className="mt-auto flex items-baseline justify-between gap-2 border-t pt-2 text-[length:var(--ds-text-xs)]" style={{ borderColor: "var(--ds-border)" }}>
-                <span className="ds-muted">{t(`newShell.kpi_${app.id}`)}</span>
+                <span className="ds-muted">{t(kpis?.[app.id as AppKpiId]?.label ? `newShell.kpi_${kpis[app.id as AppKpiId]!.label}` : `newShell.kpi_${app.id}`)}</span>
                 <span className="ds-mono font-semibold" aria-live="polite">
                   {kpis === null ? "…" : figure(kpis[app.id as AppKpiId])}
                 </span>

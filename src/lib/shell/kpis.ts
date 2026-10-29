@@ -11,6 +11,8 @@ export interface AppKpi {
   value: number | null;
   /** "money" values are AZN amounts, "count" are whole numbers. */
   kind: "money" | "count";
+  /** What the figure is when it is not the app's usual one (e.g. the user's own activities today). */
+  label?: "activitiesToday";
 }
 
 export type AppKpis = Partial<Record<AppKpiId, AppKpi>>;
@@ -54,6 +56,43 @@ export function lowStockCount(rows: readonly { stock?: unknown; min_stock?: unkn
 export function openProductionOrders(rows: readonly { status?: unknown }[] | null): number | null {
   if (!rows) return null;
   return rows.filter((r) => !CLOSED_PRODUCTION.has(String(r.status ?? "").toLowerCase())).length;
+}
+
+export interface KpiInputs {
+  /** canViewFinancials for this user (prompt 24b). */
+  financials: boolean;
+  salesRows?: readonly { total_amount?: unknown; status?: unknown }[] | null;
+  accountRows?: readonly { balance?: unknown }[] | null;
+  productRows?: Parameters<typeof lowStockCount>[0];
+  productionRows?: Parameters<typeof openProductionOrders>[0];
+  customers?: number | null;
+  employees?: number | null;
+  users?: number | null;
+  /** The user's own open activities due today (shown on the trade tile without financials). */
+  activitiesToday?: number | null;
+}
+
+/**
+ * The tile figures. Without financials no money amount and no sales count is returned, even if
+ * rows were passed: the trade tile shows the user's own activities due today instead.
+ */
+export function composeAppKpis(input: KpiInputs): AppKpis {
+  const kpis: AppKpis = {
+    inventory: { value: lowStockCount(input.productRows ?? null), kind: "count" },
+    production: { value: openProductionOrders(input.productionRows ?? null), kind: "count" },
+    crm: { value: input.customers ?? null, kind: "count" },
+    hr: { value: input.employees ?? null, kind: "count" },
+    settings: { value: input.users ?? null, kind: "count" },
+  };
+  if (input.financials) {
+    const s = salesThisMonth(input.salesRows ?? null);
+    kpis.dashboard = { value: s?.total ?? null, kind: "money" };
+    kpis.trade = { value: s?.count ?? null, kind: "count" };
+    kpis.finance = { value: totalBalance(input.accountRows ?? null), kind: "money" };
+  } else {
+    kpis.trade = { value: input.activitiesToday ?? null, kind: "count", label: "activitiesToday" };
+  }
+  return kpis;
 }
 
 export function totalBalance(rows: readonly { balance?: unknown }[] | null): number | null {
