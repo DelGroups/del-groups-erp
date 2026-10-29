@@ -130,7 +130,23 @@ import {
   type ExpenseCategoryOption,
   type ProductionPartyOption,
 } from "../lib/expenseSupport";
-import { incrementProductStock } from "@/lib/inventory/stockAdjustment";
+
+/**
+ * Gives an issued material back to the warehouse it came from (fix F3): the database resolves
+ * the material / raw-material / order warehouse as the issue did, and writes a stock movement.
+ */
+async function returnIssuedMaterialStock(
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
+  materialId: string
+): Promise<{ ok: boolean; error?: string }> {
+  // Newer than the generated Database types.
+  const rpc = admin.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ error: { message: string } | null }>;
+  const { error } = await rpc.call(admin, "return_production_material_stock", { p_material_id: materialId });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
 import type { Customer, Employee, Product, Supplier, Warehouse } from "@/types/database.types";
 import { normalizeEmployee } from "@/types/database.types";
@@ -2244,7 +2260,7 @@ export async function removeProductionMaterialAction(
 
     if (material.issued && material.product_id) {
       if (material.inventory_mode !== POLYWOOD_INVENTORY_MODE) {
-        const restored = await incrementProductStock(admin, material.product_id, material.quantity);
+        const restored = await returnIssuedMaterialStock(admin, material.id);
         if (!restored.ok) {
           return {
             success: false,
@@ -3441,7 +3457,7 @@ export async function deleteProductionOrderAction(
     for (const material of order.materials) {
       if (!material.issued || !material.product_id) continue;
       if (material.inventory_mode === POLYWOOD_INVENTORY_MODE) continue;
-      const restored = await incrementProductStock(admin, material.product_id, material.quantity);
+      const restored = await returnIssuedMaterialStock(admin, material.id);
       if (!restored.ok) {
         return {
           success: false,

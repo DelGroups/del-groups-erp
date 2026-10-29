@@ -92,7 +92,11 @@ export async function reconcileCustomerArBalances(
   };
 }
 
-/** Void/cancel a sale invoice via direct Supabase queries (no RPC). */
+/**
+ * Cancels a sales invoice in one database transaction (cancel_sales_invoice_atomic): stock goes
+ * back to each line's warehouse, cash is reversed by storno, journals are reversed (fix F3; this
+ * used to raise products.stock and delete cash rows from the browser).
+ */
 export async function voidSaleInvoice(
   saleId: string,
   reason?: string
@@ -100,82 +104,11 @@ export async function voidSaleInvoice(
   if (!saleId?.trim()) {
     return { success: false, error: "Satış tapılmadı" };
   }
-
-  const { data: sale, error: fetchError } = await supabase
-    .from("sales")
-    .select("id, status, doc_no, invoice_number, customer_id, notes, note")
-    .eq("id", saleId)
-    .single();
-
-  if (fetchError || !sale) {
-    return { success: false, error: fetchError?.message || "Satış fakturası tapılmadı" };
-  }
-
-  if (
-    sale.status &&
-    ["cancelled", "ləğv edildi", "legv edildi", "void", "voided"].includes(
-      sale.status.trim().toLowerCase()
-    )
-  ) {
-    return { success: true };
-  }
-
-  const docLabel = sale.doc_no || sale.invoice_number || saleId;
-  const voidNote = (reason || "").trim() || "Satış fakturası ləğv edildi";
-
-  const { data: items } = await supabase
-    .from("sale_items")
-    .select("product_id, quantity, polywood_sale_mode")
-    .eq("sale_id", saleId);
-
-  for (const item of items || []) {
-    if (!item.product_id || item.polywood_sale_mode) continue;
-    const qty = Number(item.quantity) || 0;
-    if (qty <= 0) continue;
-
-    const { data: product } = await supabase
-      .from("products")
-      .select("stock")
-      .eq("id", item.product_id)
-      .single();
-
-    if (!product) continue;
-    await supabase
-      .from("products")
-      .update({ stock: (Number(product.stock) || 0) + qty })
-      .eq("id", item.product_id);
-  }
-
-  await supabase.from("transactions").delete().eq("source_type", "sale").eq("source_id", saleId);
-
-  if (docLabel) {
-    await supabase
-      .from("transactions")
-      .delete()
-      .is("source_type", null)
-      .is("source_id", null)
-      .ilike("notes", `%${docLabel}%`);
-  }
-
-  const existingNotes = sale.notes || sale.note || "";
-  const { error: updateError } = await supabase
-    .from("sales")
-    .update({
-      status: "cancelled",
-      paid_amount: 0,
-      remaining_balance: 0,
-      payments: [],
-      warehouse_sent: false,
-      warehouse_slip_status: null,
-      note: voidNote,
-      notes: existingNotes ? `${existingNotes}\n${voidNote}` : voidNote,
-    })
-    .eq("id", saleId);
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
+  const { error } = await supabase.rpc("cancel_sales_invoice_atomic", {
+    p_sale_id: saleId,
+    p_reason: (reason || "").trim() || undefined,
+  });
+  if (error) return { success: false, error: error.message };
   return { success: true };
 }
 

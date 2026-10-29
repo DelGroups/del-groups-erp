@@ -133,6 +133,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/backdated_invoices.sql | tee "$RUNNER_TEMP/backdated_invoices.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/backdated_invoices.txt"
+      # Stock exits per warehouse (fix F3): write-offs, sales, production, purchases.
+      - name: Stock per warehouse checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/stock_per_warehouse.sql | tee "$RUNNER_TEMP/stock_per_warehouse.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/stock_per_warehouse.txt"
 
       - name: Server log on failure
         if: failure()
