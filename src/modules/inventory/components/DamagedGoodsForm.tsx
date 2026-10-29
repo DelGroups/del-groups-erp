@@ -69,7 +69,17 @@ export default function DamagedGoodsForm({
 
   useEffect(() => {
     if (!warehouseId) return;
-    void fetchProductsByWarehouse(warehouseId).then(setProducts);
+    // Stock of the chosen warehouse (fix F3): rows already filled in show the new warehouse's stock.
+    void fetchProductsByWarehouse(warehouseId).then((list) => {
+      setProducts(list);
+      setItems((prev) =>
+        prev.map((row) =>
+          row.product_id
+            ? { ...row, available_stock: Number(list.find((p) => p.id === row.product_id)?.stock) || 0 }
+            : row
+        )
+      );
+    });
   }, [warehouseId]);
 
   const updateItem = (id: string, patch: Partial<DamagedGoodsItem>) => {
@@ -133,11 +143,7 @@ export default function DamagedGoodsForm({
     };
 
     const result = isEdit
-      ? await updateInventoryWriteoff(
-          initialWriteoff!.id,
-          payload,
-          initialWriteoff!.items
-        )
+      ? await updateInventoryWriteoff(initialWriteoff!.id, payload)
       : await submitDamagedGoodsWriteoff(payload);
 
     setSaving(false);

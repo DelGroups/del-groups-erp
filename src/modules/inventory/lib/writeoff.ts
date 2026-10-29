@@ -1,16 +1,8 @@
 import { supabase } from "@/lib/supabase";
-import {
-  applyWriteoffStockDeltas,
-  decrementProductStock,
-} from "@/lib/inventory/stockAdjustment";
-import type {
-  DamagedGoodsItem,
-  InventoryWriteoffInsert,
-  Product,
-  WarehouseSlipItem,
-} from "@/types/database.types";
+import type { DamagedGoodsItem, Product, WarehouseSlipItem } from "@/types/database.types";
 import { toDamagedGoodsItemsJson } from "@/types/database.types";
 import { createWarehouseSlip } from "@/lib/warehouse/warehouseSlips";
+import { warehouseStockMap, writeoffCandidates, type WarehouseStockRow } from "./warehouseStockMap";
 
 export interface SubmitWriteoffPayload {
   document_number: string;
@@ -27,8 +19,26 @@ export interface SubmitWriteoffResult {
   writeoffId?: string;
 }
 
-async function restoreProductStock(productId: string, previousStock: number): Promise<void> {
-  await supabase.from("products").update({ stock: previousStock }).eq("id", productId);
+/** post_inventory_writeoff / update_inventory_writeoff are newer than the generated Database types. */
+async function callWriteoffRpc(fn: string, args: Record<string, unknown>): Promise<{ id?: string; error?: string }> {
+  const rpc = supabase.rpc as unknown as (
+    name: string,
+    params: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+  const { data, error } = await rpc.call(supabase, fn, args);
+  if (error) return { error: error.message };
+  return { id: (data as { id?: string } | null)?.id };
+}
+
+function writeoffRpcPayload(payload: SubmitWriteoffPayload, items: DamagedGoodsItem[]) {
+  return {
+    document_number: payload.document_number,
+    writeoff_date: payload.writeoff_date,
+    warehouse_id: payload.warehouse_id || null,
+    checker_name: payload.checker_name.trim(),
+    notes: payload.notes?.trim() || null,
+    items: toDamagedGoodsItemsJson(items),
+  };
 }
 
 export async function submitDamagedGoodsWriteoff(
@@ -51,48 +61,16 @@ export async function submitDamagedGoodsWriteoff(
     }
   }
 
-  const applied: { productId: string; previousStock: number }[] = [];
-
-  for (const item of validItems) {
-    const stockResult = await decrementProductStock(supabase, item.product_id, item.quantity);
-    if (!stockResult.ok) {
-      for (const rollback of applied.reverse()) {
-        await restoreProductStock(rollback.productId, rollback.previousStock);
-      }
-      return {
-        success: false,
-        error: `${item.product_name}: ${stockResult.error}`,
-      };
-    }
-    applied.push({
-      productId: item.product_id,
-      previousStock: stockResult.previousStock!,
-    });
+  // One database transaction: the document, the stock of the document warehouse and one stock
+  // movement per line (post_inventory_writeoff, fix F3). Refused when that warehouse lacks stock.
+  const saved = await callWriteoffRpc("post_inventory_writeoff", {
+    p_payload: writeoffRpcPayload(payload, validItems),
+  });
+  if (saved.error || !saved.id) {
+    return { success: false, error: saved.error || "Silinmə sənədi yaradılmadı" };
   }
 
-  const insertPayload: InventoryWriteoffInsert = {
-    document_number: payload.document_number,
-    writeoff_date: payload.writeoff_date,
-    warehouse_id: payload.warehouse_id || null,
-    checker_name: payload.checker_name.trim(),
-    items: toDamagedGoodsItemsJson(validItems),
-    notes: payload.notes?.trim() || null,
-  };
-
-  const { data, error } = await supabase
-    .from("inventory_writeoffs")
-    .insert([insertPayload])
-    .select("id")
-    .single();
-
-  if (error) {
-    for (const rollback of applied.reverse()) {
-      await restoreProductStock(rollback.productId, rollback.previousStock);
-    }
-    return { success: false, error: error.message };
-  }
-
-  const writeoffId = data?.id as string;
+  const writeoffId = saved.id;
   const slipItems: WarehouseSlipItem[] = validItems.map((item) => ({
     product_id: item.product_id,
     product_code: item.product_code,
@@ -154,10 +132,10 @@ export async function fetchInventoryWriteoffs(): Promise<WriteoffRecord[]> {
   }));
 }
 
+/** The database reads the old lines and warehouse itself, so only the new version is sent. */
 export async function updateInventoryWriteoff(
   writeoffId: string,
-  payload: SubmitWriteoffPayload,
-  previousItems: DamagedGoodsItem[]
+  payload: SubmitWriteoffPayload
 ): Promise<SubmitWriteoffResult> {
   const validItems = payload.items.filter(
     (item) => item.product_id && item.quantity > 0
@@ -176,58 +154,41 @@ export async function updateInventoryWriteoff(
     }
   }
 
-  const toStockLines = (items: DamagedGoodsItem[]) =>
-    items
-      .filter((item) => item.product_id && item.quantity > 0)
-      .map((item) => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-      }));
-
-  const stockResult = await applyWriteoffStockDeltas(
-    supabase,
-    toStockLines(previousItems),
-    toStockLines(validItems)
-  );
-
-  if (!stockResult.ok) {
-    return { success: false, error: stockResult.error };
-  }
-
-  const { error } = await supabase
-    .from("inventory_writeoffs")
-    .update({
-      writeoff_date: payload.writeoff_date,
-      warehouse_id: payload.warehouse_id || null,
-      checker_name: payload.checker_name.trim(),
-      items: toDamagedGoodsItemsJson(validItems),
-      notes: payload.notes?.trim() || null,
-    })
-    .eq("id", writeoffId);
-
-  if (error) {
-    await applyWriteoffStockDeltas(supabase, toStockLines(validItems), toStockLines(previousItems));
-    return { success: false, error: error.message };
-  }
+  // The old lines go back to the old warehouse and the new ones come out of the new warehouse,
+  // in one database transaction (update_inventory_writeoff, fix F3).
+  const saved = await callWriteoffRpc("update_inventory_writeoff", {
+    p_id: writeoffId,
+    p_payload: writeoffRpcPayload(payload, validItems),
+  });
+  if (saved.error) return { success: false, error: saved.error };
 
   return { success: true, writeoffId };
 }
 
+/**
+ * Products that can be written off from a warehouse, with `stock` set to that warehouse's stock
+ * (fix F3; it was the product total). Polywood, services and kits are not offered here.
+ */
 export async function fetchProductsByWarehouse(warehouseId: string): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("name", { ascending: true });
+  if (!warehouseId) return [];
+  const [warehouse, stockRows, products] = await Promise.all([
+    supabase.from("warehouses").select("is_default").eq("id", warehouseId).maybeSingle(),
+    supabase
+      .from("warehouse_stocks" as never)
+      .select("product_id, warehouse_id, current_stock")
+      .or(`warehouse_id.eq.${warehouseId},warehouse_id.is.null`),
+    supabase.from("products").select("*").order("name", { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error("Products fetch error:", error.message);
+  if (products.error || stockRows.error) {
+    console.error("Products fetch error:", products.error?.message || stockRows.error?.message);
     return [];
   }
 
-  const products = (data as Product[]) || [];
-  if (!warehouseId) return products;
-
-  return products.filter(
-    (p) => !p.warehouse_id || p.warehouse_id === warehouseId
+  const stock = warehouseStockMap(
+    (stockRows.data as unknown as WarehouseStockRow[]) || [],
+    warehouseId,
+    Boolean((warehouse.data as { is_default?: boolean | null } | null)?.is_default)
   );
+  return writeoffCandidates((products.data as Product[]) || [], stock);
 }
