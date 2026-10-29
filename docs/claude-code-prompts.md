@@ -713,7 +713,7 @@ resize and move widgets with mouse and keyboard, and the layout survives reload 
 - فاکتور خرید: ستون `created_by` ندارد؛ فقط `responsible_id`/`responsible_name`. برای سندهای قدیمی سازنده را می‌شود از `audit_logs` (اگر insert ثبت شده) پیدا کرد، وگرنه «—».
 - سندهای دیگر: `warehouse_slips`، `payments`، `transactions` ستون `created_by` دارند؛ برای بقیه (هزینه‌ها، انبارگردانی، موجودی اولیه، ضایعات، امانی، انتقال) Claude Code باید بررسی کند.
 
-**تصمیم‌هایی که پیشنهاد شده (اگر Del مخالف بود قبل از اجرا عوض شود):**
+**تصمیم‌ها (Del در ۲۰۲۶-۱۰-۲۹ هر سه را تأیید کرد):** تاریخ صدور سند = زمان واقعی ثبت در سیستم. تاریخ فاکتور/سند = تاریخی که کاربر تنظیم می‌کند (ممکن است امروز فاکتور یا سند پرداخت/دریافتی را بزند که چند روز قبل اتفاق افتاده). هر کاربر بتواند همه فیلدها را در لیست ببیند و به سلیقه خودش انتخاب کند کدام نمایش داده شود.
 1. انتخاب ستون‌ها برای هر کاربر جدا و روی همان مرورگر ذخیره شود (localStorage، مثل صفحه محصولات). نیازی به جدول جدید نیست.
 2. چهار ستون جدید به‌طور پیش‌فرض روشن باشند، ولی کل قابلیت پشت فلگ `LIST_COLUMNS` (پیش‌فرض خاموش) برود تا Del اول خودش ببیند و بعد روشن کند.
 3. «فروشنده» در فاکتور خرید معنی ندارد (تأمین‌کننده جداست)، پس آنجا ستون «مسئول» نشان داده شود. در سندهای امانی ستون `sales_rep_name`.
@@ -740,7 +740,8 @@ Today:
 - warehouse_slips, payments, transactions have created_by. Check every other document table.
 
 Definitions (use them in every list):
-- "Issued at" = created_at (date and time, in the user's locale). Not editable.
+- "Issued at" = created_at (date and time, in the user's locale). Not editable. It is when the
+  document was really entered, which can be days after the document date (approved by Del).
 - "Document date" = the business date of the document (doc_date, payment_date, transaction_date,
   expense_date, count_date, writeoff_date...). Label it "Invoice date" on invoices.
 - "Salesperson" = sales: issued_by name, else seller_name (same rule as mapSaleToInvoicePrint);
@@ -777,13 +778,15 @@ Steps:
      (view_favorites.state already is jsonb), so a saved view brings its columns back; old
      favourites without columns use the user's prefs.
    - Add fields to the definitions where missing: created_at ("Issued at"), created_by_name
-     ("Created by"), the salesperson field. Every field in a definition should be available in the
+     ("Created by"), the salesperson field. Every field in a definition must be available in the
      picker unless it is internal.
 
 4. Classic UI: in each list page below, replace the fixed <Th>/<Td> pairs with a column array
    (key -> header, cell renderer, numeric) filtered by the prefs, so header, body, skeleton
    column count and CSV export follow the same visible set. Keep the select checkbox and actions
    column fixed. Keep the current columns as the default set plus the four new ones.
+   Offer every useful field of the document in the picker (VAT, due date, payment type, currency,
+   note, warehouse, official, status...), hidden by default, so each user builds their own list.
 
 5. Data:
    - Sales list: add created_by and issued_by names to fetchSalesListWithMeta in ONE batched
