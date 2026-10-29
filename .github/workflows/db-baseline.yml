@@ -122,6 +122,12 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/home_widgets.sql | tee "$RUNNER_TEMP/home_widgets.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/home_widgets.txt"
+      # Stock integrity and inventory counts (fix F2): zero-stock products counted, stock trigger
+      # deltas per warehouse, admin-only backdating, as-of quantities, unpost and re-post.
+      - name: Inventory count integrity checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/inventory_count_integrity.sql | tee "$RUNNER_TEMP/inventory_count_integrity.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/inventory_count_integrity.txt"
 
       - name: Server log on failure
         if: failure()

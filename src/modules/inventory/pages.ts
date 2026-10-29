@@ -9,5 +9,6 @@ export { default as InitialBalanceListPage } from "./components/InitialBalanceLi
 export { default as InitialBalanceNewPage } from "./components/InitialBalanceNewPage";
 export { default as WarehousesPage } from "./components/WarehousesPage";
 export { default as InventoryTurnoverPage } from "./components/InventoryTurnoverPage";
+export { default as StockIntegrityPage } from "./components/StockIntegrityPage";
 /** New UI (NEW_UI): inventory screens on the view engine. */
 export { InventoryStockScreen, WarehouseSlipsScreen, InventoryCountsScreen, InitialBalanceScreen, DamagedGoodsScreen } from "./components/InventoryScreens";

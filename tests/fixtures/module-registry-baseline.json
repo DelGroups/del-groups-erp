@@ -339,6 +339,10 @@
       "permission": "can_manage_roles"
     },
     {
+      "prefix": "/settings/stock-integrity",
+      "permission": "can_manage_settings"
+    },
+    {
       "prefix": "/settings/commissions",
       "permission": "can_manage_commissions"
     },

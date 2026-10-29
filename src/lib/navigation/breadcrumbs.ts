@@ -55,6 +55,7 @@ const PATH_I18N: Record<string, string> = {
   "/settings/ai": "nav.items.aiIntegration",
   "/settings/studio": "nav.items.studio",
   "/settings/audit": "nav.items.audit",
+  "/settings/stock-integrity": "nav.items.stockIntegrity",
   "/users": "nav.items.users",
   "/dashboard/inventory/polywood/import": "breadcrumb.polywoodImport",
 };

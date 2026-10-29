@@ -49,12 +49,34 @@ export async function getProductStockAtWarehouse(
   return 0;
 }
 
+/** PostgREST answers PGRST202 while a function does not exist yet (migration not applied). */
+function isMissingFunction(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === "PGRST202" || /could not find the function/i.test(error.message || "")));
+}
+
+/**
+ * Moves a product's stock in one warehouse by `delta` and its total with it, in one database
+ * transaction (adjust_warehouse_stock). The warehouse row never goes below zero.
+ */
 export async function adjustProductStockAtWarehouse(
   client: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
   productId: string,
   warehouseId: string,
   delta: number
 ): Promise<number> {
+  const rpc = client.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+  const { data, error } = await rpc.call(client, "adjust_warehouse_stock", {
+    p_product_id: productId,
+    p_warehouse_id: warehouseId,
+    p_delta: delta,
+  });
+  if (!error) return num(data);
+  if (!isMissingFunction(error)) throw new Error(error.message);
+
+  // Before 20261028181000_product_stock_integrity: the row first, then the total.
   const current = await getProductStockAtWarehouse(client, productId, warehouseId);
   const next = Math.max(0, current + delta);
 
