@@ -117,6 +117,9 @@ export interface ConsignmentDocRecord extends ViewRecord {
   total_value: number;
   line_count: number;
   created_at: string | null;
+  /** Prompt 24c: creator id of the source row; the name is filled by the view data layer. */
+  created_by: string | null;
+  created_by_name: string | null;
 }
 
 /** The classic history: dispatches (opening balances apart), returns and monthly reports. */
@@ -134,6 +137,8 @@ export function consignmentDocuments(dispatches: readonly Record<string, unknown
       total_value: linesValue(d.items),
       line_count: Array.isArray(d.items) ? d.items.length : 0,
       created_at: str(d.created_at),
+      created_by: str(d.created_by),
+      created_by_name: null,
     })),
     ...returns.map((r) => ({
       id: `return-${r.id}`,
@@ -147,6 +152,8 @@ export function consignmentDocuments(dispatches: readonly Record<string, unknown
       total_value: linesValue(r.items),
       line_count: Array.isArray(r.items) ? r.items.length : 0,
       created_at: str(r.created_at),
+      created_by: str(r.created_by),
+      created_by_name: null,
     })),
     ...reports.map((p) => ({
       id: `report-${p.id}`,
@@ -160,6 +167,8 @@ export function consignmentDocuments(dispatches: readonly Record<string, unknown
       total_value: round(num(p.total_amount)),
       line_count: Array.isArray(p.sold_items) ? p.sold_items.length : 0,
       created_at: str(p.created_at),
+      created_by: str(p.created_by),
+      created_by_name: null,
     })),
   ];
   // Newest first, as the classic history.
@@ -168,7 +177,7 @@ export function consignmentDocuments(dispatches: readonly Record<string, unknown
 
 export function documentsDefinition(fetchers: Fetchers): ViewDefinition<ConsignmentDocRecord> {
   return {
-    model: { key: DOCS_VIEW_KEY, table: "consignment_dispatches", module: "consignment", readPermission: "can_view_consignments", writePermission: "can_manage_consignments", select: "*", order: { field: "date", dir: "desc" }, toRecord: (r) => r as ConsignmentDocRecord, ...fetchers },
+    model: { key: DOCS_VIEW_KEY, table: "consignment_dispatches", module: "consignment", readPermission: "can_view_consignments", writePermission: "can_manage_consignments", select: "*", order: { field: "date", dir: "desc" }, toRecord: (r) => r as ConsignmentDocRecord, userFields: { created_by: "created_by_name" }, ...fetchers },
     titleKey: "consignments.tabHistory",
     fields: [
       { name: "doc_no", labelKey: "consignments.docNo", type: "char", searchable: true, readonly: true },
@@ -190,6 +199,8 @@ export function documentsDefinition(fetchers: Fetchers): ViewDefinition<Consignm
       { name: "date", labelKey: "common.date", type: "date", readonly: true },
       { name: "line_count", labelKey: "inventory.engine.lines", type: "integer", readonly: true },
       { name: "total_value", labelKey: "consignments.totalValue", type: "monetary", readonly: true },
+      { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: [
       { key: "dispatch", labelKey: "consignments.opTypeDispatch", group: "type", conditions: () => [{ field: "document_type", op: "eq", value: "DISPATCH" }] },
@@ -199,7 +210,14 @@ export function documentsDefinition(fetchers: Fetchers): ViewDefinition<Consignm
     ],
     groupBys: ["document_type", "partner_id", "sales_rep_name", "date:month"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
-    list: { columns: ["doc_no", "document_type", "partner_id", "sales_rep_name", "date", "total_value"], sums: ["total_value"] },
+    list: {
+      columns: ["doc_no", "document_type", "partner_id", "sales_rep_name", "date", "total_value"],
+      sums: ["total_value"],
+      // Prompt 24c: the sales rep is already a column (the salesperson of consignment).
+      standard: ["created_at", "created_by_name"],
+      optional: ["line_count"],
+      standardLabels: { date: "listColumns.documentDate", sales_rep_name: "listColumns.salesperson", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     kanban: { groupBy: "document_type", title: "doc_no", subtitle: "partner_id", amount: "total_value", fields: ["date", "sales_rep_name"] },
     form: { title: "doc_no", fields: ["document_type", "partner_id", "sales_rep_name", "date", "line_count", "total_value"] },
     pivot: { rows: "partner_id", cols: "document_type", measure: "total_value" },

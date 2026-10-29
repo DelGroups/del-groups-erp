@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import type { SaleItem, SalePayment, WarehouseSlipStatus } from "@/types/database.types";
 
@@ -256,6 +257,12 @@ export async function fetchSalesList(): Promise<SaleRecord[]> {
   return result.sales;
 }
 
+/** User id columns of a sale and the fields that get their names. */
+export const SALE_USER_FIELDS = [
+  ["created_by", "created_by_name"],
+  ["issued_by", "issued_by_name"],
+] as const;
+
 export async function fetchSalesListWithMeta(): Promise<FetchSalesListResult> {
   try {
     const selectAttempts = [
@@ -288,10 +295,12 @@ export async function fetchSalesListWithMeta(): Promise<FetchSalesListResult> {
       return { sales: [], error: error.message };
     }
 
-    const sales = (data || [])
+    const mapped = (data || [])
       .map((row) => mapSaleRow(row as SalesListRow))
       .filter((row): row is SaleRecord => row != null)
       .filter((row) => !isInvoiceCancelled(row.status));
+    // Creator and issuer names for the list columns (prompt 24c): one lookup for all rows.
+    const sales = await withProfileNames(supabase as unknown as ProfileNamesClient, mapped as unknown as Record<string, unknown>[], SALE_USER_FIELDS) as unknown as SaleRecord[];
 
     return { sales };
   } catch (err) {

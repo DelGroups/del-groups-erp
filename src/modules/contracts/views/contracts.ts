@@ -27,6 +27,8 @@ export interface ContractRecord extends ViewRecord {
   has_attachment: boolean;
   payment_terms_notes: string | null;
   created_at: string | null;
+  /** Prompt 24c. */
+  created_by_name: string | null;
 }
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -54,6 +56,7 @@ export function contractToRecord(row: Record<string, unknown>): ContractRecord {
     has_attachment: !!str(row.attachment_path),
     payment_terms_notes: str(row.payment_terms_notes),
     created_at: str(row.created_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
@@ -101,6 +104,8 @@ export function contractsDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetch
       { name: "expiry_date", labelKey: "official.expiryDate", type: "date", readonly: true },
       { name: "has_attachment", labelKey: "contracts.engine.hasAttachment", type: "boolean", groupable: true, readonly: true },
       { name: "payment_terms_notes", labelKey: "official.paymentTermsNotes", type: "text", searchable: true, readonly: true },
+      { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: [
       { key: "active", labelKey: "official.statusActive", group: "status", conditions: () => [{ field: "status", op: "eq", value: "active" }] },
@@ -124,7 +129,14 @@ export function contractsDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetch
     ],
     groupBys: ["status", "type", "party_id", "has_attachment", "contract_date:month", "expiry_date:month"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
-    list: { columns: ["contract_number", "title", "party_id", "type", "total_amount", "advance_percentage", "contract_date", "expiry_date", "status"], sums: ["total_amount", "advance_amount"] },
+    list: {
+      columns: ["contract_number", "title", "party_id", "type", "total_amount", "advance_percentage", "contract_date", "expiry_date", "status"],
+      sums: ["total_amount", "advance_amount"],
+      // Prompt 24c: contracts have no salesperson.
+      standard: ["created_at", "created_by_name"],
+      optional: ["advance_amount", "payment_stages", "voen", "has_attachment", "payment_terms_notes"],
+      standardLabels: { contract_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     kanban: { groupBy: "status", title: "title", subtitle: "party_id", amount: "total_amount", fields: ["contract_number", "expiry_date"] },
     form: {
       title: "title",

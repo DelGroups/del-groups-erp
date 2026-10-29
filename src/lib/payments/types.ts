@@ -14,6 +14,9 @@ export type PartnerPaymentRecord = {
   cash_account_name: string | null;
   journal_entry_id: string | null;
   created_at: string | null;
+  /** Prompt 24c: who entered the payment and their name ("—" in lists when unknown). */
+  created_by?: string | null;
+  created_by_name?: string | null;
 };
 
 export type CreatePartnerPaymentInput = {

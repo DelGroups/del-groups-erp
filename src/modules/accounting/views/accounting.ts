@@ -37,6 +37,8 @@ export interface LedgerRecord extends ViewRecord {
   description: string;
   notes: string | null;
   created_at: string;
+  /** Prompt 24c (name filled by the view data layer from created_by). */
+  created_by_name: string | null;
 }
 
 export function ledgerToRecord(row: Record<string, unknown>): LedgerRecord {
@@ -56,6 +58,7 @@ export function ledgerToRecord(row: Record<string, unknown>): LedgerRecord {
     description: String(row.description ?? ""),
     notes: str(row.notes),
     created_at: String(row.created_at ?? ""),
+    created_by_name: str(row.created_by_name),
   };
 }
 
@@ -64,7 +67,7 @@ export const LEDGER_SOURCES = ["production_expense", "production", "manual_expen
 
 export function ledgerDefinition(fetchers: Fetchers): ViewDefinition<LedgerRecord> {
   return {
-    model: { key: LEDGER_VIEW_KEY, table: "transactions", module: "accounting", readPermission: "can_view_finance", writePermission: "can_manage_finance", select: "*", order: { field: "transaction_date", dir: "desc" }, toRecord: ledgerToRecord, ...fetchers },
+    model: { key: LEDGER_VIEW_KEY, table: "transactions", module: "accounting", readPermission: "can_view_finance", writePermission: "can_manage_finance", select: "*", order: { field: "transaction_date", dir: "desc" }, toRecord: ledgerToRecord, userFields: { created_by: "created_by_name" }, ...fetchers },
     titleKey: "finance.title",
     fields: [
       { name: "transaction_date", labelKey: "finance.columnDate", type: "date", readonly: true },
@@ -89,6 +92,7 @@ export function ledgerDefinition(fetchers: Fetchers): ViewDefinition<LedgerRecor
       { name: "source", labelKey: "finance.columnSource", type: "selection", options: LEDGER_SOURCES.map((value) => ({ value, labelKey: `accounting.engine.source.${value}` })), groupable: true, searchable: true, readonly: true },
       { name: "locked", labelKey: "accounting.engine.fromModule", type: "boolean", groupable: true, readonly: true },
       { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: [
       { key: "income", labelKey: "finance.typeIncome", group: "type", conditions: () => [{ field: "type", op: "eq", value: "INCOME" }] },
@@ -100,7 +104,14 @@ export function ledgerDefinition(fetchers: Fetchers): ViewDefinition<LedgerRecor
     ],
     groupBys: ["type", "category", "account_name", "source", "transaction_date:month", "transaction_date:week"],
     views: ["list", "pivot", "graph", "calendar"],
-    list: { columns: ["transaction_date", "type", "category", "amount", "account_name", "description", "source"], sums: ["net"] },
+    list: {
+      columns: ["transaction_date", "type", "category", "amount", "account_name", "description", "source"],
+      sums: ["net"],
+      // Prompt 24c: ledger lines have no salesperson.
+      standard: ["created_at", "created_by_name"],
+      optional: ["net", "notes", "locked"],
+      standardLabels: { transaction_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     form: { title: "category", statusField: "type", fields: ["transaction_date", "amount", "account_name", "source", "description", "notes", "created_at"] },
     pivot: { rows: "category", cols: "transaction_date:month", measure: "net" },
     graph: { groupBy: "transaction_date:month", measure: "net", type: "bar" },
@@ -229,6 +240,8 @@ export interface PaymentRecord extends ViewRecord {
   cash_account_name: string | null;
   reference_note: string | null;
   created_at: string | null;
+  /** Prompt 24c. */
+  created_by_name: string | null;
 }
 
 export function paymentToRecord(row: Record<string, unknown>): PaymentRecord {
@@ -245,6 +258,7 @@ export function paymentToRecord(row: Record<string, unknown>): PaymentRecord {
     cash_account_name: str(row.cash_account_name),
     reference_note: str(row.reference_note),
     created_at: str(row.created_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
@@ -282,6 +296,7 @@ export function paymentsDefinition(fetchers: Fetchers): ViewDefinition<PaymentRe
       { name: "cash_account_name", labelKey: "payments.cashAccount", type: "char", searchable: true, groupable: true, readonly: true },
       { name: "reference_note", labelKey: "payments.reference", type: "char", searchable: true, readonly: true },
       { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: [
       { key: "in", labelKey: "payments.typeIn", group: "type", conditions: () => [{ field: "payment_type", op: "eq", value: "in" }] },
@@ -290,7 +305,14 @@ export function paymentsDefinition(fetchers: Fetchers): ViewDefinition<PaymentRe
     ],
     groupBys: ["payment_type", "partner_name", "payment_method", "cash_account_name", "payment_date:month"],
     views: ["list", "pivot", "graph", "calendar"],
-    list: { columns: ["payment_date", "partner_name", "payment_type", "payment_method", "amount", "cash_account_name", "reference_note"], sums: ["net"] },
+    list: {
+      columns: ["payment_date", "partner_name", "payment_type", "payment_method", "amount", "cash_account_name", "reference_note"],
+      sums: ["net"],
+      // Prompt 24c: partner payments have no salesperson.
+      standard: ["created_at", "created_by_name"],
+      optional: ["net"],
+      standardLabels: { payment_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     form: { title: "partner_name", statusField: "payment_type", fields: ["payment_date", "amount", "payment_method", "cash_account_name", "reference_note", "created_at"] },
     pivot: { rows: "partner_name", cols: "payment_type", measure: "amount" },
     graph: { groupBy: "payment_date:month", measure: "net", type: "bar" },

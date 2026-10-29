@@ -57,6 +57,8 @@ export interface FieldDef {
   help?: string;
   /** Set on fields that come from Studio (record.custom_fields). */
   custom?: boolean;
+  /** Never offered as a list column (ids and helper values). */
+  internal?: boolean;
 }
 
 export type ConditionOp = "eq" | "neq" | "in" | "gt" | "gte" | "lt" | "lte" | "contains" | "set" | "not_set";
@@ -109,6 +111,11 @@ export interface ModelDef<R extends ViewRecord = ViewRecord> {
   order: SortSpec;
   /** Rows read at most; the views say so when the cap is reached. */
   limit?: number;
+  /**
+   * Prompt 24c: user id columns of the row and the record field that gets the user's name,
+   * e.g. { created_by: "created_by_name" }; filled in one batched lookup per read.
+   */
+  userFields?: Readonly<Record<string, string>>;
   /** studio_fields.model_key, when the model has Studio custom fields (column custom_fields). */
   studioModel?: string;
   /** Raw row → flat record (custom fields are added by the data layer). */
@@ -123,9 +130,19 @@ export interface ModelDef<R extends ViewRecord = ViewRecord> {
 }
 
 export interface ListViewDef {
+  /** The default visible columns (exactly today's list while LIST_COLUMNS is off). */
   columns: readonly string[];
   /** Columns summed in group rows and in the footer. */
   sums?: readonly string[];
+  /**
+   * Prompt 24c, only while LIST_COLUMNS is on: the standard columns (Issued at, Salesperson,
+   * Created by) shown by default after `columns`.
+   */
+  standard?: readonly string[];
+  /** Extra columns the user may turn on (off by default), offered first in the picker. */
+  optional?: readonly string[];
+  /** Headers of this list while LIST_COLUMNS is on, by field ("doc_date" -> "Invoice date"). */
+  standardLabels?: Readonly<Record<string, string>>;
 }
 
 export interface KanbanViewDef {
@@ -215,4 +232,6 @@ export interface SearchState {
   groupBy: GroupBySpec[];
   sort: SortSpec | null;
   view: Exclude<ViewType, "form">;
+  /** Visible columns and their order (prompt 24c); absent = the user's own choice. */
+  columns?: { visible: string[]; order: string[] };
 }

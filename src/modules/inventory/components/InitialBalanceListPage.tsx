@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Eye, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
+import { AlertTriangle, Eye, FileSpreadsheet, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
+import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+
+/** Column choice key of this list (prompt 24c). */
+const INTAKE_LIST_KEY = "inventory.intake";
 import PageLayout from "@/components/layout/PageLayout";
 import PageHeader from "@/components/ui/page-header";
 import Button from "@/components/ui/button";
@@ -101,7 +106,7 @@ function UnpostConfirmModal({
 }
 
 export default function InitialBalanceListPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const router = useRouter();
   const { can } = useAuth();
   const canManage = can("can_manage_products");
@@ -156,6 +161,44 @@ export default function InitialBalanceListPage() {
     void load();
   };
 
+  // Columns of the list (prompt 24c): "Created by" is already a column; no salesperson.
+  const columnDefs = useMemo<TableColumn<InitialBalanceDocument>[]>(
+    () => [
+      {
+        key: "document_number",
+        labelKey: "initialBalance.docNo",
+        defaultVisible: true,
+        required: true,
+        exportValue: (row) => row.document_number,
+        cell: (row) => (
+          <Link href={documentHref(row.id)} className="font-semibold text-app-accent hover:underline">
+            {row.document_number}
+          </Link>
+        ),
+      },
+      { key: "doc_date", labelKey: "listColumns.documentDate", offLabelKey: "common.date", defaultVisible: true, exportType: "date", exportValue: (row) => row.doc_date, cell: (row) => row.doc_date },
+      { key: "entry_type", labelKey: "initialBalance.entryType", defaultVisible: true, cell: (row) => (row.entry_type === "receipt" ? t("initialBalance.entryTypeReceipt") : t("initialBalance.entryTypeOpeningBalance")) },
+      { key: "warehouse", labelKey: "common.warehouse", defaultVisible: true, cell: (row) => row.warehouse_name || "—" },
+      { key: "total_amount", labelKey: "initialBalance.totalValue", defaultVisible: true, numeric: true, tdClassName: "font-mono", exportValue: (row) => Number(row.total_amount || 0), cell: (row) => `${Number(row.total_amount || 0).toFixed(2)} AZN` },
+      {
+        key: "status",
+        labelKey: "common.status",
+        defaultVisible: true,
+        cell: (row) => (row.status === "posted" ? t("initialBalance.statusPosted") : row.status === "cancelled" ? t("initialBalance.statusCancelled") : t("initialBalance.statusDraft")),
+      },
+      { key: "created_by", labelKey: "listColumns.createdBy", offLabelKey: "initialBalance.createdBy", defaultVisible: true, cell: (row) => row.created_by_name || "—" },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (row) => row.created_at, cell: (row) => (row.created_at ? formatDateTime(row.created_at) : "—") },
+      { key: "posted_at", labelKey: "inventory.engine.postedAt", defaultVisible: false, exportType: "datetime", exportValue: (row) => row.posted_at, cell: (row) => (row.posted_at ? formatDateTime(row.posted_at) : "—") },
+      { key: "notes", labelKey: "inventoryCount.notes", defaultVisible: false, tdClassName: "max-w-xs truncate", cell: (row) => dash(row.notes) },
+    ],
+    [t, formatDateTime]
+  );
+  const columns = useTableColumns(INTAKE_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!rows.length) return;
+    void exportXlsx(xlsxFileName(t("initialBalance.listTitle"), new Date()), { sheetName: t("initialBalance.listTitle"), columns: columns.exportColumns, rows });
+  };
+
   return (
     <PageLayout>
       <PageHeader
@@ -163,6 +206,14 @@ export default function InitialBalanceListPage() {
         subtitle={t("initialBalance.listDescription")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
+            {columns.enabled ? (
+              <Button variant="secondary" onClick={handleExport} className="inline-flex items-center gap-1">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {t("common.excelDownload")}
+              </Button>
+            ) : null}
+            {columns.picker}
             <Link href="/warehouse/initial-balance/new?type=opening_balance">
               <Button variant="outline" className="inline-flex items-center gap-1">
                 <Plus className="h-4 w-4" />
@@ -183,26 +234,24 @@ export default function InitialBalanceListPage() {
         <table className="min-w-full text-xs">
           <thead className="bg-app-card-hover text-app-muted">
             <tr>
-              <th className="px-3 py-2 text-left">{t("initialBalance.docNo")}</th>
-              <th className="px-3 py-2 text-left">{t("common.date")}</th>
-              <th className="px-3 py-2 text-left">{t("initialBalance.entryType")}</th>
-              <th className="px-3 py-2 text-left">{t("common.warehouse")}</th>
-              <th className="px-3 py-2 text-right">{t("initialBalance.totalValue")}</th>
-              <th className="px-3 py-2 text-left">{t("common.status")}</th>
-              <th className="px-3 py-2 text-left">{t("initialBalance.createdBy")}</th>
+              {columns.visible.map((c) => (
+                <th key={c.key} className={c.numeric ? "px-3 py-2 text-right" : "px-3 py-2 text-left"}>
+                  {c.label}
+                </th>
+              ))}
               <th className="w-12 px-3 py-2 text-center">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-app-muted">
+                <td colSpan={columns.visible.length + 1} className="px-3 py-8 text-center text-app-muted">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-app-muted">
+                <td colSpan={columns.visible.length + 1} className="px-3 py-8 text-center text-app-muted">
                   {t("initialBalance.emptyList")}
                 </td>
               </tr>
@@ -212,32 +261,11 @@ export default function InitialBalanceListPage() {
                 const isPosted = row.status === "posted";
                 return (
                   <tr key={row.id} className="border-t border-app hover:bg-app-card-hover">
-                    <td className="px-3 py-2">
-                      <Link
-                        href={documentHref(row.id)}
-                        className="font-semibold text-app-accent hover:underline"
-                      >
-                        {row.document_number}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">{row.doc_date}</td>
-                    <td className="px-3 py-2">
-                      {row.entry_type === "receipt"
-                        ? t("initialBalance.entryTypeReceipt")
-                        : t("initialBalance.entryTypeOpeningBalance")}
-                    </td>
-                    <td className="px-3 py-2">{row.warehouse_name || "—"}</td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {Number(row.total_amount || 0).toFixed(2)} AZN
-                    </td>
-                    <td className="px-3 py-2">
-                      {isPosted
-                        ? t("initialBalance.statusPosted")
-                        : row.status === "cancelled"
-                          ? t("initialBalance.statusCancelled")
-                          : t("initialBalance.statusDraft")}
-                    </td>
-                    <td className="px-3 py-2">{row.created_by_name || "—"}</td>
+                    {columns.visible.map((c) => (
+                      <td key={c.key} className={["px-3 py-2", c.numeric ? "text-right" : "", c.tdClassName ?? ""].join(" ").trim()}>
+                        {c.cell(row)}
+                      </td>
+                    ))}
                     <td className="relative px-3 py-2 text-center">
                       <TableRowActionsMenu
                         align="right"

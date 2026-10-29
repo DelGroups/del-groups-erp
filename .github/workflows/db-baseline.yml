@@ -138,6 +138,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/stock_per_warehouse.sql | tee "$RUNNER_TEMP/stock_per_warehouse.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/stock_per_warehouse.txt"
+      # List columns (prompt 24c): created_by triggers and backfill, profile_display_names.
+      - name: List columns checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/list_columns.sql | tee "$RUNNER_TEMP/list_columns.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/list_columns.txt"
 
       - name: Server log on failure
         if: failure()

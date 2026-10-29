@@ -341,7 +341,7 @@ test("Excel rows: translated headers, numbers as numbers, names instead of ids",
   assert.deepEqual(rows[0], ["crm.deal.title", "crm.deal.client", "crm.engine.fields.salesperson", "crm.engine.fields.stage", "crm.engine.fields.lastQuote", "crm.deal.expectedValue", "crm.engine.fields.createdAt"]);
   assert.deepEqual(rows[1].slice(0, 6), ["Deal a", "Aysel", null, "Lead", null, 100]);
   assert.equal(rows[2][5], 250.5);
-  assert.equal(exportFileName('CRM: "deals"/2026', new Date(2026, 9, 14)), "CRM deals 2026 2026-10-14.xlsx");
+  assert.equal(exportFileName('CRM: "deals"/2026', new Date(2026, 9, 14)), "CRM_deals_2026-2026-10-14.xlsx");
 });
 
 test("display values by field type", () => {

@@ -47,6 +47,9 @@ export interface ExpenseDocument {
   amount: number;
   cancel_reason: string | null;
   created_at: string | null;
+  /** Prompt 24c: who entered the document and their name (null when unknown). */
+  created_by?: string | null;
+  created_by_name?: string | null;
   /** Posted by another module (production); cancelled from there, not here. */
   is_production: boolean;
   /** Receipts / invoices attached to the document. */

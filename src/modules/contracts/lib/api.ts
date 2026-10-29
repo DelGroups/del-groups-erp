@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 
 import { storageFullMessage } from "@/lib/limits/client";
 export type ContractType = "sale" | "purchase" | "service";
@@ -21,6 +22,9 @@ export interface Contract {
   expiry_date: string | null;
   attachment_path: string | null;
   created_at: string | null;
+  /** Prompt 24c: who created the contract and their name. */
+  created_by?: string | null;
+  created_by_name?: string | null;
 }
 
 export interface ContractInput {
@@ -73,6 +77,8 @@ function toContract(row: Record<string, unknown>): Contract {
     attachment_path:
       row.attachment_path != null ? String(row.attachment_path) : null,
     created_at: row.created_at != null ? String(row.created_at) : null,
+    // contracts.created_by exists once migration 20261028143000 ran (prompt 24c).
+    created_by: row.created_by != null ? String(row.created_by) : null,
   };
 }
 
@@ -147,7 +153,9 @@ export async function fetchContracts(filters?: {
     console.error("fetchContracts:", error.message);
     return [];
   }
-  return (data || []).map((row) => toContract(row as Record<string, unknown>));
+  const contracts = (data || []).map((row) => toContract(row as Record<string, unknown>));
+  // Creator names for the list columns (prompt 24c): one lookup for all rows.
+  return (await withProfileNames(supabase as unknown as ProfileNamesClient, contracts as unknown as Record<string, unknown>[], [["created_by", "created_by_name"]])) as unknown as Contract[];
 }
 
 export async function createContract(

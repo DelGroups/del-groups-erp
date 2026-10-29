@@ -5,6 +5,8 @@
  * favourites (saved search state) and the Excel rows.
  */
 import type { StudioField } from "../lib/studio/fields";
+import { columnsForFlag, mergeColumnPrefs, type ColumnPrefs, type FlaggedColumnDef } from "../lib/lists/columns";
+import { xlsxFileName, type XlsxCellType, type XlsxColumn } from "../lib/export/exportXlsx";
 import type {
   Condition,
   DateGranularity,
@@ -694,6 +696,8 @@ export function sanitizeSearchState(raw: unknown, def: ViewDefinition): SearchSt
     groupBy: Array.isArray(s.groupBy) ? [...new Set(s.groupBy.filter((k): k is string => typeof k === "string" && groupable.has(k)))].slice(0, MAX_GROUP_LEVELS) : [],
     sort,
     view,
+    // A favourite saved with its columns (prompt 24c) brings them back; without, the user's own.
+    ...(s.columns && typeof s.columns === "object" ? { columns: mergeColumnPrefs(listColumnDefs(def), s.columns) } : {}),
   };
 }
 
@@ -742,10 +746,69 @@ export function exportRows(records: readonly ViewRecord[], def: Pick<ViewDefinit
   ];
 }
 
-/** "CRM deals 2026-10-14.xlsx", without characters that break file names. */
+/** "CRM_deals-2026-10-14.xlsx" (prompt 24c: "<list>-<yyyy-mm-dd>.xlsx"). */
 export function exportFileName(title: string, now: Date): string {
-  const safe = title.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim() || "export";
-  return `${safe} ${dayKey(now)}.xlsx`;
+  return xlsxFileName(title, now);
+}
+
+const XLSX_TYPE: Partial<Record<FieldType, XlsxCellType>> = { monetary: "money", integer: "integer", float: "number", date: "date", datetime: "datetime" };
+
+/**
+ * Excel columns of a list (prompt 24c): the columns the user sees, in their order. Numbers and
+ * dates keep their types; everything else is the text the list shows.
+ */
+export function exportColumns(def: Pick<ViewDefinition, "fields" | "list">, columns: readonly string[], fmt: Formatter, enabled = false): XlsxColumn<ViewRecord>[] {
+  const fields = fieldMap(def);
+  return columns
+    .map((c) => fields.get(c))
+    .filter((f): f is FieldDef => !!f)
+    .map((f) => {
+      const type = XLSX_TYPE[f.type];
+      return {
+        header: listFieldLabel(f, def, enabled, fmt),
+        type: type ?? "text",
+        value: (r: ViewRecord) => (type ? r[f.name] : displayValue(f, r, fmt) || null),
+      };
+    });
+}
+
+// ── List columns (prompt 24c) ────────────────────────────────────────────────
+
+/**
+ * Every column the picker offers, in its default order: the list's columns (shown; the first
+ * cannot be hidden), the standard columns (shown while LIST_COLUMNS is on), the optional ones,
+ * then every other field of the definition but internal ones (hidden).
+ */
+export function listColumnDefs(def: Pick<ViewDefinition, "fields" | "list">): FlaggedColumnDef[] {
+  const fields = fieldMap(def);
+  const out: FlaggedColumnDef[] = [];
+  const seen = new Set<string>();
+  const add = (name: string, defaultVisible: boolean, standard = false) => {
+    const f = fields.get(name);
+    if (!f || f.internal || seen.has(name)) return;
+    seen.add(name);
+    out.push({ key: name, labelKey: f.labelKey ?? name, defaultVisible, required: out.length === 0 || undefined, numeric: isNumericField(f) || undefined, standard: standard || undefined });
+  };
+  for (const c of def.list.columns) add(c, true);
+  for (const c of def.list.standard ?? []) add(c, true, true);
+  for (const c of def.list.optional ?? []) add(c, false);
+  for (const f of def.fields) add(f.name, false);
+  return out;
+}
+
+/** The column keys a list shows: today's columns while the flag is off, else the user's choice. */
+export function shownListColumns(def: Pick<ViewDefinition, "fields" | "list">, enabled: boolean, prefs: ColumnPrefs | undefined): string[] {
+  if (!enabled || !prefs) {
+    const fields = fieldMap(def);
+    return def.list.columns.filter((c) => fields.has(c));
+  }
+  return columnsForFlag(listColumnDefs(def), true, prefs).map((c) => c.key);
+}
+
+/** Header of a list column: the list's own label for it while LIST_COLUMNS is on ("Invoice date"). */
+export function listFieldLabel(field: FieldDef, def: Pick<ViewDefinition, "list">, enabled: boolean, fmt: Pick<Formatter, "t">): string {
+  const own = enabled ? def.list.standardLabels?.[field.name] : undefined;
+  return own ? fmt.t(own) : fieldLabel(field, fmt);
 }
 
 // ── Form ─────────────────────────────────────────────────────────────────────

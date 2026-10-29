@@ -10,6 +10,7 @@ import ContractPrintTemplate, {
 import ContractStatsCards from "./ContractStatsCards";
 import {
   Ban,
+  FileSpreadsheet,
   FileText,
   Pencil,
   Plus,
@@ -41,6 +42,11 @@ import {
 import { filterLegalCustomers, filterLegalSuppliers } from "@/lib/customers/entityType";
 import type { CompanyBranding } from "@/lib/print/types";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+
+/** Column choice key of this list (prompt 24c). */
+const CONTRACTS_LIST_KEY = "contracts.list";
 import { supabase } from "@/lib/supabase";
 import type { Customer, Supplier } from "@/types/database.types";
 
@@ -53,7 +59,7 @@ const STATUS_TABS: Array<"all" | ContractStatus> = [
 ];
 
 export default function ContractsPageClient() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_create_invoice") || can("can_view_purchases");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -154,6 +160,57 @@ export default function ContractsPageClient() {
       );
     });
   }, [contracts, search, filterType, filterStatus]);
+
+  // Columns of the list (prompt 24c): contracts have no salesperson.
+  const columnDefs = useMemo<TableColumn<Contract>[]>(
+    () => [
+      { key: "contract_number", labelKey: "official.contractNumber", defaultVisible: true, required: true, tdClassName: "font-mono", cell: (c) => c.contract_number },
+      { key: "title", labelKey: "official.contractTitle", defaultVisible: true, cell: (c) => c.title },
+      { key: "type", labelKey: "official.contractType", defaultVisible: true, cell: (c) => getContractTypeLabel(c.type, t) },
+      {
+        key: "party",
+        labelKey: "official.party",
+        defaultVisible: true,
+        exportValue: (c) => c.party_name,
+        cell: (c) => (
+          <>
+            <div>{c.party_name || "—"}</div>
+            {c.voen && <div className="text-[10px] text-app-muted">VÖEN: {c.voen}</div>}
+          </>
+        ),
+      },
+      { key: "total_amount", labelKey: "official.contractAmount", defaultVisible: true, numeric: true, tdClassName: "font-mono", exportValue: (c) => c.total_amount, cell: (c) => (c.total_amount != null ? Number(c.total_amount).toFixed(2) : "—") },
+      { key: "payment_terms", labelKey: "official.paymentTerms", defaultVisible: true, tdClassName: "text-app-muted", cell: (c) => formatContractOptionLabel(c, t).split(" - ").slice(1).join(" - ") || "—" },
+      {
+        key: "status",
+        labelKey: "common.status",
+        defaultVisible: true,
+        exportValue: (c) => getContractStatusLabel(c.status, t),
+        cell: (c) => (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              c.status === "active" ? "bg-emerald-500/10 text-emerald-600" : c.status === "completed" ? "bg-blue-500/10 text-blue-600" : "bg-rose-500/10 text-rose-600"
+            }`}
+          >
+            {getContractStatusLabel(c.status, t)}
+          </span>
+        ),
+      },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (c) => c.created_at, cell: (c) => (c.created_at ? formatDateTime(c.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (c) => dash(c.created_by_name) },
+      { key: "contract_date", labelKey: "listColumns.documentDate", defaultVisible: false, exportType: "date", exportValue: (c) => c.contract_date, cell: (c) => dash(c.contract_date) },
+      { key: "expiry_date", labelKey: "official.expiryDate", defaultVisible: false, exportType: "date", exportValue: (c) => c.expiry_date, cell: (c) => dash(c.expiry_date) },
+      { key: "advance", labelKey: "official.advancePercentage", defaultVisible: false, numeric: true, exportType: "number", exportValue: (c) => c.advance_percentage, cell: (c) => (c.advance_percentage != null ? `${c.advance_percentage}%` : "—") },
+      { key: "voen", labelKey: "contracts.engine.voen", defaultVisible: false, cell: (c) => dash(c.voen) },
+      { key: "notes", labelKey: "official.paymentTermsNotes", defaultVisible: false, tdClassName: "max-w-xs truncate", cell: (c) => dash(c.payment_terms_notes) },
+    ],
+    [t, formatDateTime]
+  );
+  const columns = useTableColumns(CONTRACTS_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!filtered.length) return;
+    void exportXlsx(xlsxFileName(t("official.contractsPageTitle"), new Date()), { sheetName: t("official.contractsPageTitle"), columns: columns.exportColumns, rows: filtered });
+  };
 
   const resetForm = (type: ContractType = "sale") => ({
     contract_number: generateContractNumber(type),
@@ -365,6 +422,17 @@ export default function ContractsPageClient() {
           ))}
         </div>
 
+        {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
+        {columns.enabled ? (
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary" onClick={handleExport}>
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              {t("common.excelDownload")}
+            </button>
+            {columns.picker}
+          </div>
+        ) : null}
+
         <div className="app-card overflow-hidden">
           {loading ? (
             <p className="p-6 text-center text-sm text-app-muted">{t("common.loading")}</p>
@@ -375,47 +443,22 @@ export default function ContractsPageClient() {
               <table className="w-full min-w-[960px] text-xs">
                 <thead className="border-b border-app bg-app-card-hover text-left text-app-muted">
                   <tr>
-                    <th className="px-4 py-2">{t("official.contractNumber")}</th>
-                    <th className="px-4 py-2">{t("official.contractTitle")}</th>
-                    <th className="px-4 py-2">{t("official.contractType")}</th>
-                    <th className="px-4 py-2">{t("official.party")}</th>
-                    <th className="px-4 py-2 text-right">{t("official.contractAmount")}</th>
-                    <th className="px-4 py-2">{t("official.paymentTerms")}</th>
-                    <th className="px-4 py-2">{t("common.status")}</th>
+                    {columns.visible.map((col) => (
+                      <th key={col.key} className={col.numeric ? "px-4 py-2 text-right" : "px-4 py-2"}>
+                        {col.label}
+                      </th>
+                    ))}
                     <th className="px-4 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
                     <tr key={c.id} className="border-b border-app/50 hover:bg-app-card-hover">
-                      <td className="px-4 py-2 font-mono">{c.contract_number}</td>
-                      <td className="px-4 py-2">{c.title}</td>
-                      <td className="px-4 py-2">{getContractTypeLabel(c.type, t)}</td>
-                      <td className="px-4 py-2">
-                        <div>{c.party_name || "—"}</div>
-                        {c.voen && (
-                          <div className="text-[10px] text-app-muted">VÖEN: {c.voen}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        {c.total_amount != null ? Number(c.total_amount).toFixed(2) : "—"}
-                      </td>
-                      <td className="px-4 py-2 text-app-muted">
-                        {formatContractOptionLabel(c, t).split(" - ").slice(1).join(" - ") || "—"}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            c.status === "active"
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : c.status === "completed"
-                                ? "bg-blue-500/10 text-blue-600"
-                                : "bg-rose-500/10 text-rose-600"
-                          }`}
-                        >
-                          {getContractStatusLabel(c.status, t)}
-                        </span>
-                      </td>
+                      {columns.visible.map((col) => (
+                        <td key={col.key} className={["px-4 py-2", col.numeric ? "text-right" : "", col.tdClassName ?? ""].join(" ").trim()}>
+                          {col.cell(c)}
+                        </td>
+                      ))}
                       <td className="px-4 py-2">
                         <div className="flex items-center justify-end gap-0.5">
                           <button

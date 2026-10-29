@@ -5,7 +5,7 @@ import {
   ActionAuthError,
   requirePermissionAction,
 } from "@/lib/auth/serverActionAuth";
-import { rowsToCsv } from "@/lib/csv/csvUtils";
+import type { XlsxCellType } from "@/lib/export/exportXlsx";
 import {
   BACKUP_DELETE_ORDER,
   BACKUP_TABLES,
@@ -20,6 +20,20 @@ import {
   PRODUCTION_MATERIAL_LIVE_COLUMNS,
 } from "@/modules/production";
 import { PRODUCT_SLUG } from "@/lib/brand";
+
+/**
+ * One sheet of a modular export (prompt 24c: list exports are .xlsx, never .csv). The browser
+ * writes the file with src/lib/export/exportXlsx, so numbers and dates keep their types.
+ */
+export interface SheetExport {
+  filename: string;
+  sheetName: string;
+  headers: string[];
+  types: XlsxCellType[];
+  rows: (string | number | null)[][];
+}
+
+const cellValue = (v: unknown): string | number | null => (v === null || v === undefined ? null : typeof v === "number" ? v : String(v));
 
 export type BackupActionResult<T = void> =
   | { success: true; data: T }
@@ -143,8 +157,8 @@ export async function restoreFullBackupAction(
   }
 }
 
-export async function exportCustomersCsvAction(): Promise<
-  BackupActionResult<{ filename: string; content: string }>
+export async function exportCustomersSheetAction(): Promise<
+  BackupActionResult<SheetExport>
 > {
   try {
     await requirePermissionAction("can_manage_settings");
@@ -180,8 +194,11 @@ export async function exportCustomersCsvAction(): Promise<
     return {
       success: true,
       data: {
-        filename: "Musteri_Siyahisi.csv",
-        content: rowsToCsv(headers, rows),
+        filename: "Musteri_Siyahisi.xlsx",
+        sheetName: "Musteriler",
+        headers,
+        types: ["text", "text", "text", "text", "text", "text", "text", "money"],
+        rows: rows.map((r) => r.map(cellValue)),
       },
     };
   } catch (err) {
@@ -190,8 +207,8 @@ export async function exportCustomersCsvAction(): Promise<
   }
 }
 
-export async function exportProductsCsvAction(): Promise<
-  BackupActionResult<{ filename: string; content: string }>
+export async function exportProductsSheetAction(): Promise<
+  BackupActionResult<SheetExport>
 > {
   try {
     await requirePermissionAction("can_manage_settings");
@@ -227,8 +244,11 @@ export async function exportProductsCsvAction(): Promise<
     return {
       success: true,
       data: {
-        filename: "Mahsullar_ve_Stok.csv",
-        content: rowsToCsv(headers, rows),
+        filename: "Mahsullar_ve_Stok.xlsx",
+        sheetName: "Mahsullar",
+        headers,
+        types: ["text", "text", "text", "money", "money", "number", "number", "text"],
+        rows: rows.map((r) => r.map(cellValue)),
       },
     };
   } catch (err) {
@@ -237,8 +257,8 @@ export async function exportProductsCsvAction(): Promise<
   }
 }
 
-export async function exportInvoicesCsvAction(): Promise<
-  BackupActionResult<{ filename: string; content: string }>
+export async function exportInvoicesSheetAction(): Promise<
+  BackupActionResult<SheetExport>
 > {
   try {
     await requirePermissionAction("can_manage_settings");
@@ -295,8 +315,11 @@ export async function exportInvoicesCsvAction(): Promise<
     return {
       success: true,
       data: {
-        filename: "Satisi_ve_Alis_Fakturalari.csv",
-        content: rowsToCsv(headers, [...salesRows, ...purchaseRows]),
+        filename: "Satisi_ve_Alis_Fakturalari.xlsx",
+        sheetName: "Fakturalar",
+        headers,
+        types: ["text", "text", "date", "text", "money", "money", "money", "text"],
+        rows: [...salesRows, ...purchaseRows].map((r) => r.map(cellValue)),
       },
     };
   } catch (err) {
@@ -305,8 +328,8 @@ export async function exportInvoicesCsvAction(): Promise<
   }
 }
 
-export async function exportExpensesPayrollCsvAction(): Promise<
-  BackupActionResult<{ filename: string; content: string }>
+export async function exportExpensesPayrollSheetAction(): Promise<
+  BackupActionResult<SheetExport>
 > {
   try {
     await requirePermissionAction("can_manage_settings");
@@ -363,8 +386,11 @@ export async function exportExpensesPayrollCsvAction(): Promise<
     return {
       success: true,
       data: {
-        filename: "Xercler_ve_Emekhaqqi.csv",
-        content: rowsToCsv(headers, [...expenseRows, ...payrollRows]),
+        filename: "Xercler_ve_Emekhaqqi.xlsx",
+        sheetName: "Xercler",
+        headers,
+        types: ["text", "text", "text", "money", "text", "text", "datetime", "text"],
+        rows: [...expenseRows, ...payrollRows].map((r) => r.map(cellValue)),
       },
     };
   } catch (err) {

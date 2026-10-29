@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { downloadTextFile, rowsToCsv } from "@/lib/csv/csvUtils";
+import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
 import {
   buildMonthlyReport,
   type ExpenseDocument,
@@ -13,7 +13,7 @@ import {
 interface Props {
   rows: ExpenseDocument[];
   loading: boolean;
-  /** Used in the CSV file name. */
+  /** Used in the Excel file name. */
   rangeLabel: string;
 }
 
@@ -32,23 +32,19 @@ export default function ExpenseMonthlyReport({ rows, loading, rangeLabel }: Prop
   const noLabel = group === "category" ? t("expenses.doc.reportNoCategory") : t("expenses.doc.reportNoDepartment");
   const report = useMemo(() => buildMonthlyReport(rows, group, noLabel), [rows, group, noLabel]);
 
-  const exportCsv = () => {
-    const headers = [
-      group === "category" ? t("common.category") : t("expenses.doc.department"),
-      ...report.months.map(monthLabel),
-      t("expenses.doc.total"),
+  // Excel (prompt 24c): the report as shown, amounts as numbers, a total row at the end.
+  const exportExcel = () => {
+    type Line = { label: string; byMonth: Record<string, number>; total: number };
+    const columns: XlsxColumn<Line>[] = [
+      { header: group === "category" ? t("common.category") : t("expenses.doc.department"), value: (l) => l.label },
+      ...report.months.map((m): XlsxColumn<Line> => ({ header: monthLabel(m), type: "money", value: (l) => l.byMonth[m] || 0 })),
+      { header: t("expenses.doc.total"), type: "money", value: (l) => l.total },
     ];
-    const data = report.lines.map((line) => [
-      line.label,
-      ...report.months.map((m) => (line.byMonth[m] || 0).toFixed(2)),
-      line.total.toFixed(2),
-    ]);
-    data.push([
-      t("expenses.doc.total"),
-      ...report.months.map((m) => (report.monthTotals[m] || 0).toFixed(2)),
-      report.total.toFixed(2),
-    ]);
-    downloadTextFile(`xerc_hesabat_${group}_${rangeLabel}.csv`, rowsToCsv(headers, data));
+    const lines: Line[] = [
+      ...report.lines.map((line) => ({ label: line.label, byMonth: line.byMonth, total: line.total })),
+      { label: t("expenses.doc.total"), byMonth: report.monthTotals, total: report.total },
+    ];
+    void exportXlsx(xlsxFileName(`xerc_hesabat_${group}_${rangeLabel}`, new Date()), { sheetName: t("expenses.doc.reportTitle"), columns, rows: lines });
   };
 
   return (
@@ -69,12 +65,12 @@ export default function ExpenseMonthlyReport({ rows, loading, rangeLabel }: Prop
         ))}
         <button
           type="button"
-          onClick={exportCsv}
+          onClick={exportExcel}
           disabled={report.lines.length === 0}
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          {t("expenses.doc.exportCsv")}
+          {t("expenses.doc.exportExcel")}
         </button>
       </div>
       <p className="text-[11px] text-app-muted">{t("expenses.doc.reportHint")}</p>

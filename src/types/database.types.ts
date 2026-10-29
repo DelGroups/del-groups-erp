@@ -890,6 +890,9 @@ export interface PurchaseRecord extends Purchase {
   supplier_name?: string;
   supplier_company?: string;
   warehouse_name?: string;
+  /** Prompt 24c: who created the invoice (purchases.created_by) and their name. */
+  created_by?: string | null;
+  created_by_name?: string | null;
   items: PurchaseLineItem[];
 }
 

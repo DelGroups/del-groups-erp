@@ -2,8 +2,12 @@
 
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, Inbox, Lock, SearchX } from "lucide-react";
-import { EmptyState, SkeletonList } from "@/design-system/components";
-import { applySearch, defaultFavorite, defaultSearchState, exportFileName, exportRows, sortRecords, type Formatter } from "../logic";
+import { EmptyState, SkeletonList, useDesignScope } from "@/design-system/components";
+import { ColumnPicker } from "@/components/lists/ColumnPicker";
+import { useColumnPrefs } from "@/components/lists/useColumnPrefs";
+import { useListColumnsEnabled } from "@/components/lists/ListColumnsFlag";
+import { exportXlsx } from "@/lib/export/exportXlsx";
+import { applySearch, defaultFavorite, defaultSearchState, exportColumns, exportFileName, fieldMap, listColumnDefs, listFieldLabel, shownListColumns, sortRecords, type Formatter } from "../logic";
 import { useFavorites, type ViewData } from "../data";
 import type { FilterContext, SearchState, ViewRecord } from "../types";
 import { SearchPanel } from "./SearchPanel";
@@ -53,13 +57,43 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   const filtered = useMemo(() => applySearch(data.records, def, state, ctx, fmt), [data.records, def, state, ctx, fmt]);
   const sorted = useMemo(() => sortRecords(filtered, def, state.sort), [filtered, def, state.sort]);
 
-  const exportExcel = async () => {
-    const XLSX = await import("xlsx");
-    const sheet = XLSX.utils.aoa_to_sheet(exportRows(sorted, def, def.list.columns, fmt));
-    const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, title.slice(0, 31) || "Sheet1");
-    XLSX.writeFile(book, exportFileName(title, new Date()));
-  };
+  // Columns (prompt 24c): a favourite's own columns, else the user's choice for this view. With
+  // LIST_COLUMNS off the list keeps its definition's columns and no picker shows.
+  const listColumns = useListColumnsEnabled();
+  const { portalContainer } = useDesignScope();
+  const columnDefs = useMemo(() => listColumnDefs(def), [def]);
+  const userColumns = useColumnPrefs(def.model.key, columnDefs);
+  const columnPrefs = listColumns ? (state.columns ?? userColumns.prefs) : undefined;
+  const shown = useMemo(() => shownListColumns(def, listColumns, columnPrefs), [def, listColumns, columnPrefs]);
+  // A favourite saved now keeps the columns on screen.
+  const panelState = columnPrefs ? { ...state, columns: columnPrefs } : state;
+  const fields = useMemo(() => fieldMap(def), [def]);
+  const picker = listColumns && columnPrefs ? (
+    <ColumnPicker
+      variant="ds"
+      compact
+      portalContainer={portalContainer}
+      columns={columnDefs.map((c) => ({ key: c.key, label: fields.get(c.key) ? listFieldLabel(fields.get(c.key)!, def, true, fmt) : c.key, defaultVisible: c.defaultVisible, required: c.required }))}
+      prefs={columnPrefs}
+      onChange={(next) => {
+        userColumns.setPrefs(next);
+        setTouched({ ...state, columns: next });
+      }}
+      onReset={() => {
+        userColumns.reset();
+        setTouched({ ...state, columns: undefined });
+      }}
+    />
+  ) : null;
+
+  // All searched and filtered rows (not a page), in the columns the user sees.
+  const exportExcel = () =>
+    exportXlsx(exportFileName(title, new Date()), {
+      sheetName: title,
+      columns: exportColumns(def, shown, fmt, listColumns),
+      rows: sorted,
+      rtl: typeof document !== "undefined" && document.documentElement.dir === "rtl",
+    });
 
   let body: React.ReactNode;
   if (data.status === "forbidden") body = <EmptyState icon={Lock} title={fmt.t("views.forbidden")} description={fmt.t("views.forbiddenHint")} />;
@@ -95,11 +129,11 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   else if (state.view === "pivot" && def.pivot) body = <PivotView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "graph" && def.graph) body = <GraphView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "calendar" && def.calendar) body = <CalendarView definition={def} records={sorted} openHref={openHref ?? noHref} fmt={fmt} />;
-  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} />;
+  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} columns={shown} picker={picker} listColumns={listColumns} />;
 
   return (
     <div className="flex flex-col gap-4">
-      <SearchPanel definition={def} title={title} state={state} onChange={setTouched} fmt={fmt} count={sorted.length} favorites={favorites} onExport={() => void exportExcel()} actions={actions} />
+      <SearchPanel definition={def} title={title} state={panelState} onChange={setTouched} fmt={fmt} count={sorted.length} favorites={favorites} onExport={() => void exportExcel()} actions={actions} />
       {data.capped ? (
         <p role="note" className="ds-chip self-start" style={{ background: "var(--ds-warning-soft)", color: "var(--ds-text)" }}>
           {fmt.t("views.capped", { count: data.records.length })}

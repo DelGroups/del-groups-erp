@@ -16,6 +16,8 @@ import { NewUiProvider, type NewUiServerValue } from "@/components/shell/NewUiPr
 import { isNewUiEnabled, newUiAudienceSetting } from "@/lib/features/newUi";
 import { isNewCrmEnabled } from "@/lib/features/newCrm";
 import { isNewHomeEnabled, newHomeAudience } from "@/lib/features/newHome";
+import { isListColumnsEnabled } from "@/lib/features/listColumns";
+import { ListColumnsFlagProvider } from "@/components/lists/ListColumnsFlag";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
@@ -107,12 +109,14 @@ export default async function RootLayout({
                 <QueryProvider>
                   <I18nProvider>
                     <NewUiProvider value={newUi}>
-                      {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
-                      {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
-                      {tenant.status !== null ? <LimitBanner /> : null}
-                      {children}
-                      <SonnerProvider />
-                      <TableColumnResizer />
+                      <ListColumnsFlagProvider enabled={isListColumnsEnabled()}>
+                        {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
+                        {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
+                        {tenant.status !== null ? <LimitBanner /> : null}
+                        {children}
+                        <SonnerProvider />
+                        <TableColumnResizer />
+                      </ListColumnsFlagProvider>
                     </NewUiProvider>
                   </I18nProvider>
                 </QueryProvider>

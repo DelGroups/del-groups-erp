@@ -3,7 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardCheck, Eye, Plus, Trash2 } from "lucide-react";
+import { ClipboardCheck, Eye, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import PageLayout from "@/components/layout/PageLayout";
 import PageHeader from "@/components/ui/page-header";
 import Button from "@/components/ui/button";
@@ -15,7 +17,7 @@ import { Modal } from "@/components/ui/modal";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
-import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Tr } from "@/components/ui/table";
 import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -279,8 +281,11 @@ export function CreateCountModal({
   );
 }
 
+/** Column choice key of this list (prompt 24c). */
+const COUNTS_LIST_KEY = "inventory.counts";
+
 export default function InventoryCountsPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [rows, setRows] = useState<InventoryCountDocument[]>([]);
@@ -308,6 +313,50 @@ export default function InventoryCountsPage() {
   }, [rows]);
 
   const visible = statusFilter === "all" ? rows : rows.filter((row) => row.status === statusFilter);
+
+  // Columns of the list (prompt 24c): counts have no salesperson ("Responsible" is a column).
+  const columnDefs = useMemo<TableColumn<InventoryCountDocument>[]>(
+    () => [
+      {
+        key: "document_number",
+        labelKey: "inventoryCount.docNo",
+        defaultVisible: true,
+        required: true,
+        exportValue: (row) => row.document_number,
+        cell: (row) => (
+          <Link href={`/inventory/counts/${row.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-app-accent hover:underline">
+            {row.document_number}
+          </Link>
+        ),
+      },
+      {
+        key: "count_date",
+        labelKey: "listColumns.documentDate",
+        offLabelKey: "inventoryCount.countDate",
+        defaultVisible: true,
+        exportType: "date",
+        exportValue: (row) => row.count_date,
+        cell: (row) => <span className="flex flex-wrap items-center gap-1.5">{row.book_as_of ? <BackdatedBadge date={row.count_date} /> : row.count_date}</span>,
+      },
+      { key: "warehouse", labelKey: "inventoryCount.warehouse", defaultVisible: true, cell: (row) => row.warehouse_name || "—" },
+      { key: "scope", labelKey: "inventoryCount.scope", defaultVisible: true, cell: (row) => (row.category_name ? [row.category_name, row.subcategory_name].filter(Boolean).join(" › ") : t("inventoryCount.allCategories")) },
+      { key: "status", labelKey: "common.status", defaultVisible: true, exportValue: (row) => t(`inventoryCount.status_${row.status}`), cell: (row) => <InventoryCountStatusBadge status={row.status} /> },
+      { key: "progress", labelKey: "inventoryCount.progress", defaultVisible: true, numeric: true, exportValue: (row) => (row.status === "draft" ? null : `${row.counted_count} / ${row.line_count}`), cell: (row) => (row.status === "draft" ? "—" : `${row.counted_count} / ${row.line_count}`) },
+      { key: "variance", labelKey: "inventoryCount.variance", defaultVisible: true, numeric: true, exportType: "money", exportValue: (row) => (row.status === "draft" ? null : row.total_variance_value), cell: (row) => (row.status === "draft" ? "—" : <VarianceAmount value={row.total_variance_value} />) },
+      { key: "responsible", labelKey: "inventoryCount.responsible", defaultVisible: true, cell: (row) => row.responsible_name || row.created_by_name || "—" },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (row) => row.created_at, cell: (row) => (row.created_at ? formatDateTime(row.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (row) => dash(row.created_by_name) },
+      { key: "surplus", labelKey: "inventory.engine.surplus", defaultVisible: false, numeric: true, exportValue: (row) => row.total_surplus_value, cell: (row) => <VarianceAmount value={row.total_surplus_value} /> },
+      { key: "shortage", labelKey: "inventory.engine.shortage", defaultVisible: false, numeric: true, exportValue: (row) => row.total_shortage_value, cell: (row) => <VarianceAmount value={row.total_shortage_value} /> },
+      { key: "notes", labelKey: "inventoryCount.notes", defaultVisible: false, tdClassName: "max-w-xs truncate", cell: (row) => dash(row.notes) },
+    ],
+    [t, formatDateTime]
+  );
+  const columns = useTableColumns(COUNTS_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!visible.length) return;
+    void exportXlsx(xlsxFileName(t("inventoryCount.listTitle"), new Date()), { sheetName: t("inventoryCount.listTitle"), columns: columns.exportColumns, rows: visible });
+  };
   const openCount = (id: string) => router.push(`/inventory/counts/${id}`);
 
   const handleDelete = async () => {
@@ -331,10 +380,20 @@ export default function InventoryCountsPage() {
         subtitle={t("inventoryCount.listDescription")}
         icon={<ClipboardCheck className="h-5 w-5" />}
         actions={
-          <Button onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1">
-            <Plus className="h-4 w-4" />
-            {t("inventoryCount.newCount")}
-          </Button>
+          <>
+            {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
+            {columns.enabled ? (
+              <Button variant="secondary" onClick={handleExport} className="inline-flex items-center gap-1">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {t("common.excelDownload")}
+              </Button>
+            ) : null}
+            {columns.picker}
+            <Button onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              {t("inventoryCount.newCount")}
+            </Button>
+          </>
         }
       />
 
@@ -361,63 +420,27 @@ export default function InventoryCountsPage() {
         <Table>
           <THead>
             <tr>
-              <Th>{t("inventoryCount.docNo")}</Th>
-              <Th>{t("inventoryCount.countDate")}</Th>
-              <Th>{t("inventoryCount.warehouse")}</Th>
-              <Th>{t("inventoryCount.scope")}</Th>
-              <Th>{t("common.status")}</Th>
-              <Th numeric>{t("inventoryCount.progress")}</Th>
-              <Th numeric>{t("inventoryCount.variance")}</Th>
-              <Th>{t("inventoryCount.responsible")}</Th>
+              <ListHeadCells columns={columns.visible} />
               <ActionsTh>{t("common.actions")}</ActionsTh>
             </tr>
           </THead>
           <tbody className="divide-y divide-app">
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-app-muted">
+                <td colSpan={columns.visible.length + 1} className="px-4 py-8 text-center text-app-muted">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visible.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-app-muted">
+                <td colSpan={columns.visible.length + 1} className="px-4 py-8 text-center text-app-muted">
                   {t("inventoryCount.emptyList")}
                 </td>
               </tr>
             ) : (
               visible.map((row) => (
                 <Tr key={row.id} className="cursor-pointer" onClick={() => openCount(row.id)}>
-                  <Td>
-                    <Link
-                      href={`/inventory/counts/${row.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-semibold text-app-accent hover:underline"
-                    >
-                      {row.document_number}
-                    </Link>
-                  </Td>
-                  <Td>
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      {row.book_as_of ? <BackdatedBadge date={row.count_date} /> : row.count_date}
-                    </span>
-                  </Td>
-                  <Td>{row.warehouse_name || "—"}</Td>
-                  <Td>
-                    {row.category_name
-                      ? [row.category_name, row.subcategory_name].filter(Boolean).join(" › ")
-                      : t("inventoryCount.allCategories")}
-                  </Td>
-                  <Td>
-                    <InventoryCountStatusBadge status={row.status} />
-                  </Td>
-                  <Td numeric>
-                    {row.status === "draft" ? "—" : `${row.counted_count} / ${row.line_count}`}
-                  </Td>
-                  <Td numeric>
-                    {row.status === "draft" ? "—" : <VarianceAmount value={row.total_variance_value} />}
-                  </Td>
-                  <Td>{row.responsible_name || row.created_by_name || "—"}</Td>
+                  <ListBodyCells columns={columns.visible} row={row} />
                   <ActionsTd onClick={(e) => e.stopPropagation()}>
                     <TableRowActionsMenu
                       align="right"

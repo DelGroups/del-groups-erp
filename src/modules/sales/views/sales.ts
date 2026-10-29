@@ -9,6 +9,9 @@ import { computeInvoiceDebtBreakdown } from "../../../lib/finance/invoiceRemaini
 import type { FilterDef, ModelDef, SelectionOption, ViewDefinition, ViewRecord } from "../../../views/types";
 
 export const SALES_VIEW_KEY = "sales.invoices";
+
+/** List headers of the standard columns on invoices (prompt 24c, LIST_COLUMNS on). */
+const STANDARD_INVOICE_LABELS = { doc_date: "listColumns.invoiceDate", created_at: "listColumns.issuedAt", seller_name: "listColumns.salesperson", created_by_name: "listColumns.createdBy" } as const;
 export const SALES_REPORT_VIEW_KEY = "sales.report";
 
 export type { PaymentState, WarehouseState } from "../../../lib/invoices/documentStates";
@@ -37,6 +40,8 @@ export interface SaleListRecord extends ViewRecord {
   currency: string | null;
   note: string | null;
   created_at: string | null;
+  /** Prompt 24c: the profile name of created_by, null when unknown. */
+  created_by_name: string | null;
 }
 
 const num = (v: unknown) => {
@@ -85,6 +90,7 @@ export function saleToRecord(row: Record<string, unknown>): SaleListRecord {
     currency: str(row.currency),
     note: str(row.note),
     created_at: str(row.created_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
@@ -175,13 +181,17 @@ export function salesDefinition(model: ModelDef<SaleListRecord>): ViewDefinition
       { name: "currency", labelKey: "sales.engine.fields.currency", type: "char", readonly: true },
       { name: "note", labelKey: "sales.engine.fields.note", type: "text", searchable: true, readonly: true },
       { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: salesFilters(),
     groupBys: ["doc_status", "payment_state", "warehouse_state", "customer_id", "warehouse_name", "seller_name", "payment_type", "is_official", "doc_date:month", "doc_date:week", "doc_date:quarter"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
     list: {
       columns: ["doc_no", "doc_date", "customer_id", "warehouse_name", "total_amount", "paid_amount", "remaining", "doc_status", "warehouse_state"],
-      sums: ["total_amount", "paid_amount", "remaining"],
+      sums: ["total_amount", "paid_amount", "remaining", "vat_total"],
+      standard: ["created_at", "seller_name", "created_by_name"],
+      optional: ["vat_total", "due_date", "payment_type", "currency", "is_official", "payment_state", "note"],
+      standardLabels: STANDARD_INVOICE_LABELS,
     },
     kanban: { groupBy: "payment_state", title: "doc_no", subtitle: "customer_id", amount: "remaining", fields: ["doc_date", "total_amount"] },
     form: {

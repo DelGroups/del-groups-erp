@@ -184,7 +184,7 @@ export async function fetchExpensesAction(
       .select(
         "id,code,expense_date,status,category_id,category,account_id,supplier_id,payee,reference_no," +
           "description,notes,department_id,production_order_id,net_amount,vat_rate,vat_amount,amount," +
-          "cancel_reason,created_at,transaction_id,payment_mode,employee_id,rejected_reason,vat_account_id"
+          "cancel_reason,created_at,transaction_id,payment_mode,employee_id,rejected_reason,vat_account_id,created_by"
       )
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -223,8 +223,9 @@ export async function fetchExpensesAction(
     const supplierIds = ids("supplier_id");
     const departmentIds = ids("department_id");
     const employeeIds = ids("employee_id");
+    const creatorIds = ids("created_by");
 
-    const [accountsRes, suppliersRes, departmentsRes, employeesRes] = await Promise.all([
+    const [accountsRes, suppliersRes, departmentsRes, employeesRes, creatorsRes] = await Promise.all([
       accountIds.length
         ? admin.from("accounts").select("id,name").in("id", accountIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
@@ -236,6 +237,10 @@ export async function fetchExpensesAction(
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
       employeeIds.length
         ? admin.from("employees").select("id,full_name").in("id", employeeIds)
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+      // "Created by" list column (prompt 24c): names only.
+      creatorIds.length
+        ? admin.from("profiles").select("id,full_name").in("id", creatorIds)
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     ]);
 
@@ -250,6 +255,7 @@ export async function fetchExpensesAction(
     const supplierNames = nameMap(suppliersRes.data, supplierLabel);
     const departmentNames = nameMap(departmentsRes.data, (row) => String(row.name || ""));
     const employeeNames = nameMap(employeesRes.data, (row) => String(row.full_name || ""));
+    const creatorNames = nameMap(creatorsRes.data, (row) => String(row.full_name || "").trim());
 
     let mapped: ExpenseDocument[] = rows.map((row) => {
       const amount = toNumber(row.amount);
@@ -288,6 +294,8 @@ export async function fetchExpensesAction(
         amount,
         cancel_reason: (row.cancel_reason as string) || null,
         created_at: (row.created_at as string) || null,
+        created_by: (row.created_by as string) || null,
+        created_by_name: row.created_by ? creatorNames.get(String(row.created_by)) || null : null,
         // Posted by this module means it has its own cash row; anything else
         // (production expenses) is cancelled where it was written.
         is_production: String(row.status || "posted") === "posted" && !row.transaction_id,

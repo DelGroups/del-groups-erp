@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
@@ -9,7 +9,7 @@ import DocumentListActions from "@/components/documents/DocumentListActions";
 import DocumentPageHeader from "@/components/documents/DocumentPageHeader";
 import PurchaseForm from "./PurchaseForm";
 import PurchaseDocumentStatusBadge from "./PurchaseDocumentStatusBadge";
-import { isPurchaseDraft } from "@/lib/invoices/invoiceStatus";
+import { isPurchaseDraft, normalizePurchaseDocumentStatus } from "@/lib/invoices/invoiceStatus";
 import PurchaseViewModal from "./PurchaseViewModal";
 import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
@@ -46,16 +46,21 @@ import {
   TableWrap,
   THead,
   Th,
-  Td,
   Tr,
 } from "@/components/ui/table";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
-import { Plus, ShoppingBag } from "lucide-react";
+import { FileSpreadsheet, Plus, ShoppingBag } from "lucide-react";
+import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+import { docStatusLabelKey, warehouseStateLabelKey } from "@/lib/lists/documentLabels";
 import InvoiceRemainingBalanceCell from "@/components/finance/InvoiceRemainingBalanceCell";
 import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalance";
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
+
+/** Column choice key of this list (prompt 24c). */
+const PURCHASES_LIST_KEY = "purchases.invoices";
 
 export default function PurchasesPage() {
   const router = useRouter();
@@ -72,7 +77,7 @@ export default function PurchasesPage() {
   const { printData: printPurchase, setPrintData: setPrintPurchase } =
     useDocumentPrint<PurchaseRecord>();
   const { can } = useAuth();
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
@@ -108,6 +113,83 @@ export default function PurchasesPage() {
   );
 
   const bulk = useBulkSelection(filtered, (row) => row.id);
+
+  const debtOf = useCallback(
+    (row: PurchaseRecord) =>
+      computeInvoiceDebtBreakdown(
+        {
+          isOfficial: row.is_official,
+          subtotalAmount: row.subtotal_amount,
+          vatAmount: row.vat_amount,
+          grandTotal: row.grand_total ?? row.total_amount,
+          totalAmount: row.total_amount,
+          paidAmount: row.paid_amount,
+          remainingBalance: row.debt_amount,
+        },
+        vatAccountIds
+      ),
+    [vatAccountIds]
+  );
+
+  // Columns of the list (prompt 24c). Purchases have no salesperson: "Responsible" instead.
+  const columnDefs = useMemo<TableColumn<PurchaseRecord>[]>(
+    () => [
+      { key: "invoice_number", labelKey: "purchases.invoiceNo", defaultVisible: true, required: true, tdClassName: "font-mono font-bold text-emerald-600", cell: (r) => r.invoice_number },
+      { key: "doc_date", labelKey: "listColumns.invoiceDate", offLabelKey: "common.date", defaultVisible: true, exportType: "date", exportValue: (r) => r.doc_date || r.created_at?.slice(0, 10) || null, cell: (r) => r.doc_date || r.created_at?.slice(0, 10) || "-" },
+      { key: "supplier", labelKey: "purchases.supplier", defaultVisible: true, tdClassName: "font-semibold text-app", cell: (r) => r.supplier_name || "-" },
+      { key: "total_amount", labelKey: "purchases.totalAmount", defaultVisible: true, tdClassName: "font-mono font-bold", exportType: "money", exportValue: (r) => r.total_amount, cell: (r) => `${r.total_amount.toFixed(2)} ${t("common.currency")}` },
+      { key: "paid_amount", labelKey: "purchases.paid", defaultVisible: true, tdClassName: "font-mono text-emerald-600", exportType: "money", exportValue: (r) => r.paid_amount, cell: (r) => `${r.paid_amount.toFixed(2)} ${t("common.currency")}` },
+      {
+        key: "debt",
+        labelKey: "purchases.debt",
+        defaultVisible: true,
+        exportType: "money",
+        exportValue: (r) => debtOf(r).totalRemaining,
+        cell: (r) => {
+          const debtBreakdown = debtOf(r);
+          return (
+            <InvoiceRemainingBalanceCell
+              breakdown={debtBreakdown}
+              currencyLabel={t("common.currency")}
+              splitLabel={t("official.remainingSplit", {
+                base: debtBreakdown.remainingBase.toFixed(2),
+                vat: debtBreakdown.remainingVat.toFixed(2),
+              })}
+              totalRemainingLabel={t("official.totalRemaining")}
+            />
+          );
+        },
+      },
+      { key: "status", labelKey: "common.status", defaultVisible: true, exportValue: (r) => t(docStatusLabelKey(normalizePurchaseDocumentStatus(r.status))), cell: (r) => <PurchaseDocumentStatusBadge status={r.status} /> },
+      {
+        key: "send_status",
+        labelKey: "purchases.sendStatus",
+        defaultVisible: true,
+        exportValue: (r) => t(warehouseStateLabelKey(r.warehouse_sent, r.warehouse_slip_status)),
+        cell: (r) => <WarehouseSendBadge warehouseSent={r.warehouse_sent === true} warehouseSlipStatus={r.warehouse_slip_status ?? null} />,
+      },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (r) => r.created_at, cell: (r) => (r.created_at ? formatDateTime(r.created_at) : "—") },
+      { key: "responsible", labelKey: "listColumns.responsible", defaultVisible: true, standard: true, cell: (r) => dash(r.responsible_name) },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (r) => dash(r.created_by_name) },
+      { key: "warehouse", labelKey: "purchases.warehouse", defaultVisible: false, cell: (r) => dash(r.warehouse_name) },
+      { key: "vat", labelKey: "sales.engine.fields.vat", defaultVisible: false, numeric: true, exportValue: (r) => r.vat_amount ?? 0, cell: (r) => `${Number(r.vat_amount ?? 0).toFixed(2)} ${t("common.currency")}` },
+      { key: "due_date", labelKey: "sales.engine.fields.dueDate", defaultVisible: false, exportType: "date", exportValue: (r) => r.due_date, cell: (r) => dash(r.due_date) },
+      { key: "official", labelKey: "sales.engine.fields.official", defaultVisible: false, cell: (r) => (r.is_official ? t("views.yes") : t("views.no")) },
+      { key: "notes", labelKey: "sales.engine.fields.note", defaultVisible: false, tdClassName: "max-w-[16rem] truncate", cell: (r) => dash(r.notes) },
+    ],
+    [t, formatDateTime, debtOf]
+  );
+  const columns = useTableColumns(PURCHASES_LIST_KEY, columnDefs);
+
+  // Excel (prompt 24c): new with LIST_COLUMNS (this list had no export); every filtered row.
+  const handleExport = (rows = filtered) => {
+    if (rows.length === 0) return;
+    void exportXlsx(xlsxFileName(t("purchases.title"), new Date()), {
+      sheetName: t("purchases.title"),
+      columns: columns.exportColumns,
+      rows,
+    });
+  };
 
   const openEditById = async (purchaseId: string) => {
     const full = await fetchPurchaseById(purchaseId);
@@ -199,10 +281,18 @@ export default function PurchasesPage() {
             title={t("purchases.title")}
             description={t("purchases.description")}
             extraActions={
-              <Button href="/purchases/new">
-                <Plus className="h-4 w-4" />
-                {t("purchases.createLabel")}
-              </Button>
+              <>
+                {columns.enabled ? (
+                  <Button type="button" variant="secondary" onClick={() => handleExport()}>
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                    {t("common.excelDownload")}
+                  </Button>
+                ) : null}
+                <Button href="/purchases/new">
+                  <Plus className="h-4 w-4" />
+                  {t("purchases.createLabel")}
+                </Button>
+              </>
             }
           />
         }
@@ -241,6 +331,7 @@ export default function PurchasesPage() {
                 loading={loading}
               />
             ) : null}
+            {activeTab === "invoices" ? columns.picker : null}
           </>
         }
       >
@@ -250,6 +341,12 @@ export default function PurchasesPage() {
             <>
           <div className="app-table-wrap">
             <BulkActionBar count={bulk.count} onClear={bulk.clear}>
+              {columns.enabled ? (
+                <Button type="button" variant="secondary" size="sm" onClick={() => handleExport(bulk.selectedItems)}>
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  {t("table.exportSelected")}
+                </Button>
+              ) : null}
               {canDeletePurchases ? (
                 <Button
                   type="button"
@@ -272,13 +369,13 @@ export default function PurchasesPage() {
                   <THead>
                     <tr>
                       <SelectTh checked={false} onChange={() => {}} />
-                      {Array.from({ length: 8 }).map((_, index) => (
+                      {Array.from({ length: columns.visible.length }).map((_, index) => (
                         <Th key={index}>&nbsp;</Th>
                       ))}
                     </tr>
                   </THead>
                   <tbody>
-                    <TableSkeletonRows columns={8} rows={10} withActions />
+                    <TableSkeletonRows columns={columns.visible.length} rows={10} withActions />
                   </tbody>
                 </Table>
               </TableWrap>
@@ -296,31 +393,13 @@ export default function PurchasesPage() {
                         indeterminate={bulk.someSelected}
                         onChange={bulk.toggleAll}
                       />
-                      <Th>{t("purchases.invoiceNo")}</Th>
-                      <Th>{t("common.date")}</Th>
-                      <Th>{t("purchases.supplier")}</Th>
-                      <Th>{t("purchases.totalAmount")}</Th>
-                      <Th>{t("purchases.paid")}</Th>
-                      <Th>{t("purchases.debt")}</Th>
-                      <Th>{t("common.status")}</Th>
-                      <Th>{t("purchases.sendStatus")}</Th>
+                      <ListHeadCells columns={columns.visible} />
                       <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filtered.map((row) => {
-                      const debtBreakdown = computeInvoiceDebtBreakdown(
-                        {
-                          isOfficial: row.is_official,
-                          subtotalAmount: row.subtotal_amount,
-                          vatAmount: row.vat_amount,
-                          grandTotal: row.grand_total ?? row.total_amount,
-                          totalAmount: row.total_amount,
-                          paidAmount: row.paid_amount,
-                          remainingBalance: row.debt_amount,
-                        },
-                        vatAccountIds
-                      );
+                      const debtBreakdown = debtOf(row);
 
                       return (
                       <Tr key={row.id}>
@@ -328,41 +407,7 @@ export default function PurchasesPage() {
                           checked={bulk.isSelected(row)}
                           onChange={() => bulk.toggle(row)}
                         />
-                        <Td className="font-mono font-bold text-emerald-600">
-                          {row.invoice_number}
-                        </Td>
-                        <Td>
-                          {row.doc_date || row.created_at?.slice(0, 10) || "-"}
-                        </Td>
-                        <Td className="font-semibold text-app">
-                          {row.supplier_name || "-"}
-                        </Td>
-                        <Td className="font-mono font-bold">
-                          {row.total_amount.toFixed(2)} {t("common.currency")}
-                        </Td>
-                        <Td className="font-mono text-emerald-600">
-                          {row.paid_amount.toFixed(2)} {t("common.currency")}
-                        </Td>
-                        <Td>
-                          <InvoiceRemainingBalanceCell
-                            breakdown={debtBreakdown}
-                            currencyLabel={t("common.currency")}
-                            splitLabel={t("official.remainingSplit", {
-                              base: debtBreakdown.remainingBase.toFixed(2),
-                              vat: debtBreakdown.remainingVat.toFixed(2),
-                            })}
-                            totalRemainingLabel={t("official.totalRemaining")}
-                          />
-                        </Td>
-                        <Td>
-                          <PurchaseDocumentStatusBadge status={row.status} />
-                        </Td>
-                        <Td>
-                          <WarehouseSendBadge
-                            warehouseSent={row.warehouse_sent === true}
-                            warehouseSlipStatus={row.warehouse_slip_status ?? null}
-                          />
-                        </Td>
+                        <ListBodyCells columns={columns.visible} row={row} />
                         <ActionsTd>
                           <DocumentListActions
                             onView={() => void openView(row)}
