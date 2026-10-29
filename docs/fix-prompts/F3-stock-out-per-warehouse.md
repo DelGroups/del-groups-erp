@@ -66,7 +66,7 @@ Read first:
 - src/lib/finance/customerAr.ts (client-side sale void restoring stock)
 - supabase/modules/purchases/install.sql (post_purchase_invoice_draft and its cancel/void paths)
 
-Part A: one core function (migration 20261029100000_stock_per_warehouse.sql)
+Part A: one core function (migration 20261029200000_stock_per_warehouse.sql)
 - public.stock_move(p_product_id uuid, p_warehouse_id uuid, p_delta numeric, p_strict boolean
   default true) returns numeric (the new warehouse quantity). SECURITY DEFINER, search_path public.
   Locks the product row, finds the row with _stock_row_for (NULL warehouse = default warehouse),
@@ -135,8 +135,8 @@ Part E: incoming (decision 2)
   and leave it unless it is a reversal of one of the flows above.
 
 General
-- One migration file, unique prefix not on main or in any open PR: suggested
-  20261029100000_stock_per_warehouse.sql (check ls supabase/migrations and open PRs first).
+- One migration file, unique prefix not on main or in any open PR (20261029100000 is F1's): suggested
+  20261029200000_stock_per_warehouse.sql (check ls supabase/migrations and open PRs first).
   Module-table/function changes inside the existing to_regclass guard pattern. Safe to re-run.
 - No feature flag (bug fix, like F2). No new UI strings except stock messages; every UI string
   through src/i18n (az, en, ru).
@@ -154,7 +154,7 @@ PR description: what changed in plain words; the table of every stock writer tou
 now; writers left unchanged and why; how it was tested; Del's manual steps in order: (1) on production
 open Settings > Stock integrity as admin and "Fix all" (F2), (2) run
 supabase/scripts/product_integrity_check.sql and confirm no null_warehouse_row / total_mismatch,
-(3) run migration 20261029100000_stock_per_warehouse.sql in the SQL Editor, (4) as a normal user
+(3) run migration 20261029200000_stock_per_warehouse.sql in the SQL Editor, (4) as a normal user
 write off one item from a non-default warehouse and check that warehouse's stock went down by that
 amount and the default warehouse did not change.
 
