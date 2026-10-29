@@ -727,7 +727,7 @@ Done when: a visitor can sign up, get a trial ERP with sample data and see prici
 
 ### پرامپت F1: فاکتور و پرداخت با تاریخ قبل
 
-**درخواست Del (۲۰۲۶-۱۰-۲۸):** همه کاربران بتوانند فاکتور با تاریخ قبل بزنند؛ پرداخت با تاریخ قبل ممکن باشد، از جمله از منوی سه‌نقطه در لیست فاکتورها؛ تاریخ پرداخت نباید قبل از تاریخ فاکتور باشد.
+**درخواست Del (۲۰۲۶-۱۰-۲۸):** همه کاربران بتوانند فاکتور با تاریخ قبل بزنند؛ پرداخت با تاریخ قبل ممکن باشد، از جمله از منوی سه‌نقطه در لیست فاکتورها؛ تاریخ پرداخت نباید قبل از تاریخ فاکتور باشد. **(۲۰۲۶-۱۰-۲۹):** فقط ادمین اجازه دارد فاکتور را حتی بعد از ثبت قطعی (posted) تغییر دهد؛ بقیه کاربران بعد از ثبت نمی‌توانند.
 
 **وضعیت امروز (بررسی کد روی main، ۲۰۲۶-۱۰-۲۸):**
 
@@ -770,13 +770,37 @@ Do:
    open the sales and purchase lists, three-dot menu, Payment, and pay an invoice with a date 5 days ago.
    Write down exactly what is blocked or wrongly dated (UI, RPC error, or record date) in the PR.
 2. Invoice date: any user who may create or edit the invoice may pick a past date (no admin check).
-   Posted invoices stay locked as today. Show a small inline note under the date when it is before today
+   Posted invoices stay locked for everyone except admins (step 3b). Show a small inline note under the date when it is before today
    ("This invoice is dated in the past; its accounting entries use this date"), not a blocking dialog.
 3. Backdated posting: make the sales and purchase posting paths pass the document date through to every
    record they create: journal entries (date + entry_date), COGS journal, stock movements / FIFO batch
    dates, and cash transactions for payments made inside the form. Keep the time-of-day trick from
    apply_invoice_payment_date (date + current time) so ordering within a day stays stable. Reuse one
    helper instead of copying the date logic into each function.
+3b. Admin-only edit of posted invoices (Del, 2026-10-29: only an admin may change a document even after
+   it is posted). Sales, purchase and Polywood invoices:
+   - Admins (isAdminRole() in the UI, public.user_is_admin() in the database) see an "Edit" action on a
+     posted invoice (detail page, invoice form, and the three-dot menu of the lists in old and new UI).
+     Nobody else sees it, and the database refuses it for non-admins too (the UI check alone is not
+     enough). Add a permission key (e.g. sales.edit_posted / purchases.edit_posted) that is true only for
+     admins by default, following how resolvePermissionPath() treats admins.
+   - Clicking it asks for a reason (required) and warns that stock, cost and accounting entries will be
+     reversed and posted again. All fields become editable, including the invoice date.
+   - Saving does it in one database transaction (new RPCs, e.g. amend_posted_sales_invoice /
+     amend_posted_purchase_invoice): reverse every effect of the old version the way
+     cancel_sales_invoice_atomic / cancel_purchase_invoice_atomic do (storno journals via
+     reverse_journal_entry, stock and FIFO given back, never DELETE ledger rows), then post the new
+     version with its own date (step 3). Reuse the reversal code from 20261005130000_cancel_invoice_atomic.sql
+     instead of copying it. Keep the same id and invoice number.
+   - Payments already recorded against the invoice stay as they are (they are separate cash events).
+     Refuse the change if the new total is below the amount already paid, or if a payment would end up
+     dated before the new invoice date; tell the admin which payment blocks it.
+   - Refuse it when the old or the new date is in a closed accounting period (is_accounting_period_closed).
+   - Keep a history: who changed it, when, the reason, and the old values (doc_date, totals, lines), shown
+     in the invoice's chatter/activity log if the document has one, otherwise in a small "Changes" list on
+     the detail page. Log it with log_erp_event too.
+   - The same rule applies to cancelling: keep the existing permission checks of the cancel RPCs, do not
+     loosen them.
 4. Payments inside the invoice form: add an optional date per payment row, default = invoice date,
    allowed range invoice date .. today. Send it in the payload; the RPC uses it for the cash transaction
    and journal entry and stores it as `date` in sales.payments, like process_invoice_payment_event does.
@@ -797,6 +821,9 @@ Do:
    purchase invoice with a payment and checks journal_entries.entry_date, transactions.transaction_date
    and the stock movement date all equal the invoice date; a payment before the invoice date is rejected;
    a backdated document inside a closed period is rejected with the period-closed message.
+   Also: a non-admin cannot amend a posted invoice (RPC refuses); an admin amendment of quantity, price
+   and date leaves stock, FIFO, GL 1300 and the customer/supplier balance equal to what a fresh posting of
+   the new version would give; an amendment that drops the total below the paid amount is refused.
 
 Do not change: invoice numbering, the closed-period guard itself, inventory count dates (another task).
 
@@ -804,7 +831,8 @@ PR description: what changed in plain words, the reproduction result from step 1
 and the manual step for Del: run the new migration on the test project first, then on production in the
 SQL Editor, before or right after merging. Existing invoices are not re-dated; say so.
 
-Done when: a normal user can save and post an invoice dated in the past, its journal, stock and cash
+Done when: only an admin can change a posted invoice and every effect is reversed and re-posted
+correctly with a history entry; a normal user can save and post an invoice dated in the past, its journal, stock and cash
 records carry that date, and a payment from the three-dot menu can be dated any day from the invoice
 date to today but not earlier.
 ```
