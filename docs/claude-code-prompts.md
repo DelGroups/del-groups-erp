@@ -720,3 +720,119 @@ Do:
 
 Done when: a visitor can sign up, get a trial ERP with sample data and see pricing that matches the plans in the control panel.
 ```
+
+---
+
+## اصلاحات خارج از فازها
+
+### پرامپت F1: فاکتور و پرداخت با تاریخ قبل
+
+**درخواست Del (۲۰۲۶-۱۰-۲۸):** همه کاربران بتوانند فاکتور با تاریخ قبل بزنند؛ پرداخت با تاریخ قبل ممکن باشد، از جمله از منوی سه‌نقطه در لیست فاکتورها؛ تاریخ پرداخت نباید قبل از تاریخ فاکتور باشد. **(۲۰۲۶-۱۰-۲۹):** فقط ادمین اجازه دارد فاکتور را حتی بعد از ثبت قطعی (posted) تغییر دهد؛ بقیه کاربران بعد از ثبت نمی‌توانند.
+
+**وضعیت امروز (بررسی کد روی main، ۲۰۲۶-۱۰-۲۸):**
+
+- فیلد تاریخ فاکتور در فرم فروش، خرید و Polywood برای همه باز است و فقط بعد از ثبت قطعی (posted) قفل می‌شود. ولی ثبت حسابداری فاکتور تاریخ فاکتور را نمی‌گیرد: `post_sale_invoice_gl_journal` تاریخی به `create_journal_entry` نمی‌دهد و سند حسابداری با تاریخ امروز ثبت می‌شود. پرداخت‌هایی که داخل خود فرم فاکتور وارد می‌شوند (`post_cash_transaction`) هم تاریخ امروز می‌گیرند و ردیف پرداخت فرم اصلاً فیلد تاریخ ندارد (`SalePayment` فقط id, account_id, method, amount دارد). پس فاکتور «۱۰ روز پیش» در گزارش‌ها و دفتر کل امروز دیده می‌شود.
+- پنجره پرداخت (`DocumentPaymentModal`، همان که منوی سه‌نقطه در لیست فروش و خرید باز می‌کند) از PR #55 فیلد تاریخ دارد با `max=today` و بدون حداقل. سرور (`process_invoice_payment_event`، migration `20261017120000`) تاریخ را می‌پذیرد ولی چک نمی‌کند که قبل از تاریخ فاکتور نباشد. اگر Del هنوز در سه‌نقطه نمی‌تواند تاریخ قبل بزند، Claude Code باید اول دقیقاً همان مسیر را روی دیتابیس تست بازسازی کند و علت را پیدا کند.
+
+```text
+Before starting, check the list of available skills. Use every skill that fits this task.
+At the end, say which skills you used, or that none fit.
+
+Task: let every user create invoices with a past date and record invoice payments with a past date,
+and make sure every accounting and stock record of a backdated document carries the document's date,
+not today's. Branch: saas/backdated-invoices-payments. Open a PR.
+
+This is a fix Del asked for, so it ships without a feature flag. It must not change anything for
+invoices dated today.
+
+Findings from a code read on main (verify each before changing it):
+- Invoice date input: src/modules/sales/components/InvoiceForm.tsx (docDate, disabled only when
+  documentLocked = posted), src/modules/purchases/components/PurchaseForm.tsx,
+  src/modules/polywood/components/MixedDimensionalInvoiceForm.tsx. doc_date is saved by
+  save_sales_invoice_draft / save_purchase_invoice_draft / process_sales_invoice_event.
+- The sales GL journal is posted by post_sale_invoice_gl_journal (20260910170000), which calls
+  create_journal_entry without a date, so create_journal_entry falls back to NOW(). Check the purchase
+  journal, the COGS journal (post_sale_cogs_journal), the FIFO/stock movements
+  (handle_sales_posted_inventory, process_sale_fifo_cogs, purchase stock entry) and the payments booked
+  inside post_sales_invoice_draft / post_purchase_invoice_draft / process_sales_invoice_event through
+  post_cash_transaction: all of them appear to use the current date.
+- Payment rows inside the invoice form have no date (SalePayment in src/types/database.types.ts).
+- The payment dialog src/components/documents/DocumentPaymentModal.tsx (opened from the three-dot
+  menu in SalesPage / PurchasesPage via DocumentListActions, and from SaleFormScreen in the new UI) has
+  a date with max=today and no min. Client check: src/lib/forms/paymentDate.ts. Server:
+  process_invoice_payment_event + apply_invoice_payment_date (20261017120000_invoice_payment_date.sql).
+- Accounting periods: is_accounting_period_closed() rejects ledger movements dated in a closed period.
+  Keep that guard; it must now check the document's date.
+
+Do:
+1. Reproduce first, on the test database (never production): as a non-admin user with invoice rights,
+   create a sales invoice and a purchase invoice dated 10 days ago with a payment inside the form, then
+   open the sales and purchase lists, three-dot menu, Payment, and pay an invoice with a date 5 days ago.
+   Write down exactly what is blocked or wrongly dated (UI, RPC error, or record date) in the PR.
+2. Invoice date: any user who may create or edit the invoice may pick a past date (no admin check).
+   Posted invoices stay locked for everyone except admins (step 3b). Show a small inline note under the date when it is before today
+   ("This invoice is dated in the past; its accounting entries use this date"), not a blocking dialog.
+3. Backdated posting: make the sales and purchase posting paths pass the document date through to every
+   record they create: journal entries (date + entry_date), COGS journal, stock movements / FIFO batch
+   dates, and cash transactions for payments made inside the form. Keep the time-of-day trick from
+   apply_invoice_payment_date (date + current time) so ordering within a day stays stable. Reuse one
+   helper instead of copying the date logic into each function.
+3b. Admin-only edit of posted invoices (Del, 2026-10-29: only an admin may change a document even after
+   it is posted). Sales, purchase and Polywood invoices:
+   - Admins (isAdminRole() in the UI, public.user_is_admin() in the database) see an "Edit" action on a
+     posted invoice (detail page, invoice form, and the three-dot menu of the lists in old and new UI).
+     Nobody else sees it, and the database refuses it for non-admins too (the UI check alone is not
+     enough). Add a permission key (e.g. sales.edit_posted / purchases.edit_posted) that is true only for
+     admins by default, following how resolvePermissionPath() treats admins.
+   - Clicking it asks for a reason (required) and warns that stock, cost and accounting entries will be
+     reversed and posted again. All fields become editable, including the invoice date.
+   - Saving does it in one database transaction (new RPCs, e.g. amend_posted_sales_invoice /
+     amend_posted_purchase_invoice): reverse every effect of the old version the way
+     cancel_sales_invoice_atomic / cancel_purchase_invoice_atomic do (storno journals via
+     reverse_journal_entry, stock and FIFO given back, never DELETE ledger rows), then post the new
+     version with its own date (step 3). Reuse the reversal code from 20261005130000_cancel_invoice_atomic.sql
+     instead of copying it. Keep the same id and invoice number.
+   - Payments already recorded against the invoice stay as they are (they are separate cash events).
+     Refuse the change if the new total is below the amount already paid, or if a payment would end up
+     dated before the new invoice date; tell the admin which payment blocks it.
+   - Refuse it when the old or the new date is in a closed accounting period (is_accounting_period_closed).
+   - Keep a history: who changed it, when, the reason, and the old values (doc_date, totals, lines), shown
+     in the invoice's chatter/activity log if the document has one, otherwise in a small "Changes" list on
+     the detail page. Log it with log_erp_event too.
+   - The same rule applies to cancelling: keep the existing permission checks of the cancel RPCs, do not
+     loosen them.
+4. Payments inside the invoice form: add an optional date per payment row, default = invoice date,
+   allowed range invoice date .. today. Send it in the payload; the RPC uses it for the cash transaction
+   and journal entry and stores it as `date` in sales.payments, like process_invoice_payment_event does.
+5. Payment dialog (DocumentPaymentModal) for sales and purchases: pass the invoice doc_date in as a prop,
+   set min = invoice date and max = today, default = today (or the invoice date if that is later).
+   Extend validatePaymentDate with "before_document_date" and a translated message (az, en, ru) such as
+   "The payment date cannot be earlier than the invoice date (dd.mm.yyyy)". Make sure the three-dot path
+   in both lists passes the full invoice (with doc_date), not a list row that lacks it.
+6. Server rule, in one new migration: process_invoice_payment_event (and the in-form payment path)
+   rejects a payment date earlier than sales.doc_date / purchases.doc_date with a clear Azerbaijani
+   message, and still rejects a future date. Start from the latest definition of each function
+   (20261017120000 for the payment RPC) and change only what this task needs. Pick a unique version
+   prefix (suggested 20261028130000; check `ls supabase/migrations` and open PRs first).
+7. Customer and supplier payments (src/components/payments/PaymentFormModal.tsx) already have a date;
+   check that a past date reaches the transaction and journal entry, and fix it only if it does not.
+8. Tests: unit tests for validatePaymentDate (past ok, future blocked, before invoice date blocked) and for
+   the date default; an SQL test or a test script on the test database that posts a backdated sales and
+   purchase invoice with a payment and checks journal_entries.entry_date, transactions.transaction_date
+   and the stock movement date all equal the invoice date; a payment before the invoice date is rejected;
+   a backdated document inside a closed period is rejected with the period-closed message.
+   Also: a non-admin cannot amend a posted invoice (RPC refuses); an admin amendment of quantity, price
+   and date leaves stock, FIFO, GL 1300 and the customer/supplier balance equal to what a fresh posting of
+   the new version would give; an amendment that drops the total below the paid amount is refused.
+
+Do not change: invoice numbering, the closed-period guard itself, inventory count dates (another task).
+
+PR description: what changed in plain words, the reproduction result from step 1, how it was tested,
+and the manual step for Del: run the new migration on the test project first, then on production in the
+SQL Editor, before or right after merging. Existing invoices are not re-dated; say so.
+
+Done when: only an admin can change a posted invoice and every effect is reversed and re-posted
+correctly with a history entry; a normal user can save and post an invoice dated in the past, its journal, stock and cash
+records carry that date, and a payment from the three-dot menu can be dated any day from the invoice
+date to today but not earlier.
+```
