@@ -46,8 +46,10 @@ export interface SubmitSalePayload {
   decrementStock?: boolean;
   additionalExpenses?: DocumentAdditionalExpense[];
   officialFields?: OfficialDocumentFields;
-  mode?: "draft" | "post";
+  /** "amend": an admin changes a posted invoice (amend_posted_sales_invoice); needs saleId and amendReason. */
+  mode?: "draft" | "post" | "amend";
   saleId?: string | null;
+  amendReason?: string;
   paymentType?: SalesPaymentType;
   dueDate?: string | null;
   currency?: SalesCurrency;
@@ -239,6 +241,7 @@ function buildRpcPayload(payload: SubmitSalePayload, validItems: SaleItem[]) {
       method: pay.method || "",
       amount: pay.amount,
       id: pay.id,
+      date: pay.date || null,
     })),
     additional_expenses: documentExpensesToRpcPayload(payload.additionalExpenses || []),
   };
@@ -387,6 +390,37 @@ export async function submitSale(payload: SubmitSalePayload): Promise<SubmitSale
 
   const rpcPayload = buildRpcPayload(payload, validItems);
   const mode = payload.mode || "post";
+
+  if (mode === "amend") {
+    if (!payload.saleId) return { success: false, error: "Satış fakturası seçilməyib" };
+    // Newer than the generated Database types.
+    const rpc = supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+    const { data, error } = await rpc.call(supabase, "amend_posted_sales_invoice", {
+      p_sale_id: payload.saleId,
+      p_payload: { ...rpcPayload, sale_id: payload.saleId },
+      p_reason: payload.amendReason || "",
+    });
+    if (error) return { success: false, error: error.message };
+    const result = (data ?? null) as ProcessSalesInvoiceEventResponse | null;
+    const docNo = result?.doc_no ? String(result.doc_no) : payload.docNo;
+    // The old Polywood cuts were put back by the amendment: cut the new lines as after posting.
+    if (payload.decrementStock !== false) {
+      const dimensional = await applyDimensionalAndAccessoryDeductions(validItems, result?.items);
+      if (!dimensional.ok) {
+        return {
+          success: false,
+          saleId: payload.saleId,
+          error: `${dimensional.error} (Satış #${docNo} dəyişdirildi, amma anbar əməliyyatı tamamlanmadı)`,
+        };
+      }
+    }
+    const officialError = await persistOfficialAndCommissions(payload, payload.saleId, docNo, validItems, true);
+    if (officialError) return officialError;
+    return { success: true, saleId: payload.saleId, docNo, status: "posted" };
+  }
 
   if (mode === "draft") {
     const { data, error } = await supabase.rpc("save_sales_invoice_draft", {

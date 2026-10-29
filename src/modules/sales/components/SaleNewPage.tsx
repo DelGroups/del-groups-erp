@@ -12,6 +12,8 @@ export default function SaleNewPage({ afterSaleSaved }: { afterSaleSaved?: SaleS
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft");
+  // From a list's "Edit" on a posted invoice (admins, fix F1).
+  const amendOnOpen = searchParams.get("amend") === "1";
   const { t } = useI18n();
   const goToList = () => router.push("/sales");
 
@@ -30,6 +32,7 @@ export default function SaleNewPage({ afterSaleSaved }: { afterSaleSaved?: SaleS
           isOpen
           layoutMode="page"
           draftId={draftId}
+          amendOnOpen={amendOnOpen}
           defaultType="sale"
           afterSaleSaved={afterSaleSaved}
           onClose={goToList}

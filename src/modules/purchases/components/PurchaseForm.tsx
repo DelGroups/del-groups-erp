@@ -24,7 +24,9 @@ import {
 } from "@/lib/purchases/helpers";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { submitPurchase, updatePurchase } from "../lib/submitPurchase";
+import { amendPurchase, submitPurchase } from "../lib/submitPurchase";
+import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
+import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
 import {
   isPurchaseDraft,
   isPurchasePosted,
@@ -174,7 +176,14 @@ export default function PurchaseForm({
   const [documentStatus, setDocumentStatus] = useState<PurchaseDocumentStatus>(
     initialPurchase ? (isPurchaseDraft(initialPurchase.status) ? "draft" : "posted") : "draft"
   );
-  const documentLocked = documentStatus === "posted";
+  // Fix F1: a posted purchase is changed only by admins (or a role granted it), after a reason.
+  const [amendDialogOpen, setAmendDialogOpen] = useState(false);
+  const [amendReason, setAmendReason] = useState<string | null>(null);
+  const amending = amendReason !== null;
+  const documentLocked = documentStatus === "posted" && !amending;
+  // Payments already booked stay as they are; nothing new is paid while amending.
+  const paymentsLocked = documentStatus === "posted";
+  const today = todayLocalDate();
   const [docDate, setDocDate] = useState(
     initialPurchase?.doc_date ||
       initialPurchase?.created_at?.slice(0, 10) ||
@@ -229,6 +238,7 @@ export default function PurchaseForm({
     showSuccess: showToastSuccess,
   } = useToast();
   const { can } = useAuth();
+  const canEditPosted = can("can_edit_posted_purchases");
   const { t } = useI18n();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
   const { config: procurementConfig } = useProcurementConfig();
@@ -606,7 +616,7 @@ export default function PurchaseForm({
     setPayments((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const persistDocument = async (mode: "draft" | "post") => {
+  const persistDocument = async (mode: "draft" | "post" | "amend") => {
     if (!canSavePurchase) {
       showToastError(t("forms.noPurchasePermission"));
       return;
@@ -694,19 +704,14 @@ export default function PurchaseForm({
       payments: paymentsToProcess,
       additionalExpenses,
       officialFields,
-      mode,
+      mode: mode === "amend" ? ("post" as const) : mode,
       purchaseId: savedPurchaseId,
     };
 
+    // A posted purchase is reversed and posted again in the database (admins, fix F1).
     const result =
-      isEdit && isPostedDocument
-        ? await updatePurchase(
-            initialPurchase!.id,
-            { ...payload, mode: "post" },
-            initialPurchase!.items,
-            initialPurchase!.debt_amount,
-            initialPurchase!.supplier_id || ""
-          )
+      mode === "amend" && savedPurchaseId
+        ? await amendPurchase(savedPurchaseId, { ...payload, mode: "post", payments: [] }, amendReason ?? "")
         : await submitPurchase(payload);
 
     setSaving(false);
@@ -722,6 +727,13 @@ export default function PurchaseForm({
       setInvoiceNumber(result.invoiceNumber);
     }
     setDocumentStatus(result.status === "posted" ? "posted" : "draft");
+
+    if (mode === "amend") {
+      setAmendReason(null);
+      showToastSuccess(t("invoice.amend.saved"));
+      onSuccess?.();
+      return;
+    }
 
     if (mode === "draft") {
       showToastSuccess(t("invoice.draftSaveSuccess"));
@@ -774,7 +786,7 @@ export default function PurchaseForm({
           {t("common.cancel")}
         </Button>
       ) : null}
-      {!documentLocked ? (
+      {!documentLocked && !amending ? (
         <Button
           type="button"
           variant="secondary"
@@ -786,7 +798,7 @@ export default function PurchaseForm({
           {saving ? t("common.saving") : t("invoice.saveDraft")}
         </Button>
       ) : null}
-      {!documentLocked ? (
+      {!documentLocked && !amending ? (
         <Button
           type="button"
           disabled={saving || Boolean(purchasePreflightIssue)}
@@ -796,14 +808,26 @@ export default function PurchaseForm({
           <CheckCircle2 className="h-4 w-4" />
           {saving ? t("common.saving") : t("invoice.postDocument")}
         </Button>
-      ) : isEdit ? (
-        <Button
-          type="button"
-          disabled={saving || Boolean(purchasePreflightIssue)}
-          title={purchasePreflightHint}
-          onClick={() => void persistDocument("post")}
-        >
-          {saving ? t("common.saving") : t("forms.saveChanges")}
+      ) : null}
+      {amending ? (
+        <>
+          <p role="status" className="me-auto text-xs font-medium text-amber-600">
+            {t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
+          </p>
+          <Button
+            type="button"
+            disabled={saving || Boolean(purchasePreflightIssue)}
+            title={purchasePreflightHint}
+            onClick={() => void persistDocument("amend")}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {saving ? t("common.saving") : t("invoice.amend.save")}
+          </Button>
+        </>
+      ) : documentLocked && savedPurchaseId && canEditPosted ? (
+        <Button type="button" variant="outline" onClick={() => setAmendDialogOpen(true)}>
+          <FileText className="h-4 w-4" />
+          {t("invoice.amend.edit")}
         </Button>
       ) : null}
     </div>
@@ -835,6 +859,9 @@ export default function PurchaseForm({
                 onChange={(e) => setDocDate(e.target.value)}
                 className="ml-2 w-auto"
               />
+              {isBackdatedDocument(docDate, today) && !documentLocked ? (
+                <span className="mt-1 block text-[11px] font-normal text-amber-600">{t("invoice.pastDateNote")}</span>
+              ) : null}
             </label>
             {layoutMode === "page" && onCancel ? (
               <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
@@ -1257,6 +1284,8 @@ export default function PurchaseForm({
             <button
               type="button"
               onClick={addPaymentRow}
+              disabled={paymentsLocked && amending}
+              hidden={paymentsLocked && amending}
               className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -1272,7 +1301,7 @@ export default function PurchaseForm({
                 })}
               </p>
             )}
-            {payments.map((pay) => (
+            {(paymentsLocked && amending ? [] : payments).map((pay) => (
               <div key={pay.id} className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-end">
                 <label className="md:col-span-4 block text-[11px] font-semibold text-app-muted">
                   {t("forms.paymentAccount")}
@@ -1306,6 +1335,8 @@ export default function PurchaseForm({
                   {t("common.date")}
                   <input
                     type="date"
+                    min={docDate}
+                    max={today}
                     value={pay.payment_date}
                     onChange={(e) => updatePayment(pay.id, { payment_date: e.target.value })}
                     className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm"
@@ -1412,6 +1443,16 @@ export default function PurchaseForm({
         />
       )}
 
+      {amendDialogOpen && canEditPosted ? (
+        <AmendPostedDialog
+          documentNumber={invoiceNumber}
+          onCancel={() => setAmendDialogOpen(false)}
+          onConfirm={(reason) => {
+            setAmendDialogOpen(false);
+            setAmendReason(reason);
+          }}
+        />
+      ) : null}
       <ToastMessage message={toastMessage} variant={toastVariant} />
 
       {ratingTarget ? (

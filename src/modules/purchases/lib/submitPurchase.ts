@@ -393,6 +393,48 @@ export async function submitPurchaseImmediate(
 }
 
 /** Edit flow — still multi-step until update_purchase_atomic is implemented. */
+/**
+ * Admins (or a role granted can_edit_posted_purchases) change a posted purchase (fix F1): the
+ * database reverses the old version and posts the new one in one transaction
+ * (amend_posted_purchase_invoice). Payments already made stay as they are.
+ */
+export async function amendPurchase(
+  purchaseId: string,
+  payload: SubmitPurchasePayload,
+  reason: string
+): Promise<SubmitPurchaseResult> {
+  const validItems = payload.items.filter((i) => i.product_id && i.quantity > 0);
+  if (validItems.length === 0) {
+    return { success: false, error: "Ən azı bir məhsul tələb olunur" };
+  }
+  // Metric receipts create Polywood pieces outside the database transaction; posting them again
+  // would duplicate the pieces, so such a purchase is cancelled and created again instead.
+  if (validItems.some((item) => item.metric_receive_mode)) {
+    return { success: false, error: "Metrik (Polywood) sətirli alış bu yolla dəyişdirilmir — ləğv edib yenidən yaradın" };
+  }
+  const draftPayload = buildDraftRpcPayload({ ...payload, purchaseId }, validItems);
+  // Newer than the generated Database types.
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+  const { data, error } = await rpc.call(supabase, "amend_posted_purchase_invoice", {
+    p_purchase_id: purchaseId,
+    p_payload: draftPayload,
+    p_reason: reason,
+  });
+  if (error) return { success: false, error: error.message };
+  const officialError = await persistOfficialFields(payload, purchaseId);
+  if (officialError) return officialError;
+  const result = (data ?? null) as ProcessPurchaseEventResponse | null;
+  return {
+    success: true,
+    purchaseId,
+    invoiceNumber: result?.invoice_number ? String(result.invoice_number) : payload.invoiceNumber,
+    status: "posted",
+  };
+}
+
 export async function updatePurchase(
   purchaseId: string,
   payload: SubmitPurchasePayload,

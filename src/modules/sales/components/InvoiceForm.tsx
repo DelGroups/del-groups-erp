@@ -112,6 +112,8 @@ import {
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import Button from "@/components/ui/button";
+import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
+import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { ResizableTh } from "@/components/ui/table";
@@ -168,6 +170,8 @@ export interface InvoiceFormProps {
   onDraftSaved?: (saleId: string, docNo: string) => void;
   /** Run after a sale is saved (see SaleSavedHook); commissions records its commission here. */
   afterSaleSaved?: SaleSavedHook;
+  /** Opened from a list's "Edit" on a posted invoice: ask an admin for the reason right away (fix F1). */
+  amendOnOpen?: boolean;
 }
 
 interface Employee {
@@ -367,6 +371,7 @@ export default function UniversalInvoiceForm({
   draftId = null,
   onDraftSaved,
   afterSaleSaved,
+  amendOnOpen = false,
 }: InvoiceFormProps) {
   const [docNo, setDocNo] = useState("");
   const [docDate, setDocDate] = useState(new Date().toISOString().slice(0, 10));
@@ -435,6 +440,11 @@ export default function UniversalInvoiceForm({
   const { message: toastMessage, variant: toastVariant, showError: showToastError, showSuccess: showToastSuccess } = useToast();
   const invoicePrint = useInvoicePrintSystem();
   const { can, profile } = useAuth();
+  // Fix F1: only admins (or a role granted it) change a posted invoice; the database checks it too.
+  const canEditPosted = can("can_edit_posted_sales");
+  const [amendDialogOpen, setAmendDialogOpen] = useState(false);
+  /** Reason of the admin change in progress; null = not amending. */
+  const [amendReason, setAmendReason] = useState<string | null>(null);
   const { t } = useI18n();
   const { config: taxConfig } = useTaxPayrollConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
@@ -517,7 +527,8 @@ export default function UniversalInvoiceForm({
     void (async () => {
       await fetchInitialData();
       if (draftId) {
-        await hydrateDraft(draftId);
+        const posted = await hydrateDraft(draftId);
+        if (amendOnOpen && posted) setAmendDialogOpen(true);
       } else {
         await assignPreviewDocNo();
       }
@@ -596,11 +607,12 @@ export default function UniversalInvoiceForm({
     setDocNo(`${prefix}-${new Date().getFullYear()}-.....`);
   };
 
-  const hydrateDraft = async (saleId: string) => {
+  /** Loads a saved sale into the form; true when it is posted. */
+  const hydrateDraft = async (saleId: string): Promise<boolean> => {
     const sale = await fetchSaleById(saleId);
     if (!sale) {
       showToastError(t("invoice.draftNotFound"));
-      return;
+      return false;
     }
     applySaleRecordToForm(sale);
     if (sale.customer_id) {
@@ -612,6 +624,7 @@ export default function UniversalInvoiceForm({
       if (customerRow) setSelectedCustomer(customerRow as Customer);
       void loadCustomerCredit(sale.customer_id);
     }
+    return isSalesPosted(sale.status);
   };
 
   const applySaleRecordToForm = (sale: SaleRecord) => {
@@ -1241,6 +1254,7 @@ export default function UniversalInvoiceForm({
         account_id: acc?.id || "",
         method: acc?.name || "Nəğd",
         amount: 0,
+        date: docDate,
       },
     ]);
   };
@@ -1406,9 +1420,13 @@ export default function UniversalInvoiceForm({
     onClose?.();
   };
 
-  const documentLocked = Boolean(savedSaleId) && documentStatus === "posted";
+  const amending = amendReason !== null;
+  const documentLocked = Boolean(savedSaleId) && documentStatus === "posted" && !amending;
+  // Payments already booked stay as they are during an admin change.
+  const paymentsLocked = documentLocked || amending;
+  const today = todayLocalDate();
 
-  const persistDocument = async (mode: "draft" | "post") => {
+  const persistDocument = async (mode: "draft" | "post" | "amend") => {
     if (documentLocked) {
       showToastError(t("invoice.postedLocked"));
       return;
@@ -1433,7 +1451,7 @@ export default function UniversalInvoiceForm({
     }
 
     const lineIssue = validateSaleInvoiceLines(saleItems, resolveItemAvailableStock);
-    if (mode === "post" && lineIssue) {
+    if (mode !== "draft" && lineIssue) {
       showToastError(preflightMessage(t, lineIssue));
       return;
     }
@@ -1544,6 +1562,7 @@ export default function UniversalInvoiceForm({
       officialFields,
       mode,
       saleId: savedSaleId,
+      amendReason: amendReason ?? undefined,
       paymentType,
       dueDate: dueDate || null,
       currencyBreakdown: calcCurrencyBreakdown(saleItems),
@@ -1560,6 +1579,13 @@ export default function UniversalInvoiceForm({
     if (result.saleId) setSavedSaleId(result.saleId);
     if (result.docNo) setDocNo(result.docNo);
     setDocumentStatus(result.status === "posted" ? "posted" : "draft");
+
+    if (mode === "amend") {
+      setAmendReason(null);
+      showToastSuccess(t("invoice.amend.saved"));
+      onSuccess?.();
+      return;
+    }
 
     if (mode === "draft") {
       showToastSuccess(t("invoice.draftSaveSuccess"));
@@ -1617,11 +1643,38 @@ export default function UniversalInvoiceForm({
     "flex items-baseline justify-between gap-4 text-sm text-[color:var(--gt-text-primary)]";
   const summaryValueClass = "shrink-0 font-mono tabular-nums text-[color:var(--gt-text-dark)]";
 
-  const actionButtons = (
+  const actionButtons = amending ? (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <p role="status" className="me-auto text-xs font-medium text-amber-600">
+        {t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
+      </p>
+      <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => setAmendReason(null)}>
+        {t("common.cancel")}
+      </Button>
+      <Button
+        type="button"
+        variant="default"
+        size="sm"
+        disabled={saving || Boolean(salePreflightIssue)}
+        title={salePreflightHint}
+        loading={saving}
+        onClick={() => void persistDocument("amend")}
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        {saving ? t("common.saving") : t("invoice.amend.save")}
+      </Button>
+    </div>
+  ) : (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <Button type="button" variant="outline" size="sm" onClick={handleClose}>
         {t("common.cancel")}
       </Button>
+      {documentLocked && canEditPosted ? (
+        <Button type="button" variant="outline" size="sm" onClick={() => setAmendDialogOpen(true)}>
+          <FileText className="h-4 w-4" />
+          {t("invoice.amend.edit")}
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="secondary"
@@ -1686,6 +1739,9 @@ export default function UniversalInvoiceForm({
                   onChange={(e) => setDocDate(e.target.value)}
                   className={`${INVOICE_INPUT} ml-2 mt-1 w-auto`}
                 />
+              {isBackdatedDocument(docDate, today) && !documentLocked ? (
+                <span className="mt-1 block text-[11px] font-normal text-amber-600">{t("invoice.pastDateNote")}</span>
+              ) : null}
               </label>
             </CardHeader>
           </Card>
@@ -1712,6 +1768,9 @@ export default function UniversalInvoiceForm({
                   onChange={(e) => setDocDate(e.target.value)}
                   className="ml-2 rounded-lg border border-app px-2 py-1 font-semibold text-app disabled:opacity-60"
                 />
+              {isBackdatedDocument(docDate, today) && !documentLocked ? (
+                <span className="mt-1 block text-[11px] font-normal text-amber-600">{t("invoice.pastDateNote")}</span>
+              ) : null}
               </label>
               <button
                 type="button"
@@ -2885,7 +2944,7 @@ export default function UniversalInvoiceForm({
               <button
                 type="button"
                 onClick={addPaymentRow}
-                disabled={documentLocked}
+                disabled={paymentsLocked}
                 className="btn-secondary flex shrink-0 items-center gap-1 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -2897,11 +2956,11 @@ export default function UniversalInvoiceForm({
               {payments.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-1 gap-2 rounded-xl border border-app bg-app-card-hover p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"
+                  className="grid grid-cols-1 gap-2 rounded-xl border border-app bg-app-card-hover p-2 sm:grid-cols-[minmax(0,1fr)_9rem_8rem_auto]"
                 >
                   <select
                     value={p.account_id}
-                    disabled={documentLocked}
+                    disabled={paymentsLocked}
                     onChange={(e) => handleAccountChange(p.id, e.target.value)}
                     className={INVOICE_INPUT}
                   >
@@ -2913,12 +2972,22 @@ export default function UniversalInvoiceForm({
                     ))}
                   </select>
                   <input
+                    type="date"
+                    aria-label={t("invoice.paymentDate")}
+                    min={docDate}
+                    max={today}
+                    value={p.date || docDate}
+                    disabled={paymentsLocked}
+                    onChange={(e) => updatePayment(p.id, { date: e.target.value || undefined })}
+                    className={INVOICE_INPUT}
+                  />
+                  <input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder={t("invoice.amountPlaceholder")}
                     value={p.amount}
-                    disabled={documentLocked}
+                    disabled={paymentsLocked}
                     onChange={(e) =>
                       updatePayment(p.id, { amount: Number(e.target.value) || 0 })
                     }
@@ -2926,7 +2995,7 @@ export default function UniversalInvoiceForm({
                   />
                   <button
                     type="button"
-                    disabled={documentLocked}
+                    disabled={paymentsLocked}
                     onClick={() => removePaymentRow(p.id)}
                     className="flex h-10 w-10 items-center justify-center rounded-lg text-app-muted hover:bg-rose-500/10 hover:text-rose-600"
                     aria-label={t("common.delete")}
@@ -3148,6 +3217,16 @@ export default function UniversalInvoiceForm({
       />
     ) : null}
 
+    {amendDialogOpen && canEditPosted ? (
+      <AmendPostedDialog
+        documentNumber={docNo}
+        onCancel={() => setAmendDialogOpen(false)}
+        onConfirm={(reason) => {
+          setAmendDialogOpen(false);
+          setAmendReason(reason);
+        }}
+      />
+    ) : null}
     <ToastMessage message={toastMessage} variant={toastVariant} />
     <InvoicePrintSystem
       branding={invoicePrint.branding}

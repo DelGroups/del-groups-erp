@@ -5,6 +5,7 @@ import { Plus, Save, Trash2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isBackdatedDocument } from "@/lib/forms/paymentDate";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -658,6 +659,9 @@ export default function MixedDimensionalInvoiceForm({
               onChange={(e) => setDocDate(e.target.value)}
               className="app-input mt-1 w-full text-sm"
             />
+            {isBackdatedDocument(docDate) ? (
+              <span className="mt-1 block text-[11px] font-normal text-amber-600">{t("invoice.pastDateNote")}</span>
+            ) : null}
           </label>
 
           <label className="text-xs font-semibold text-app">

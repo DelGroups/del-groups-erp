@@ -117,6 +117,8 @@ function SaleForm({ id }: { id: string }) {
 
   const actions: FormAction[] = [
     ...(isDraft && can("can_edit_sales") ? [{ key: "edit", label: t("sales.engine.actions.editDraft"), primary: true, icon: <PencilLine className="h-4 w-4" aria-hidden />, onClick: () => router.push(`/sales/new?draft=${sale.id}`) }] : []),
+    // Fix F1: admins change a posted invoice (reason asked in the form; the database checks the right).
+    ...(record.doc_status === "posted" && can("can_edit_posted_sales") ? [{ key: "amend", label: t("invoice.amend.edit"), icon: <PencilLine className="h-4 w-4" aria-hidden />, onClick: () => router.push(`/sales/new?draft=${sale.id}&amend=1`) }] : []),
     ...(debt.totalRemaining > 0 ? [{ key: "pay", label: t("sales.engine.actions.registerPayment"), primary: !isDraft, icon: <Banknote className="h-4 w-4" aria-hidden />, onClick: () => setPaying(true) }] : []),
     { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => invoicePrint.requestPrint(mapSaleToInvoicePrint(sale)) },
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: <FileCode2 className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("xml") },
@@ -258,6 +260,7 @@ function SaleForm({ id }: { id: string }) {
           isOfficial={sale.is_official === true}
           documentSubtotalAmount={Number(sale.subtotal_amount ?? sale.subtotal ?? 0)}
           documentVatAmount={Number(sale.vat_amount ?? sale.vat_total ?? 0)}
+          documentDate={sale.doc_date}
           onSubmit={async (payload) => {
             const result = await recordSalePaymentAction({
               saleId: sale.id,

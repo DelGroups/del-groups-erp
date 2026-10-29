@@ -13,6 +13,7 @@ import { isPurchaseDraft } from "@/lib/invoices/invoiceStatus";
 import PurchaseViewModal from "./PurchaseViewModal";
 import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
+import { purchaseDocumentDate } from "../lib/purchaseDates";
 import {
   fetchPurchaseById,
   fetchPurchaseFormData,
@@ -77,6 +78,8 @@ export default function PurchasesPage() {
   const branding = useCompanyBranding();
   const canDeletePurchases = can("can_delete_purchases");
   const canEditPurchases = can("can_edit_purchases");
+  // Fix F1: a posted purchase is changed by admins only (can_edit_posted_purchases; the database checks it).
+  const canEditPostedPurchases = can("can_edit_posted_purchases");
   const [deleteTarget, setDeleteTarget] = useState<PurchaseRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"invoices" | "requisitions">("invoices");
@@ -367,7 +370,11 @@ export default function PurchasesPage() {
                             onPayment={() => void openPayment(row)}
                             onEQaimeExport={(format) => exportEQaime(row, format)}
                             paymentDisabled={debtBreakdown.totalRemaining <= 0}
-                            onEdit={canEditPurchases ? () => void openEdit(row) : undefined}
+                            onEdit={
+                              isPurchaseDraft(row.status)
+                                ? canEditPurchases ? () => void openEdit(row) : undefined
+                                : canEditPostedPurchases ? () => void openEdit(row) : undefined
+                            }
                             onDelete={
                               canDeletePurchases ? () => setDeleteTarget(row) : undefined
                             }
@@ -438,6 +445,7 @@ export default function PurchasesPage() {
             paymentPurchase.subtotal_amount ?? paymentPurchase.total_amount ?? 0
           )}
           documentVatAmount={Number(paymentPurchase.vat_amount ?? 0)}
+          documentDate={purchaseDocumentDate(paymentPurchase)}
           onSubmit={async (payload) => {
             const result = await recordPurchasePaymentAction({
               purchaseId: paymentPurchase.id,
