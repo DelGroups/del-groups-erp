@@ -272,7 +272,8 @@ begin
   perform pg_temp.assert_balanced(v_id);
 end $$;
 
--- 6. Pay the supplier 250 of 400 from two accounts in one entry; date and overpay rules.
+-- 6. Pay the supplier 250 of 400 (125 of 200 USD at the booking rate 2, so no exchange difference)
+--    from two accounts in one entry; date and overpay rules. IMP-3 adds the currency arguments.
 -- As the admin, who may also read the ledger rows checked below.
 select pg_temp.as_user('00000000-0000-0000-02a2-00000000000a');
 do $$
@@ -283,18 +284,18 @@ declare
 begin
   begin
     perform public.pay_import_payable(v_payable, '2026-09-30', null,
-      '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 10}]', 'imp2-pay-early');
+      '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 10}]', 'imp2-pay-early', 5, 2);
     raise exception 'FAIL a payment before the document date';
   exception when others then if sqlerrm not like '%imports_payment_before_document%' then raise; end if;
   end;
   begin
     perform public.pay_import_payable(v_payable, '2026-10-05', null,
-      '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 300}, {"account_id": "00000000-0000-0000-02a2-0000000000c2", "amount": 101}]', 'imp2-pay-over');
+      '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 300}, {"account_id": "00000000-0000-0000-02a2-0000000000c2", "amount": 101}]', 'imp2-pay-over', 200.5, 2);
     raise exception 'FAIL an overpayment';
   exception when others then if sqlerrm not like '%imports_overpay%' then raise; end if;
   end;
   r := public.pay_import_payable(v_payable, '2026-10-05', 'First part',
-    '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 150}, {"account_id": "00000000-0000-0000-02a2-0000000000c2", "amount": 100}]', 'imp2-pay-1');
+    '[{"account_id": "00000000-0000-0000-02a2-0000000000c1", "amount": 150}, {"account_id": "00000000-0000-0000-02a2-0000000000c2", "amount": 100}]', 'imp2-pay-1', 125, 2);
   if (public.pay_import_payable(v_payable, '2026-10-05', null, '[]', 'imp2-pay-1') ->> 'payment_id') is distinct from r ->> 'payment_id' then
     raise exception 'FAIL payment not idempotent';
   end if;
@@ -425,5 +426,7 @@ select set_config('request.jwt.claims', '', false);
 
 -- 11. Safe to run again.
 \ir ../migrations/20261030110000_imports_posting.sql
+-- IMP-3 replaces pay_import_payable and confirm_import_shipment: apply it again after.
+\ir ../migrations/20261030120000_imports_fx.sql
 
 select 'ALL CHECKS PASSED';

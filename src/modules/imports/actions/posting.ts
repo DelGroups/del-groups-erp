@@ -178,7 +178,7 @@ export async function finalizeCostAction(shipmentId: string, costLineId: string,
   }
 }
 
-export async function payPayableAction(payableId: string, onDate: string | null, note: string | null, splits: unknown, idempotencyKey: string): Promise<PostingResult<Row>> {
+export async function payPayableAction(payableId: string, onDate: string | null, note: string | null, splits: unknown, idempotencyKey: string, amountFc?: number | null, rate?: number | null): Promise<PostingResult<Row>> {
   try {
     await guard("can_manage_imports");
     if (!isUuid(payableId)) return { success: false, error: "imports.errors.notFound" };
@@ -190,6 +190,9 @@ export async function payPayableAction(payableId: string, onDate: string | null,
       p_note: typeof note === "string" ? note.slice(0, 500) : null,
       p_splits: paid,
       p_idempotency_key: key(idempotencyKey),
+      // IMP-3: a foreign-currency payable needs the amount in its currency and the payment-date rate.
+      p_amount_fc: Number(amountFc) > 0 ? Number(amountFc) : null,
+      p_rate: Number(rate) > 0 ? Number(rate) : null,
     });
   } catch (err) {
     return fail(err);

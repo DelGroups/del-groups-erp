@@ -75,6 +75,8 @@ export interface ShipmentDraft {
   invoiceNo: string | null;
   invoiceDate: string | null;
   invoiceRate: number;
+  /** Set on confirmation with supplier prepayments (IMP-3): AZN per unit for the goods. */
+  goodsRateAzn?: number | null;
   incoterm: Incoterm | null;
   customsDeclarationNo: string | null;
   customsDeclarationDate: string | null;
@@ -160,7 +162,8 @@ export function suggestedVat(cost: Pick<CostLineDraft, "amount" | "rateToAzn" | 
 /** The calculator's input for a draft (cost and line ids are the row keys). */
 export function landedCostInput(draft: ShipmentDraft, config: ImportsConfig, marginPct?: number | null): LandedCostInput {
   return {
-    invoiceRate: draft.invoiceRate,
+    // Prepaid goods are valued at the prepayment rate (IMP-3): the effective goods rate, once set.
+    invoiceRate: draft.goodsRateAzn ?? draft.invoiceRate,
     lines: draft.lines.map((l) => ({
       id: l.key,
       qtyPurchase: l.qtyPurchase,
