@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarDays, calendarEvents, dayKey, displayValue, fieldMap, shiftAnchor, startOfDay, type CalendarEvent, type CalendarMode, type Formatter } from "../logic";
 import type { ViewDefinition, ViewRecord } from "../types";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 const HOUR_PX = 48;
 const MONTH_VISIBLE = 3;
@@ -39,9 +40,9 @@ export function CalendarView<R extends ViewRecord>({ definition: def, records, o
   const colorField = cal.colorField ? fields.get(cal.colorField) : undefined;
   const colorOf = (r: R) => (colorField ? colorField.options?.find((o) => o.value === r[colorField.name])?.color : undefined) ?? cal.colorOf?.(r) ?? "var(--ds-brand)";
   const isAllDay = (e: CalendarEvent<R>) => !!cal.allDayField && e.record[cal.allDayField] === true;
-  const heading = new Intl.DateTimeFormat(fmt.locale, mode === "day" ? { dateStyle: "full" } : { month: "long", year: "numeric" }).format(anchor);
-  const weekday = (d: Date) => new Intl.DateTimeFormat(fmt.locale, { weekday: "short" }).format(d);
-  const time = (d: Date) => new Intl.DateTimeFormat(fmt.locale, { hour: "2-digit", minute: "2-digit" }).format(d);
+  const heading = dateFormat(fmt.locale, mode === "day" ? { dateStyle: "full" } : { month: "long", year: "numeric" }).format(anchor);
+  const weekday = (d: Date) => dateFormat(fmt.locale, { weekday: "short" }).format(d);
+  const time = (d: Date) => dateFormat(fmt.locale, { hour: "2-digit", minute: "2-digit" }).format(d);
 
   return (
     <div className="flex flex-col gap-3">

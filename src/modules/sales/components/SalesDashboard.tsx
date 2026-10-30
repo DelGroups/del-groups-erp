@@ -5,6 +5,7 @@ import { ChartCard, MetricCard, RingGauge } from "@/design-system/components";
 import { formatFigure } from "@/design-system/logic";
 import type { Formatter } from "@/views";
 import { salesDashboard, type SaleListRecord } from "../views/sales";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 type Range = "3m" | "6m" | "12m";
 const RANGE_MONTHS: Record<Range, number> = { "3m": 3, "6m": 6, "12m": 12 };
@@ -22,7 +23,7 @@ export function SalesDashboard({ records, fmt, onFilter }: { records: readonly S
   const money = (n: number) => `${formatFigure(n, 0, locale)} ${t("common.currency")}`;
   const monthLabel = (key: string) => {
     const [y, m] = key.split("-").map(Number);
-    return new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(y, m - 1, 1));
+    return dateFormat(locale, { month: "short" }).format(new Date(y, m - 1, 1));
   };
   const card = (filters: string[], label: string, node: React.ReactNode) => (
     <button type="button" onClick={() => onFilter(filters)} aria-label={label} className="rounded-[var(--ds-radius-xl)] text-left outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2">

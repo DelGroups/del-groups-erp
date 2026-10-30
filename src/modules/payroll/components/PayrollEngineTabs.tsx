@@ -17,6 +17,7 @@ import { advanceKpis, advancesDefinition, ADVANCES_VIEW_KEY, canPayRun, payrollD
 import AdvanceFormModal from "./AdvanceFormModal";
 import PayPayrollModal from "./PayPayrollModal";
 import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 const PAYROLL = payrollDefinition({});
 const ADVANCES = advancesDefinition({ fetchAll: async () => (await fetchEmployeeAdvances()) as unknown as Record<string, unknown>[] });
@@ -99,7 +100,7 @@ export function PayrollEngineTab({ accounts, canManageHr, header }: EmployeesPag
               <select id={monthId} className="ds-input w-auto" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
-                    {new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2000, i, 1))}
+                    {dateFormat(undefined, { month: "long" }).format(new Date(2000, i, 1))}
                   </option>
                 ))}
               </select>

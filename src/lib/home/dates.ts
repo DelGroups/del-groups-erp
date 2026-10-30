@@ -1,3 +1,4 @@
+import { dateFormat } from "@/lib/dates/localeDate";
 /**
  * Dates of the home page (prompt 24b). The company works in Baku time unless its profile says
  * otherwise (the profile has no time zone yet): "today" is the Baku calendar day, also on a
@@ -8,7 +9,7 @@ export const HOME_TIME_ZONE = "Asia/Baku";
 
 /** YYYY-MM-DD of `date` in `timeZone`. */
 export function isoDay(date: Date, timeZone: string = HOME_TIME_ZONE): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+  return dateFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
 /** First and last day of a YYYY-MM month. */

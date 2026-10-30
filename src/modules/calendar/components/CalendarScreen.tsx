@@ -14,6 +14,7 @@ import { buildIcs, calendarWindow, isMine, REMINDER_CHOICES, toCalendarRecords, 
 import { useBusy, useCalendarActions, useCalendarEvent, useCalendarEvents } from "../lib/data";
 import { calendarDefinition } from "../views/calendar";
 import { EventForm } from "./EventForm";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 /**
  * The Calendar module's screen (phase 20, new UI only): my calendar (events I organise or was
@@ -166,8 +167,8 @@ function EventDetails({
   const myReminder = (row.calendar_reminders ?? []).find((r) => r.user_id === userId && r.channel === "in_app");
   const name = (id: string | null) => (id ? users.data?.find((u) => u.id === id)?.full_name || t("views.chatter.unnamedUser") : "—");
   const when = record.all_day
-    ? new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(new Date(record.start_at))
-    : `${new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short" }).format(new Date(record.start_at))} – ${new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(new Date(record.end_at))}`;
+    ? dateFormat(locale, { dateStyle: "full" }).format(new Date(record.start_at))
+    : `${dateFormat(locale, { dateStyle: "full", timeStyle: "short" }).format(new Date(record.start_at))} – ${dateFormat(locale, { timeStyle: "short" }).format(new Date(record.end_at))}`;
   return (
     <div className="flex flex-col gap-3">
       <p className="font-medium">{when}</p>

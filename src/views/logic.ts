@@ -20,6 +20,7 @@ import type {
   ViewDefinition,
   ViewRecord,
 } from "./types";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 export interface Formatter {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -320,11 +321,11 @@ export function dateBucket(value: unknown, granularity: DateGranularity): string
 function bucketLabel(key: string, granularity: DateGranularity, locale: string): string {
   if (granularity === "month") {
     const [y, m] = key.split("-").map(Number);
-    return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
+    return dateFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
   }
   if (granularity === "day") {
     const [y, m, d] = key.split("-").map(Number);
-    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
+    return dateFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
   }
   return key;
 }
@@ -355,7 +356,7 @@ export function displayValue(field: FieldDef, record: ViewRecord, fmt: Formatter
     case "datetime": {
       const d = toDate(v);
       if (!d) return "";
-      return new Intl.DateTimeFormat(fmt.locale, field.type === "date" ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(d);
+      return dateFormat(fmt.locale, field.type === "date" ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(d);
     }
     default:
       return v === null || v === undefined ? "" : String(v);
