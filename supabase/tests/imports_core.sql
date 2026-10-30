@@ -152,6 +152,11 @@ create or replace function pg_temp.as_user(p_user uuid) returns void language sq
   select set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated')::text, false);
 $$;
 
+-- What the posting functions do to the status, done as the owner for the checks below.
+create or replace function pg_temp.set_status(p_id uuid, p_status text) returns void language sql security definer as $$
+  update public.import_shipments set status = p_status where id = p_id;
+$$;
+
 set role authenticated;
 
 select pg_temp.as_user('00000000-0000-0000-01a1-00000000000a');
@@ -216,8 +221,14 @@ begin
     raise exception 'FAIL a user stored a cbar rate';
   exception when insufficient_privilege then null;
   end;
-  -- A closed shipment cannot get new lines.
-  update public.import_shipments set status = 'closed' where id = v_id;
+  -- The status is not changed directly (IMP-2: only the posting functions move it).
+  begin
+    update public.import_shipments set status = 'closed' where id = v_id;
+    raise exception 'FAIL the status was changed directly';
+  exception when insufficient_privilege then null;
+  end;
+  -- A shipment that is no longer a draft cannot get new lines.
+  perform pg_temp.set_status(v_id, 'closed');
   begin
     insert into public.import_shipment_lines (shipment_id, position, product_id, qty_purchase_unit, qty_stock_unit, unit_price_fc)
     values (v_id, 1, '00000000-0000-0000-01a1-000000000102', 1, 1, 1);
@@ -250,7 +261,9 @@ do $$ begin
   if not ('import_shipments' = any (public.chatter_models())) then raise exception 'FAIL import_shipments not in chatter_models()'; end if;
 end $$;
 
--- 6. Safe to run again.
+-- 6. Safe to run again. Later migrations tighten its write rules (IMP-2: direct writes only
+-- while a draft), so they are applied again after it, in order, as a re-run must be.
 \ir ../migrations/20261030100000_imports_core.sql
+\ir ../migrations/20261030110000_imports_posting.sql
 
 select 'ALL CHECKS PASSED';

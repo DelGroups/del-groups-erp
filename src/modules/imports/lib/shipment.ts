@@ -28,6 +28,8 @@ export interface ImportProduct {
   unit: string | null;
   /** Metres per sheet for sheet products (stock kept in metres), else null. */
   sheetLengthM: number | null;
+  /** For the receiving sheet (IMP-2). */
+  barcode?: string | null;
 }
 
 export interface ShipmentLineDraft {
