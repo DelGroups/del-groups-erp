@@ -8,6 +8,7 @@
     "modules:check": "node --experimental-strip-types --import ./scripts/node-ts/register.mjs scripts/check-modules.mjs",
     "start": "next start",
     "lint": "eslint",
+    "ui:guard": "node scripts/ui-guard.mjs",
     "test": "node --import ./scripts/node-ts/register.mjs --test \"tests/**/*.test.mjs\"",
     "build:zip": "node scripts/create-source-zip.mjs",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs",

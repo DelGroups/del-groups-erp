@@ -183,7 +183,7 @@ function appPages() {
 const NOT_NAVIGATION = new Set([
   "/login", "/forgot-password", "/update-password", "/auth/callback", "/auth/set-password",
   "/tenant/not-found", "/tenant/preparing", "/tenant/suspended", "/tenant/unavailable",
-  "/apps", "/dev/design", "/not-in-plan", "/inventory-audit",
+  "/apps", "/dev/design", "/dev/ui-lab", "/not-in-plan", "/inventory-audit",
 ]);
 // Pages reached by a link on a page that is itself reachable (checked in the source).
 const LINKED_FROM = {

@@ -263,23 +263,24 @@ export function decimalsOf(value: number): number {
   return dot < 0 || /e/i.test(text) ? 0 : text.length - dot - 1;
 }
 
-/**
- * Separators per language: en 1,234.5 · az 1.234,5 · ru 1 234,5 (no-break space). Written out
- * instead of Intl.NumberFormat because Node's and the browser's ICU data differ for az, which
- * would make server-rendered figures disagree with the browser's (hydration mismatch).
- */
-const SEPARATORS: Record<string, { group: string; decimal: string }> = {
-  en: { group: ",", decimal: "." },
-  az: { group: ".", decimal: "," },
-  ru: { group: "\u00a0", decimal: "," },
-};
+/** Thousands separators per language, fixed decimals (one formatting module: src/lib/dates/localeDate.ts). */
+export { formatFigure } from "../lib/dates/localeDate";
 
-/** Thousands separators per language, fixed decimals; the same on server and client. */
-export function formatFigure(value: number, decimals: number, locale = "en"): string {
-  const sep = SEPARATORS[locale] ?? SEPARATORS.en;
-  const fixed = Math.abs(value).toFixed(Math.max(0, decimals));
-  const [int, frac] = fixed.split(".");
-  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, sep.group);
-  const sign = value < 0 && Number(fixed) !== 0 ? "-" : "";
-  return `${sign}${grouped}${frac ? sep.decimal + frac : ""}`;
+/**
+ * Truncate (UI-1): the text is cut by its ellipsis, so the full text needs a tooltip. One pixel
+ * of tolerance for sub-pixel rounding of the browser's layout.
+ */
+export function isTextTruncated(box: { scrollWidth: number; clientWidth: number; scrollHeight?: number; clientHeight?: number }): boolean {
+  if (box.scrollWidth - box.clientWidth > 1) return true;
+  return box.scrollHeight !== undefined && box.clientHeight !== undefined && box.scrollHeight - box.clientHeight > 1;
+}
+
+/** Combobox (UI-1): options whose label or hint contains every word of the query, case-insensitive. */
+export function filterOptions<T extends { label: string; hint?: string }>(options: readonly T[], query: string, locale = "az"): T[] {
+  const words = query.trim().toLocaleLowerCase(locale).split(/\s+/).filter(Boolean);
+  if (!words.length) return [...options];
+  return options.filter((o) => {
+    const text = `${o.label} ${o.hint ?? ""}`.toLocaleLowerCase(locale);
+    return words.every((w) => text.includes(w));
+  });
 }

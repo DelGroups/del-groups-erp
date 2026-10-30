@@ -3,3 +3,5 @@
 /* New UI (prompt 15): scoped to [data-ds], no effect on existing screens. */
 @import "./theme.css";
 @import "./components.css";
+/* UI_STANDARD (UI-1): token aliases and layout fixes, only under html[data-ui-standard]. */
+@import "./ui-standard.css";

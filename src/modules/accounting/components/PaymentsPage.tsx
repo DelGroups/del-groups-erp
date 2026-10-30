@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { FileSpreadsheet, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+import { formatGridDateTime, toDateValue } from "@/lib/dates/localeDate";
 
 /** Column choice key of this list (prompt 24c). */
 const PAYMENTS_LIST_KEY = "accounting.payments";
@@ -20,8 +21,7 @@ function formatMoney(value: number): string {
 
 function formatDate(value: string): string {
   if (!value) return "—";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+  return toDateValue(value) ? formatGridDateTime(value) : value;
 }
 
 export default function PaymentsPage() {

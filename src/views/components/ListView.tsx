@@ -149,9 +149,9 @@ export function Cell({ field, record, fmt }: { field: FieldDef; record: ViewReco
   if (field.type === "selection" && text) {
     const color = field.options?.find((o) => o.value === record[field.name])?.color;
     return (
-      <span className="ds-chip" style={{ background: color ? `color-mix(in srgb, ${color} 18%, transparent)` : "var(--ds-surface-sunken)", color: "var(--ds-text)" }}>
+      <span className="ds-chip" title={text} style={{ background: color ? `color-mix(in srgb, ${color} 18%, transparent)` : "var(--ds-surface-sunken)", color: "var(--ds-text)" }}>
         {color ? <span className="ds-dot" style={{ background: color }} aria-hidden /> : null}
-        {text}
+        <span className="ds-chip-text">{text}</span>
       </span>
     );
   }

@@ -6,6 +6,7 @@ import {
   getWarehouseSlipTypeLabel,
 } from "@/lib/warehouse/warehouseSlips";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { formatGridDateTime } from "@/lib/dates/localeDate";
 
 export interface WarehouseSlipPrintData {
   slip_number: string;
@@ -25,15 +26,7 @@ interface WarehouseSlipPrintTemplateProps {
 }
 
 function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("az-AZ", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return formatGridDateTime(value, { empty: "-" });
 }
 
 export function warehouseSlipToPrintData(slip: WarehouseSlip): WarehouseSlipPrintData {

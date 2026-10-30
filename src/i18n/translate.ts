@@ -1,4 +1,5 @@
 import type { Messages } from "@/i18n/messages";
+import { formatGridDate, formatGridDateTime } from "@/lib/dates/localeDate";
 
 export function translate(
   messages: Messages,
@@ -28,28 +29,18 @@ export function translate(
   );
 }
 
+/** dd.mm.yyyy HH:mm in every language (src/lib/dates/localeDate.ts); "-" when empty. */
 export function formatDateTime(
-  locale: string,
+  _locale: string,
   value: string | null | undefined
 ): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString(locale, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatGridDateTime(value, { empty: "-" });
 }
 
+/** dd.mm.yyyy in every language; "-" when empty. */
 export function formatDate(
-  locale: string,
+  _locale: string,
   value: string | null | undefined
 ): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString(locale, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  return formatGridDate(value, { empty: "-" });
 }

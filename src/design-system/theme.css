@@ -17,6 +17,7 @@
   --ds-brand-hover: #0d6961;
   --ds-brand-fg: #ffffff;
   --ds-brand-soft: rgb(15 118 110 / 0.12);
+  --ds-on-solid: #ffffff; /* text on solid status colours */
 
   /* ── Light scheme ───────────────────────────────────────────────────── */
   --ds-bg: #f6f7f9;
@@ -52,6 +53,18 @@
   --ds-band-rule: rgb(255 255 255 / 0.1);
   --ds-focus-ring: 0 0 0 3px rgb(15 118 110 / 0.35);
 
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  color-scheme: light;
+}
+
+/*
+ * Scale tokens (type, spacing, radius, elevation, density, motion, layers). Inside every
+ * [data-ds] scope, and at the root while UI_STANDARD is on (html[data-ui-standard]), so the
+ * legacy --erp-* tokens can alias them (ui-standard.css): one scale for both component sets.
+ */
+[data-ds],
+html[data-ui-standard] {
   /* ── Typography: Latin + Cyrillic (fonts.ts sets --ds-font-face) ───── */
   --ds-font-sans: var(--ds-font-face, "Inter"), "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --ds-font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
@@ -61,6 +74,25 @@
   --ds-text-lg: 1.125rem;
   --ds-text-xl: 1.375rem;
   --ds-text-2xl: 1.875rem;
+  --ds-text-3xl: 2.25rem;
+  --ds-weight-normal: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold: 700;
+  --ds-leading-tight: 1.25;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.625;
+
+  /* ── Spacing scale (4 px grid) ─────────────────────────────────────── */
+  --ds-space-0: 0;
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
 
   /* ── Radius scale ──────────────────────────────────────────────────── */
   --ds-radius-xs: 4px;
@@ -83,6 +115,32 @@
   --ds-pad-x: 1.25rem;
   --ds-pad-y: 1rem;
   --ds-gap: 1rem;
+  --ds-control-h-sm: 2rem;
+  /* Fixed hit areas of icon buttons (IconButton md / sm), the same in both densities */
+  --ds-icon-btn: 2rem;
+  --ds-icon-btn-sm: 1.75rem;
+  /* Explicit control widths for inline groups, toolbars and table cells */
+  --ds-w-xs: 5rem;
+  --ds-w-sm: 8rem;
+  --ds-w-md: 12rem;
+  --ds-w-lg: 18rem;
+  /* Longest chip / badge before it ellipsizes */
+  --ds-chip-max: 16rem;
+
+  /* ── Page and shell layout ─────────────────────────────────────────── */
+  --ds-page-pad-x: 1.875rem;
+  --ds-page-pad-y: 1.25rem;
+  --ds-shell-sidebar-w: 14.375rem;
+  --ds-shell-sidebar-w-collapsed: 5rem;
+  --ds-shell-topbar-h: 3.5625rem;
+
+  /* ── Layers ────────────────────────────────────────────────────────── */
+  --ds-z-sticky: 30;
+  --ds-z-dropdown: 40;
+  --ds-z-sidebar: 50;
+  --ds-z-modal: 60;
+  --ds-z-modal-content: 61;
+  --ds-z-toast: 70;
 
   /* ── Motion budget 200–300 ms (motion.ts mirrors these) ───────────── */
   --ds-duration-fast: 200ms;
@@ -90,10 +148,6 @@
   --ds-duration-slow: 300ms;
   --ds-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ds-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-
-  color: var(--ds-text);
-  font-family: var(--ds-font-sans);
-  color-scheme: light;
 }
 
 /* ── Dark scheme ──────────────────────────────────────────────────────── */
@@ -162,6 +216,7 @@
 /* ── Density: compact ─────────────────────────────────────────────────── */
 [data-ds][data-ds-density="compact"] {
   --ds-control-h: 2rem;
+  --ds-control-h-sm: 1.75rem;
   --ds-row-h: 2.25rem;
   --ds-pad-x: 0.875rem;
   --ds-pad-y: 0.625rem;
@@ -171,7 +226,8 @@
 
 /* ── Reduced motion ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  [data-ds] {
+  [data-ds],
+  html[data-ui-standard] {
     --ds-duration-fast: 0ms;
     --ds-duration-base: 0ms;
     --ds-duration-slow: 0ms;

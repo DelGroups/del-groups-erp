@@ -20,6 +20,7 @@ import { fetchCrmProducts, mapDeal } from "../lib/api";
 import { useCrmConfig } from "../hooks/useCrmConfig";
 import { DEALS_VIEW_KEY } from "../views/deals";
 import { useDealsDefinition } from "../hooks/useDealsDefinition";
+import { formatFigure } from "@/lib/dates/localeDate";
 
 /** One deal in the view engine's form (new UI): status bar, fields, notes and quotations. */
 export default function DealFormScreen({ id }: { id: string }) {
@@ -126,7 +127,7 @@ function DealForm({ id }: { id: string }) {
                 <td className="px-2 py-1.5 ds-mono">{q.quote_number}</td>
                 <td className="px-2 py-1.5"><span className="ds-chip ds-chip-flat">{t(`crm.quoteStatus.${q.status}`)}</span></td>
                 <td className="px-2 py-1.5">{q.valid_until ? formatDate(q.valid_until) : "—"}</td>
-                <td className="px-2 py-1.5 text-right ds-mono">{`${new Intl.NumberFormat(fmt.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(q.total_amount)} ${t("common.currency")}`}</td>
+                <td className="px-2 py-1.5 text-right ds-mono">{`${formatFigure(q.total_amount, 2, fmt.locale)} ${t("common.currency")}`}</td>
                 <td className="px-2 py-1.5">
                   <div className="flex flex-wrap justify-end gap-1">
                     {canWrite && q.status !== "CONVERTED" ? (

@@ -27,7 +27,7 @@ import { documentUrl, useDocumentActions, useDocuments, useFolders, useFolderWri
 import { DocumentPanel, SystemFilePanel } from "./DocumentPanel";
 import { FolderTree } from "./FolderTree";
 import { RequestsPanel } from "./RequestsPanel";
-import { dateFormat } from "@/lib/dates/localeDate";
+import { formatGridDate } from "@/lib/dates/localeDate";
 
 /**
  * The Documents module's screen (phase 23, new UI only): the folder tree on the left; on the
@@ -342,7 +342,7 @@ function FolderView({ folder, folders, docs, loading, fmt }: { folder: DocumentF
                   </td>
                   <td className="p-2 ds-muted">{d.tags.join(", ")}</td>
                   <td className="p-2 ds-mono">{fileSize(d.size_bytes)}</td>
-                  <td className="p-2 ds-muted">{dateFormat(fmt.locale, { dateStyle: "medium" }).format(new Date(d.created_at))}</td>
+                  <td className="p-2 ds-muted">{formatGridDate(d.created_at)}</td>
                 </tr>
               ))}
             </tbody>
