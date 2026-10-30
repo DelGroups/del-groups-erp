@@ -37,6 +37,7 @@ import {
 } from "../lib/shipment";
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { costTypeLabel, LandedCostPanel } from "./LandedCostPanel";
+import { PostingPanel } from "./PostingPanel";
 
 const LOOKUPS_KEY = ["imports", "lookups"] as const;
 const CONFIG_KEY = ["imports", "config"] as const;
@@ -142,6 +143,8 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
   const deferred = useDeferredValue(draft);
   const result = useMemo(() => landedCostOf(deferred, config, marginPct), [deferred, config, marginPct]);
   const issues = useMemo(() => draftIssues(draft, config), [draft, config]);
+  // Unsaved changes: posting waits for a save (IMP-2 posts the stored shipment).
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(view.draft), [draft, view.draft]);
 
   const set = (patch: Partial<ShipmentDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const setLine = (key: string, patch: Partial<ShipmentLineDraft>) =>
@@ -507,6 +510,8 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
           }
         />
       ) : null}
+
+      {view.draft.id && view.financials ? <PostingPanel draft={view.draft} lookups={lookups} config={config} dirty={dirty} /> : null}
 
       {draft.id ? (
         <section className="ds-card ds-card-pad" aria-label={t("imports.sections.attachments")}>

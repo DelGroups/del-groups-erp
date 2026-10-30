@@ -153,6 +153,12 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_core.sql | tee "$RUNNER_TEMP/imports_core.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_core.txt"
+      # Imports posting (IMP-2): confirm, receive into two warehouses, late cost on sold stock,
+      # estimate to actual, split payment, close, cancel and storno, period lock, idempotency.
+      - name: Imports posting checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_posting.sql | tee "$RUNNER_TEMP/imports_posting.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_posting.txt"
 
       - name: Server log on failure
         if: failure()

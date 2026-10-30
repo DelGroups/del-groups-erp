@@ -101,7 +101,7 @@ export async function importLookupsAction(): Promise<ImportsResult<ImportLookups
     const client = await admin();
     const [suppliers, products, warehouses, accounts] = await Promise.all([
       rows(client.from("suppliers").select("id, full_name, company_name").order("full_name").limit(5000)),
-      rows(client.from("products").select("id, code, name, unit, inventory_mode, full_sheet_length_m, is_service, is_composite").order("name").limit(20000)),
+      rows(client.from("products").select("id, code, name, unit, barcode, inventory_mode, full_sheet_length_m, is_service, is_composite").order("name").limit(20000)),
       rows(client.from("warehouses").select("id, name, is_default").order("name")),
       rows(client.from("accounts").select("id, code, name").order("code")),
     ]);
@@ -117,6 +117,7 @@ export async function importLookupsAction(): Promise<ImportsResult<ImportLookups
             name: String(p.name ?? ""),
             unit: (p.unit as string | null) ?? null,
             sheetLengthM: p.inventory_mode === "polywood" && Number(p.full_sheet_length_m) > 0 ? Number(p.full_sheet_length_m) : null,
+            barcode: (p.barcode as string | null) ?? null,
           })),
         warehouses: warehouses.map((w) => ({ id: String(w.id), name: String(w.name ?? ""), isDefault: w.is_default === true })),
         accounts: accounts.map((a) => ({ id: String(a.id), name: [a.code, a.name].filter(Boolean).join(" · ") })),
