@@ -68,6 +68,7 @@ import {
   type InventoryCountProductHit,
 } from "../lib/inventoryCountSearch";
 import { countToday } from "../lib/inventoryCountDates";
+import { formatTime } from "@/lib/dates/localeDate";
 
 const PAGE_SIZE = 100;
 /** Start of the scan action's error when no product matches the code (see inventory_count_scan). */
@@ -307,7 +308,7 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => vo
       <span className={cn(base, "text-emerald-600")}>
         <Check className="h-3.5 w-3.5" />
         {t("inventoryCount.saveSaved", {
-          time: state.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: formatTime(state.at),
         })}
       </span>
     );

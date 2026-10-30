@@ -20,7 +20,7 @@ import type {
   ViewDefinition,
   ViewRecord,
 } from "./types";
-import { dateFormat } from "@/lib/dates/localeDate";
+import { dateFormat, formatFigure, formatGridDate, formatGridDateTime } from "@/lib/dates/localeDate";
 
 export interface Formatter {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -333,7 +333,7 @@ function bucketLabel(key: string, granularity: DateGranularity, locale: string):
 // ── Display ──────────────────────────────────────────────────────────────────
 
 export function formatNumber(value: number, digits: number, locale: string): string {
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+  return formatFigure(value, digits, locale);
 }
 
 /** Text of a value in lists, cards, groups and Excel headers. Empty values give "". */
@@ -354,9 +354,10 @@ export function displayValue(field: FieldDef, record: ViewRecord, fmt: Formatter
       return typeof v === "number" ? `${formatNumber(v, 2, fmt.locale)} ${fmt.t("common.currency")}` : "";
     case "date":
     case "datetime": {
+      // Grids and cells: numeric dd.mm.yyyy (HH:mm) in every language (docs/ui-standard.md).
       const d = toDate(v);
       if (!d) return "";
-      return dateFormat(fmt.locale, field.type === "date" ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(d);
+      return field.type === "date" ? formatGridDate(typeof v === "string" ? v : d) : formatGridDateTime(d);
     }
     default:
       return v === null || v === undefined ? "" : String(v);

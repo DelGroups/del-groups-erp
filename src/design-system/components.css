@@ -99,8 +99,11 @@
 }
 
 /* ── Inputs ── */
-[data-ds] .ds-input {
+/* Full width only without UI_STANDARD; with it, ui-standard.css decides (stacked fields only). */
+html:not([data-ui-standard]) [data-ds] .ds-input {
   width: 100%;
+}
+[data-ds] .ds-input {
   height: var(--ds-control-h);
   padding: 0 0.75rem;
   border-radius: var(--ds-radius-md);
@@ -136,6 +139,11 @@
   border-radius: var(--ds-radius-full);
   font-size: var(--ds-text-xs);
   font-weight: 600;
+}
+[data-ds] .ds-chip > .ds-chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 [data-ds] .ds-chip-up {
   background: var(--ds-success-soft);
@@ -363,4 +371,420 @@
   font-size: var(--ds-text-xs);
   font-weight: 500;
   box-shadow: var(--ds-elevation-2);
+}
+
+/* ══ UI standard components (UI-1, docs/ui-standard.md) ══════════════════════════════════ */
+
+/* ── Truncate: one line, ellipsis (tooltip in Truncate.tsx) ── */
+[data-ds] .ds-truncate {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-ds] span.ds-truncate,
+[data-ds] label.ds-truncate {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+/* ── Explicit control widths ── */
+[data-ds] .ds-w-xs {
+  width: var(--ds-w-xs);
+}
+[data-ds] .ds-w-sm {
+  width: var(--ds-w-sm);
+}
+[data-ds] .ds-w-md {
+  width: var(--ds-w-md);
+}
+[data-ds] .ds-w-lg {
+  width: var(--ds-w-lg);
+}
+
+/* ── IconButton: fixed 32 px / 28 px hit area in every density ── */
+[data-ds] .ds-icon-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--ds-icon-btn);
+  height: var(--ds-icon-btn);
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease-out),
+    color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-icon-button[data-size="sm"] {
+  width: var(--ds-icon-btn-sm);
+  height: var(--ds-icon-btn-sm);
+}
+[data-ds] .ds-icon-button[data-variant="outline"] {
+  border-color: var(--ds-border);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-icon-button:hover:not(:disabled),
+[data-ds] .ds-icon-button[data-state="open"] {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+}
+[data-ds] .ds-icon-button[data-variant="danger"]:hover:not(:disabled) {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Control shell (DateField, Combobox): input + icon in one bordered box ── */
+[data-ds] .ds-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: 100%;
+  height: var(--ds-control-h);
+  padding: 0 0.25rem 0 0;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  vertical-align: middle;
+}
+[data-ds] .ds-control:focus-within {
+  border-color: var(--ds-brand);
+  box-shadow: var(--ds-focus-ring);
+}
+[data-ds] .ds-control[data-invalid] {
+  border-color: var(--ds-danger-strong);
+  box-shadow: 0 0 0 3px var(--ds-danger-soft);
+}
+[data-ds] .ds-control[data-disabled] {
+  opacity: 0.55;
+}
+[data-ds] .ds-control-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0.5rem 0 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+[data-ds] .ds-control-input:focus-visible {
+  box-shadow: none;
+}
+[data-ds] .ds-control-input::placeholder,
+[data-ds] .ds-combobox-placeholder {
+  color: var(--ds-text-subtle);
+}
+[data-ds] .ds-date-field {
+  width: 9.75rem;
+}
+[data-ds] .ds-datetime-field {
+  width: 12.5rem;
+}
+[data-ds] .ds-combobox {
+  width: var(--ds-w-md);
+}
+[data-ds] .ds-combobox-trigger {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0.5rem 0 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+[data-ds] .ds-combobox-trigger:focus-visible {
+  box-shadow: none;
+}
+[data-ds] .ds-combobox-placeholder {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-combobox-panel {
+  width: 100%;
+  max-width: min(28rem, calc(100vw - 1.5rem));
+  padding: 0.25rem;
+}
+[data-ds] .ds-combobox-search {
+  width: 100%;
+  height: var(--ds-control-h);
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--ds-border);
+}
+[data-ds] .ds-combobox-list {
+  max-height: 16rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-ds] .ds-combobox-item {
+  height: auto;
+  min-height: var(--ds-control-h);
+  padding: 0.25rem 0.5rem;
+}
+[data-ds] .ds-combobox-footer {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--ds-border);
+}
+
+/* ── Calendar (DateField popover) ── */
+[data-ds] .ds-calendar {
+  width: 17.5rem;
+  min-width: 0;
+  padding: 0.5rem;
+}
+[data-ds] .ds-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.125rem;
+}
+[data-ds] .ds-calendar-weekday {
+  padding: 0.25rem 0;
+  overflow: hidden;
+  color: var(--ds-text-subtle);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+[data-ds] .ds-calendar-day {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+[data-ds] .ds-calendar-day:hover {
+  background: var(--ds-surface-sunken);
+}
+[data-ds] .ds-calendar-day[data-outside] {
+  color: var(--ds-text-subtle);
+}
+[data-ds] .ds-calendar-day[data-today] {
+  border-color: var(--ds-border-strong);
+}
+[data-ds] .ds-calendar-day[data-selected] {
+  background: var(--ds-brand);
+  color: var(--ds-brand-fg);
+}
+
+/* ── Field / FormGrid / InlineGroup ── */
+[data-ds] .ds-form-grid {
+  gap: var(--ds-gap) calc(var(--ds-gap) * 1.5);
+}
+[data-ds] .ds-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ds-gap);
+}
+[data-ds] .ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+[data-ds] .ds-field[data-layout="inline"] {
+  display: grid;
+  grid-template-columns: minmax(0, var(--ds-field-label-w, 10rem)) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+[data-ds] .ds-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  min-width: 0;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+[data-ds] .ds-field-required {
+  flex: 0 0 auto;
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-field-control {
+  min-width: 0;
+}
+/* In a stacked field the control takes the field's width. */
+[data-ds] .ds-field-control > .ds-control,
+[data-ds] .ds-field-control > .ds-input {
+  width: 100%;
+}
+[data-ds] .ds-field-hint,
+[data-ds] .ds-field-error {
+  margin-top: 0.25rem;
+  font-size: var(--ds-text-xs);
+}
+[data-ds] .ds-field-hint {
+  color: var(--ds-text-subtle);
+}
+[data-ds] .ds-field-error {
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-inline-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+/* Whole units wrap; a unit keeps its own width instead of stretching to a full line. */
+[data-ds] .ds-inline-group > * {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+[data-ds] .ds-inline-group > .ds-grow {
+  flex: 1 1 10rem;
+}
+[data-ds] .ds-inline-group > .ds-field > .ds-field-control > .ds-control,
+[data-ds] .ds-inline-group > .ds-field > .ds-field-control > .ds-input {
+  width: auto;
+}
+
+/* ── Section / Card, Toolbar, PageHeader ── */
+[data-ds] .ds-section {
+  min-width: 0;
+}
+[data-ds] .ds-section.ds-card > .ds-section-header,
+[data-ds] .ds-section.ds-card > .ds-section-body {
+  padding: var(--ds-pad-y) var(--ds-pad-x);
+}
+[data-ds] .ds-section.ds-card > .ds-section-body {
+  padding-top: 0;
+}
+[data-ds] .ds-section-header,
+[data-ds] .ds-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+[data-ds] .ds-section-heading {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+[data-ds] .ds-section-title {
+  font-size: var(--ds-text-base);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+}
+[data-ds] .ds-section-description {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+}
+[data-ds] .ds-section-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+}
+[data-ds] .ds-page-header {
+  padding-bottom: 0.75rem;
+}
+[data-ds] .ds-page-title {
+  font-size: var(--ds-text-xl);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+}
+[data-ds] .ds-page-eyebrow {
+  min-width: 0;
+  color: var(--ds-text-subtle);
+  font-size: var(--ds-text-xs);
+}
+[data-ds] .ds-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+[data-ds] .ds-toolbar-start {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+[data-ds] .ds-toolbar-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+}
+
+/* ── Chip (Cells.tsx) and cells ── */
+[data-ds] .ds-chip-std {
+  justify-content: center;
+  max-width: min(var(--ds-chip-max), 100%);
+  min-width: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.25rem;
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-chip-std[data-tone="brand"] {
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+}
+[data-ds] .ds-chip-std[data-tone="success"] {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+[data-ds] .ds-chip-std[data-tone="warning"] {
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+}
+[data-ds] .ds-chip-std[data-tone="danger"] {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-chip-std[data-tone="info"] {
+  background: var(--ds-info-soft);
+  color: var(--ds-info);
+}
+[data-ds] .ds-num-cell,
+[data-ds] .ds-date-cell {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-ds] .ds-num-cell {
+  text-align: end;
 }

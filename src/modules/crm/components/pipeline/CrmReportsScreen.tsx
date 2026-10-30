@@ -10,7 +10,7 @@ import { useFormatter, ViewScope } from "@/views";
 import { addMonths, forecastByMonth, funnel, lostReasonLabel, lostReasons, stageKind, stagesForTeam, targetProgress, teamLabel, weightedValue, winRateByUser, type PipelineDeal } from "../../lib/pipeline";
 import { fetchReportDeals } from "../../lib/pipelineData";
 import { usePipeline } from "../../hooks/usePipeline";
-import { dateFormat } from "@/lib/dates/localeDate";
+import { dateFormat, formatFigure, formatQuantity } from "@/lib/dates/localeDate";
 
 /** CRM reports (prompt 21, NEW_CRM): funnel, forecast by month, win rate by salesperson, lost reasons, targets. */
 export function CrmReportsScreen() {
@@ -55,8 +55,8 @@ function Reports() {
   if (!pipeline.ready || rows.isPending) return <SkeletonList loading rows={6} label={t("common.loading")}>{null}</SkeletonList>;
   if (rows.isError) return <EmptyState icon={AlertTriangle} title={t("views.error")} action={<button type="button" className="ds-btn ds-btn-sm" onClick={() => void rows.refetch()}>{t("views.retry")}</button>} />;
 
-  const money = (n: number) => `${new Intl.NumberFormat(fmt.locale, { maximumFractionDigits: 0 }).format(n)} ${t("common.currency")}`;
-  const count = (n: number) => new Intl.NumberFormat(fmt.locale).format(n);
+  const money = (n: number) => `${formatFigure(n, 0, fmt.locale)} ${t("common.currency")}`;
+  const count = (n: number) => formatQuantity(n, fmt.locale);
   const kind = new Map(stages.map((s) => [s.id, stageKind(s)] as const));
   const open = deals.filter((d) => d.type === "opportunity" && (d.stage_id ? kind.get(d.stage_id) : "open") === "open");
   const openValue = open.reduce((s, d) => s + d.expected_value, 0);

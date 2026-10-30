@@ -4,6 +4,8 @@ import React, { useId, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Loader2 } from "lucide-react";
 import { recordLayoutId, transitions } from "@/design-system/motion";
+import { Combobox, DateField, useUiStandard } from "@/design-system/components";
+import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import { changedValues, displayValue, fieldLabel, fieldMap, missingRequired, optionLabel, parseInput, type Formatter } from "../logic";
 import type { FieldDef, ViewDefinition, ViewRecord } from "../types";
 import { Cell } from "./ListView";
@@ -263,9 +265,44 @@ function FieldRow({ field, record, editable, invalid, onChange, fmt }: { field: 
     onChange(parseInput(field, raw));
   };
   const common = { id, "aria-invalid": invalid || undefined, "aria-describedby": helpId, "aria-required": field.required || undefined };
+  // UI_STANDARD: DateField and Combobox instead of the native date input and select.
+  const standard = useUiStandard();
   let input: React.ReactNode;
   if (!editable) input = <Cell field={field} record={record} fmt={fmt} />;
-  else if (field.type === "boolean") input = <input {...common} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />;
+  else if (standard && field.type === "date")
+    input = (
+      <DateField
+        id={id}
+        value={typeof value === "string" && value ? value.slice(0, 10) : null}
+        onChange={(v) => onChange(v)}
+        locale={fmt.locale}
+        labels={dateFieldLabels(fmt.t)}
+        invalid={invalid}
+        required={field.required}
+        aria-describedby={helpId}
+        width="full"
+      />
+    );
+  else if (standard && (field.type === "selection" || field.type === "many2one")) {
+    const options = (field.options ?? []).map((o) => ({ value: String(o.value), label: o.label ?? (o.labelKey ? fmt.t(o.labelKey) : String(o.value)) }));
+    input = (
+      <Combobox
+        id={id}
+        value={value === null || value === undefined || value === "" ? null : String(value)}
+        onChange={(v) => onChange(v)}
+        options={options}
+        // A value missing from the options (archived customer) still shows its name.
+        selectedLabel={value ? displayValue(field, record, fmt) || String(value) : undefined}
+        labels={comboboxLabels(fmt.t)}
+        locale={fmt.locale}
+        clearable={!field.required}
+        invalid={invalid}
+        required={field.required}
+        aria-describedby={helpId}
+        width="full"
+      />
+    );
+  } else if (field.type === "boolean") input = <input {...common} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />;
   else if (field.type === "selection" || field.type === "many2one")
     input = (
       <select {...common} className="ds-input" value={value === null || value === undefined ? "" : String(value)} onChange={(e) => onChange(e.target.value || null)}>

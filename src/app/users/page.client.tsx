@@ -28,10 +28,10 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import SeatLimitNudge from "@/components/limits/SeatLimitNudge";
 import { useLimitStatus } from "@/components/limits/useLimitStatus";
 import { isSeatLimitDbError } from "@/lib/limits/limits";
+import { formatGridDate } from "@/lib/dates/localeDate";
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString("az-AZ");
+  return formatGridDate(value, { empty: "-" });
 }
 
 function InviteUserModal({

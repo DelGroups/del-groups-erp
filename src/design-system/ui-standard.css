@@ -1,0 +1,176 @@
+/**
+ * UI standard (UI-1, docs/ui-standard.md). Applies ONLY while UI_STANDARD=true, when the root
+ * layout puts `data-ui-standard` on <html>; with the flag off this file matches nothing.
+ *
+ * 1. Token aliases: --ds-* is the single source of truth. Every legacy --erp-* token is an
+ *    alias of a --ds-* token here, so src/components/ui/* and src/design-system render with one
+ *    scale. Scale tokens alias everywhere; colour tokens alias inside new-UI scopes ([data-ds]),
+ *    outside them the classic theme picker (globals.css) keeps its colours.
+ * 2. Inputs size to their content in rows (flex rows, toolbars, inline groups, table cells);
+ *    full width only in a stacked field (label above the control).
+ * 3. Chips and badges never wrap: one line, centred, ellipsis past --ds-chip-max.
+ *
+ * tests/uiStandard.test.mjs checks that every --erp-* token of tokens.css has an alias below.
+ */
+
+/* ── 1a. Scale aliases (root and every scope, so compact density reaches legacy parts) ── */
+html[data-ui-standard],
+html[data-ui-standard] [data-ds] {
+  --erp-font-sans: var(--ds-font-sans);
+  --erp-font-mono: var(--ds-font-mono);
+
+  --erp-text-xs: var(--ds-text-xs);
+  --erp-text-sm: var(--ds-text-sm);
+  --erp-text-base: var(--ds-text-base);
+  --erp-text-lg: var(--ds-text-lg);
+  --erp-text-xl: var(--ds-text-xl);
+  --erp-text-2xl: var(--ds-text-2xl);
+  --erp-text-3xl: var(--ds-text-3xl);
+
+  --erp-leading-tight: var(--ds-leading-tight);
+  --erp-leading-normal: var(--ds-leading-normal);
+  --erp-leading-relaxed: var(--ds-leading-relaxed);
+
+  --erp-font-weight-normal: var(--ds-weight-normal);
+  --erp-font-weight-medium: var(--ds-weight-medium);
+  --erp-font-weight-semibold: var(--ds-weight-semibold);
+  --erp-font-weight-bold: var(--ds-weight-bold);
+
+  --erp-space-0: var(--ds-space-0);
+  --erp-space-1: var(--ds-space-1);
+  --erp-space-2: var(--ds-space-2);
+  --erp-space-3: var(--ds-space-3);
+  --erp-space-4: var(--ds-space-4);
+  --erp-space-5: var(--ds-space-5);
+  --erp-space-6: var(--ds-space-6);
+  --erp-space-8: var(--ds-space-8);
+  --erp-space-10: var(--ds-space-10);
+
+  --erp-panel-padding-x: var(--ds-pad-x);
+  --erp-panel-padding-y: var(--ds-pad-y);
+  --erp-content-padding-x: var(--ds-page-pad-x);
+  --erp-content-padding-y: var(--ds-page-pad-y);
+
+  --erp-sidebar-width: var(--ds-shell-sidebar-w);
+  --erp-sidebar-width-collapsed: var(--ds-shell-sidebar-w-collapsed);
+  --erp-topbar-height: var(--ds-shell-topbar-h);
+
+  --erp-radius-sm: var(--ds-radius-xs);
+  --erp-radius-md: var(--ds-radius-sm);
+  --erp-radius-lg: var(--ds-radius-md);
+  --erp-radius-full: var(--ds-radius-full);
+
+  --erp-shadow-none: var(--ds-elevation-0);
+  --erp-shadow-sm: var(--ds-elevation-1);
+  --erp-shadow-md: var(--ds-elevation-2);
+  --erp-shadow-lg: var(--ds-elevation-3);
+
+  --erp-duration-fast: var(--ds-duration-fast);
+  --erp-duration-normal: var(--ds-duration-base);
+  --erp-duration-slow: var(--ds-duration-slow);
+  --erp-ease-default: var(--ds-ease-out);
+
+  --erp-z-sticky: var(--ds-z-sticky);
+  --erp-z-dropdown: var(--ds-z-dropdown);
+  --erp-z-sidebar: var(--ds-z-sidebar);
+  --erp-z-modal: var(--ds-z-modal);
+  --erp-z-modal-content: var(--ds-z-modal-content);
+  --erp-z-toast: var(--ds-z-toast);
+}
+
+/* ── 1b. Colour aliases inside new-UI scopes (theme, dark mode and tenant brand follow the scope) ── */
+html[data-ui-standard] [data-ds] {
+  --erp-color-primary: var(--ds-brand);
+  --erp-color-primary-hover: var(--ds-brand-hover);
+  --erp-color-primary-active: var(--ds-brand-hover);
+  --erp-color-primary-foreground: var(--ds-brand-fg);
+
+  --erp-color-secondary: var(--ds-text);
+  --erp-color-secondary-hover: var(--ds-text);
+  --erp-color-secondary-active: var(--ds-text);
+  --erp-color-secondary-foreground: var(--ds-surface);
+
+  --erp-color-success: var(--ds-success);
+  --erp-color-success-hover: var(--ds-success);
+  --erp-color-success-foreground: var(--ds-on-solid);
+  --erp-color-warning: var(--ds-warning);
+  --erp-color-warning-hover: var(--ds-warning);
+  --erp-color-warning-foreground: var(--ds-on-solid);
+  --erp-color-danger: var(--ds-danger-strong);
+  --erp-color-danger-hover: var(--ds-danger-solid);
+  --erp-color-danger-foreground: var(--ds-on-solid);
+  --erp-color-info: var(--ds-info);
+  --erp-color-info-hover: var(--ds-info);
+  --erp-color-info-foreground: var(--ds-on-solid);
+  --erp-color-link: var(--ds-info);
+  --erp-color-link-hover: var(--ds-info);
+
+  --erp-bg-main: var(--ds-bg);
+  --erp-bg-panel: var(--ds-surface);
+  --erp-bg-sidebar: var(--ds-surface-sunken);
+  --erp-bg-sidebar-footer: var(--ds-surface-sunken);
+  --erp-bg-topbar: var(--ds-surface);
+  --erp-bg-table-header: var(--ds-surface-sunken);
+  --erp-bg-table-row-alt: var(--ds-surface-sunken);
+  --erp-bg-input: var(--ds-surface);
+  --erp-bg-overlay: var(--ds-overlay);
+
+  --erp-text-main: var(--ds-text);
+  --erp-text-muted: var(--ds-text-muted);
+  --erp-text-inverse: var(--ds-on-solid);
+  --erp-text-sidebar: var(--ds-text);
+  --erp-text-sidebar-muted: var(--ds-text-muted);
+  --erp-text-placeholder: var(--ds-text-subtle);
+
+  --erp-border-default: var(--ds-border);
+  --erp-border-strong: var(--ds-border-strong);
+  --erp-border-sidebar: var(--ds-border);
+  --erp-border-focus: var(--ds-brand-soft);
+}
+
+/*
+ * ── 2. Input widths. In the components layer, so a Tailwind width class on the element
+ * (w-24, min-w-[10rem], flex-1) still wins over them.
+ */
+@layer components {
+  /* Stacked field (label above the control): the control takes the field's width. */
+  html[data-ui-standard] [data-ds] .ds-input {
+    width: 100%;
+    min-width: 0;
+  }
+  /* In a row the control sizes to its content or to its own width class, never a full line. */
+  html[data-ui-standard] [data-ds] :is(.flex, .inline-flex, .ds-inline-group, .ds-toolbar):not(.flex-col, .flex-col-reverse) > .ds-input,
+  html[data-ui-standard] [data-ds] :is(td, th) > .ds-input {
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+/* ── 3. Chips and badges: unlayered, so they also override display of the base .ds-chip rule. */
+html[data-ui-standard] [data-ds] .ds-chip {
+  justify-content: center;
+  max-width: min(var(--ds-chip-max), 100%);
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.25rem;
+}
+
+/* A chip with only text (no icon, no inner span) can ellipsize as a block. */
+html[data-ui-standard] [data-ds] .ds-chip:not(:has(> *)) {
+  display: inline-block;
+  text-overflow: ellipsis;
+}
+
+/* Legacy badges (src/components/ui/badge.tsx, status-badge.tsx). */
+html[data-ui-standard] .ui-pill {
+  justify-content: center;
+  max-width: min(var(--ds-chip-max), 100%);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+html[data-ui-standard] .ui-pill > .ui-pill-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasAuthenticatedSession } from "@/lib/auth/homeRouteAuth";
 import { isPublicAuthPath } from "@/lib/auth/publicRoutes";
+import { isUiLabOpen } from "@/lib/features/uiStandard";
 import { isModuleEnabled } from "@/lib/modules/server";
 import { moduleForPath } from "@/modules/enabled";
 import type { TenantConfigSource } from "@/lib/tenant/config";
@@ -118,6 +119,11 @@ async function pageRules(request: NextRequest, forward: Forward): Promise<NextRe
   const { pathname } = request.nextUrl;
 
   if (isPublicAuthPath(pathname)) {
+    return forward.next();
+  }
+
+  // `next dev` with UI_LAB_OPEN=true only: the UI lab without signing in (npm run ui:guard).
+  if (pathname === "/dev/ui-lab" && isUiLabOpen()) {
     return forward.next();
   }
 

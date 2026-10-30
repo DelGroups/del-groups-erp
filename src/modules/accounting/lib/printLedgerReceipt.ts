@@ -1,4 +1,5 @@
 import { formatReferenceTypeLabel, type UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
+import { formatGridDateTime } from "@/lib/dates/localeDate";
 
 function formatTypeLabel(type: string): string {
   if (type === "INCOME") return "Gəlir / Mədaxil";
@@ -51,7 +52,7 @@ export function printLedgerReceipt(
     <div class="row"><strong>Mənbə</strong><span>${formatReferenceTypeLabel(tx.reference_type)}</span></div>
     <div class="row"><strong>Təsvir</strong><span>${tx.description || tx.notes || "—"}</span></div>
     <div class="amount">${amountPrefix}${tx.amount.toFixed(2)} AZN</div>
-    <div class="footer">Çap tarixi: ${new Date().toLocaleString("az-AZ")}</div>
+    <div class="footer">Çap tarixi: ${formatGridDateTime(new Date())}</div>
   </div>
   <script>window.onload = function () { window.print(); };</script>
 </body>

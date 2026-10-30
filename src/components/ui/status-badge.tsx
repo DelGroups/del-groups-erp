@@ -24,13 +24,14 @@ interface StatusBadgeProps {
 export default function StatusBadge({ tone = "neutral", children, className }: StatusBadgeProps) {
   return (
     <span
+      title={typeof children === "string" ? children : undefined}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
+        "ui-pill inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
         TONE[tone],
         className
       )}
     >
-      {children}
+      {typeof children === "string" ? <span className="ui-pill-text">{children}</span> : children}
     </span>
   );
 }

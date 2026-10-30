@@ -1,6 +1,13 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import { readFileSync } from "node:fs";
+import { uiGuardConfigs } from "./scripts/ui-guard-rules.mjs";
+
+// UI standard guard (docs/ui-standard.md): no native <select>, <input type="date">, <datalist>,
+// toLocaleString / Intl.DateTimeFormat in src/. Files that had them before the rule are listed in
+// scripts/ui-guard-allowlist.json with their count; the list may only shrink (tests/uiStandard.test.mjs).
+const uiGuardAllowlist = JSON.parse(readFileSync(new URL("./scripts/ui-guard-allowlist.json", import.meta.url), "utf8"));
 
 // Module boundaries (src/modules/<id>, docs/SaaS-Commercialization-Plan.md §5.3):
 // from outside a module, import only its public API `@/modules/<id>` (index.ts) or,
@@ -40,6 +47,7 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  ...uiGuardConfigs(uiGuardAllowlist),
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

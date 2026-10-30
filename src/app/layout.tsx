@@ -19,6 +19,8 @@ import { isNewImportsEnabled } from "@/lib/features/newImports";
 import { isNewHomeEnabled, newHomeAudience } from "@/lib/features/newHome";
 import { isListColumnsEnabled } from "@/lib/features/listColumns";
 import { ListColumnsFlagProvider } from "@/components/lists/ListColumnsFlag";
+import { isUiLabOpen, isUiStandardEnabled } from "@/lib/features/uiStandard";
+import { UiStandardProvider } from "@/design-system/components/UiStandard";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
@@ -89,9 +91,11 @@ export default async function RootLayout({
   ]);
   const enabledModules = [...enabledModuleSet];
   const newUi = await newUiServerValue();
+  // UI_STANDARD (UI-1): the attribute turns on src/design-system/ui-standard.css.
+  const uiStandard = isUiStandardEnabled();
 
   return (
-    <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} suppressHydrationWarning>
+    <html lang="az" dir="ltr" data-theme={DEFAULT_THEME} data-ui-standard={uiStandard ? "" : undefined} data-ui-lab-open={isUiLabOpen() ? "" : undefined} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -111,12 +115,14 @@ export default async function RootLayout({
                   <I18nProvider>
                     <NewUiProvider value={newUi}>
                       <ListColumnsFlagProvider enabled={isListColumnsEnabled()}>
-                        {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
-                        {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
-                        {tenant.status !== null ? <LimitBanner /> : null}
-                        {children}
-                        <SonnerProvider />
-                        <TableColumnResizer />
+                        <UiStandardProvider enabled={uiStandard}>
+                          {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
+                          {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
+                          {tenant.status !== null ? <LimitBanner /> : null}
+                          {children}
+                          <SonnerProvider />
+                          <TableColumnResizer />
+                        </UiStandardProvider>
                       </ListColumnsFlagProvider>
                     </NewUiProvider>
                   </I18nProvider>

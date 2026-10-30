@@ -21,6 +21,7 @@ import { lostReasonLabel, stageKind, teamLabel, type CrmStage, type CrmTeam } fr
 import { PIPELINE_SETTINGS_KEY } from "../../lib/pipelineData";
 import { usePipeline } from "../../hooks/usePipeline";
 import { pipelineError } from "./errors";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 /** Settings of the new CRM (prompt 21, NEW_CRM): stages, teams, lost reasons and monthly targets. */
 export function CrmConfigScreen() {
@@ -311,7 +312,7 @@ function TargetsCard({ teams, people, targets, busy, run }: { teams: readonly Cr
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("");
   const names = new Map(people.map((p) => [p.id, p.full_name] as const));
-  const money = (n: number) => `${new Intl.NumberFormat(fmt.locale, { maximumFractionDigits: 2 }).format(n)} ${t("common.currency")}`;
+  const money = (n: number) => `${formatQuantity(n, fmt.locale, 2)} ${t("common.currency")}`;
   return (
     <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="crm-targets">
       <div>

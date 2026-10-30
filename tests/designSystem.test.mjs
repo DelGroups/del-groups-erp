@@ -259,11 +259,13 @@ function selectors(css) {
   return out;
 }
 
-test("every rule of theme.css and components.css is scoped to [data-ds]", () => {
+test("every rule of theme.css and components.css is scoped to [data-ds] (or to UI_STANDARD's html[data-ui-standard])", () => {
   for (const file of ["src/design-system/theme.css", "src/design-system/components.css"]) {
     const list = selectors(read(file)).filter((s) => !/^(0%|100%|50%)$/.test(s));
     assert.ok(list.length >= 5, file);
-    for (const sel of list) assert.ok(sel.startsWith("[data-ds]"), `${file}: unscoped selector "${sel}"`);
+    // UI-1: the shared scale also sits on html[data-ui-standard] (only while UI_STANDARD is on), and
+    // the old full-width input rule only applies without it.
+    for (const sel of list) assert.ok(/^(\[data-ds\]|html\[data-ui-standard\]$|html:not\(\[data-ui-standard\]\) \[data-ds\])/.test(sel), `${file}: unscoped selector "${sel}"`);
   }
   const index = read("src/design-system/index.css");
   assert.match(index, /@import "\.\/tokens\.css";\r?\n@import "\.\/typography\.css";/, "existing layers still load first");

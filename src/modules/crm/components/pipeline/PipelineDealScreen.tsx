@@ -25,6 +25,7 @@ import { LEADS_VIEW_KEY, PIPELINE_VIEW_KEY, type PipelineRecord } from "../../vi
 import { ConvertDialog, LostDialog } from "./PipelineDialogs";
 import { pipelineError } from "./errors";
 import { quotationToDraftInvoice } from "./quoteToInvoice";
+import { formatFigure } from "@/lib/dates/localeDate";
 
 /** One lead or opportunity of the new CRM (prompt 21, NEW_CRM). */
 export function PipelineDealScreen({ id }: { id: string }) {
@@ -178,7 +179,7 @@ function DealForm({ id }: { id: string }) {
     if (latest) actions.push({ key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => setPrintData({ quotation: latest, deal, branding, crmConfig }) });
   }
 
-  const money = (n: number) => `${new Intl.NumberFormat(fmt.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${t("common.currency")}`;
+  const money = (n: number) => `${formatFigure(n, 2, fmt.locale)} ${t("common.currency")}`;
 
   const quotationsTab = (
     <div className="overflow-x-auto">

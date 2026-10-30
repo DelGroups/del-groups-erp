@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
 
 export const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-[var(--erp-radius-md)] border px-2 py-0.5 text-[length:var(--erp-text-xs)] font-[var(--erp-font-weight-semibold)] uppercase tracking-wide",
+  "ui-pill inline-flex items-center gap-1 rounded-[var(--erp-radius-md)] border px-2 py-0.5 text-[length:var(--erp-text-xs)] font-[var(--erp-font-weight-semibold)] uppercase tracking-wide",
   {
     variants: {
       variant: {
@@ -37,8 +37,13 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {}
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+export function Badge({ className, variant, children, title, ...props }: BadgeProps) {
+  // Text in .ui-pill-text so it can ellipsize on one line (UI_STANDARD); the full text in the tooltip.
+  return (
+    <span className={cn(badgeVariants({ variant }), className)} title={title ?? (typeof children === "string" ? children : undefined)} {...props}>
+      {typeof children === "string" ? <span className="ui-pill-text">{children}</span> : children}
+    </span>
+  );
 }
 
 /** @deprecated Use `Badge` */
