@@ -159,6 +159,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_posting.sql | tee "$RUNNER_TEMP/imports_posting.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_posting.txt"
+      # Imports exchange differences (IMP-3): partial payments at other rates, prepayments.
+      - name: Imports exchange difference checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_fx.sql | tee "$RUNNER_TEMP/imports_fx.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_fx.txt"
 
       - name: Server log on failure
         if: failure()

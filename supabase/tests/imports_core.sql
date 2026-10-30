@@ -265,5 +265,6 @@ end $$;
 -- while a draft), so they are applied again after it, in order, as a re-run must be.
 \ir ../migrations/20261030100000_imports_core.sql
 \ir ../migrations/20261030110000_imports_posting.sql
+\ir ../migrations/20261030120000_imports_fx.sql
 
 select 'ALL CHECKS PASSED';

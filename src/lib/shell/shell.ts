@@ -93,6 +93,7 @@ export const SHELL_EXTRA_ITEMS = [
   // Imports (IMP-1): only while NEW_IMPORTS is on; the route permissions are imports.view and settings.
   { section: "trade", path: "/imports", titleKey: "newShell.extra_imports", module: "imports", icon: "Ship", flag: "newImports" },
   { section: "settings", path: "/settings/imports", titleKey: "newShell.extra_importsSettings", module: "imports", icon: "Ship", flag: "newImports" },
+  { section: "reports", path: "/imports/reports", titleKey: "newShell.extra_importsReports", module: "imports", icon: "BarChart3", flag: "newImports" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */

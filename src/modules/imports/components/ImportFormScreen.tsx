@@ -4,7 +4,9 @@ import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Lock, RefreshCw, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Lock, Printer, RefreshCw, Save, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { EmptyState, SkeletonList, useToast } from "@/design-system/components";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRecordCrumb } from "@/components/shell/useShell";
@@ -38,6 +40,7 @@ import {
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { costTypeLabel, LandedCostPanel } from "./LandedCostPanel";
 import { PostingPanel } from "./PostingPanel";
+import CostSheet, { type CostSheetData } from "./CostSheet";
 
 const LOOKUPS_KEY = ["imports", "lookups"] as const;
 const CONFIG_KEY = ["imports", "config"] as const;
@@ -145,6 +148,16 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
   const issues = useMemo(() => draftIssues(draft, config), [draft, config]);
   // Unsaved changes: posting waits for a save (IMP-2 posts the stored shipment).
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(view.draft), [draft, view.draft]);
+  // IMP-3: the shipment cost sheet (A4) of the saved shipment.
+  const { printData: costSheet, setPrintData: setCostSheet } = useDocumentPrint<CostSheetData>(300);
+  const printCostSheet = () =>
+    setCostSheet({
+      draft: view.draft,
+      result: landedCostOf(view.draft, config),
+      config,
+      products,
+      supplierName: lookups.suppliers.find((s) => s.id === view.draft.supplierId)?.name ?? "",
+    });
 
   const set = (patch: Partial<ShipmentDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const setLine = (key: string, patch: Partial<ShipmentLineDraft>) =>
@@ -220,6 +233,17 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
             </p>
           ) : null}
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/imports/reports" className="ds-btn ds-btn-sm ds-btn-ghost">
+            <BarChart3 className="h-4 w-4" aria-hidden />
+            {t("importReports.title")}
+          </Link>
+          {view.draft.id && view.financials ? (
+            <button type="button" className="ds-btn ds-btn-sm" onClick={printCostSheet} disabled={dirty} title={dirty ? t("importPosting.saveFirst") : undefined}>
+              <Printer className="h-4 w-4" aria-hidden />
+              {t("importReports.costSheet.print")}
+            </button>
+          ) : null}
         {editable ? (
           <button type="button" className="ds-btn ds-btn-primary" onClick={() => void save()} disabled={saving}>
             <Save className="h-4 w-4" aria-hidden />
@@ -231,6 +255,7 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
             {!view.financials ? t("imports.readOnlyNoFinancials") : draft.status !== "draft" ? t("imports.readOnlyStatus") : t("imports.readOnlyPermission")}
           </span>
         )}
+        </div>
       </header>
 
       {showIssues && issues.length ? (
@@ -510,6 +535,8 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
           }
         />
       ) : null}
+
+      {costSheet ? createPortal(<div className="print-area"><CostSheet data={costSheet} /></div>, document.body) : null}
 
       {view.draft.id && view.financials ? <PostingPanel draft={view.draft} lookups={lookups} config={config} dirty={dirty} /> : null}
 

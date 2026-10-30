@@ -30,6 +30,7 @@ export function shipmentFromRows(header: Row, lines: readonly Row[], costs: read
     invoiceNo: str(header.invoice_no),
     invoiceDate: str(header.invoice_date),
     invoiceRate: num(header.invoice_rate, 1),
+    goodsRateAzn: numOrNull(header.goods_rate_azn),
     incoterm: typeof header.incoterm === "string" && (INCOTERMS as readonly string[]).includes(header.incoterm) ? (header.incoterm as Incoterm) : null,
     customsDeclarationNo: str(header.customs_declaration_no),
     customsDeclarationDate: str(header.customs_declaration_date),

@@ -324,6 +324,9 @@ export const POSTING_ERROR_CODES = [
   "stock_consumed",
   "period_closed",
   "invalid_amount",
+  "fx_required",
+  "prepayment_exceeds",
+  "prepay_draft_only",
 ] as const;
 
 /** A new pay split row. */

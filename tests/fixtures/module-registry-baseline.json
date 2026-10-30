@@ -593,7 +593,8 @@
     "/todo": "can_view_dashboard",
     "/documents": "can_view_dashboard",
     "/imports": "can_view_imports",
-    "/settings/imports": "can_manage_settings"
+    "/settings/imports": "can_manage_settings",
+    "/imports/reports": "can_view_imports"
   },
   "permissionMatrix": [
     {
