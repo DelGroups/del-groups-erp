@@ -38,6 +38,7 @@ import {
   type WarehouseCategoryPath,
 } from "../lib/inventoryCountTypes";
 import { countToday, isBackdated } from "../lib/inventoryCountDates";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** "Backdated · <date>" next to a count whose book quantities are taken at the end of a past day. */
 export function BackdatedBadge({ date }: { date: string }) {
@@ -373,6 +374,32 @@ export default function InventoryCountsPage() {
     void load();
   };
 
+  const rowActions = (row: InventoryCountDocument) => {
+    return (
+      <>
+        <TableRowActionsMenu
+          align="right"
+          items={[
+            {
+              key: "open",
+              label: t("common.view"),
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => openCount(row.id),
+            },
+            {
+              key: "delete",
+              label: t("common.delete"),
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => setDeleteTarget(row),
+              hidden: row.status === "posted",
+              variant: "destructive",
+            },
+          ]}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <PageHeader
@@ -382,7 +409,7 @@ export default function InventoryCountsPage() {
         actions={
           <>
             {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
-            {columns.enabled ? (
+            {columns.enabled && !columns.grid ? (
               <Button variant="secondary" onClick={handleExport} className="inline-flex items-center gap-1">
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.excelDownload")}
@@ -416,6 +443,19 @@ export default function InventoryCountsPage() {
         ))}
       </div>
 
+      {columns.grid ? (
+        <ListGrid
+          columns={columns}
+          rows={visible}
+          rowKey={(row) => row.id}
+          label={t("inventoryCount.listTitle")}
+          loading={loading}
+          empty={<p className="text-sm ds-muted">{t("inventoryCount.emptyList")}</p>}
+          onOpen={(row) => openCount(row.id)}
+          rowActions={rowActions}
+          onExport={columns.enabled ? handleExport : undefined}
+        />
+      ) : (
       <TableWrap>
         <Table>
           <THead>
@@ -441,33 +481,14 @@ export default function InventoryCountsPage() {
               visible.map((row) => (
                 <Tr key={row.id} className="cursor-pointer" onClick={() => openCount(row.id)}>
                   <ListBodyCells columns={columns.visible} row={row} />
-                  <ActionsTd onClick={(e) => e.stopPropagation()}>
-                    <TableRowActionsMenu
-                      align="right"
-                      items={[
-                        {
-                          key: "open",
-                          label: t("common.view"),
-                          icon: <Eye className="h-4 w-4" />,
-                          onClick: () => openCount(row.id),
-                        },
-                        {
-                          key: "delete",
-                          label: t("common.delete"),
-                          icon: <Trash2 className="h-4 w-4" />,
-                          onClick: () => setDeleteTarget(row),
-                          hidden: row.status === "posted",
-                          variant: "destructive",
-                        },
-                      ]}
-                    />
-                  </ActionsTd>
+                  <ActionsTd onClick={(e) => e.stopPropagation()}>{rowActions(row)}</ActionsTd>
                 </Tr>
               ))
             )}
           </tbody>
         </Table>
       </TableWrap>
+      )}
 
       {createOpen ? (
         <CreateCountModal

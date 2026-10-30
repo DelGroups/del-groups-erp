@@ -20,6 +20,7 @@ import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn }
 import { useProfileNames } from "@/components/lists/useProfileNames";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { profileName } from "@/lib/profiles/displayNames";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of this list (prompt 24c). */
 const LEDGER_LIST_KEY = "accounting.ledger";
@@ -154,6 +155,20 @@ export default function FinancePage() {
     void exportXlsx(xlsxFileName(t("finance.title"), new Date()), { sheetName: t("finance.title"), columns: columns.exportColumns, rows: filtered });
   };
 
+  const rowActions = (tx: UnifiedLedgerTransaction) => {
+    return (
+      <>
+        <UnifiedLedgerRowActions
+          transaction={tx}
+          canManage={canManage}
+          onChanged={() => void loadData()}
+          onError={showError}
+          onSuccess={showSuccess}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <DocumentPageHeader
@@ -167,7 +182,7 @@ export default function FinancePage() {
               {t("common.refresh")}
             </Button>
             {/* Excel comes with LIST_COLUMNS (prompt 24c): this list had no export. */}
-            {columns.enabled ? (
+            {columns.enabled && !columns.grid ? (
               <Button type="button" variant="secondary" onClick={handleExport}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.excelDownload")}
@@ -217,6 +232,18 @@ export default function FinancePage() {
         />
         {columns.picker ? <div className="flex justify-end">{columns.picker}</div> : null}
 
+        {columns.grid ? (
+          <ListGrid
+            columns={columns}
+            rows={filtered}
+            rowKey={(tx) => tx.id}
+            label={t("finance.title")}
+            loading={loading}
+            empty={<p className="text-xs ds-muted">{t("finance.empty")}</p>}
+            rowActions={rowActions}
+            onExport={columns.enabled ? handleExport : undefined}
+          />
+        ) : (
         <Card padding={false}>
           {loading ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("finance.loading")}</div>
@@ -237,15 +264,7 @@ export default function FinancePage() {
                       return (
                         <tr key={tx.id} className="transition-colors hover:bg-app-card-hover">
                           <ListBodyCells columns={columns.visible} row={tx} />
-                          <ActionsTd>
-                            <UnifiedLedgerRowActions
-                              transaction={tx}
-                              canManage={canManage}
-                              onChanged={() => void loadData()}
-                              onError={showError}
-                              onSuccess={showSuccess}
-                            />
-                          </ActionsTd>
+                          <ActionsTd>{rowActions(tx)}</ActionsTd>
                         </tr>
                       );
                     })}
@@ -255,6 +274,7 @@ export default function FinancePage() {
             </TableWrap>
           )}
         </Card>
+        )}
       </main>
 
       <ToastMessage message={toastMessage} variant={toastVariant} />

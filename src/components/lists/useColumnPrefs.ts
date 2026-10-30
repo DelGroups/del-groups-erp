@@ -8,6 +8,7 @@ import {
   mergeColumnPrefs,
   resetColumnPrefs,
   saveColumnPrefs,
+  serializeColumnPrefs,
   type ColumnPrefs,
   type ListColumnDef,
 } from "@/lib/lists/columns";
@@ -73,7 +74,7 @@ export function useColumnPrefs(listKey: string, defs: readonly ColumnLike[]): Co
 
   const setPrefs = useCallback(
     (next: ColumnPrefs) => {
-      memory.set(storageKey, JSON.stringify({ visible: next.visible, order: next.order }));
+      memory.set(storageKey, serializeColumnPrefs(next));
       saveColumnPrefs(listKey, userId, next);
       notify();
     },

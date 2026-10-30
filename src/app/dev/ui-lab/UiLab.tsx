@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import StatusBadge from "@/components/ui/status-badge";
+import { ClassicInvoiceTable, GridLab } from "./GridLab";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
   Chip,
@@ -193,6 +194,14 @@ function LabContent() {
           <Chip>{LONG.ruSent}</Chip>
           <Chip tone="info">{LONG.supplier}</Chip>
         </div>
+      </Section>
+
+      {/* UI-2: the list standard. 20 columns, long az texts; ui:guard checks one-line rows. */}
+      <Section title={l("grid")} variant="card">
+        <GridLab />
+      </Section>
+      <Section title={l("classic")} variant="card">
+        <ClassicInvoiceTable />
       </Section>
 
       <Section title={l("cells")} variant="card">

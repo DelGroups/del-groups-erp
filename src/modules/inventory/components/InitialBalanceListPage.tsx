@@ -24,6 +24,7 @@ import {
 } from "../actions/initialBalance";
 import type { InitialBalanceDocument } from "../lib/initialBalanceTypes";
 import { useI18n } from "@/i18n/I18nProvider";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Drafts open editable; posted/cancelled documents open read-only in the same form. */
 const documentHref = (id: string) => `/warehouse/initial-balance/new?draft=${id}`;
@@ -199,6 +200,48 @@ export default function InitialBalanceListPage() {
     void exportXlsx(xlsxFileName(t("initialBalance.listTitle"), new Date()), { sheetName: t("initialBalance.listTitle"), columns: columns.exportColumns, rows });
   };
 
+  const rowActions = (row: InitialBalanceDocument) => {
+    const isDraft = row.status === "draft";
+    const isPosted = row.status === "posted";
+    return (
+      <>
+        <TableRowActionsMenu
+          align="right"
+          items={[
+            {
+              key: "view",
+              label: t("common.view"),
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => router.push(documentHref(row.id)),
+            },
+            {
+              key: "edit",
+              label: t("common.edit"),
+              icon: <Pencil className="h-4 w-4" />,
+              onClick: () => router.push(documentHref(row.id)),
+              hidden: !isDraft || !canManage,
+            },
+            {
+              key: "unpost",
+              label: t("initialBalance.revertToDraft"),
+              icon: <Undo2 className="h-4 w-4" />,
+              onClick: () => setUnpostTarget(row),
+              hidden: !isPosted || !canUnpost,
+            },
+            {
+              key: "delete",
+              label: t("common.delete"),
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => setDeleteTarget(row),
+              hidden: !isDraft || !canManage,
+              variant: "destructive",
+            },
+          ]}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <PageHeader
@@ -207,7 +250,7 @@ export default function InitialBalanceListPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
-            {columns.enabled ? (
+            {columns.enabled && !columns.grid ? (
               <Button variant="secondary" onClick={handleExport} className="inline-flex items-center gap-1">
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.excelDownload")}
@@ -230,6 +273,19 @@ export default function InitialBalanceListPage() {
         }
       />
 
+      {columns.grid ? (
+        <ListGrid
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+          label={t("initialBalance.listTitle")}
+          loading={loading}
+          empty={<p className="text-xs ds-muted">{t("initialBalance.emptyList")}</p>}
+          onOpen={(row) => router.push(documentHref(row.id))}
+          rowActions={rowActions}
+          onExport={columns.enabled ? handleExport : undefined}
+        />
+      ) : (
       <div className="app-card overflow-x-auto rounded-xl">
         <table className="min-w-full text-xs">
           <thead className="bg-app-card-hover text-app-muted">
@@ -257,8 +313,6 @@ export default function InitialBalanceListPage() {
               </tr>
             ) : (
               rows.map((row) => {
-                const isDraft = row.status === "draft";
-                const isPosted = row.status === "posted";
                 return (
                   <tr key={row.id} className="border-t border-app hover:bg-app-card-hover">
                     {columns.visible.map((c) => (
@@ -266,41 +320,7 @@ export default function InitialBalanceListPage() {
                         {c.cell(row)}
                       </td>
                     ))}
-                    <td className="relative px-3 py-2 text-center">
-                      <TableRowActionsMenu
-                        align="right"
-                        items={[
-                          {
-                            key: "view",
-                            label: t("common.view"),
-                            icon: <Eye className="h-4 w-4" />,
-                            onClick: () => router.push(documentHref(row.id)),
-                          },
-                          {
-                            key: "edit",
-                            label: t("common.edit"),
-                            icon: <Pencil className="h-4 w-4" />,
-                            onClick: () => router.push(documentHref(row.id)),
-                            hidden: !isDraft || !canManage,
-                          },
-                          {
-                            key: "unpost",
-                            label: t("initialBalance.revertToDraft"),
-                            icon: <Undo2 className="h-4 w-4" />,
-                            onClick: () => setUnpostTarget(row),
-                            hidden: !isPosted || !canUnpost,
-                          },
-                          {
-                            key: "delete",
-                            label: t("common.delete"),
-                            icon: <Trash2 className="h-4 w-4" />,
-                            onClick: () => setDeleteTarget(row),
-                            hidden: !isDraft || !canManage,
-                            variant: "destructive",
-                          },
-                        ]}
-                      />
-                    </td>
+                    <td className="relative px-3 py-2 text-center">{rowActions(row)}</td>
                   </tr>
                 );
               })
@@ -308,6 +328,7 @@ export default function InitialBalanceListPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       <ConfirmDeleteModal
         open={Boolean(deleteTarget)}

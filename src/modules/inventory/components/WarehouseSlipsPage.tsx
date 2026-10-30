@@ -29,6 +29,7 @@ import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn }
 import { useProfileNames } from "@/components/lists/useProfileNames";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { profileName } from "@/lib/profiles/displayNames";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of this list (prompt 24c). */
 const SLIPS_LIST_KEY = "inventory.slips";
@@ -158,6 +159,51 @@ export default function WarehouseSlipsPage() {
     { id: "all", label: t("warehouseSlips.tabs.all") },
   ];
 
+  const rowActions = (slip: WarehouseSlip) => {
+    return (
+      <>
+        {slip.status === "pending" && canApprove && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              title={t("warehouseSlips.approveAndPrint")}
+              loading={processingId === slip.id}
+              onClick={() => void handleApproveAndPrint(slip)}
+              className="bg-emerald-600 bg-none text-white hover:bg-emerald-700 hover:brightness-100"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {t("warehouseSlips.approveAndPrint")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              title={t("warehouseSlips.reject")}
+              disabled={processingId === slip.id}
+              onClick={() => void handleReject(slip)}
+              className="text-rose-600 hover:bg-rose-500/10"
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        {slip.status === "approved" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title={t("warehouseSlips.reprint")}
+            onClick={() => setPrintData(warehouseSlipToPrintData(slip))}
+            className="text-indigo-600"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+        )}
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <DocumentPageHeader
@@ -166,7 +212,7 @@ export default function WarehouseSlipsPage() {
         description={t("warehouseSlips.description")}
         extraActions={
           // Excel comes with LIST_COLUMNS (prompt 24c): this list had no export.
-          columns.enabled ? (
+          columns.enabled && !columns.grid ? (
             <Button type="button" variant="secondary" onClick={handleExport}>
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
               {t("common.excelDownload")}
@@ -205,6 +251,19 @@ export default function WarehouseSlipsPage() {
           </div>
         )}
 
+        {columns.grid ? (
+          <ListGrid
+            columns={columns}
+            rows={filtered}
+            rowKey={(slip) => slip.id}
+            label={t("warehouseSlips.title")}
+            loading={loading}
+            empty={<p className="text-xs ds-muted">{tab === "pending" ? t("warehouseSlips.emptyPending") : t("warehouseSlips.empty")}</p>}
+            rowActions={rowActions}
+            actionsWidth={tab === "pending" ? 220 : 56}
+            onExport={columns.enabled ? handleExport : undefined}
+          />
+        ) : (
         <Card padding={false}>
           {loading ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
@@ -230,46 +289,7 @@ export default function WarehouseSlipsPage() {
                         <tr key={slip.id} className="hover:bg-app-card-hover">
                           <ListBodyCells columns={columns.visible} row={slip} />
                           <Td>
-                            <div className="flex items-center justify-center gap-1">
-                              {slip.status === "pending" && canApprove && (
-                                <>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    title={t("warehouseSlips.approveAndPrint")}
-                                    loading={processingId === slip.id}
-                                    onClick={() => void handleApproveAndPrint(slip)}
-                                    className="bg-emerald-600 bg-none text-white hover:bg-emerald-700 hover:brightness-100"
-                                  >
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                    {t("warehouseSlips.approveAndPrint")}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    title={t("warehouseSlips.reject")}
-                                    disabled={processingId === slip.id}
-                                    onClick={() => void handleReject(slip)}
-                                    className="text-rose-600 hover:bg-rose-500/10"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                              {slip.status === "approved" && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  title={t("warehouseSlips.reprint")}
-                                  onClick={() => setPrintData(warehouseSlipToPrintData(slip))}
-                                  className="text-indigo-600"
-                                >
-                                  <Printer className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
+                            <div className="flex items-center justify-center gap-1">{rowActions(slip)}</div>
                           </Td>
                         </tr>
                       );
@@ -280,6 +300,7 @@ export default function WarehouseSlipsPage() {
             </TableWrap>
           )}
         </Card>
+        )}
       </main>
 
       {printData && (

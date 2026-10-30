@@ -788,3 +788,355 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-num-cell {
   text-align: end;
 }
+
+/* ══ DataGrid (UI-2, docs/ui-standard.md "Lists") ═════════════════════════════════════════ */
+[data-ds] .ds-grid-root {
+  --ds-grid-row-h: 40px;
+  --ds-grid-bg: var(--ds-surface);
+  --ds-grid-head-bg: var(--ds-surface-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+[data-ds] .ds-grid-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+[data-ds] .ds-grid-toolbar-start {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+[data-ds] .ds-grid-toolbar-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+}
+[data-ds] .ds-grid-count {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-ds] .ds-grid-frame {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-grid-bg);
+  overflow: hidden;
+}
+/* Edge shadows on the side that hides columns. */
+[data-ds] .ds-grid-frame::before,
+[data-ds] .ds-grid-frame::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  z-index: 4;
+  width: 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-grid-frame::before {
+  inset-inline-start: 0;
+  background: linear-gradient(to right, rgb(16 24 40 / 0.14), transparent);
+}
+[data-ds] .ds-grid-frame::after {
+  inset-inline-end: 0;
+  background: linear-gradient(to left, rgb(16 24 40 / 0.14), transparent);
+}
+[data-ds] .ds-grid-frame[data-shadow-end]::after {
+  opacity: 1;
+}
+/* At the start side the shadow sits on the sticky first column instead (below). */
+[data-ds] .ds-grid-frame:dir(rtl)::before {
+  background: linear-gradient(to left, rgb(16 24 40 / 0.14), transparent);
+}
+[data-ds] .ds-grid-frame:dir(rtl)::after {
+  background: linear-gradient(to right, rgb(16 24 40 / 0.14), transparent);
+}
+[data-ds] .ds-grid-scroll {
+  max-height: var(--ds-grid-max-h, calc(100dvh - 12rem));
+  min-height: calc(var(--ds-grid-row-h) * 3);
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+}
+[data-ds] .ds-grid-scroll:focus-visible {
+  box-shadow: inset var(--ds-focus-ring);
+}
+[data-ds] .ds-grid {
+  table-layout: fixed;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+}
+[data-ds] .ds-grid th,
+[data-ds] .ds-grid td {
+  height: var(--ds-grid-row-h);
+  padding: 0 0.75rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: start;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-grid-bg);
+}
+[data-ds] .ds-grid td.is-num,
+[data-ds] .ds-grid th.is-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+/* Header: one line, sentence case, semibold, muted, sticky to the top. */
+[data-ds] .ds-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ds-grid-head-bg);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+[data-ds] .ds-grid-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: default;
+}
+[data-ds] button.ds-grid-head {
+  cursor: pointer;
+}
+[data-ds] button.ds-grid-head:hover {
+  color: var(--ds-text);
+}
+[data-ds] .ds-grid th.is-num .ds-grid-head {
+  flex-direction: row-reverse;
+}
+[data-ds] .ds-grid-head-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+[data-ds] .ds-grid-sort {
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--ds-brand);
+}
+/* Resize handle: visible only while the header is hovered or the handle has focus. */
+[data-ds] .ds-grid-resize {
+  position: absolute;
+  inset-block: 0.375rem;
+  inset-inline-end: 0;
+  z-index: 3;
+  width: 0.5rem;
+  cursor: col-resize;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-grid-resize::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0.125rem;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--ds-border-strong);
+}
+[data-ds] .ds-grid thead th:hover .ds-grid-resize,
+[data-ds] .ds-grid-resize:focus-visible,
+[data-ds] .ds-grid-resize:active {
+  opacity: 1;
+}
+[data-ds] .ds-grid-resize:hover::after,
+[data-ds] .ds-grid-resize:active::after {
+  background: var(--ds-brand);
+}
+/* Cells: one line, ellipsis (tooltip from DataGrid when cut). */
+[data-ds] .ds-grid-cell {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25rem;
+}
+[data-ds] .ds-grid-cell > .ds-chip,
+[data-ds] .ds-grid-cell > .ui-pill,
+[data-ds] .ds-grid-cell > .ds-chip-std {
+  max-width: 100%;
+}
+[data-ds] .ds-grid-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+[data-ds] .ds-grid-link:hover,
+[data-ds] .ds-grid-link:focus-visible {
+  text-decoration: underline;
+}
+/* Rows: 1px dividers, no zebra, hover and selection tint. */
+[data-ds] .ds-grid tbody tr {
+  outline: none;
+}
+[data-ds] .ds-grid tbody tr[data-clickable] {
+  cursor: pointer;
+}
+[data-ds] .ds-grid tbody tr:hover > td,
+[data-ds] .ds-grid tbody tr:hover > th {
+  background: color-mix(in srgb, var(--ds-brand) 6%, var(--ds-grid-bg));
+}
+[data-ds] .ds-grid tbody tr[data-selected] > td {
+  background: color-mix(in srgb, var(--ds-brand) 11%, var(--ds-grid-bg));
+}
+[data-ds] .ds-grid tbody tr:focus-visible > td,
+[data-ds] .ds-grid tbody tr:focus-visible > th {
+  box-shadow: inset 0 2px 0 var(--ds-brand), inset 0 -2px 0 var(--ds-brand);
+}
+/* Sticky first column (selection + document number) and actions column. */
+[data-ds] .ds-grid .is-sticky-start {
+  position: sticky;
+  z-index: 1;
+}
+[data-ds] .ds-grid thead .is-sticky-start {
+  z-index: 3;
+}
+[data-ds] .ds-grid .is-sticky-end {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 1;
+}
+[data-ds] .ds-grid thead .is-sticky-end {
+  z-index: 3;
+}
+[data-ds] .ds-grid-frame[data-shadow-start] .is-sticky-last {
+  box-shadow: inset -1px 0 0 var(--ds-border), 8px 0 10px -8px rgb(16 24 40 / 0.22);
+}
+[data-ds] .ds-grid-frame[data-shadow-start]:dir(rtl) .is-sticky-last {
+  box-shadow: inset 1px 0 0 var(--ds-border), -8px 0 10px -8px rgb(16 24 40 / 0.22);
+}
+[data-ds] .ds-grid-frame[data-shadow-end] .is-sticky-end {
+  box-shadow: -8px 0 10px -8px rgb(16 24 40 / 0.22);
+}
+[data-ds] .ds-grid-frame[data-shadow-end]:dir(rtl) .is-sticky-end {
+  box-shadow: 8px 0 10px -8px rgb(16 24 40 / 0.22);
+}
+[data-ds] .ds-grid-select {
+  padding: 0 !important;
+  text-align: center !important;
+}
+[data-ds] .ds-grid-checkbox {
+  width: 0.875rem;
+  height: 0.875rem;
+  accent-color: var(--ds-brand);
+  cursor: pointer;
+}
+[data-ds] .ds-grid-actions {
+  padding: 0 0.25rem !important;
+  overflow: visible !important;
+}
+[data-ds] .ds-grid-actions-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Group rows (view engine group by). */
+[data-ds] .ds-grid-group > td,
+[data-ds] .ds-grid-group > th {
+  background: var(--ds-surface-sunken);
+  font-weight: 600;
+}
+[data-ds] .ds-grid-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+[data-ds] .ds-grid-chevron {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-grid-chevron[data-open] {
+  transform: rotate(90deg);
+}
+[data-ds] .ds-grid-chevron:dir(rtl):not([data-open]) {
+  transform: rotate(180deg);
+}
+/* Totals stick to the bottom of the grid. */
+[data-ds] .ds-grid tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  border-top: 2px solid var(--ds-border-strong);
+  border-bottom: 0;
+  background: var(--ds-grid-head-bg);
+  font-weight: 600;
+}
+[data-ds] .ds-grid tfoot td.is-sticky-start,
+[data-ds] .ds-grid tfoot td.is-sticky-end {
+  z-index: 3;
+}
+[data-ds] .ds-grid-empty > td {
+  height: auto;
+  padding: 1.5rem 1rem;
+  white-space: normal;
+  text-align: center;
+}
+[data-ds] .ds-grid-empty:hover > td {
+  background: var(--ds-grid-bg);
+}
+/* Floating scrollbar at the bottom of the window while the grid's own one is below it. */
+[data-ds] .ds-grid-hscroll {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  height: 14px;
+  margin-top: -0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--ds-surface);
+}
+[data-ds] .ds-grid-hscroll[hidden] {
+  display: none;
+}
+[data-ds] .ds-grid-footer {
+  min-width: 0;
+}
+/* A scope around one grid on a classic page: no page background of its own. */
+[data-ds].ds-root.ds-scope-transparent {
+  background: transparent;
+}

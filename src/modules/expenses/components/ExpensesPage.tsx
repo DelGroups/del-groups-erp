@@ -56,6 +56,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 type ExpensesTab = "records" | "report" | "categories";
 
@@ -413,6 +414,101 @@ export default function ExpensesPage() {
 
   const maxCategory = summary.byCategory[0]?.amount || 0;
 
+  const rowActions = (r: ExpenseDocument) => {
+    const isOpen = r.status === "draft" || r.status === "submitted";
+    const byEmployee = r.payment_mode === "employee";
+    return (
+      <>
+        <TableRowActionsMenu
+          items={[
+            {
+              key: "edit",
+              label: t("common.edit"),
+              icon: <Pencil className="h-4 w-4" />,
+              hidden: !isOpen,
+              disabled: !canManageExpenses,
+              onClick: () => {
+                setEditing(r);
+                setFormOpen(true);
+              },
+            },
+            {
+              key: "attachments",
+              label: t("expenses.doc.attachmentsAction", { count: r.attachment_count }),
+              icon: <Paperclip className="h-4 w-4" />,
+              onClick: () => setAttachTarget(r),
+            },
+            {
+              key: "submit",
+              label: t("expenses.doc.sendForApproval"),
+              icon: <Send className="h-4 w-4" />,
+              hidden: r.status !== "draft",
+              disabled: !canManageExpenses || busyId === r.id,
+              onClick: () =>
+                void runRowAction(r, () => submitExpenseAction(r.id), "expenses.doc.submittedToast"),
+            },
+            {
+              key: "post",
+              label: t("expenses.doc.post"),
+              icon: <CheckCircle2 className="h-4 w-4" />,
+              hidden: r.status !== "draft" || byEmployee,
+              disabled: !canManageExpenses || busyId === r.id,
+              onClick: () => void handlePost(r),
+            },
+            {
+              key: "approve",
+              label: byEmployee ? t("expenses.doc.approve") : t("expenses.doc.approveAndPay"),
+              icon: <ThumbsUp className="h-4 w-4" />,
+              hidden: r.status !== "submitted",
+              disabled: !canManageFinance || busyId === r.id,
+              onClick: () =>
+                void runRowAction(r, () => approveExpenseAction(r.id), "expenses.doc.approvedToast"),
+            },
+            {
+              key: "reject",
+              label: t("expenses.doc.reject"),
+              icon: <ThumbsDown className="h-4 w-4" />,
+              hidden: r.status !== "submitted",
+              disabled: !canManageFinance || busyId === r.id,
+              onClick: () => {
+                setRejectReason("");
+                setRejectTarget(r);
+              },
+            },
+            {
+              key: "reimburse",
+              label: t("expenses.doc.reimburse"),
+              icon: <HandCoins className="h-4 w-4" />,
+              hidden: !isOwedToEmployee(r),
+              disabled: !canManageFinance || busyId === r.id,
+              onClick: () => {
+                setReimburseAccountId("");
+                setReimburseDate(todayIsoDate());
+                setReimburseTarget(r);
+              },
+            },
+            {
+              key: "cancel",
+              label: t("expenses.doc.cancelExpense"),
+              icon: <Ban className="h-4 w-4" />,
+              hidden: cancelled || r.is_production,
+              disabled:
+                !canManageExpenses ||
+                busyId === r.id ||
+                ((r.status === "approved" || (r.status === "posted" && byEmployee)) &&
+                  !canManageFinance),
+              variant: "destructive",
+              onClick: () => {
+                setCancelReason("");
+                setCancelTarget(r);
+              },
+            },
+          ]}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-app app-glass px-6 py-4">
@@ -422,6 +518,7 @@ export default function ExpensesPage() {
         </div>
         {activeTab === "records" ? (
           <div className="flex flex-wrap items-center gap-2">
+            {columns.grid ? null : (
             <button
               type="button"
               onClick={exportExcel}
@@ -431,6 +528,7 @@ export default function ExpensesPage() {
               <Download className="h-4 w-4" />
               {t("expenses.doc.exportExcel")}
             </button>
+            )}
             {columns.picker}
             <button
               type="button"
@@ -658,7 +756,18 @@ export default function ExpensesPage() {
             ) : null}
 
             <div className="app-table-wrap">
-              {loading && rows.length === 0 ? (
+              {columns.grid ? (
+                <ListGrid
+                  columns={columns}
+                  rows={rows}
+                  rowKey={(r) => r.id}
+                  label={t("expenses.pageTitle")}
+                  loading={loading && rows.length === 0}
+                  empty={<p className="text-sm ds-muted">{t("expenses.emptyRecords")}</p>}
+                  rowActions={rowActions}
+                  onExport={rows.length ? exportExcel : undefined}
+                />
+              ) : loading && rows.length === 0 ? (
                 <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
               ) : rows.length === 0 ? (
                 <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
@@ -673,100 +782,11 @@ export default function ExpensesPage() {
                     </THead>
                     <tbody>
                       {rows.map((r) => {
-                        const isOpen = r.status === "draft" || r.status === "submitted";
-                        const byEmployee = r.payment_mode === "employee";
                         const cancelled = r.status === "cancelled";
                         return (
                           <Tr key={r.id} className={cancelled ? "opacity-60" : undefined}>
                             <ListBodyCells columns={columns.visible} row={r} />
-                            <ActionsTd>
-                              <TableRowActionsMenu
-                                items={[
-                                  {
-                                    key: "edit",
-                                    label: t("common.edit"),
-                                    icon: <Pencil className="h-4 w-4" />,
-                                    hidden: !isOpen,
-                                    disabled: !canManageExpenses,
-                                    onClick: () => {
-                                      setEditing(r);
-                                      setFormOpen(true);
-                                    },
-                                  },
-                                  {
-                                    key: "attachments",
-                                    label: t("expenses.doc.attachmentsAction", { count: r.attachment_count }),
-                                    icon: <Paperclip className="h-4 w-4" />,
-                                    onClick: () => setAttachTarget(r),
-                                  },
-                                  {
-                                    key: "submit",
-                                    label: t("expenses.doc.sendForApproval"),
-                                    icon: <Send className="h-4 w-4" />,
-                                    hidden: r.status !== "draft",
-                                    disabled: !canManageExpenses || busyId === r.id,
-                                    onClick: () =>
-                                      void runRowAction(r, () => submitExpenseAction(r.id), "expenses.doc.submittedToast"),
-                                  },
-                                  {
-                                    key: "post",
-                                    label: t("expenses.doc.post"),
-                                    icon: <CheckCircle2 className="h-4 w-4" />,
-                                    hidden: r.status !== "draft" || byEmployee,
-                                    disabled: !canManageExpenses || busyId === r.id,
-                                    onClick: () => void handlePost(r),
-                                  },
-                                  {
-                                    key: "approve",
-                                    label: byEmployee ? t("expenses.doc.approve") : t("expenses.doc.approveAndPay"),
-                                    icon: <ThumbsUp className="h-4 w-4" />,
-                                    hidden: r.status !== "submitted",
-                                    disabled: !canManageFinance || busyId === r.id,
-                                    onClick: () =>
-                                      void runRowAction(r, () => approveExpenseAction(r.id), "expenses.doc.approvedToast"),
-                                  },
-                                  {
-                                    key: "reject",
-                                    label: t("expenses.doc.reject"),
-                                    icon: <ThumbsDown className="h-4 w-4" />,
-                                    hidden: r.status !== "submitted",
-                                    disabled: !canManageFinance || busyId === r.id,
-                                    onClick: () => {
-                                      setRejectReason("");
-                                      setRejectTarget(r);
-                                    },
-                                  },
-                                  {
-                                    key: "reimburse",
-                                    label: t("expenses.doc.reimburse"),
-                                    icon: <HandCoins className="h-4 w-4" />,
-                                    hidden: !isOwedToEmployee(r),
-                                    disabled: !canManageFinance || busyId === r.id,
-                                    onClick: () => {
-                                      setReimburseAccountId("");
-                                      setReimburseDate(todayIsoDate());
-                                      setReimburseTarget(r);
-                                    },
-                                  },
-                                  {
-                                    key: "cancel",
-                                    label: t("expenses.doc.cancelExpense"),
-                                    icon: <Ban className="h-4 w-4" />,
-                                    hidden: cancelled || r.is_production,
-                                    disabled:
-                                      !canManageExpenses ||
-                                      busyId === r.id ||
-                                      ((r.status === "approved" || (r.status === "posted" && byEmployee)) &&
-                                        !canManageFinance),
-                                    variant: "destructive",
-                                    onClick: () => {
-                                      setCancelReason("");
-                                      setCancelTarget(r);
-                                    },
-                                  },
-                                ]}
-                              />
-                            </ActionsTd>
+                            <ActionsTd>{rowActions(r)}</ActionsTd>
                           </Tr>
                         );
                       })}

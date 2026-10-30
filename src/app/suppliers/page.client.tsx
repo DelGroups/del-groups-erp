@@ -1,7 +1,7 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -26,6 +26,9 @@ import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import SupplierFormDrawer from "@/components/suppliers/SupplierFormDrawer";
 import { queryKeys } from "@/lib/query/keys";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 const EMPTY_FORM = {
   code: "",
@@ -39,7 +42,7 @@ const EMPTY_FORM = {
 };
 
 export default function SuppliersPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { can } = useAuth();
   const canManageSuppliers = can("can_manage_suppliers");
   const { config: procurementConfig } = useProcurementConfig();
@@ -144,6 +147,78 @@ export default function SuppliersPage() {
   );
 
   const loading = isLoading || isFetching;
+  // UI_STANDARD (UI-2): the list through DataGrid, one line per supplier (company name muted on
+  // the same line).
+  const star = (n: number | null | undefined) => (n ? `★ ${Number(n).toFixed(1)}` : "—");
+  const columnDefs = useMemo<TableColumn<Supplier>[]>(
+    () => [
+      { key: "code", labelKey: "common.code", defaultVisible: true, required: true, gridType: "code", tdClassName: "font-mono font-semibold", cell: (s) => s.code ?? "-" },
+      {
+        key: "name",
+        labelKey: "suppliers.supplierCompany",
+        defaultVisible: true,
+        cell: (s) => (
+          <>
+            <span className="font-medium">{s.full_name}</span>
+            {s.company_name ? <span className="ds-muted">{` · ${s.company_name}`}</span> : null}
+          </>
+        ),
+      },
+      { key: "phone", labelKey: "common.phone", defaultVisible: true, cell: (s) => s.phone || "-" },
+      { key: "quality", labelKey: "purchases.qualityScore", defaultVisible: true, numeric: true, exportType: "number", cell: (s) => star(s.quality_score) },
+      { key: "delivery", labelKey: "purchases.deliverySpeedScore", defaultVisible: true, numeric: true, exportType: "number", cell: (s) => star(s.delivery_speed_score) },
+      {
+        key: "score",
+        labelKey: "purchases.totalScore",
+        defaultVisible: true,
+        numeric: true,
+        exportType: "number",
+        cell: (s) => {
+          const total = weightedSupplierScore(s, procurementConfig);
+          return total != null ? `★ ${formatSupplierScore(total)}` : "—";
+        },
+      },
+      {
+        key: "balance",
+        labelKey: "suppliers.ourDebt",
+        defaultVisible: true,
+        numeric: true,
+        cell: (s) =>
+          (s.balance ?? 0) > 0 ? (
+            <span className="font-semibold text-rose-600" title={t("common.weOwe")}>{formatMoney(s.balance ?? 0, locale)}</span>
+          ) : (
+            <span className="font-semibold text-emerald-600">{formatMoney(s.balance ?? 0, locale)}</span>
+          ),
+      },
+    ],
+    [t, locale, procurementConfig]
+  );
+  const gridColumns = useTableColumns("suppliers", columnDefs);
+
+  const rowActions = (s: Supplier) => {
+    return (
+      <>
+        <TableRowActionsMenu
+          items={[
+            {
+              key: "edit",
+              label: t("common.edit"),
+              icon: <Pencil className="h-4 w-4" />,
+              onClick: () => openEditModal(s),
+            },
+            {
+              key: "delete",
+              label: t("common.delete"),
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => setDeleteTarget(s),
+              variant: "destructive",
+            },
+          ]}
+        />
+      </>
+    );
+  };
+
 
   return (
     <PageLayout>
@@ -186,8 +261,18 @@ export default function SuppliersPage() {
           </div>
         }
       >
-          <div className="app-table-wrap">
-            {isLoading ? (
+          <div className={gridColumns.grid ? undefined : "app-table-wrap"}>
+            {gridColumns.grid ? (
+              <ListGrid
+                columns={gridColumns}
+                rows={filteredSuppliers}
+                rowKey={(s) => s.id}
+                label={t("suppliers.title")}
+                loading={isLoading}
+                empty={<p className="text-sm ds-muted">{t("suppliers.emptyHint")}</p>}
+                rowActions={canManageSuppliers ? rowActions : undefined}
+              />
+            ) : isLoading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
             ) : filteredSuppliers.length === 0 ? (
               <div className="p-8 text-center text-app-muted text-sm">
@@ -252,25 +337,7 @@ export default function SuppliersPage() {
                           )}
                         </Td>
                         {canManageSuppliers ? (
-                          <ActionsTd>
-                            <TableRowActionsMenu
-                              items={[
-                                {
-                                  key: "edit",
-                                  label: t("common.edit"),
-                                  icon: <Pencil className="h-4 w-4" />,
-                                  onClick: () => openEditModal(s),
-                                },
-                                {
-                                  key: "delete",
-                                  label: t("common.delete"),
-                                  icon: <Trash2 className="h-4 w-4" />,
-                                  onClick: () => setDeleteTarget(s),
-                                  variant: "destructive",
-                                },
-                              ]}
-                            />
-                          </ActionsTd>
+                          <ActionsTd>{rowActions(s)}</ActionsTd>
                         ) : null}
                       </Tr>
                     ))}

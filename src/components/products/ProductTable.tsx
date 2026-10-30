@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { AlertTriangle, Copy, Pencil, Printer, Trash2 } from "lucide-react";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import PolywoodStockCell from "@/components/polywood/PolywoodStockCell";
@@ -27,6 +27,10 @@ import {
   Td,
   Tr,
 } from "@/components/ui/table";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { useUiStandard } from "@/design-system/components";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 function isMeterStockProduct(product: Product): boolean {
   const unit = (product.unit || "").trim().toLowerCase();
@@ -152,9 +156,78 @@ export default function ProductTable({
   bulkSelection,
 }: ProductTableProps) {
   const { t } = useI18n();
+  const standard = useUiStandard();
   const columns = (Object.keys(visibleColumns) as ProductColumnKey[]).filter(
     (key) => visibleColumns[key]
   );
+
+  const rowActions = (product: Product) => {
+    return (
+      <>
+        <TableRowActionsMenu
+          items={[
+            ...(onPrintLabel
+              ? [
+                  {
+                    key: "print",
+                    label: t("inventory.printLabel"),
+                    icon: <Printer className="h-4 w-4" />,
+                    onClick: () => onPrintLabel(product),
+                  },
+                ]
+              : []),
+            ...(canEdit && onEdit
+              ? [
+                  {
+                    key: "edit",
+                    label: t("common.edit"),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => onEdit(product),
+                  },
+                ]
+              : []),
+            ...(canEdit && onClone
+              ? [
+                  {
+                    key: "clone",
+                    label: t("products.duplicateLabel"),
+                    icon: <Copy className="h-4 w-4" />,
+                    onClick: () => onClone(product),
+                  },
+                ]
+              : []),
+            ...(canEdit && onDelete
+              ? [
+                  {
+                    key: "delete",
+                    label: t("common.delete"),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => onDelete(product),
+                    variant: "destructive" as const,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </>
+    );
+  };
+
+  // UI_STANDARD (UI-2): the list through DataGrid, which also shows the loading and empty states.
+  if (standard) {
+    return (
+      <ProductGrid
+        products={products}
+        warehouses={warehouses}
+        polywoodSummaries={polywoodSummaries}
+        columns={columns}
+        loading={loading}
+        emptyMessage={emptyMessage || t("products.empty")}
+        bulkSelection={bulkSelection}
+        rowActions={canEdit || onPrintLabel ? rowActions : undefined}
+      />
+    );
+  }
 
   const skeletonDataColumns = columns.length + 4 + (bulkSelection ? 1 : 0);
 
@@ -271,53 +344,7 @@ export default function ProductTable({
                       )}
                     </Td>
                     {canEdit || onPrintLabel ? (
-                      <ActionsTd>
-                        <TableRowActionsMenu
-                          items={[
-                            ...(onPrintLabel
-                              ? [
-                                  {
-                                    key: "print",
-                                    label: t("inventory.printLabel"),
-                                    icon: <Printer className="h-4 w-4" />,
-                                    onClick: () => onPrintLabel(product),
-                                  },
-                                ]
-                              : []),
-                            ...(canEdit && onEdit
-                              ? [
-                                  {
-                                    key: "edit",
-                                    label: t("common.edit"),
-                                    icon: <Pencil className="h-4 w-4" />,
-                                    onClick: () => onEdit(product),
-                                  },
-                                ]
-                              : []),
-                            ...(canEdit && onClone
-                              ? [
-                                  {
-                                    key: "clone",
-                                    label: t("products.duplicateLabel"),
-                                    icon: <Copy className="h-4 w-4" />,
-                                    onClick: () => onClone(product),
-                                  },
-                                ]
-                              : []),
-                            ...(canEdit && onDelete
-                              ? [
-                                  {
-                                    key: "delete",
-                                    label: t("common.delete"),
-                                    icon: <Trash2 className="h-4 w-4" />,
-                                    onClick: () => onDelete(product),
-                                    variant: "destructive" as const,
-                                  },
-                                ]
-                              : []),
-                          ]}
-                        />
-                      </ActionsTd>
+                      <ActionsTd>{rowActions(product)}</ActionsTd>
                     ) : null}
                   </Tr>
                 );
@@ -327,5 +354,106 @@ export default function ProductTable({
         </div>
       </TableWrap>
     </Card>
+  );
+}
+
+/** One product cell in the grid: amounts through the formatting module, one line each. */
+function renderGridCell(key: ProductColumnKey, product: Product, t: (key: string) => string, locale: string): React.ReactNode {
+  switch (key) {
+    case "buy_price":
+      return formatMoney(Number(product.buy_price || 0), locale);
+    case "sell_price":
+      return formatMoney(Number(product.sell_price || 0), locale);
+    case "barcode":
+      return <span className="font-mono">{product.barcode || "-"}</span>;
+    case "extra_info":
+      return <span className="ds-muted">{displayExtraInfoNotes(product.extra_info) || "-"}</span>;
+    default:
+      return renderCell(key, product, t);
+  }
+}
+
+/**
+ * The products list through DataGrid (UI-2): one line per product. The page keeps its own column
+ * choice (visibleColumns), so the grid shows no second picker; widths and density are the user's.
+ * The barcode is its digits (no drawn bars) and notes are one line, as every list row.
+ */
+function ProductGrid({
+  products,
+  warehouses,
+  polywoodSummaries,
+  columns,
+  loading,
+  emptyMessage,
+  bulkSelection,
+  rowActions,
+}: {
+  products: Product[];
+  warehouses: Warehouse[];
+  polywoodSummaries?: Map<string, PolywoodInventorySummary>;
+  columns: ProductColumnKey[];
+  loading?: boolean;
+  emptyMessage: string;
+  bulkSelection?: ProductTableProps["bulkSelection"];
+  rowActions?: (product: Product) => React.ReactNode;
+}) {
+  const { t, locale } = useI18n();
+  const defs = useMemo<TableColumn<Product>[]>(() => {
+    return [
+      ...columns.map(
+        (key): TableColumn<Product> => ({
+          key,
+          labelKey: `products.columnLabels.${key}`,
+          defaultVisible: true,
+          numeric: isNumericColumn(key),
+          gridType: key === "code" ? "code" : key === "category" ? "status" : undefined,
+          cell: (product: Product) => renderGridCell(key, product, t, locale),
+        })
+      ),
+      {
+        key: "stock",
+        labelKey: "products.stock",
+        defaultVisible: true,
+        numeric: true,
+        exportType: "number",
+        cell: (product) => {
+          const summary = isMeterStockProduct(product) ? polywoodSummaries?.get(product.id) : null;
+          return (
+            <span className="font-semibold">
+              {summary ? `${summary.total_length_m.toFixed(2)} m` : `${product.stock} ${product.unit ?? ""}`}
+            </span>
+          );
+        },
+      },
+      { key: "min_stock", labelKey: "products.minStockLevel", defaultVisible: true, numeric: true, exportType: "number", cell: (product) => `${productMinStock(product)} ${product.unit ?? ""}` },
+      { key: "warehouse", labelKey: "common.warehouse", defaultVisible: true, cell: (product) => warehouseNameForProduct(product, warehouses) },
+      {
+        key: "stock_status",
+        labelKey: "common.status",
+        defaultVisible: true,
+        gridType: "status",
+        gridSamples: [t("products.lowStockBadge"), t("products.sufficientStock")],
+        cell: (product) =>
+          isCriticalStock(product) ? (
+            <StatusBadge tone="low-stock">{t("products.lowStockBadge")}</StatusBadge>
+          ) : (
+            <StatusBadge tone="posted">{t("products.sufficientStock")}</StatusBadge>
+          ),
+      },
+    ];
+  }, [columns, locale, t, polywoodSummaries, warehouses]);
+  const api = useTableColumns("products.grid", defs);
+
+  return (
+    <ListGrid
+      columns={{ ...api, pickerPanel: null }}
+      rows={products}
+      rowKey={(product) => product.id}
+      label={t("products.title")}
+      loading={loading}
+      empty={<p className="text-sm ds-muted">{emptyMessage}</p>}
+      selection={bulkSelection}
+      rowActions={rowActions}
+    />
   );
 }

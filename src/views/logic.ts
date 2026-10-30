@@ -21,6 +21,7 @@ import type {
   ViewRecord,
 } from "./types";
 import { dateFormat, formatFigure, formatGridDate, formatGridDateTime } from "@/lib/dates/localeDate";
+import type { GridColumnType } from "../design-system/grid";
 
 export interface Formatter {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -891,3 +892,38 @@ export function monthTotals<R extends ViewRecord>(records: readonly R[], date: (
 /** "12,480 AZN" in the user's language. */
 export const money = (n: number, fmt: Formatter, digits = 0): string => `${formatNumber(n, digits, fmt.locale)} ${fmt.t("common.currency")}`;
 export const figure = (n: number, fmt: Formatter, digits = 0): string => formatNumber(n, digits, fmt.locale);
+
+// ── DataGrid (UI-2) ──────────────────────────────────────────────────────────
+
+/** Width class of a field's column in DataGrid (docs/ui-standard.md "Lists"). */
+export function gridColumnType(field: FieldDef): GridColumnType {
+  switch (field.type) {
+    case "monetary":
+      return "money";
+    case "integer":
+    case "float":
+      return "number";
+    case "date":
+      return "date";
+    case "datetime":
+      return "datetime";
+    case "selection":
+      return "status";
+    default:
+      return "text";
+  }
+}
+
+export type FlatGroupItem<R extends ViewRecord> = { kind: "group"; group: RecordGroup<R>; depth: number } | { kind: "row"; record: R; depth: number };
+
+/** Groups and rows in screen order: a group's children (or records) follow it only while it is open. */
+export function flattenGroups<R extends ViewRecord>(groups: readonly RecordGroup<R>[], open: ReadonlySet<string>, depth = 0): FlatGroupItem<R>[] {
+  return groups.flatMap((group): FlatGroupItem<R>[] => {
+    const head: FlatGroupItem<R> = { kind: "group", group, depth };
+    if (!open.has(group.path)) return [head];
+    const inner: FlatGroupItem<R>[] = group.children.length
+      ? flattenGroups(group.children, open, depth + 1)
+      : group.records.map((record) => ({ kind: "row" as const, record, depth: depth + 1 }));
+    return [head, ...inner];
+  });
+}
