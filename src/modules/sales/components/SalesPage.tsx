@@ -25,6 +25,7 @@ import {
   SelectTd,
   SelectTh,
   Table,
+  TablePagination,
   TableSkeletonRows,
   TableWrap,
   THead,
@@ -58,6 +59,9 @@ import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useUiStandard } from "@/design-system/components";
+import { formatGridDate } from "@/lib/dates/localeDate";
 import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
 import { docStatusLabelKey, paymentTypeLabelKey, warehouseStateLabelKey } from "@/lib/lists/documentLabels";
 
@@ -216,12 +220,15 @@ export default function SalesPage() {
     [vatAccountIds]
   );
 
+  // UI_STANDARD (UI-2): the list renders through DataGrid (ListGrid) instead of the table below.
+  const standard = useUiStandard();
+
   // Columns of the list (prompt 24c): today's set, then the standard and optional columns that
   // LIST_COLUMNS offers. Header, cells and the Excel export all follow the visible set.
   const columnDefs = useMemo<TableColumn<SaleRecord>[]>(
     () => [
       { key: "doc_no", labelKey: "sales.docNo", defaultVisible: true, required: true, thClassName: "min-w-[7rem]", tdClassName: "font-mono font-bold text-app-accent", cell: (s) => s.doc_no ?? "-" },
-      { key: "doc_date", labelKey: "listColumns.invoiceDate", offLabelKey: "common.date", defaultVisible: true, thClassName: "min-w-[6rem]", exportType: "date", exportValue: (s) => s.doc_date, cell: (s) => s.doc_date ?? "-" },
+      { key: "doc_date", labelKey: "listColumns.invoiceDate", offLabelKey: "common.date", defaultVisible: true, thClassName: "min-w-[6rem]", exportType: "date", exportValue: (s) => s.doc_date, cell: (s) => (standard ? formatGridDate(s.doc_date) : s.doc_date ?? "-") },
       { key: "customer", labelKey: "sales.customer", defaultVisible: true, thClassName: "min-w-[10rem]", tdClassName: "font-semibold text-app", cell: (s) => s.customer_name || t("common.anonymousCustomer") },
       { key: "warehouse", labelKey: "sales.warehouse", defaultVisible: true, thClassName: "min-w-[8rem]", tdClassName: "text-app-muted", cell: (s) => getSaleWarehouseLabel(s) },
       { key: "total_amount", labelKey: "sales.totalAmount", defaultVisible: true, numeric: true, thClassName: "min-w-[7rem]", tdClassName: "font-bold", exportValue: (s) => Number(s.total_amount || 0), cell: (s) => formatSaleAmount(s.total_amount, t("common.currency")) },
@@ -262,13 +269,13 @@ export default function SalesPage() {
       { key: "salesperson", labelKey: "listColumns.salesperson", defaultVisible: true, standard: true, thClassName: "min-w-[8rem]", cell: (s) => dash(s.issued_by_name || s.seller_name) },
       { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, thClassName: "min-w-[8rem]", cell: (s) => dash(s.created_by_name) },
       { key: "vat", labelKey: "sales.engine.fields.vat", defaultVisible: false, numeric: true, exportValue: (s) => Number(s.vat_amount ?? s.vat_total ?? 0), cell: (s) => formatSaleAmount(s.vat_amount ?? s.vat_total, t("common.currency")) },
-      { key: "due_date", labelKey: "sales.engine.fields.dueDate", defaultVisible: false, exportType: "date", exportValue: (s) => s.due_date, cell: (s) => dash(s.due_date) },
+      { key: "due_date", labelKey: "sales.engine.fields.dueDate", defaultVisible: false, exportType: "date", exportValue: (s) => s.due_date, cell: (s) => (standard ? formatGridDate(s.due_date) : dash(s.due_date)) },
       { key: "payment_type", labelKey: "sales.engine.fields.paymentType", defaultVisible: false, cell: (s) => { const key = paymentTypeLabelKey(s.payment_type); return key ? t(key) : dash(s.payment_type); } },
       { key: "currency", labelKey: "sales.engine.fields.currency", defaultVisible: false, cell: (s) => dash(s.currency) },
       { key: "official", labelKey: "sales.engine.fields.official", defaultVisible: false, cell: (s) => (s.is_official ? t("views.yes") : t("views.no")) },
       { key: "note", labelKey: "sales.engine.fields.note", defaultVisible: false, tdClassName: "max-w-[16rem] truncate", cell: (s) => dash(s.note) },
     ],
-    [t, formatDateTime, debtOf]
+    [t, formatDateTime, debtOf, standard]
   );
   const columns = useTableColumns(SALES_LIST_KEY, columnDefs);
 
@@ -292,6 +299,45 @@ export default function SalesPage() {
     });
   };
 
+  const rowActions = (sale: SaleRecord) => {
+    const debtBreakdown = debtOf(sale);
+    return (
+      <DocumentListActions
+        onView={() => void openView(sale)}
+        onPrint={() => void openPrint(sale)}
+        onEdit={
+          canEditSales && isSalesDraft(sale.status)
+            ? () => router.push(`/sales/new?draft=${sale.id}`)
+            : canEditPostedSales && isSalesPosted(sale.status)
+              ? () => router.push(`/sales/new?draft=${sale.id}&amend=1`)
+              : undefined
+        }
+        onPayment={() => void openPayment(sale)}
+        onEQaimeExport={(format) => exportEQaime(sale, format)}
+        paymentDisabled={debtBreakdown.totalRemaining <= 0}
+        onDelete={
+          canDeleteSales ? () => setVoidTarget(sale) : undefined
+        }
+        deleteTitle={t("common.void")}
+        showSendToWarehouse={warehouseSend.getSendButtonProps(sale).show}
+        sendToWarehouseDisabled={
+          warehouseSend.getSendButtonProps(sale).disabled
+        }
+        sendToWarehouseTitle={
+          warehouseSend.getSendButtonProps(sale).title
+        }
+        onSendToWarehouse={() =>
+          warehouseSend.handleSendClick({
+            id: sale.id,
+            warehouse_sent: sale.warehouse_sent === true,
+            documentLabel: t("sales.docNo"),
+            documentNumber: sale.doc_no ?? "-",
+          })
+        }
+      />
+    );
+  };
+
   return (
     <PageLayout>
       <ListPageChrome
@@ -305,12 +351,14 @@ export default function SalesPage() {
             onCreate={() => router.push("/sales/new")}
             createDisabled={!canCreateInvoice}
             extraActions={
-              <>
-                <Button type="button" variant="secondary" onClick={() => handleExport()}>
-                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                  {t("common.excelDownload")}
-                </Button>
-              </>
+              standard ? undefined : (
+                <>
+                  <Button type="button" variant="secondary" onClick={() => handleExport()}>
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                    {t("common.excelDownload")}
+                  </Button>
+                </>
+              )
             }
           />
         }
@@ -379,7 +427,36 @@ export default function SalesPage() {
               ) : null}
             </BulkActionBar>
 
-            {loading ? (
+            {standard ? (
+              <ListGrid
+                columns={columns}
+                rows={paginatedSales}
+                total={filteredSales.length}
+                rowKey={(sale) => sale.id}
+                label={t("sales.title")}
+                loading={loading}
+                empty={<p className="text-xs ds-muted">{t("sales.empty")}</p>}
+                selection={{ isSelected: bulk.isSelected, toggle: bulk.toggle, allSelected: bulk.allSelected, someSelected: bulk.someSelected, toggleAll: bulk.toggleAll }}
+                onOpen={(sale) => void openView(sale)}
+                rowActions={rowActions}
+                onExport={() => handleExport()}
+                footer={
+                  filteredSales.length ? (
+                    <TablePagination
+                      page={page}
+                      limit={pageSize}
+                      total={filteredSales.length}
+                      onPageChange={setPage}
+                      onLimitChange={(limit) => {
+                        setPageSize(limit);
+                        setPage(1);
+                      }}
+                      limitOptions={PAGE_SIZE_OPTIONS}
+                    />
+                  ) : null
+                }
+              />
+            ) : loading ? (
               <TableWrap>
                 <Table>
                   <THead>
@@ -428,8 +505,6 @@ export default function SalesPage() {
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {paginatedSales.map((sale) => {
-                      const debtBreakdown = debtOf(sale);
-
                       return (
                       <Tr key={sale.id}>
                         <SelectTd
@@ -438,39 +513,7 @@ export default function SalesPage() {
                         />
                         <ListBodyCells columns={columns.visible} row={sale} />
                         <ActionsTd>
-                          <DocumentListActions
-                            onView={() => void openView(sale)}
-                            onPrint={() => void openPrint(sale)}
-                            onEdit={
-                              canEditSales && isSalesDraft(sale.status)
-                                ? () => router.push(`/sales/new?draft=${sale.id}`)
-                                : canEditPostedSales && isSalesPosted(sale.status)
-                                  ? () => router.push(`/sales/new?draft=${sale.id}&amend=1`)
-                                  : undefined
-                            }
-                            onPayment={() => void openPayment(sale)}
-                            onEQaimeExport={(format) => exportEQaime(sale, format)}
-                            paymentDisabled={debtBreakdown.totalRemaining <= 0}
-                            onDelete={
-                              canDeleteSales ? () => setVoidTarget(sale) : undefined
-                            }
-                            deleteTitle={t("common.void")}
-                            showSendToWarehouse={warehouseSend.getSendButtonProps(sale).show}
-                            sendToWarehouseDisabled={
-                              warehouseSend.getSendButtonProps(sale).disabled
-                            }
-                            sendToWarehouseTitle={
-                              warehouseSend.getSendButtonProps(sale).title
-                            }
-                            onSendToWarehouse={() =>
-                              warehouseSend.handleSendClick({
-                                id: sale.id,
-                                warehouse_sent: sale.warehouse_sent === true,
-                                documentLabel: t("sales.docNo"),
-                                documentNumber: sale.doc_no ?? "-",
-                              })
-                            }
-                          />
+                          {rowActions(sale)}
                         </ActionsTd>
                       </Tr>
                       );

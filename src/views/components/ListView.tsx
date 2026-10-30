@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
-import { displayValue, fieldMap, formatNumber, groupRecords, isNumericField, listFieldLabel, nextSort, sumBy, type Formatter, type RecordGroup } from "../logic";
+import { DataGrid, useUiStandard, type GridColumn, type GridItem } from "@/design-system/components";
+import type { GridDensity } from "@/design-system/grid";
+import { dataGridLabels } from "@/i18n/uiStandardLabels";
+import { displayValue, fieldMap, flattenGroups, formatNumber, gridColumnType, groupRecords, isNumericField, listFieldLabel, nextSort, optionLabel, sumBy, type Formatter, type RecordGroup } from "../logic";
 import type { FieldDef, SortSpec, ViewDefinition, ViewRecord } from "../types";
 
 export interface ListViewProps<R extends ViewRecord> {
@@ -23,6 +26,19 @@ export interface ListViewProps<R extends ViewRecord> {
   picker?: React.ReactNode;
   /** LIST_COLUMNS is on (list-specific headers such as "Invoice date"). */
   listColumns?: boolean;
+  /** UI_STANDARD (UI-2): the grid's user settings and its toolbar. */
+  grid?: ListGridSettings;
+}
+
+export interface ListGridSettings {
+  widths?: Readonly<Record<string, number>>;
+  onWidthChange: (key: string, width: number | null) => void;
+  density: GridDensity;
+  onDensityChange: (density: GridDensity) => void;
+  /** The column picker panel for the toolbar's "Columns" button. */
+  columnsMenu?: React.ReactNode;
+  /** "125 records". */
+  count?: string;
 }
 
 /**
@@ -30,7 +46,12 @@ export interface ListViewProps<R extends ViewRecord> {
  * nested collapsible groups with counts and sums, and a totals row. Each row opens the record;
  * its first cell is a real link, so keyboard and middle-click work.
  */
-export function ListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, picker, listColumns = false }: ListViewProps<R>) {
+export function ListView<R extends ViewRecord>(props: ListViewProps<R>) {
+  // UI_STANDARD: the one DataGrid; otherwise today's table, unchanged.
+  return useUiStandard() ? <GridListView {...props} /> : <ClassicListView {...props} />;
+}
+
+function ClassicListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, picker, listColumns = false }: ListViewProps<R>) {
   const router = useRouter();
   const fields = useMemo(() => fieldMap(def), [def]);
   const columns = (shown ?? def.list.columns).map((c) => fields.get(c)).filter((f): f is FieldDef => !!f);
@@ -140,6 +161,87 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
         ) : null}
       </table>
     </div>
+  );
+}
+
+/**
+ * The list through DataGrid (UI-2): one-line rows, sticky header / first column / totals,
+ * resizable columns, group rows with their sums, keyboard rows. The column picker sits in the
+ * grid's toolbar ("Columns"), never in a header cell.
+ */
+function GridListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, listColumns = false, grid }: ListViewProps<R>) {
+  const router = useRouter();
+  const fields = useMemo(() => fieldMap(def), [def]);
+  const columns = useMemo(() => (shown ?? def.list.columns).map((c) => fields.get(c)).filter((f): f is FieldDef => !!f), [shown, def.list.columns, fields]);
+  const sums = useMemo(() => (def.list.sums ?? []).filter((s) => fields.has(s)), [def.list.sums, fields]);
+  const groups = useMemo(() => groupRecords(records, def, groupBy, sums, fmt), [records, def, groupBy, sums, fmt]);
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const toggle = useCallback(
+    (path: string) =>
+      setOpen((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+        return next;
+      }),
+    []
+  );
+  const sumText = useCallback((f: FieldDef, value: number) => formatNumber(value, f.type === "integer" ? 0 : 2, fmt.locale), [fmt.locale]);
+
+  const gridColumns = useMemo<GridColumn<R>[]>(
+    () =>
+      columns.map((f, i) => ({
+        key: f.name,
+        header: listFieldLabel(f, def, listColumns, fmt),
+        type: gridColumnType(f),
+        sortable: f.sortable ?? f.type !== "text",
+        // A status column is as wide as its longest label.
+        samples: f.type === "selection" ? (f.options ?? []).map((o) => optionLabel(f, o.value, fmt) ?? o.value) : undefined,
+        className: i === 0 ? "font-medium" : undefined,
+        cell: (r: R) => (i === 0 ? displayValue(f, r, fmt) || "—" : <Cell field={f} record={r} fmt={fmt} />),
+      })),
+    [columns, def, listColumns, fmt]
+  );
+
+  const items = useMemo<GridItem<R>[]>(() => {
+    if (!groupBy.length) return records.map((row) => ({ kind: "row", row }));
+    return flattenGroups(groups, open).map((it): GridItem<R> => {
+      if (it.kind === "row") return { kind: "row", row: it.record, depth: it.depth };
+      const g = it.group;
+      return {
+        kind: "group",
+        key: g.path,
+        depth: it.depth,
+        expanded: open.has(g.path),
+        onToggle: () => toggle(g.path),
+        label: `${g.label} (${g.count})`,
+        cells: Object.fromEntries(columns.filter((f) => sums.includes(f.name)).map((f) => [f.name, sumText(f, g.sums[f.name] ?? 0)])),
+      };
+    });
+  }, [groupBy.length, records, groups, open, columns, sums, toggle, sumText]);
+
+  const totals = sums.length && records.length ? Object.fromEntries(columns.filter((f) => sums.includes(f.name)).map((f) => [f.name, sumText(f, sumBy(records, f.name))])) : null;
+
+  return (
+    <DataGrid<R>
+      columns={gridColumns}
+      items={items}
+      rowKey={(r) => String(r.id)}
+      label={def.model.key}
+      labels={dataGridLabels(fmt.t)}
+      sort={sort ? { key: sort.field, dir: sort.dir } : null}
+      onSort={(key) => onSort(nextSort(sort, key))}
+      onOpen={openHref ? (r) => router.push(openHref(r)) : undefined}
+      rowHref={openHref}
+      linkAs={Link}
+      totals={totals}
+      widths={grid?.widths}
+      onWidthChange={grid?.onWidthChange}
+      density={grid?.density}
+      onDensityChange={grid?.onDensityChange}
+      columnsMenu={grid?.columnsMenu}
+      count={grid?.count}
+    />
   );
 }
 

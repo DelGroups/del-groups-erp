@@ -49,6 +49,7 @@ import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 const CONTRACTS_LIST_KEY = "contracts.list";
 import { supabase } from "@/lib/supabase";
 import type { Customer, Supplier } from "@/types/database.types";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 const TYPE_TABS: Array<"all" | ContractType> = ["all", "sale", "purchase", "service"];
 const STATUS_TABS: Array<"all" | ContractStatus> = [
@@ -359,6 +360,69 @@ export default function ContractsPageClient() {
     return getContractStatusLabel(tab, t);
   };
 
+  const rowActions = (c: Contract) => {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => handlePrint(c)}
+          className="rounded p-1.5 hover:bg-app-card-hover"
+          title={t("official.printContract")}
+        >
+          <Printer className="h-4 w-4" />
+        </button>
+        {canManage && (
+          <ContractAttachmentButton
+            contract={c}
+            disabled={!canManage}
+            onUploaded={handleAttachmentUploaded}
+            onError={showError}
+          />
+        )}
+        <button
+          type="button"
+          onClick={() => setLinkedContract(c)}
+          className="rounded p-1.5 hover:bg-app-card-hover"
+          title={t("official.linkedInvoices")}
+        >
+          <FileText className="h-4 w-4" />
+        </button>
+        {canManage && (
+          <>
+            <button
+              type="button"
+              onClick={() => openEdit(c)}
+              className="rounded p-1.5 hover:bg-app-card-hover"
+              title={t("official.editContract")}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleStatus(c)}
+              className="rounded p-1.5 text-rose-500 hover:bg-rose-500/10"
+              title={
+                c.status === "cancelled"
+                  ? t("official.reactivateContract")
+                  : t("official.cancelContract")
+              }
+            >
+              <Ban className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(c)}
+              className="rounded p-1.5 text-rose-600 hover:bg-rose-500/10"
+              title={t("common.delete")}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </>
+    );
+  };
+
   return (
     <PageLayout title={t("official.contractsPageTitle")}>
       <div className="space-y-4">
@@ -423,7 +487,7 @@ export default function ContractsPageClient() {
         </div>
 
         {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
-        {columns.enabled ? (
+        {columns.enabled && !columns.grid ? (
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={handleExport}>
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
@@ -433,6 +497,19 @@ export default function ContractsPageClient() {
           </div>
         ) : null}
 
+        {columns.grid ? (
+          <ListGrid
+            columns={columns}
+            rows={filtered}
+            rowKey={(c) => c.id}
+            label={t("official.contractsPageTitle")}
+            loading={loading}
+            empty={<p className="text-sm ds-muted">{t("common.noData")}</p>}
+            rowActions={rowActions}
+            actionsWidth={184}
+            onExport={columns.enabled ? handleExport : undefined}
+          />
+        ) : (
         <div className="app-card overflow-hidden">
           {loading ? (
             <p className="p-6 text-center text-sm text-app-muted">{t("common.loading")}</p>
@@ -460,64 +537,7 @@ export default function ContractsPageClient() {
                         </td>
                       ))}
                       <td className="px-4 py-2">
-                        <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handlePrint(c)}
-                            className="rounded p-1.5 hover:bg-app-card-hover"
-                            title={t("official.printContract")}
-                          >
-                            <Printer className="h-4 w-4" />
-                          </button>
-                          {canManage && (
-                            <ContractAttachmentButton
-                              contract={c}
-                              disabled={!canManage}
-                              onUploaded={handleAttachmentUploaded}
-                              onError={showError}
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setLinkedContract(c)}
-                            className="rounded p-1.5 hover:bg-app-card-hover"
-                            title={t("official.linkedInvoices")}
-                          >
-                            <FileText className="h-4 w-4" />
-                          </button>
-                          {canManage && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => openEdit(c)}
-                                className="rounded p-1.5 hover:bg-app-card-hover"
-                                title={t("official.editContract")}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleStatus(c)}
-                                className="rounded p-1.5 text-rose-500 hover:bg-rose-500/10"
-                                title={
-                                  c.status === "cancelled"
-                                    ? t("official.reactivateContract")
-                                    : t("official.cancelContract")
-                                }
-                              >
-                                <Ban className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteTarget(c)}
-                                className="rounded p-1.5 text-rose-600 hover:bg-rose-500/10"
-                                title={t("common.delete")}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                        <div className="flex items-center justify-end gap-0.5">{rowActions(c)}</div>
                       </td>
                     </tr>
                   ))}
@@ -526,6 +546,7 @@ export default function ContractsPageClient() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {modalOpen && (

@@ -11,6 +11,7 @@ import { FileSpreadsheet, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { formatGridDateTime, toDateValue } from "@/lib/dates/localeDate";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of this list (prompt 24c). */
 const PAYMENTS_LIST_KEY = "accounting.payments";
@@ -110,7 +111,7 @@ export default function PaymentsPage() {
             {t("common.refresh")}
           </button>
           {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
-          {columns.enabled ? (
+          {columns.enabled && !columns.grid ? (
             <button type="button" onClick={handleExport} className="btn-secondary">
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
               {t("common.excelDownload")}
@@ -132,6 +133,17 @@ export default function PaymentsPage() {
           />
         </div>
 
+        {columns.grid ? (
+          <ListGrid
+            columns={columns}
+            rows={filtered}
+            rowKey={(row) => row.id}
+            label={t("payments.pageTitle")}
+            loading={loading}
+            empty={<p className="text-sm ds-muted">{t("payments.empty")}</p>}
+            onExport={columns.enabled ? handleExport : undefined}
+          />
+        ) : (
         <div className="app-card overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead className="bg-app-card-hover text-xs font-bold uppercase text-app-muted">
@@ -166,6 +178,7 @@ export default function PaymentsPage() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       <PaymentFormModal

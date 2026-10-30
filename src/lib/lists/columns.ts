@@ -21,6 +21,42 @@ export interface ListColumnDef {
 export interface ColumnPrefs {
   visible: string[];
   order: string[];
+  /** Column widths in px set by the user (DataGrid, UI-2); missing: the column's default. */
+  widths?: Record<string, number>;
+  /** Row density chosen in the grid toolbar (UI-2); missing: comfortable. */
+  density?: "compact" | "comfortable";
+}
+
+/** What goes to storage: only the fields that are set. */
+export function serializeColumnPrefs(prefs: ColumnPrefs): string {
+  return JSON.stringify({
+    visible: prefs.visible,
+    order: prefs.order,
+    ...(prefs.widths && Object.keys(prefs.widths).length ? { widths: prefs.widths } : {}),
+    ...(prefs.density ? { density: prefs.density } : {}),
+  });
+}
+
+/** Stored widths kept for known columns, as whole pixels between 24 and 2000. */
+function readWidths(value: unknown, known: ReadonlySet<string>): Record<string, number> | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (known.has(k) && typeof v === "number" && Number.isFinite(v) && v >= 24 && v <= 2000) out[k] = Math.round(v);
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** One column's width set (UI-2 resize); the other prefs stay. */
+export function setColumnWidth(prefs: ColumnPrefs, key: string, width: number): ColumnPrefs {
+  return { ...prefs, widths: { ...prefs.widths, [key]: Math.round(width) } };
+}
+
+/** Back to the default width of every column (keeps order, visibility and density). */
+export function clearColumnWidths(prefs: ColumnPrefs): ColumnPrefs {
+  const rest: ColumnPrefs = { ...prefs };
+  delete rest.widths;
+  return rest;
 }
 
 /** Minimal Storage, so tests can pass a fake one. */
@@ -54,11 +90,15 @@ const keyList = (value: unknown): string[] =>
 export function mergeColumnPrefs(defs: readonly ColumnLike[], stored: unknown): ColumnPrefs {
   const fallback = defaultColumnPrefs(defs);
   if (!stored || typeof stored !== "object") return fallback;
-  const raw = stored as { visible?: unknown; order?: unknown };
+  const raw = stored as { visible?: unknown; order?: unknown; widths?: unknown; density?: unknown };
   const known = new Set(defs.map((d) => d.key));
+  const extras: Pick<ColumnPrefs, "widths" | "density"> = {};
+  const widths = readWidths(raw.widths, known);
+  if (widths) extras.widths = widths;
+  if (raw.density === "compact" || raw.density === "comfortable") extras.density = raw.density;
   const storedOrder = [...new Set(keyList(raw.order))].filter((k) => known.has(k));
   const storedVisible = new Set(keyList(raw.visible).filter((k) => known.has(k)));
-  if (!storedOrder.length && !storedVisible.size) return fallback;
+  if (!storedOrder.length && !storedVisible.size) return { ...fallback, ...extras };
 
   // A column the stored order does not mention is new: it goes after its predecessor in the
   // definition (or first) and takes its default visibility.
@@ -73,8 +113,8 @@ export function mergeColumnPrefs(defs: readonly ColumnLike[], stored: unknown): 
   });
   for (const d of defs) if (d.required) storedVisible.add(d.key);
   const visible = order.filter((k) => storedVisible.has(k));
-  if (!visible.length) return fallback;
-  return { visible, order };
+  if (!visible.length) return { ...fallback, ...extras };
+  return { visible, order, ...extras };
 }
 
 /** The visible columns, in the user's order. */
@@ -95,7 +135,7 @@ export function toggleColumn(defs: readonly ColumnLike[], prefs: ColumnPrefs, ke
   } else {
     shown.add(key);
   }
-  return { order: prefs.order, visible: prefs.order.filter((k) => shown.has(k)) };
+  return { ...prefs, visible: prefs.order.filter((k) => shown.has(k)) };
 }
 
 /** Moves a column one place up (-1) or down (+1) in the order. */
@@ -114,11 +154,16 @@ export function setColumnOrder(prefs: ColumnPrefs, order: readonly string[]): Co
   const next = [...new Set(order)].filter((k) => known.has(k));
   for (const k of prefs.order) if (!next.includes(k)) next.push(k);
   const shown = new Set(prefs.visible);
-  return { order: next, visible: next.filter((k) => shown.has(k)) };
+  return { ...prefs, order: next, visible: next.filter((k) => shown.has(k)) };
 }
 
 export function sameColumnPrefs(a: ColumnPrefs, b: ColumnPrefs): boolean {
-  return a.order.join("\u0000") === b.order.join("\u0000") && a.visible.join("\u0000") === b.visible.join("\u0000");
+  return (
+    a.order.join("\u0000") === b.order.join("\u0000") &&
+    a.visible.join("\u0000") === b.visible.join("\u0000") &&
+    JSON.stringify(a.widths ?? {}) === JSON.stringify(b.widths ?? {}) &&
+    (a.density ?? "") === (b.density ?? "")
+  );
 }
 
 function browserStorage(): ColumnStorage | null {
@@ -152,7 +197,7 @@ export function saveColumnPrefs(
 ): void {
   if (!storage) return;
   try {
-    storage.setItem(columnPrefsKey(listKey, userId), JSON.stringify({ visible: prefs.visible, order: prefs.order }));
+    storage.setItem(columnPrefsKey(listKey, userId), serializeColumnPrefs(prefs));
   } catch {
     // Private mode or a full quota: the choice lasts until the page is left.
   }

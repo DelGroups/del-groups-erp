@@ -2,16 +2,17 @@
 
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, Inbox, Lock, SearchX } from "lucide-react";
-import { EmptyState, SkeletonList, useDesignScope } from "@/design-system/components";
-import { ColumnPicker } from "@/components/lists/ColumnPicker";
+import { EmptyState, SkeletonList, useDesignScope, useUiStandard } from "@/design-system/components";
+import { ColumnPicker, ColumnPickerPanel } from "@/components/lists/ColumnPicker";
 import { useColumnPrefs } from "@/components/lists/useColumnPrefs";
 import { useListColumnsEnabled } from "@/components/lists/ListColumnsFlag";
 import { exportXlsx } from "@/lib/export/exportXlsx";
+import { clearColumnWidths, setColumnWidth } from "@/lib/lists/columns";
 import { applySearch, defaultFavorite, defaultSearchState, exportColumns, exportFileName, fieldMap, listColumnDefs, listFieldLabel, shownListColumns, sortRecords, type Formatter } from "../logic";
 import { useFavorites, type ViewData } from "../data";
 import type { FilterContext, SearchState, ViewRecord } from "../types";
 import { SearchPanel } from "./SearchPanel";
-import { ListView } from "./ListView";
+import { ListView, type ListGridSettings } from "./ListView";
 import { KanbanView } from "./KanbanView";
 import { PivotView } from "./PivotView";
 import { GraphView } from "./GraphView";
@@ -68,23 +69,34 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   // A favourite saved now keeps the columns on screen.
   const panelState = columnPrefs ? { ...state, columns: columnPrefs } : state;
   const fields = useMemo(() => fieldMap(def), [def]);
-  const picker = listColumns && columnPrefs ? (
-    <ColumnPicker
-      variant="ds"
-      compact
-      portalContainer={portalContainer}
-      columns={columnDefs.map((c) => ({ key: c.key, label: fields.get(c.key) ? listFieldLabel(fields.get(c.key)!, def, true, fmt) : c.key, defaultVisible: c.defaultVisible, required: c.required }))}
-      prefs={columnPrefs}
-      onChange={(next) => {
-        userColumns.setPrefs(next);
-        setTouched({ ...state, columns: next });
-      }}
-      onReset={() => {
-        userColumns.reset();
-        setTouched({ ...state, columns: undefined });
-      }}
-    />
-  ) : null;
+  const pickerProps = listColumns && columnPrefs
+    ? {
+        columns: columnDefs.map((c) => ({ key: c.key, label: fields.get(c.key) ? listFieldLabel(fields.get(c.key)!, def, true, fmt) : c.key, defaultVisible: c.defaultVisible, required: c.required })),
+        prefs: columnPrefs,
+        onChange: (next: typeof columnPrefs) => {
+          userColumns.setPrefs({ ...next, widths: userColumns.prefs.widths, density: userColumns.prefs.density });
+          setTouched({ ...state, columns: next });
+        },
+        onReset: () => {
+          userColumns.reset();
+          setTouched({ ...state, columns: undefined });
+        },
+      }
+    : null;
+  // UI_STANDARD (UI-2): the picker opens from the grid toolbar, never as a header cell; widths and
+  // density are kept with the user's column choice for this view.
+  const standard = useUiStandard();
+  const picker = pickerProps && !standard ? <ColumnPicker variant="ds" compact portalContainer={portalContainer} {...pickerProps} /> : null;
+  const grid: ListGridSettings | undefined = standard
+    ? {
+        widths: userColumns.prefs.widths,
+        onWidthChange: (key, width) =>
+          userColumns.setPrefs(width === null ? clearColumnWidths(userColumns.prefs) : setColumnWidth(userColumns.prefs, key, width)),
+        density: userColumns.prefs.density ?? "comfortable",
+        onDensityChange: (density) => userColumns.setPrefs({ ...userColumns.prefs, density }),
+        columnsMenu: pickerProps ? <ColumnPickerPanel variant="ds" {...pickerProps} /> : undefined,
+      }
+    : undefined;
 
   // All searched and filtered rows (not a page), in the columns the user sees.
   const exportExcel = () =>
@@ -129,7 +141,7 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   else if (state.view === "pivot" && def.pivot) body = <PivotView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "graph" && def.graph) body = <GraphView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "calendar" && def.calendar) body = <CalendarView definition={def} records={sorted} openHref={openHref ?? noHref} fmt={fmt} />;
-  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} columns={shown} picker={picker} listColumns={listColumns} />;
+  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} columns={shown} picker={picker} listColumns={listColumns} grid={grid} />;
 
   return (
     <div className="flex flex-col gap-4">

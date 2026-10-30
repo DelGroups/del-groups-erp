@@ -3,9 +3,11 @@
 import React, { useMemo } from "react";
 import { Td, Th } from "@/components/ui/table";
 import { useI18n } from "@/i18n/I18nProvider";
-import { columnLabelKey, columnsForFlag, type FlaggedColumnDef } from "@/lib/lists/columns";
+import { useUiStandard } from "@/design-system/components";
+import type { GridColumnType } from "@/design-system/grid";
+import { columnLabelKey, columnsForFlag, type ColumnPrefs, type FlaggedColumnDef } from "@/lib/lists/columns";
 import type { XlsxCellType, XlsxColumn } from "@/lib/export/exportXlsx";
-import { ColumnPicker } from "./ColumnPicker";
+import { ColumnPicker, ColumnPickerPanel } from "./ColumnPicker";
 import { useColumnPrefs } from "./useColumnPrefs";
 import { useListColumnsEnabled } from "./ListColumnsFlag";
 
@@ -18,6 +20,21 @@ export interface TableColumn<Row> extends FlaggedColumnDef {
   exportType?: XlsxCellType;
   /** Raw Excel value (numbers, ISO dates); default: the cell when it is plain text. */
   exportValue?: (row: Row) => unknown;
+  /** Width class in DataGrid (UI-2); default from numeric / exportType / the key. */
+  gridType?: GridColumnType;
+  /** Texts a status column shows, so DataGrid sizes it to the longest one. */
+  gridSamples?: readonly string[];
+}
+
+/** DataGrid width class of a classic column: explicit, else from its Excel type, numeric flag or key. */
+export function classicGridType(c: Pick<TableColumn<unknown>, "gridType" | "numeric" | "exportType" | "key">): GridColumnType {
+  if (c.gridType) return c.gridType;
+  if (c.exportType === "date") return "date";
+  if (c.exportType === "datetime") return "datetime";
+  if (c.numeric) return c.exportType === "number" ? "number" : "money";
+  if (/status/.test(c.key)) return "status";
+  if (/^(doc_no|number|code|slip_no)$/.test(c.key)) return "code";
+  return "text";
 }
 
 export interface ShownColumn<Row> extends TableColumn<Row> {
@@ -34,6 +51,12 @@ export interface TableColumnsApi<Row> {
   picker: React.ReactNode;
   /** The same columns for the Excel export. */
   exportColumns: XlsxColumn<Row>[];
+  /** UI_STANDARD is on: the page renders <ListGrid> (UI-2) instead of its table. */
+  grid: boolean;
+  /** The user's prefs (order, visibility, widths, density) and the picker panel for the grid toolbar. */
+  prefs: ColumnPrefs;
+  setPrefs: (next: ColumnPrefs) => void;
+  pickerPanel: React.ReactNode;
 }
 
 const plainText = (node: React.ReactNode): unknown => (typeof node === "string" || typeof node === "number" ? node : null);
@@ -44,6 +67,7 @@ const plainText = (node: React.ReactNode): unknown => (typeof node === "string" 
  */
 export function useTableColumns<Row>(listKey: string, columns: readonly TableColumn<Row>[]): TableColumnsApi<Row> {
   const enabled = useListColumnsEnabled();
+  const grid = useUiStandard();
   const { t } = useI18n();
   const { prefs, setPrefs, reset } = useColumnPrefs(listKey, columns);
 
@@ -54,16 +78,14 @@ export function useTableColumns<Row>(listKey: string, columns: readonly TableCol
       type: c.exportType ?? (c.numeric ? "money" : "text"),
       value: (row: Row) => (c.exportValue ? c.exportValue(row) : plainText(c.cell(row))),
     }));
-    const picker = enabled ? (
-      <ColumnPicker
-        columns={columns.map((c) => ({ key: c.key, label: t(c.labelKey), defaultVisible: c.defaultVisible, required: c.required }))}
-        prefs={prefs}
-        onChange={setPrefs}
-        onReset={reset}
-      />
+    const pickerColumns = columns.map((c) => ({ key: c.key, label: t(c.labelKey), defaultVisible: c.defaultVisible, required: c.required }));
+    // With the grid (UI-2) the picker lives in the grid toolbar, so the page's own slot is empty.
+    const picker = enabled && !grid ? <ColumnPicker columns={pickerColumns} prefs={prefs} onChange={setPrefs} onReset={reset} /> : null;
+    const pickerPanel = enabled ? (
+      <ColumnPickerPanel variant="ds" columns={pickerColumns} prefs={prefs} onChange={(next) => setPrefs({ ...next, widths: prefs.widths, density: prefs.density })} onReset={reset} />
     ) : null;
-    return { enabled, visible, picker, exportColumns };
-  }, [columns, enabled, prefs, setPrefs, reset, t]);
+    return { enabled, visible, picker, exportColumns, grid, prefs, setPrefs, pickerPanel };
+  }, [columns, enabled, grid, prefs, setPrefs, reset, t]);
 }
 
 /** Header cells of the visible columns (between the select and the actions column). */

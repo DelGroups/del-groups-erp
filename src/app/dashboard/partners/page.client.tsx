@@ -23,6 +23,8 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
 
 type PartnerRow = PartnerRecord & { balance: PartnerNetBalance };
 
@@ -112,6 +114,81 @@ export default function PartnersPageClient() {
     await load();
   };
 
+  // UI_STANDARD (UI-2): the list through DataGrid, one line per partner (phone and e-mail on one
+  // line, roles as chips side by side).
+  const columnDefs = useMemo<TableColumn<PartnerRow>[]>(
+    () => [
+      { key: "code", labelKey: "partners.codeVoen", defaultVisible: true, required: true, gridType: "code", tdClassName: "font-mono", cell: (row) => codeOrVoen(row) },
+      {
+        key: "name",
+        labelKey: "partners.name",
+        defaultVisible: true,
+        cell: (row) => (
+          <Link href={`/dashboard/partners/${row.id}`} className="font-semibold text-app-accent hover:underline">
+            {partnerDisplayName(row)}
+          </Link>
+        ),
+      },
+      {
+        key: "roles",
+        labelKey: "partners.roles",
+        defaultVisible: true,
+        gridType: "status",
+        gridSamples: [`${t("partners.customer")} ${t("partners.supplier")}`],
+        cell: (row) => (
+          <span className="inline-flex gap-1">
+            {row.is_customer ? <span className="ds-chip ds-chip-std" data-tone="info">{t("partners.customer")}</span> : null}
+            {row.is_supplier ? <span className="ds-chip ds-chip-std" data-tone="brand">{t("partners.supplier")}</span> : null}
+          </span>
+        ),
+      },
+      { key: "contact", labelKey: "partners.contact", defaultVisible: true, cell: (row) => [row.phone, row.email].filter(Boolean).join(" · ") || "—" },
+      {
+        key: "balance",
+        labelKey: "partners.netBalance",
+        defaultVisible: true,
+        numeric: true,
+        cell: (row) => <span className={`inline-flex rounded-full px-2 text-xs font-bold ${balanceBadgeClass(row.balance.netBalance)}`}>{formatMoney(row.balance.netBalance)}</span>,
+      },
+    ],
+    [t]
+  );
+  const gridColumns = useTableColumns("partners", columnDefs);
+
+  const rowActions = (row: PartnerRow) => {
+    return (
+      <>
+        <Link
+          href={`/dashboard/partners/${row.id}`}
+          className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
+          title={t("partners.viewDetails")}
+        >
+          <Eye className="h-4 w-4" />
+        </Link>
+        {canManage ? (
+          <>
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
+              title={t("common.edit")}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(row)}
+              className="rounded-lg p-2 text-app-muted hover:bg-rose-50 hover:text-rose-600"
+              title={t("common.delete")}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </>
+        ) : null}
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <header className="app-glass flex flex-wrap items-center justify-between gap-4 border-b border-app px-6 py-4">
@@ -154,6 +231,18 @@ export default function PartnersPageClient() {
           />
         </div>
 
+        {gridColumns.grid ? (
+          <ListGrid
+            columns={gridColumns}
+            rows={filtered}
+            rowKey={(row) => row.id}
+            label={t("partners.pageTitle")}
+            loading={loading}
+            empty={<p className="text-sm ds-muted">{t("partners.empty")}</p>}
+            rowActions={rowActions}
+            actionsWidth={canManage ? 120 : 56}
+          />
+        ) : (
         <div className="app-card overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead className="bg-app-card-hover text-xs font-bold uppercase text-app-muted">
@@ -213,35 +302,7 @@ export default function PartnersPageClient() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/dashboard/partners/${row.id}`}
-                          className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
-                          title={t("partners.viewDetails")}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                        {canManage ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(row)}
-                              className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
-                              title={t("common.edit")}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(row)}
-                              className="rounded-lg p-2 text-app-muted hover:bg-rose-50 hover:text-rose-600"
-                              title={t("common.delete")}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
+                      <div className="flex items-center justify-end gap-1">{rowActions(row)}</div>
                     </td>
                   </tr>
                 ))
@@ -249,6 +310,7 @@ export default function PartnersPageClient() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       <PartnerFormModal

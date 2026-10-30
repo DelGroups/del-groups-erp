@@ -23,6 +23,7 @@ import { FileSpreadsheet, Trash2 } from "lucide-react";
 import Button from "@/components/ui/button";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of this list (prompt 24c). */
 const WRITEOFFS_LIST_KEY = "inventory.writeoffs";
@@ -123,6 +124,18 @@ export default function DamagedGoodsPage() {
     setPrintWriteoff(toPrintData(row, warehouses));
   };
 
+  const rowActions = (row: WriteoffRecord) => {
+    return (
+      <>
+        <DocumentListActions
+          onView={() => setViewingWriteoff(row)}
+          onPrint={() => handlePrint(row)}
+          onEdit={() => openEditForm(row)}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
         <DocumentPageHeader
@@ -135,7 +148,7 @@ export default function DamagedGoodsPage() {
           backLink={{ href: "/products", label: t("products.backToList") }}
           extraActions={
             // Excel comes with LIST_COLUMNS (prompt 24c): this list had no export.
-            columns.enabled ? (
+            columns.enabled && !columns.grid ? (
               <Button type="button" variant="secondary" onClick={handleExport}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                 {t("common.excelDownload")}
@@ -154,8 +167,20 @@ export default function DamagedGoodsPage() {
           />
           {columns.picker ? <div className="flex justify-end">{columns.picker}</div> : null}
 
-          <div className="app-table-wrap">
-            {loading ? (
+          <div className={columns.grid ? undefined : "app-table-wrap"}>
+            {columns.grid && warehouses.length > 0 ? (
+              <ListGrid
+                columns={columns}
+                rows={filteredWriteoffs}
+                rowKey={(row) => row.id}
+                label={t("damagedGoods.pageTitle")}
+                loading={loading}
+                empty={<p className="text-xs ds-muted">{t("damagedGoods.emptyDocs")}</p>}
+                onOpen={(row) => setViewingWriteoff(row)}
+                rowActions={rowActions}
+                onExport={columns.enabled ? handleExport : undefined}
+              />
+            ) : loading ? (
               <div className="p-12 text-center text-xs text-app-muted">{t("damagedGoods.loadingDocs")}</div>
             ) : warehouses.length === 0 ? (
               <div className="p-12 text-center text-xs text-app-muted">
@@ -189,13 +214,7 @@ export default function DamagedGoodsPage() {
                             {c.cell(row)}
                           </td>
                         ))}
-                        <td className="px-4 py-3">
-                          <DocumentListActions
-                            onView={() => setViewingWriteoff(row)}
-                            onPrint={() => handlePrint(row)}
-                            onEdit={() => openEditForm(row)}
-                          />
-                        </td>
+                        <td className="px-4 py-3">{rowActions(row)}</td>
                       </tr>
                     ))}
                   </tbody>

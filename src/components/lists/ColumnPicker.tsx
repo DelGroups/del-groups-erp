@@ -59,6 +59,34 @@ const STYLES = {
 export function ColumnPicker({ columns, prefs, onChange, onReset, variant = "classic", portalContainer, compact }: ColumnPickerProps) {
   const { t } = useI18n();
   const s = STYLES[variant];
+  const shownCount = prefs.order.filter((k) => prefs.visible.includes(k) && columns.some((c) => c.key === k)).length;
+  const total = prefs.order.filter((k) => columns.some((c) => c.key === k)).length;
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button type="button" className={s.trigger} aria-label={t("listColumns.columns")}>
+          <Columns3 className={`h-4 w-4 ${s.accent}`} aria-hidden />
+          {compact ? null : <span>{t("listColumns.columns")}</span>}
+          {compact ? null : <span className={s.muted}>({t("listColumns.shownCount", { shown: shownCount, total })})</span>}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal container={portalContainer ?? undefined}>
+        <Popover.Content sideOffset={6} align="end" collisionPadding={12} className={s.panel}>
+          <ColumnPickerPanel columns={columns} prefs={prefs} onChange={onChange} onReset={onReset} variant={variant} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * The picker's content without its button: the title, the rows (checkbox, drag handle, move up /
+ * down) and "Reset to default". The DataGrid toolbar (UI-2) shows it in its "Columns" popover.
+ */
+export function ColumnPickerPanel({ columns, prefs, onChange, onReset, variant = "ds" }: Omit<ColumnPickerProps, "portalContainer" | "compact">) {
+  const { t } = useI18n();
+  const s = STYLES[variant];
   const reduced = useReducedMotion();
   const byKey = new Map(columns.map((c) => [c.key, c]));
   const order = prefs.order.filter((k) => byKey.has(k));
@@ -67,56 +95,45 @@ export function ColumnPicker({ columns, prefs, onChange, onReset, variant = "cla
   const titleId = useId();
 
   return (
-    <Popover.Root>
-      <Popover.Trigger asChild>
-        <button type="button" className={s.trigger} aria-label={t("listColumns.columns")}>
-          <Columns3 className={`h-4 w-4 ${s.accent}`} aria-hidden />
-          {compact ? null : <span>{t("listColumns.columns")}</span>}
-          {compact ? null : <span className={s.muted}>({t("listColumns.shownCount", { shown: shownCount, total: order.length })})</span>}
+    <div role="group" aria-labelledby={titleId}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p id={titleId} className="text-xs font-semibold">
+          {t("listColumns.pickerTitle")}
+        </p>
+        <span className={`text-xs tabular-nums ${s.muted}`}>{t("listColumns.shownCount", { shown: shownCount, total: order.length })}</span>
+      </div>
+      <Reorder.Group
+        as="ul"
+        axis="y"
+        values={order}
+        onReorder={(next: string[]) => onChange(setColumnOrder(prefs, next))}
+        className="max-h-80 space-y-0.5 overflow-y-auto overscroll-contain"
+      >
+        {order.map((key, index) => {
+          const col = byKey.get(key)!;
+          return (
+            <PickerRow
+              key={key}
+              column={col}
+              checked={shown.has(key)}
+              first={index === 0}
+              last={index === order.length - 1}
+              lastVisible={shown.has(key) && shownCount <= 1}
+              styles={s}
+              reduced={!!reduced}
+              onToggle={() => onChange(toggleColumn(columns, prefs, key))}
+              onMove={(delta) => onChange(moveColumn(prefs, key, delta))}
+            />
+          );
+        })}
+      </Reorder.Group>
+      <div className="mt-3 border-t pt-3" style={{ borderColor: variant === "ds" ? "var(--ds-border)" : undefined }}>
+        <button type="button" className={s.reset} onClick={onReset}>
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+          {t("listColumns.reset")}
         </button>
-      </Popover.Trigger>
-      <Popover.Portal container={portalContainer ?? undefined}>
-        <Popover.Content sideOffset={6} align="end" collisionPadding={12} className={s.panel} aria-labelledby={titleId}>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p id={titleId} className="text-xs font-semibold">
-              {t("listColumns.pickerTitle")}
-            </p>
-            <span className={`text-xs tabular-nums ${s.muted}`}>{t("listColumns.shownCount", { shown: shownCount, total: order.length })}</span>
-          </div>
-          <Reorder.Group
-            as="ul"
-            axis="y"
-            values={order}
-            onReorder={(next: string[]) => onChange(setColumnOrder(prefs, next))}
-            className="max-h-80 space-y-0.5 overflow-y-auto overscroll-contain"
-          >
-            {order.map((key, index) => {
-              const col = byKey.get(key)!;
-              return (
-                <PickerRow
-                  key={key}
-                  column={col}
-                  checked={shown.has(key)}
-                  first={index === 0}
-                  last={index === order.length - 1}
-                  lastVisible={shown.has(key) && shownCount <= 1}
-                  styles={s}
-                  reduced={!!reduced}
-                  onToggle={() => onChange(toggleColumn(columns, prefs, key))}
-                  onMove={(delta) => onChange(moveColumn(prefs, key, delta))}
-                />
-              );
-            })}
-          </Reorder.Group>
-          <div className="mt-3 border-t pt-3" style={{ borderColor: variant === "ds" ? "var(--ds-border)" : undefined }}>
-            <button type="button" className={s.reset} onClick={onReset}>
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-              {t("listColumns.reset")}
-            </button>
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+      </div>
+    </div>
   );
 }
 

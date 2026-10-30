@@ -47,6 +47,50 @@ Never native select or date inputs; never wrapped text in a row, chip, button or
 10. **Every icon-only button is an `IconButton`:** an aria-label, a tooltip and a fixed hit area.
 11. **Every UI text goes through `src/i18n`** (az, en, ru). Components take their texts from the caller.
 
+## Lists
+
+Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach it through `ListGrid` (`src/components/lists/ListGrid.tsx`, fed by `useTableColumns`); view-engine lists through `ListView`. Behind `UI_STANDARD`; with the flag off every page renders its old table.
+
+1. **Rows are one line**, with a fixed height: compact 32 px, comfortable 40 px.
+   - Cells never wrap. They end in an ellipsis, and the full text shows as a tooltip only when it is cut.
+   - Resizing a column moves the ellipsis point; it never wraps or changes the row height.
+   - No two-line cells: a code goes in its own column, or as muted text on the same line ("Name · Company").
+2. **Header:** one line, sentence case (never uppercase), semibold, muted. It has an ellipsis with a tooltip and a sort arrow, and it sticks to the top while the grid scrolls.
+3. **Resizing:**
+   - The resize handle shows only while the header is hovered.
+   - Drag to resize; double-click to fit the content; arrow keys work when the handle has focus.
+   - Each type has a minimum width.
+4. **Column widths by type:**
+
+   | Type | Width |
+   | --- | --- |
+   | date | 96 px |
+   | datetime | 132 px |
+   | money / number | sized to content, right-aligned, tabular figures |
+   | status | sized to its longest label |
+   | code | 136 px |
+   | text | flexible: takes the free space |
+
+   Widths, order, visibility and density are per user (`useColumnPrefs`, localStorage).
+5. **Toolbar above the grid, never inside the header:**
+   - left: search, filters, group by, record count;
+   - right: density toggle, Excel export, and the "Columns" icon button. It opens the column picker: drag to reorder, show or hide, reset.
+   - One export per screen: when the grid toolbar has it, the page header does not.
+6. **Horizontal overflow:**
+   - The grid scrolls inside its own box, which is at most the window's height, so the header, the totals row and the scrollbar stay visible.
+   - A floating scrollbar appears at the bottom of the window while the box's own scrollbar is below it.
+   - Edge shadows mark the side that hides columns.
+   - The first column (selection checkbox and document number) and the actions column stay put.
+   - Shift + wheel and trackpads scroll sideways.
+7. **Rows:**
+   - selection column; hover tint; no zebra; 1 px dividers;
+   - a totals row that sticks to the bottom;
+   - an empty state, and a loading skeleton with the same row height;
+   - pagination or "load more" in the footer.
+8. **Keyboard:** arrows (Home/End, PageUp/PageDown) move the focused row, Enter opens it, Space selects it.
+9. **RTL-safe:** logical properties only (`inset-inline-start`, `padding-inline`, `text-align: start`).
+10. **Global resizer:** `TableColumnResizer` skips grids (`.ds-grid`, `data-col-resize="manual"`). It stays for old tables until they move to the grid.
+
 ## Which component (`@/design-system/components`)
 
 | Need | Component |
@@ -60,6 +104,7 @@ Never native select or date inputs; never wrapped text in a row, chip, button or
 | Any one-line text that may be long | `Truncate` (tooltip only when actually cut) |
 | Icon-only button | `IconButton` (`size` md 32 px / sm 28 px) |
 | Status | `Chip` |
+| Any list of records | `DataGrid` (classic pages: `ListGrid`) |
 | Money / number / date in a table | `MoneyCell` / `NumberCell` / `DateCell` |
 | Lookup or choice | `Combobox` (fixed or async options, clear, empty state, `footer` slot for "+ create") |
 | Date / date and time | `DateField` / `DateTimeField` |

@@ -1,7 +1,7 @@
 ﻿"use client";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -28,13 +28,16 @@ import { useStudioFields } from "@/components/studio/useStudioFields";
 import { buildCustomFieldValues, formatFieldValue } from "@/lib/studio/fields";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { RecordChatter } from "@/views/chatter/RecordChatter";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 export default function CustomersPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { can } = useAuth();
   const canManageCustomers = can("can_manage_customers");
   const { fields: studioFields } = useStudioFields("customers");
-  const listStudioFields = studioFields.filter((field) => field.show_in_list);
+  const listStudioFields = useMemo(() => studioFields.filter((field) => field.show_in_list), [studioFields]);
   const [customDraft, setCustomDraft] = useState<CustomFieldDraft>({});
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,6 +257,75 @@ export default function CustomersPage() {
       (c.code && c.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // UI_STANDARD (UI-2): the list through DataGrid, one line per customer. The company name follows
+  // the person's name (muted) and VÖEN has its own column instead of a second line.
+  const columnDefs = useMemo<TableColumn<Customer>[]>(
+    () => [
+      { key: "code", labelKey: "common.code", defaultVisible: true, required: true, gridType: "code", tdClassName: "font-mono font-semibold", cell: (c) => c.code ?? "-" },
+      {
+        key: "name",
+        labelKey: "customers.customerCompany",
+        defaultVisible: true,
+        cell: (c) => (
+          <>
+            <span className="font-medium">{c.full_name}</span>
+            {c.company_name ? <span className="ds-muted">{` · ${c.company_name}`}</span> : null}
+          </>
+        ),
+      },
+      { key: "phone", labelKey: "common.phone", defaultVisible: true, cell: (c) => c.phone || "-" },
+      { key: "entity_type", labelKey: "customers.entityType", defaultVisible: true, gridType: "status", cell: (c) => entityTypeLabel(c.entity_type === "legal" ? "legal" : "physical", t) },
+      { key: "voen", labelKey: "partners.voen", defaultVisible: true, gridType: "code", cell: (c) => c.voen || "-" },
+      {
+        key: "balance",
+        labelKey: "customers.balanceDebt",
+        defaultVisible: true,
+        numeric: true,
+        cell: (c) =>
+          (c.balance ?? 0) > 0 ? (
+            <span className="font-semibold text-amber-600" title={t("common.debtor")}>{formatMoney(c.balance ?? 0, locale)}</span>
+          ) : (
+            <span className="font-semibold text-emerald-600">{formatMoney(c.balance ?? 0, locale)}</span>
+          ),
+      },
+      ...listStudioFields.map(
+        (field): TableColumn<Customer> => ({
+          key: `x:${field.name}`,
+          // A Studio label is shown as written (t() returns an unknown key unchanged).
+          labelKey: field.label,
+          defaultVisible: true,
+          cell: (c) => formatFieldValue(field, c.custom_fields?.[field.name], { yes: t("studio.yes"), no: t("studio.no") }) || "-",
+        })
+      ),
+    ],
+    [listStudioFields, t, locale]
+  );
+  const gridColumns = useTableColumns("customers", columnDefs);
+
+  const rowActions = (c: Customer) => {
+    return (
+      <>
+        <TableRowActionsMenu
+          items={[
+            {
+              key: "edit",
+              label: t("common.edit"),
+              icon: <Pencil className="h-4 w-4" />,
+              onClick: () => openEditModal(c),
+            },
+            {
+              key: "delete",
+              label: t("common.delete"),
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => setDeleteTarget(c),
+              variant: "destructive",
+            },
+          ]}
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <ListPageChrome
@@ -295,8 +367,18 @@ export default function CustomersPage() {
           </div>
         }
       >
-          <div className="app-table-wrap">
-            {loading ? (
+          <div className={gridColumns.grid ? undefined : "app-table-wrap"}>
+            {gridColumns.grid ? (
+              <ListGrid
+                columns={gridColumns}
+                rows={filteredCustomers}
+                rowKey={(c) => c.id}
+                label={t("customers.title")}
+                loading={loading}
+                empty={<p className="text-sm ds-muted">{t("customers.emptyHint")}</p>}
+                rowActions={canManageCustomers ? rowActions : undefined}
+              />
+            ) : loading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
             ) : filteredCustomers.length === 0 ? (
               <div className="p-8 text-center text-app-muted text-sm">
@@ -364,25 +446,7 @@ export default function CustomersPage() {
                             </Td>
                           ))}
                           {canManageCustomers ? (
-                            <ActionsTd>
-                              <TableRowActionsMenu
-                                items={[
-                                  {
-                                    key: "edit",
-                                    label: t("common.edit"),
-                                    icon: <Pencil className="h-4 w-4" />,
-                                    onClick: () => openEditModal(c),
-                                  },
-                                  {
-                                    key: "delete",
-                                    label: t("common.delete"),
-                                    icon: <Trash2 className="h-4 w-4" />,
-                                    onClick: () => setDeleteTarget(c),
-                                    variant: "destructive",
-                                  },
-                                ]}
-                              />
-                            </ActionsTd>
+                            <ActionsTd>{rowActions(c)}</ActionsTd>
                           ) : null}
                         </Tr>
                       );

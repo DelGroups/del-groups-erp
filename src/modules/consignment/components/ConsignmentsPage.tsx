@@ -44,6 +44,7 @@ import { dash, useTableColumns, type TableColumn } from "@/components/lists/list
 import { useProfileNames } from "@/components/lists/useProfileNames";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { profileName } from "@/lib/profiles/displayNames";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of the history list (prompt 24c). */
 const HISTORY_LIST_KEY = "consignment.documents";
@@ -369,6 +370,22 @@ export default function ConsignmentsPage() {
     { id: "alerts", label: t("consignments.tabAlerts") },
   ];
 
+  const rowActions = (row: HistoryRow) => {
+    return (
+      <>
+        {row.document_type !== "RETURN" && row.document_type !== "INITIAL_BALANCE" && (
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            onClick={() => handlePrintHistoryRow(row)}
+          >
+            <Printer className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <DocumentPageHeader
@@ -600,7 +617,7 @@ export default function ConsignmentsPage() {
               </section>
             )}
 
-            {tab === "history" && historyColumns.enabled ? (
+            {tab === "history" && historyColumns.enabled && !historyColumns.grid ? (
               // Excel and the column picker of the history come with LIST_COLUMNS (prompt 24c).
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn-secondary" onClick={exportHistory}>
@@ -610,7 +627,18 @@ export default function ConsignmentsPage() {
                 {historyColumns.picker}
               </div>
             ) : null}
-            {tab === "history" && (
+            {tab === "history" && historyColumns.grid ? (
+              <ListGrid
+                columns={historyColumns}
+                rows={historyRows}
+                rowKey={(row) => row.id}
+                label={t("consignments.tabHistory")}
+                empty={<p className="text-sm ds-muted">{t("consignments.historyEmpty")}</p>}
+                rowActions={rowActions}
+                onExport={historyColumns.enabled ? exportHistory : undefined}
+              />
+            ) : null}
+            {tab === "history" && !historyColumns.grid && (
               <section className="overflow-x-auto rounded-xl border border-app">
                 <table className="min-w-full text-sm">
                   <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
@@ -631,17 +659,7 @@ export default function ConsignmentsPage() {
                             {c.cell(row)}
                           </td>
                         ))}
-                        <td className="px-3 py-2 text-right">
-                          {row.document_type !== "RETURN" && row.document_type !== "INITIAL_BALANCE" && (
-                            <button
-                              type="button"
-                              className="btn-secondary text-xs"
-                              onClick={() => handlePrintHistoryRow(row)}
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </td>
+                        <td className="px-3 py-2 text-right">{rowActions(row)}</td>
                       </tr>
                     ))}
                     {historyRows.length === 0 && (

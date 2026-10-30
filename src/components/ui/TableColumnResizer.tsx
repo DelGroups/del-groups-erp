@@ -15,11 +15,20 @@ function resizableHeaderAt(e: MouseEvent): HTMLTableCellElement | null {
   const table = th.closest("table");
   const head = table?.tHead;
   if (!table || !head || th.parentElement?.parentElement !== head) return null;
-  // Grids that manage their own widths (useTableResize) or opted out.
-  if (table.dataset.colResize === "manual" || table.dataset.colResize === "off") return null;
+  // Grids that manage their own widths (DataGrid, useTableResize) or opted out.
+  if (isSelfResizingTable(table)) return null;
   // Grouped headers can't be mapped 1:1 onto columns.
   if (head.rows.length !== 1 || Array.from(head.rows[0].cells).some((cell) => cell.colSpan > 1)) return null;
   return th;
+}
+
+/**
+ * Tables the global resizer leaves alone: DataGrid (UI-2, `.ds-grid`, resizes its own columns)
+ * and any table marked `data-col-resize="manual"` or `"off"`. Old tables keep the global
+ * behaviour until they move to DataGrid.
+ */
+export function isSelfResizingTable(table: { dataset: DOMStringMap; classList: { contains(name: string): boolean } }): boolean {
+  return table.dataset.colResize === "manual" || table.dataset.colResize === "off" || table.classList.contains("ds-grid");
 }
 
 /**

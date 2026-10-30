@@ -58,6 +58,7 @@ import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalan
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
+import { ListGrid } from "@/components/lists/ListGrid";
 
 /** Column choice key of this list (prompt 24c). */
 const PURCHASES_LIST_KEY = "purchases.invoices";
@@ -271,6 +272,45 @@ export default function PurchasesPage() {
     void loadData();
   };
 
+  const rowActions = (row: PurchaseRecord) => {
+    const debtBreakdown = debtOf(row);
+    return (
+      <>
+        <DocumentListActions
+          onView={() => void openView(row)}
+          onPrint={() => void openPrint(row)}
+          onPayment={() => void openPayment(row)}
+          onEQaimeExport={(format) => exportEQaime(row, format)}
+          paymentDisabled={debtBreakdown.totalRemaining <= 0}
+          onEdit={
+            isPurchaseDraft(row.status)
+              ? canEditPurchases ? () => void openEdit(row) : undefined
+              : canEditPostedPurchases ? () => void openEdit(row) : undefined
+          }
+          onDelete={
+            canDeletePurchases ? () => setDeleteTarget(row) : undefined
+          }
+          deleteTitle={t("common.void")}
+          showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}
+          sendToWarehouseDisabled={
+            warehouseSend.getSendButtonProps(row).disabled
+          }
+          sendToWarehouseTitle={
+            warehouseSend.getSendButtonProps(row).title
+          }
+          onSendToWarehouse={() =>
+            warehouseSend.handleSendClick({
+              id: row.id,
+              warehouse_sent: row.warehouse_sent === true,
+              documentLabel: t("purchases.invoiceNo"),
+              documentNumber: row.invoice_number,
+            })
+          }
+        />
+      </>
+    );
+  };
+
   return (
     <PageLayout>
       <ListPageChrome
@@ -282,7 +322,7 @@ export default function PurchasesPage() {
             description={t("purchases.description")}
             extraActions={
               <>
-                {columns.enabled ? (
+                {columns.enabled && !columns.grid ? (
                   <Button type="button" variant="secondary" onClick={() => handleExport()}>
                     <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                     {t("common.excelDownload")}
@@ -363,7 +403,20 @@ export default function PurchasesPage() {
               ) : null}
             </BulkActionBar>
 
-            {loading ? (
+            {columns.grid ? (
+              <ListGrid
+                columns={columns}
+                rows={filtered}
+                rowKey={(row) => row.id}
+                label={t("purchases.title")}
+                loading={loading}
+                empty={<p className="text-xs ds-muted">{t("purchases.empty")}</p>}
+                selection={{ isSelected: bulk.isSelected, toggle: bulk.toggle, allSelected: bulk.allSelected, someSelected: bulk.someSelected, toggleAll: bulk.toggleAll }}
+                onOpen={(row) => void openView(row)}
+                rowActions={rowActions}
+                onExport={columns.enabled ? () => handleExport() : undefined}
+              />
+            ) : loading ? (
               <TableWrap className="rounded-none border-0 shadow-none">
                 <Table>
                   <THead>
@@ -399,8 +452,6 @@ export default function PurchasesPage() {
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filtered.map((row) => {
-                      const debtBreakdown = debtOf(row);
-
                       return (
                       <Tr key={row.id}>
                         <SelectTd
@@ -408,39 +459,7 @@ export default function PurchasesPage() {
                           onChange={() => bulk.toggle(row)}
                         />
                         <ListBodyCells columns={columns.visible} row={row} />
-                        <ActionsTd>
-                          <DocumentListActions
-                            onView={() => void openView(row)}
-                            onPrint={() => void openPrint(row)}
-                            onPayment={() => void openPayment(row)}
-                            onEQaimeExport={(format) => exportEQaime(row, format)}
-                            paymentDisabled={debtBreakdown.totalRemaining <= 0}
-                            onEdit={
-                              isPurchaseDraft(row.status)
-                                ? canEditPurchases ? () => void openEdit(row) : undefined
-                                : canEditPostedPurchases ? () => void openEdit(row) : undefined
-                            }
-                            onDelete={
-                              canDeletePurchases ? () => setDeleteTarget(row) : undefined
-                            }
-                            deleteTitle={t("common.void")}
-                            showSendToWarehouse={warehouseSend.getSendButtonProps(row).show}
-                            sendToWarehouseDisabled={
-                              warehouseSend.getSendButtonProps(row).disabled
-                            }
-                            sendToWarehouseTitle={
-                              warehouseSend.getSendButtonProps(row).title
-                            }
-                            onSendToWarehouse={() =>
-                              warehouseSend.handleSendClick({
-                                id: row.id,
-                                warehouse_sent: row.warehouse_sent === true,
-                                documentLabel: t("purchases.invoiceNo"),
-                                documentNumber: row.invoice_number,
-                              })
-                            }
-                          />
-                        </ActionsTd>
+                        <ActionsTd>{rowActions(row)}</ActionsTd>
                       </Tr>
                       );
                     })}

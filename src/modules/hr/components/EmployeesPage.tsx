@@ -47,12 +47,15 @@ import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import { ListGrid } from "@/components/lists/ListGrid";
+import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 /** Tabs of HR itself; modules that build on HR add theirs through `extraTabs` (after the directory). */
 type HrTab = "directory" | "leaves";
 
 export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: EmployeesPageTab[] }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { can } = useAuth();
   const canManageHr = can("can_manage_hr");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -198,6 +201,54 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
         : activeTab === "leaves" && canManageHr
           ? { label: t("employees.leaves.newTitle"), onClick: () => setLeaveModalOpen(true) }
           : undefined;
+  // UI_STANDARD (UI-2): the directory through DataGrid.
+  const columnDefs = useMemo<TableColumn<Employee>[]>(
+    () => [
+      { key: "code", labelKey: "common.code", defaultVisible: true, required: true, gridType: "code", tdClassName: "font-mono font-semibold", cell: (e) => e.employee_code ?? "—" },
+      { key: "name", labelKey: "auth.fullName", defaultVisible: true, tdClassName: "font-semibold", cell: (e) => e.full_name },
+      { key: "role", labelKey: "employees.role", defaultVisible: true, cell: (e) => e.role || "—" },
+      { key: "department", labelKey: "employees.department", defaultVisible: true, cell: (e) => getDepartmentLabel(e.department, departments) },
+      { key: "status", labelKey: "common.status", defaultVisible: true, gridType: "status", cell: (e) => <StatusBadge status={e.status} label={getEmployeeStatusLabel(e.status)} /> },
+      { key: "salary", labelKey: "employees.baseSalary", defaultVisible: true, numeric: true, cell: (e) => <span className="font-semibold">{formatMoney(e.base_salary, locale)}</span> },
+    ],
+    [departments, locale]
+  );
+  const gridColumns = useTableColumns("employees", columnDefs);
+
+  const rowActions = (emp: Employee) => {
+    return (
+      <>
+        <TableRowActionsMenu
+          items={[
+            {
+              key: "view",
+              label: t("employees.viewProfile"),
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => setDetailEmployee(emp),
+            },
+            ...(canManageHr
+              ? [
+                  {
+                    key: "edit",
+                    label: t("employees.editEmployee"),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => openEdit(emp),
+                  },
+                  {
+                    key: "delete",
+                    label: t("common.delete"),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => void handleDelete(emp),
+                    variant: "destructive" as const,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </>
+    );
+  };
+
 
   return (
     <PageLayout>
@@ -245,8 +296,19 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
               onRefresh={() => void loadData()}
               loading={loading}
             />
-            <div className="app-table-wrap">
-              {loading ? (
+            <div className={gridColumns.grid ? undefined : "app-table-wrap"}>
+              {gridColumns.grid ? (
+                <ListGrid
+                  columns={gridColumns}
+                  rows={filteredEmployees}
+                  rowKey={(e) => e.id}
+                  label={t("employees.title")}
+                  loading={loading}
+                  empty={<p className="text-xs ds-muted">{t("employees.empty")}</p>}
+                  onOpen={(e) => setDetailEmployee(e)}
+                  rowActions={rowActions}
+                />
+              ) : loading ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
               ) : filteredEmployees.length === 0 ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("employees.empty")}</div>
@@ -277,35 +339,7 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
                           <Td numeric className="font-mono font-bold">
                             {emp.base_salary.toFixed(2)} {t("common.currency")}
                           </Td>
-                          <ActionsTd>
-                            <TableRowActionsMenu
-                              items={[
-                                {
-                                  key: "view",
-                                  label: t("employees.viewProfile"),
-                                  icon: <Eye className="h-4 w-4" />,
-                                  onClick: () => setDetailEmployee(emp),
-                                },
-                                ...(canManageHr
-                                  ? [
-                                      {
-                                        key: "edit",
-                                        label: t("employees.editEmployee"),
-                                        icon: <Pencil className="h-4 w-4" />,
-                                        onClick: () => openEdit(emp),
-                                      },
-                                      {
-                                        key: "delete",
-                                        label: t("common.delete"),
-                                        icon: <Trash2 className="h-4 w-4" />,
-                                        onClick: () => void handleDelete(emp),
-                                        variant: "destructive" as const,
-                                      },
-                                    ]
-                                  : []),
-                              ]}
-                            />
-                          </ActionsTd>
+                          <ActionsTd>{rowActions(emp)}</ActionsTd>
                         </Tr>
                       ))}
                     </tbody>

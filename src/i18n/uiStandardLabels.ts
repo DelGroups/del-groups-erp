@@ -1,4 +1,4 @@
-import type { ComboboxLabels, DateFieldLabels } from "@/design-system/components";
+import type { ComboboxLabels, DataGridLabels, DateFieldLabels } from "@/design-system/components";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
@@ -22,5 +22,22 @@ export function comboboxLabels(t: T): ComboboxLabels {
     empty: t("uiStandard.combobox.empty"),
     loading: t("uiStandard.combobox.loading"),
     clear: t("uiStandard.combobox.clear"),
+  };
+}
+
+/** Texts of DataGrid in the current language (group uiStandard.grid). */
+export function dataGridLabels(t: T): DataGridLabels {
+  return {
+    columns: t("uiStandard.grid.columns"),
+    compact: t("uiStandard.grid.compact"),
+    comfortable: t("uiStandard.grid.comfortable"),
+    export: t("uiStandard.grid.export"),
+    selectAll: t("uiStandard.grid.selectAll"),
+    selectRow: t("uiStandard.grid.selectRow"),
+    actions: t("uiStandard.grid.actions"),
+    // {column} is filled in by the grid per header.
+    resize: t("uiStandard.grid.resize", { column: "{column}" }),
+    loading: t("uiStandard.grid.loading"),
+    total: t("uiStandard.grid.total"),
   };
 }
