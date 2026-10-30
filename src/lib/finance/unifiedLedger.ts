@@ -26,6 +26,8 @@ export type UnifiedLedgerTransaction = {
   description: string;
   notes: string | null;
   created_at: string;
+  /** Prompt 24c: who entered the transaction (null on old databases or system rows). */
+  created_by: string | null;
 };
 
 export type UnifiedLedgerSummary = {
@@ -101,6 +103,7 @@ export function mapUnifiedLedgerRow(row: Record<string, unknown>): UnifiedLedger
     description: String(row.description || row.notes || ""),
     notes: (row.notes as string) || null,
     created_at: String(row.created_at || ""),
+    created_by: (row.created_by as string) || null,
   };
 }
 
@@ -193,11 +196,11 @@ export function attachAccountNamesToLedgerRows(
 }
 
 export const UNIFIED_LEDGER_SELECT_ATTEMPTS = [
-  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!account_id(name), financial_categories!category_id(name)",
-  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!transactions_account_id_fkey(name), financial_categories!category_id(name)",
-  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id, accounts!fk_transactions_account(name), financial_categories!category_id(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, created_by, account_id, reference_type, reference_id, source_type, source_id, accounts!account_id(name), financial_categories!category_id(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, created_by, account_id, reference_type, reference_id, source_type, source_id, accounts!transactions_account_id_fkey(name), financial_categories!category_id(name)",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, created_by, account_id, reference_type, reference_id, source_type, source_id, accounts!fk_transactions_account(name), financial_categories!category_id(name)",
   "id, type, amount, category, notes, created_at, account_id, source_type, source_id, accounts!account_id(name)",
   "id, type, amount, category, notes, created_at, account_id, source_type, source_id, accounts!transactions_account_id_fkey(name)",
-  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, account_id, reference_type, reference_id, source_type, source_id",
+  "id, type, unified_type, amount, category, category_id, notes, description, transaction_date, created_at, created_by, account_id, reference_type, reference_id, source_type, source_id",
   "id, type, amount, category, notes, created_at, account_id, source_type, source_id",
 ] as const;

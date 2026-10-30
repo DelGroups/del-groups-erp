@@ -10,14 +10,16 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   createFullBackupAction,
-  exportCustomersCsvAction,
-  exportExpensesPayrollCsvAction,
-  exportInvoicesCsvAction,
-  exportProductsCsvAction,
+  exportCustomersSheetAction,
+  exportExpensesPayrollSheetAction,
+  exportInvoicesSheetAction,
+  exportProductsSheetAction,
   restoreFullBackupAction,
 } from "@/lib/actions/backup";
 import type { SystemBackupPayload } from "@/lib/backup/manifest";
-import { downloadJsonFile, downloadTextFile } from "@/lib/csv/csvUtils";
+import { downloadJsonFile } from "@/lib/csv/csvUtils";
+import { exportXlsx } from "@/lib/export/exportXlsx";
+import type { SheetExport } from "@/lib/actions/backup";
 import {
   AlertTriangle,
   Database,
@@ -94,7 +96,7 @@ export default function BackupSettingsPage() {
   const runExport = async (
     key: string,
     action: () => Promise<
-      | { success: true; data: { filename: string; content: string } }
+      | { success: true; data: SheetExport }
       | { success: false; error: string }
     >
   ) => {
@@ -108,7 +110,13 @@ export default function BackupSettingsPage() {
       setStatusError(result.error);
       return;
     }
-    downloadTextFile(result.data.filename, result.data.content);
+    // Modular exports are Excel files (prompt 24c); the full backup above stays JSON.
+    const sheet = result.data;
+    await exportXlsx(sheet.filename, {
+      sheetName: sheet.sheetName,
+      columns: sheet.headers.map((header, i) => ({ header, type: sheet.types[i], value: (row: (string | number | null)[]) => row[i] })),
+      rows: sheet.rows,
+    });
     setStatusMsg(t("backup.exportDone", { filename: result.data.filename }));
   };
 
@@ -118,32 +126,32 @@ export default function BackupSettingsPage() {
       icon: Users,
       titleKey: "backup.exportCustomersTitle",
       descKey: "backup.exportCustomersDesc",
-      filename: "Musteri_Siyahisi.csv",
-      action: exportCustomersCsvAction,
+      filename: "Musteri_Siyahisi.xlsx",
+      action: exportCustomersSheetAction,
     },
     {
       id: "products",
       icon: Package,
       titleKey: "backup.exportProductsTitle",
       descKey: "backup.exportProductsDesc",
-      filename: "Mahsullar_ve_Stok.csv",
-      action: exportProductsCsvAction,
+      filename: "Mahsullar_ve_Stok.xlsx",
+      action: exportProductsSheetAction,
     },
     {
       id: "invoices",
       icon: Receipt,
       titleKey: "backup.exportInvoicesTitle",
       descKey: "backup.exportInvoicesDesc",
-      filename: "Satisi_ve_Alis_Fakturalari.csv",
-      action: exportInvoicesCsvAction,
+      filename: "Satisi_ve_Alis_Fakturalari.xlsx",
+      action: exportInvoicesSheetAction,
     },
     {
       id: "expenses",
       icon: Wallet,
       titleKey: "backup.exportExpensesTitle",
       descKey: "backup.exportExpensesDesc",
-      filename: "Xercler_ve_Emekhaqqi.csv",
-      action: exportExpensesPayrollCsvAction,
+      filename: "Xercler_ve_Emekhaqqi.xlsx",
+      action: exportExpensesPayrollSheetAction,
     },
   ] as const;
 
@@ -238,7 +246,7 @@ export default function BackupSettingsPage() {
                             className="btn-ghost mt-3 disabled:opacity-50"
                           >
                             <Download className="h-3.5 w-3.5" />
-                            {exporting === mod.id ? t("common.loading") : t("backup.downloadCsv")}
+                            {exporting === mod.id ? t("common.loading") : t("backup.downloadXlsx")}
                           </button>
                         </div>
                       </div>

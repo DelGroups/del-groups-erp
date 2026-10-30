@@ -132,6 +132,8 @@ export interface SlipRecord extends ViewRecord {
   created_at: string | null;
   approved_at: string | null;
   delivery_due_at: string | null;
+  /** Prompt 24c (name filled by the view data layer from created_by). */
+  created_by_name: string | null;
 }
 
 export function slipToRecord(row: Record<string, unknown>): SlipRecord {
@@ -147,12 +149,13 @@ export function slipToRecord(row: Record<string, unknown>): SlipRecord {
     created_at: str(row.created_at),
     approved_at: str(row.approved_at),
     delivery_due_at: str(row.delivery_due_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
 export function slipsDefinition(fetchers: Fetchers): ViewDefinition<SlipRecord> {
   return {
-    model: { key: SLIPS_VIEW_KEY, table: "warehouse_slips", module: "inventory", readPermission: "can_view_warehouse_slips", writePermission: "can_approve_warehouse_slips", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: slipToRecord, ...fetchers },
+    model: { key: SLIPS_VIEW_KEY, table: "warehouse_slips", module: "inventory", readPermission: "can_view_warehouse_slips", writePermission: "can_approve_warehouse_slips", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: slipToRecord, userFields: { created_by: "created_by_name" }, ...fetchers },
     titleKey: "warehouseSlips.title",
     fields: [
       { name: "slip_number", labelKey: "warehouseSlips.slipNo", type: "char", searchable: true, readonly: true },
@@ -174,6 +177,7 @@ export function slipsDefinition(fetchers: Fetchers): ViewDefinition<SlipRecord> 
       { name: "created_at", labelKey: "warehouseSlips.invoiceDate", type: "datetime", readonly: true },
       { name: "delivery_due_at", labelKey: "inventory.engine.deliveryDue", type: "datetime", readonly: true },
       { name: "approved_at", labelKey: "inventory.engine.approvedAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
       {
         name: "status",
         labelKey: "common.status",
@@ -203,7 +207,13 @@ export function slipsDefinition(fetchers: Fetchers): ViewDefinition<SlipRecord> 
     ],
     groupBys: ["status", "type", "warehouse_name", "created_at:day", "created_at:month"],
     views: ["list", "kanban", "calendar", "graph"],
-    list: { columns: ["slip_number", "type", "source_document_no", "warehouse_name", "created_at", "delivery_due_at", "status"] },
+    list: {
+      columns: ["slip_number", "type", "source_document_no", "warehouse_name", "created_at", "delivery_due_at", "status"],
+      // Prompt 24c: a slip is dated when it is created (no separate document date, no salesperson).
+      standard: ["created_by_name"],
+      optional: ["item_count", "approved_at"],
+      standardLabels: { created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     kanban: { groupBy: "status", title: "slip_number", subtitle: "warehouse_name", fields: ["type", "source_document_no", "delivery_due_at"] },
     form: { title: "slip_number", statusField: "status", fields: ["type", "source_document_no", "warehouse_name", "item_count", "created_at", "delivery_due_at", "approved_at"] },
     graph: { groupBy: "created_at:day", measure: "__count", type: "bar" },
@@ -243,6 +253,8 @@ export interface CountRecord extends ViewRecord {
   shortage: number;
   variance: number;
   created_at: string | null;
+  /** Prompt 24c: stored with the count; else looked up from created_by. */
+  created_by_name: string | null;
 }
 
 export function countToRecord(row: Record<string, unknown>): CountRecord {
@@ -264,12 +276,13 @@ export function countToRecord(row: Record<string, unknown>): CountRecord {
     shortage: round(num(row.total_shortage_value)),
     variance: round(num(row.total_variance_value)),
     created_at: str(row.created_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
 export function countsDefinition(fetchers: Fetchers): ViewDefinition<CountRecord> {
   return {
-    model: { key: COUNTS_VIEW_KEY, table: "inventory_counts", module: "inventory", readPermission: "can_writeoff_inventory", writePermission: "can_writeoff_inventory", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: countToRecord, ...fetchers },
+    model: { key: COUNTS_VIEW_KEY, table: "inventory_counts", module: "inventory", readPermission: "can_writeoff_inventory", writePermission: "can_writeoff_inventory", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: countToRecord, userFields: { created_by: "created_by_name" }, ...fetchers },
     titleKey: "inventoryCount.listTitle",
     fields: [
       { name: "document_number", labelKey: "inventoryCount.docNo", type: "char", searchable: true, readonly: true },
@@ -282,6 +295,8 @@ export function countsDefinition(fetchers: Fetchers): ViewDefinition<CountRecord
       { name: "surplus", labelKey: "inventory.engine.surplus", type: "monetary", readonly: true },
       { name: "shortage", labelKey: "inventory.engine.shortage", type: "monetary", readonly: true },
       { name: "variance", labelKey: "inventoryCount.variance", type: "monetary", readonly: true },
+      { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
       {
         name: "status",
         labelKey: "common.status",
@@ -304,7 +319,14 @@ export function countsDefinition(fetchers: Fetchers): ViewDefinition<CountRecord
     ],
     groupBys: ["status", "warehouse_name", "responsible_name", "count_date:month"],
     views: ["list", "kanban", "pivot", "graph"],
-    list: { columns: ["document_number", "count_date", "warehouse_name", "scope", "responsible_name", "progress", "variance", "status"], sums: ["surplus", "shortage", "variance"] },
+    list: {
+      columns: ["document_number", "count_date", "warehouse_name", "scope", "responsible_name", "progress", "variance", "status"],
+      sums: ["surplus", "shortage", "variance"],
+      // Prompt 24c: counts have no salesperson ("Responsible" is already a column).
+      standard: ["created_at", "created_by_name"],
+      optional: ["line_count", "surplus", "shortage"],
+      standardLabels: { count_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     kanban: { groupBy: "status", title: "document_number", subtitle: "warehouse_name", amount: "variance", fields: ["count_date", "progress"] },
     form: { title: "document_number", statusField: "status", fields: ["count_date", "warehouse_name", "scope", "responsible_name", "progress", "line_count", "surplus", "shortage", "variance"] },
     pivot: { rows: "warehouse_name", cols: "count_date:month", measure: "variance" },
@@ -336,6 +358,8 @@ export interface IntakeRecord extends ViewRecord {
   created_by_name: string | null;
   posted_at: string | null;
   notes: string | null;
+  /** Prompt 24c. */
+  created_at: string | null;
 }
 
 export function intakeToRecord(row: Record<string, unknown>): IntakeRecord {
@@ -350,12 +374,13 @@ export function intakeToRecord(row: Record<string, unknown>): IntakeRecord {
     created_by_name: str(row.created_by_name),
     posted_at: str(row.posted_at),
     notes: str(row.notes),
+    created_at: str(row.created_at),
   };
 }
 
 export function intakeDefinition(fetchers: Fetchers): ViewDefinition<IntakeRecord> {
   return {
-    model: { key: INTAKE_VIEW_KEY, table: "inventory_initial_balances", module: "inventory", readPermission: "can_manage_products", writePermission: "can_manage_products", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: intakeToRecord, ...fetchers },
+    model: { key: INTAKE_VIEW_KEY, table: "inventory_initial_balances", module: "inventory", readPermission: "can_manage_products", writePermission: "can_manage_products", select: "*", order: { field: "created_at", dir: "desc" }, toRecord: intakeToRecord, userFields: { created_by: "created_by_name" }, ...fetchers },
     titleKey: "initialBalance.listTitle",
     fields: [
       { name: "document_number", labelKey: "initialBalance.docNo", type: "char", searchable: true, readonly: true },
@@ -376,6 +401,7 @@ export function intakeDefinition(fetchers: Fetchers): ViewDefinition<IntakeRecor
       { name: "created_by_name", labelKey: "initialBalance.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
       { name: "posted_at", labelKey: "inventory.engine.postedAt", type: "datetime", readonly: true },
       { name: "notes", labelKey: "inventoryCount.notes", type: "text", searchable: true, readonly: true },
+      { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
       {
         name: "status",
         labelKey: "common.status",
@@ -397,7 +423,14 @@ export function intakeDefinition(fetchers: Fetchers): ViewDefinition<IntakeRecor
     ],
     groupBys: ["status", "entry_type", "warehouse_name", "created_by_name", "doc_date:month"],
     views: ["list", "pivot", "graph", "calendar"],
-    list: { columns: ["document_number", "doc_date", "entry_type", "warehouse_name", "total_amount", "status", "created_by_name"], sums: ["total_amount"] },
+    list: {
+      columns: ["document_number", "doc_date", "entry_type", "warehouse_name", "total_amount", "status", "created_by_name"],
+      sums: ["total_amount"],
+      // Prompt 24c: "Created by" is already a column; no salesperson.
+      standard: ["created_at"],
+      optional: ["posted_at", "notes"],
+      standardLabels: { doc_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     form: { title: "document_number", statusField: "status", fields: ["doc_date", "entry_type", "warehouse_name", "total_amount", "created_by_name", "posted_at", "notes"] },
     pivot: { rows: "warehouse_name", cols: "entry_type", measure: "total_amount" },
     graph: { groupBy: "doc_date:month", measure: "total_amount", type: "bar" },
@@ -429,6 +462,8 @@ export interface WriteoffViewRecord extends ViewRecord {
   quantity: number;
   notes: string | null;
   created_at: string | null;
+  /** Prompt 24c (name filled by the view data layer from created_by). */
+  created_by_name: string | null;
 }
 
 /** A WriteoffRecord plus its warehouse name (the classic list looks it up the same way). */
@@ -444,6 +479,7 @@ export function writeoffToRecord(row: Record<string, unknown>): WriteoffViewReco
     quantity: round(items.reduce((s, i) => s + num(i.quantity), 0)),
     notes: str(row.notes),
     created_at: str(row.created_at),
+    created_by_name: str(row.created_by_name),
   };
 }
 
@@ -460,13 +496,21 @@ export function writeoffsDefinition(fetchers: Fetchers): ViewDefinition<Writeoff
       { name: "quantity", labelKey: "inventory.engine.quantity", type: "float", readonly: true },
       { name: "notes", labelKey: "inventoryCount.notes", type: "text", searchable: true, readonly: true },
       { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: [
       { key: "this_month", labelKey: "sales.engine.filters.thisMonth", group: "date", conditions: (ctx) => [{ field: "writeoff_date", op: "gte", value: monthStart(ctx.now) }] },
     ],
     groupBys: ["warehouse_name", "checker_name", "writeoff_date:month"],
     views: ["list", "graph", "calendar"],
-    list: { columns: ["document_number", "writeoff_date", "warehouse_name", "checker_name", "item_count", "quantity"], sums: ["quantity"] },
+    list: {
+      columns: ["document_number", "writeoff_date", "warehouse_name", "checker_name", "item_count", "quantity"],
+      sums: ["quantity"],
+      // Prompt 24c: write-offs have no salesperson ("Checker" is already a column).
+      standard: ["created_at", "created_by_name"],
+      optional: ["notes"],
+      standardLabels: { writeoff_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     form: { title: "document_number", fields: ["writeoff_date", "warehouse_name", "checker_name", "item_count", "quantity", "notes"] },
     graph: { groupBy: "writeoff_date:month", measure: "quantity", type: "bar" },
     calendar: { dateField: "writeoff_date", title: "document_number" },

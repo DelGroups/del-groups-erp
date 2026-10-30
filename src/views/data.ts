@@ -14,6 +14,7 @@ import { supabase as typedClient } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { parseStudioField, type StudioField } from "@/lib/studio/fields";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import type { PermissionKey } from "@/types/database.types";
 import type { ModuleId } from "@/modules/types";
 import { accessFor, customValues, DEFAULT_LIMIT, sanitizeSearchState, validFavoriteName, withStudioFields, type Favorite } from "./logic";
@@ -69,8 +70,22 @@ function selectWithCustom(def: ViewDefinition): string {
 }
 
 function toRecord<R extends ViewRecord>(def: ViewDefinition<R>, row: Record<string, unknown>, studio: readonly StudioField[]): R {
-  const record = def.model.toRecord(row);
+  let record = def.model.toRecord(row);
+  // User names read for the list (prompt 24c): the record gets the name field as is.
+  const userFields = def.model.userFields;
+  if (userFields) {
+    const names: Record<string, unknown> = {};
+    for (const nameField of Object.values(userFields)) names[nameField] = typeof row[nameField] === "string" ? row[nameField] : (record[nameField] ?? null);
+    record = { ...record, ...names };
+  }
   return studio.length ? { ...record, ...customValues(row, studio) } : record;
+}
+
+/** Rows with the names of their user columns (one batched lookup). */
+async function withUserNames(def: Pick<ViewDefinition, "model">, rows: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+  const userFields = def.model.userFields;
+  if (!userFields || !rows.length) return rows;
+  return withProfileNames(supabase as unknown as ProfileNamesClient, rows, Object.entries(userFields));
 }
 
 export interface ViewData<R extends ViewRecord> {
@@ -96,14 +111,14 @@ export function useViewData<R extends ViewRecord>(def: ViewDefinition<R>, option
     queryKey: keys.rows(def.model.key),
     enabled: allowed,
     queryFn: async () => {
-      if (def.model.fetchAll) return def.model.fetchAll();
+      if (def.model.fetchAll) return withUserNames(def, await def.model.fetchAll());
       const { data, error } = await supabase
         .from(def.model.table)
         .select(selectWithCustom(def))
         .order(def.model.order.field, { ascending: def.model.order.dir === "asc" })
         .limit(limit + 1);
       if (error) throw new Error(error.message);
-      return (data ?? []) as unknown as Record<string, unknown>[];
+      return withUserNames(def, (data ?? []) as unknown as Record<string, unknown>[]);
     },
   });
   const patches = usePatches(def.model.key);
@@ -147,10 +162,14 @@ export function useViewRecord<R extends ViewRecord>(def: ViewDefinition<R>, id: 
     queryKey: keys.row(def.model.key, id),
     enabled: allowed && !!id,
     queryFn: async () => {
-      if (def.model.fetchOne) return def.model.fetchOne(id);
-      const { data, error } = await supabase.from(def.model.table).select(selectWithCustom(def)).eq("id", id).maybeSingle();
-      if (error) throw new Error(error.message);
-      return (data ?? null) as unknown as Record<string, unknown> | null;
+      const row = def.model.fetchOne
+        ? await def.model.fetchOne(id)
+        : await (async () => {
+            const { data, error } = await supabase.from(def.model.table).select(selectWithCustom(def)).eq("id", id).maybeSingle();
+            if (error) throw new Error(error.message);
+            return (data ?? null) as unknown as Record<string, unknown> | null;
+          })();
+      return row ? (await withUserNames(def, [row]))[0] : null;
     },
   });
   const patches = usePatches(def.model.key);

@@ -36,6 +36,10 @@ export interface PurchaseListRecord extends ViewRecord {
   is_official: boolean;
   notes: string | null;
   created_at: string | null;
+  /** Prompt 24c. */
+  created_by_name: string | null;
+  vat_amount: number;
+  due_date: string | null;
 }
 
 const num = (v: unknown) => {
@@ -78,6 +82,9 @@ export function purchaseToRecord(row: Record<string, unknown>): PurchaseListReco
     doc_status: normalizePurchaseDocumentStatus(str(row.status)),
     payment_state: paymentState(total, paid, remaining),
     warehouse_state: warehouseState(row.warehouse_sent, row.warehouse_slip_status),
+    created_by_name: str(row.created_by_name),
+    vat_amount: num(row.vat_amount),
+    due_date: str(row.due_date),
     is_official: row.is_official === true,
     notes: str(row.notes),
     created_at: str(row.created_at),
@@ -142,13 +149,20 @@ export function purchasesDefinition(model: ModelDef<PurchaseListRecord>): ViewDe
       { name: "is_official", labelKey: "sales.engine.fields.official", type: "boolean", groupable: true, readonly: true },
       { name: "notes", labelKey: "sales.engine.fields.note", type: "text", searchable: true, readonly: true },
       { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
+      { name: "vat_amount", labelKey: "sales.engine.fields.vat", type: "monetary", readonly: true },
+      { name: "due_date", labelKey: "sales.engine.fields.dueDate", type: "date", readonly: true },
     ],
     filters: purchaseFilters(),
     groupBys: ["doc_status", "payment_state", "warehouse_state", "supplier_id", "warehouse_name", "responsible_name", "is_official", "doc_date:month", "doc_date:week", "doc_date:quarter"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
     list: {
       columns: ["invoice_number", "doc_date", "supplier_id", "total_amount", "paid_amount", "remaining", "doc_status", "warehouse_state"],
-      sums: ["total_amount", "paid_amount", "remaining"],
+      sums: ["total_amount", "paid_amount", "remaining", "vat_amount"],
+      // Prompt 24c: purchases have no salesperson; "Responsible" takes that place.
+      standard: ["created_at", "responsible_name", "created_by_name"],
+      optional: ["warehouse_name", "vat_amount", "due_date", "is_official", "payment_state", "notes"],
+      standardLabels: { doc_date: "listColumns.invoiceDate", created_at: "listColumns.issuedAt", responsible_name: "listColumns.responsible", created_by_name: "listColumns.createdBy" },
     },
     kanban: { groupBy: "payment_state", title: "invoice_number", subtitle: "supplier_id", amount: "remaining", fields: ["doc_date", "total_amount"] },
     form: {

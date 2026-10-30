@@ -34,6 +34,8 @@ export interface ExpenseRecord extends ViewRecord {
   rejected_reason: string | null;
   cancel_reason: string | null;
   created_at: string | null;
+  /** Prompt 24c. */
+  created_by_name: string | null;
 }
 
 export function expenseToRecord(row: Record<string, unknown>): ExpenseRecord {
@@ -62,6 +64,7 @@ export function expenseToRecord(row: Record<string, unknown>): ExpenseRecord {
     rejected_reason: doc.rejected_reason,
     cancel_reason: doc.cancel_reason,
     created_at: doc.created_at,
+    created_by_name: doc.created_by_name ?? null,
   };
 }
 
@@ -88,6 +91,8 @@ export function expensesDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetchO
       { name: "attachment_count", labelKey: "expenses.doc.attachments", type: "integer", readonly: true },
       { name: "rejected_reason", labelKey: "expenses.doc.rejectReason", type: "text", readonly: true },
       { name: "cancel_reason", labelKey: "expenses.doc.cancelReason", type: "text", readonly: true },
+      { name: "created_at", labelKey: "sales.engine.fields.createdAt", type: "datetime", readonly: true },
+      { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
       {
         name: "stage",
         labelKey: "common.status",
@@ -128,7 +133,14 @@ export function expensesDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetchO
     ],
     groupBys: ["stage", "category", "supplier_name", "department_name", "account_name", "payment_mode", "expense_date:month", "expense_date:quarter"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
-    list: { columns: ["expense_date", "code", "category", "supplier_name", "description", "account_name", "vat_amount", "amount", "stage"], sums: ["net_amount", "vat_amount", "amount"] },
+    list: {
+      columns: ["expense_date", "code", "category", "supplier_name", "description", "account_name", "vat_amount", "amount", "stage"],
+      sums: ["net_amount", "vat_amount", "amount"],
+      // Prompt 24c: expenses have no salesperson.
+      standard: ["created_at", "created_by_name"],
+      optional: ["net_amount", "payment_mode", "employee_name", "department_name", "reference_no", "payee", "attachment_count"],
+      standardLabels: { expense_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
+    },
     kanban: { groupBy: "stage", title: "code", subtitle: "category", amount: "amount", fields: ["supplier_name", "expense_date"], folded: ["cancelled"] },
     form: {
       title: "code",

@@ -28,13 +28,14 @@ import {
   type ExpenseSummary,
 } from "../lib/expenseDocuments";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { downloadTextFile, rowsToCsv } from "@/lib/csv/csvUtils";
+import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
+import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import ExpenseCategoriesManager from "@/components/finance/ExpenseCategoriesManager";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
 import ExpenseFormModal from "./ExpenseFormModal";
 import ExpenseAttachmentsModal from "./ExpenseAttachmentsModal";
 import ExpenseMonthlyReport from "./ExpenseMonthlyReport";
-import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
+import { ActionsTd, ActionsTh, Table, TableWrap, THead, Tr } from "@/components/ui/table";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import StatusBadge, { type StatusTone } from "@/components/ui/status-badge";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -93,6 +94,9 @@ function shiftMonth(iso: string, delta: number): { from: string; to: string } {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
+/** Column choice key of this list (prompt 24c). */
+const EXPENSES_LIST_KEY = "expenses.documents";
+
 function formatDate(iso: string): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
@@ -100,7 +104,7 @@ function formatDate(iso: string): string {
 }
 
 export default function ExpensesPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
   const canManageFinance = can("can_manage_finance");
@@ -275,37 +279,136 @@ export default function ExpensesPage() {
   const rowStatusLabel = (row: ExpenseDocument) =>
     isOwedToEmployee(row) ? t("expenses.doc.status_owed") : statusLabel(row.status);
 
-  const exportCsv = () => {
-    const headers = [
-      t("common.date"),
-      t("expenses.doc.code"),
-      t("common.category"),
-      t("expenses.doc.supplier"),
-      t("expenses.doc.referenceNo"),
-      t("expenses.doc.description"),
-      t("expenses.paidAccount"),
-      t("expenses.doc.department"),
-      t("expenses.doc.net"),
-      t("expenses.doc.vat"),
-      t("expenses.doc.total"),
-      t("common.status"),
+  // Columns of the list (prompt 24c); expenses have no salesperson.
+  const columnDefs = useMemo<TableColumn<ExpenseDocument>[]>(() => {
+    const docStatusText = (r: ExpenseDocument) => (isOwedToEmployee(r) ? t("expenses.doc.status_owed") : t(`expenses.doc.status_${r.status}`));
+    return [
+      { key: "date", labelKey: "listColumns.documentDate", offLabelKey: "common.date", defaultVisible: true, tdClassName: "whitespace-nowrap text-xs text-app-muted", exportType: "date", exportValue: (r) => r.expense_date, cell: (r) => formatDate(r.expense_date) },
+      {
+        key: "code",
+        labelKey: "expenses.doc.code",
+        defaultVisible: true,
+        required: true,
+        tdClassName: "whitespace-nowrap font-mono text-xs",
+        exportValue: (r) => r.code,
+        cell: (r) => (
+          <>
+            {r.code}
+            {r.attachment_count > 0 ? (
+              <button
+                type="button"
+                onClick={() => setAttachTarget(r)}
+                className="ml-1 inline-flex items-center gap-0.5 rounded px-1 text-[11px] text-sky-600 hover:bg-sky-50"
+                title={t("expenses.doc.attachments")}
+              >
+                <Paperclip className="h-3 w-3" />
+                {r.attachment_count}
+              </button>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        key: "category",
+        labelKey: "common.category",
+        defaultVisible: true,
+        tdClassName: "font-semibold text-app",
+        exportValue: (r) => r.category,
+        cell: (r) => (
+          <>
+            {r.category}
+            {r.department_name ? <div className="text-[11px] font-normal text-app-muted">{r.department_name}</div> : null}
+          </>
+        ),
+      },
+      {
+        key: "supplier",
+        labelKey: "expenses.doc.supplier",
+        defaultVisible: true,
+        tdClassName: "text-app-muted",
+        exportValue: (r) => r.supplier_name || r.payee || null,
+        cell: (r) => (
+          <>
+            {r.supplier_name || r.payee || (r.payment_mode === "employee" ? "" : "—")}
+            {r.payment_mode === "employee" ? (
+              <div className="text-[11px] font-semibold text-orange-600">{t("expenses.doc.paidByEmployee", { name: r.employee_name || "—" })}</div>
+            ) : null}
+            {r.reference_no ? <div className="text-[11px]">№ {r.reference_no}</div> : null}
+          </>
+        ),
+      },
+      { key: "description", labelKey: "expenses.doc.description", defaultVisible: true, tdClassName: "max-w-xs truncate text-app-muted", exportValue: (r) => r.description || r.notes || null, cell: (r) => <span title={r.cancel_reason || r.notes || undefined}>{r.description || r.notes || "—"}</span> },
+      {
+        key: "account",
+        labelKey: "expenses.paidAccount",
+        defaultVisible: true,
+        tdClassName: "text-app-muted",
+        exportValue: (r) => r.account_name,
+        cell: (r) => (
+          <>
+            {r.account_name || "—"}
+            {r.vat_account_name ? <div className="text-[11px]">{t("expenses.doc.vatPaidFrom", { name: r.vat_account_name })}</div> : null}
+          </>
+        ),
+      },
+      { key: "vat", labelKey: "expenses.doc.vat", defaultVisible: true, numeric: true, tdClassName: "text-xs text-app-muted", exportValue: (r) => r.vat_amount, cell: (r) => (r.vat_amount > 0 ? r.vat_amount.toFixed(2) : "—") },
+      {
+        key: "total",
+        labelKey: "expenses.doc.total",
+        defaultVisible: true,
+        numeric: true,
+        exportValue: (r) => r.amount,
+        cell: (r) => <span className={`font-bold ${r.status === "cancelled" ? "line-through text-app-muted" : "text-rose-600"}`}>{r.amount.toFixed(2)} AZN</span>,
+      },
+      {
+        key: "status",
+        labelKey: "common.status",
+        defaultVisible: true,
+        exportValue: (r) => docStatusText(r),
+        cell: (r) => (
+          <>
+            <StatusBadge tone={isOwedToEmployee(r) ? "warning" : STATUS_TONE[r.status]}>{docStatusText(r)}</StatusBadge>
+            {r.status === "draft" && r.rejected_reason ? (
+              <div className="mt-1 max-w-[10rem] truncate text-[11px] text-amber-700" title={r.rejected_reason}>
+                {r.rejected_reason}
+              </div>
+            ) : null}
+          </>
+        ),
+      },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-xs text-app-muted", exportType: "datetime", exportValue: (r) => r.created_at, cell: (r) => (r.created_at ? formatDateTime(r.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (r) => dash(r.created_by_name) },
+      { key: "net", labelKey: "expenses.doc.net", defaultVisible: false, numeric: true, exportValue: (r) => r.net_amount, cell: (r) => r.net_amount.toFixed(2) },
+      { key: "reference_no", labelKey: "expenses.doc.referenceNo", defaultVisible: false, cell: (r) => dash(r.reference_no) },
+      { key: "department", labelKey: "expenses.doc.department", defaultVisible: false, cell: (r) => dash(r.department_name) },
+      { key: "employee", labelKey: "expenses.engine.paidBy", defaultVisible: false, cell: (r) => (r.payment_mode === "employee" ? dash(r.employee_name) : t("expenses.engine.paidByCompany")) },
     ];
-    const data = rows.map((r) => [
-      r.expense_date,
-      r.code,
-      r.category,
-      r.supplier_name || r.payee || "",
-      r.reference_no || "",
-      r.description || r.notes || "",
-      r.account_name || "",
-      r.department_name || "",
-      r.net_amount.toFixed(2),
-      r.vat_amount.toFixed(2),
-      r.amount.toFixed(2),
-      rowStatusLabel(r),
-    ]);
-    const name = `xercler_${filters.from || "all"}_${filters.to || todayIsoDate()}.csv`;
-    downloadTextFile(name, rowsToCsv(headers, data));
+  }, [t, formatDateTime]);
+  const columns = useTableColumns(EXPENSES_LIST_KEY, columnDefs);
+
+  // Excel (prompt 24c, without the flag): today's export columns while LIST_COLUMNS is off,
+  // the columns the user sees while it is on. All loaded rows of the filter.
+  const legacyExportColumns: XlsxColumn<ExpenseDocument>[] = [
+    { header: t("common.date"), type: "date", value: (r) => r.expense_date },
+    { header: t("expenses.doc.code"), value: (r) => r.code },
+    { header: t("common.category"), value: (r) => r.category },
+    { header: t("expenses.doc.supplier"), value: (r) => r.supplier_name || r.payee || null },
+    { header: t("expenses.doc.referenceNo"), value: (r) => r.reference_no },
+    { header: t("expenses.doc.description"), value: (r) => r.description || r.notes || null },
+    { header: t("expenses.paidAccount"), value: (r) => r.account_name },
+    { header: t("expenses.doc.department"), value: (r) => r.department_name },
+    { header: t("expenses.doc.net"), type: "money", value: (r) => r.net_amount },
+    { header: t("expenses.doc.vat"), type: "money", value: (r) => r.vat_amount },
+    { header: t("expenses.doc.total"), type: "money", value: (r) => r.amount },
+    { header: t("common.status"), value: (r) => rowStatusLabel(r) },
+  ];
+  const exportExcel = () => {
+    const name = xlsxFileName(`xercler_${filters.from || "all"}_${filters.to || todayIsoDate()}`, new Date());
+    void exportXlsx(name, {
+      sheetName: t("expenses.pageTitle"),
+      columns: columns.enabled ? columns.exportColumns : legacyExportColumns,
+      rows,
+    });
   };
 
   const maxCategory = summary.byCategory[0]?.amount || 0;
@@ -321,13 +424,14 @@ export default function ExpensesPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={exportCsv}
+              onClick={exportExcel}
               disabled={rows.length === 0}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold text-app hover:bg-app-card-hover disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
-              {t("expenses.doc.exportCsv")}
+              {t("expenses.doc.exportExcel")}
             </button>
+            {columns.picker}
             <button
               type="button"
               onClick={() => {
@@ -563,15 +667,7 @@ export default function ExpensesPage() {
                   <Table>
                     <THead>
                       <tr>
-                        <Th>{t("common.date")}</Th>
-                        <Th>{t("expenses.doc.code")}</Th>
-                        <Th>{t("common.category")}</Th>
-                        <Th>{t("expenses.doc.supplier")}</Th>
-                        <Th>{t("expenses.doc.description")}</Th>
-                        <Th>{t("expenses.paidAccount")}</Th>
-                        <Th className="text-right">{t("expenses.doc.vat")}</Th>
-                        <Th className="text-right">{t("expenses.doc.total")}</Th>
-                        <Th>{t("common.status")}</Th>
+                        <ListHeadCells columns={columns.visible} />
                         <ActionsTh>{t("common.actions")}</ActionsTh>
                       </tr>
                     </THead>
@@ -582,65 +678,7 @@ export default function ExpensesPage() {
                         const cancelled = r.status === "cancelled";
                         return (
                           <Tr key={r.id} className={cancelled ? "opacity-60" : undefined}>
-                            <Td className="whitespace-nowrap text-xs text-app-muted">{formatDate(r.expense_date)}</Td>
-                            <Td className="whitespace-nowrap font-mono text-xs">
-                              {r.code}
-                              {r.attachment_count > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setAttachTarget(r)}
-                                  className="ml-1 inline-flex items-center gap-0.5 rounded px-1 text-[11px] text-sky-600 hover:bg-sky-50"
-                                  title={t("expenses.doc.attachments")}
-                                >
-                                  <Paperclip className="h-3 w-3" />
-                                  {r.attachment_count}
-                                </button>
-                              ) : null}
-                            </Td>
-                            <Td className="font-semibold text-app">
-                              {r.category}
-                              {r.department_name ? (
-                                <div className="text-[11px] font-normal text-app-muted">{r.department_name}</div>
-                              ) : null}
-                            </Td>
-                            <Td className="text-app-muted">
-                              {r.supplier_name || r.payee || (r.payment_mode === "employee" ? "" : "—")}
-                              {r.payment_mode === "employee" ? (
-                                <div className="text-[11px] font-semibold text-orange-600">
-                                  {t("expenses.doc.paidByEmployee", { name: r.employee_name || "—" })}
-                                </div>
-                              ) : null}
-                              {r.reference_no ? (
-                                <div className="text-[11px]">№ {r.reference_no}</div>
-                              ) : null}
-                            </Td>
-                            <Td className="max-w-xs truncate text-app-muted" title={r.cancel_reason || r.notes || undefined}>
-                              {r.description || r.notes || "—"}
-                            </Td>
-                            <Td className="text-app-muted">
-                              {r.account_name || "—"}
-                              {r.vat_account_name ? (
-                                <div className="text-[11px]">
-                                  {t("expenses.doc.vatPaidFrom", { name: r.vat_account_name })}
-                                </div>
-                              ) : null}
-                            </Td>
-                            <Td numeric className="text-xs text-app-muted">
-                              {r.vat_amount > 0 ? r.vat_amount.toFixed(2) : "—"}
-                            </Td>
-                            <Td numeric className={`font-bold ${cancelled ? "line-through text-app-muted" : "text-rose-600"}`}>
-                              {r.amount.toFixed(2)} AZN
-                            </Td>
-                            <Td>
-                              <StatusBadge tone={isOwedToEmployee(r) ? "warning" : STATUS_TONE[r.status]}>
-                                {rowStatusLabel(r)}
-                              </StatusBadge>
-                              {r.status === "draft" && r.rejected_reason ? (
-                                <div className="mt-1 max-w-[10rem] truncate text-[11px] text-amber-700" title={r.rejected_reason}>
-                                  {r.rejected_reason}
-                                </div>
-                              ) : null}
-                            </Td>
+                            <ListBodyCells columns={columns.visible} row={r} />
                             <ActionsTd>
                               <TableRowActionsMenu
                                 items={[

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import type {
   PurchaseInsert,
@@ -33,17 +34,22 @@ function mapItemRow(row: {
 }
 
 export async function fetchPurchaseList(): Promise<PurchaseRecord[]> {
-  const { data, error } = await supabase
-    .from("purchases")
-    .select("*, suppliers!supplier_id(full_name, company_name)")
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: warehouseRows }] = await Promise.all([
+    supabase
+      .from("purchases")
+      .select("*, suppliers!supplier_id(full_name, company_name)")
+      .order("created_at", { ascending: false }),
+    // Warehouse names for the list columns (prompt 24c), one read for all rows.
+    supabase.from("warehouses").select("id, name"),
+  ]);
+  const warehouseNames = new Map((warehouseRows || []).map((w) => [String(w.id), String(w.name ?? "")]));
 
   if (error) {
     console.error("Purchases fetch error:", error.message);
     return [];
   }
 
-  return (data || [])
+  const rows: PurchaseRecord[] = (data || [])
     .filter((row) => !isInvoiceCancelled(row.status))
     .map((row) => ({
     id: row.id,
@@ -70,9 +76,18 @@ export async function fetchPurchaseList(): Promise<PurchaseRecord[]> {
     grand_total: row.grand_total != null ? Number(row.grand_total) : null,
     supplier_name: (row.suppliers as Supplier | null)?.full_name || undefined,
     supplier_company: (row.suppliers as Supplier | null)?.company_name || undefined,
+    due_date: (row as { due_date?: string | null }).due_date ?? null,
+    // purchases.created_by exists once migration 20261028141000 ran; before, it is absent.
+    created_by: (row as { created_by?: string | null }).created_by ?? null,
+    warehouse_name: (row.warehouse_id && warehouseNames.get(String(row.warehouse_id))) || undefined,
     items: [],
   }));
+  // Creator names for the list columns (prompt 24c): one lookup for all rows.
+  return withProfileNames(supabase as unknown as ProfileNamesClient, rows as unknown as Record<string, unknown>[], PURCHASE_USER_FIELDS) as unknown as Promise<PurchaseRecord[]>;
 }
+
+/** User id columns of a purchase and the fields that get their names. */
+export const PURCHASE_USER_FIELDS = [["created_by", "created_by_name"]] as const;
 
 export async function fetchPurchaseById(id: string): Promise<PurchaseRecord | null> {
   const { data: purchase, error } = await supabase

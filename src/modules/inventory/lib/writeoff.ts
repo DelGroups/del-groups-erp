@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import type { DamagedGoodsItem, Product, WarehouseSlipItem } from "@/types/database.types";
 import { toDamagedGoodsItemsJson } from "@/types/database.types";
 import { createWarehouseSlip } from "@/lib/warehouse/warehouseSlips";
@@ -102,6 +103,9 @@ export interface WriteoffRecord {
   notes: string | null;
   items: DamagedGoodsItem[];
   created_at: string | null;
+  /** Prompt 24c: inventory_writeoffs.created_by (after migration 20261028142000) and the name. */
+  created_by?: string | null;
+  created_by_name?: string | null;
 }
 
 export function parseWriteoffItems(raw: unknown): DamagedGoodsItem[] {
@@ -120,7 +124,7 @@ export async function fetchInventoryWriteoffs(): Promise<WriteoffRecord[]> {
     return [];
   }
 
-  return (data || []).map((row) => ({
+  const rows: WriteoffRecord[] = (data || []).map((row) => ({
     id: row.id,
     document_number: row.document_number,
     writeoff_date: row.writeoff_date,
@@ -129,7 +133,10 @@ export async function fetchInventoryWriteoffs(): Promise<WriteoffRecord[]> {
     notes: row.notes,
     items: parseWriteoffItems(row.items),
     created_at: row.created_at,
+    created_by: (row as { created_by?: string | null }).created_by ?? null,
   }));
+  // Creator names for the list columns (prompt 24c): one lookup for all rows.
+  return (await withProfileNames(supabase as unknown as ProfileNamesClient, rows as unknown as Record<string, unknown>[], [["created_by", "created_by_name"]])) as unknown as WriteoffRecord[];
 }
 
 /** The database reads the old lines and warehouse itself, so only the new version is sent. */

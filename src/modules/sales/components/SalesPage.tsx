@@ -29,7 +29,6 @@ import {
   TableWrap,
   THead,
   Th,
-  Td,
   Tr,
 } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
@@ -58,6 +57,9 @@ import { computeInvoiceDebtBreakdown } from "@/lib/finance/invoiceRemainingBalan
 import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
+import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
+import { docStatusLabelKey, paymentTypeLabelKey, warehouseStateLabelKey } from "@/lib/lists/documentLabels";
 
 type SalesStatusFilter = "all" | SalesDocumentStatus;
 
@@ -69,6 +71,9 @@ const STATUS_FILTERS: Array<{ id: SalesStatusFilter; labelKey: string }> = [
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
+/** Column choice key of this list (prompt 24c). */
+const SALES_LIST_KEY = "sales.invoices";
 
 export default function SalesPage() {
   const router = useRouter();
@@ -89,7 +94,7 @@ export default function SalesPage() {
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
   const { can } = useAuth();
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const canCreateInvoice = can("can_create_invoice");
   const canEditSales = can("can_edit_sales");
@@ -190,35 +195,101 @@ export default function SalesPage() {
     invalidateSalesList();
   };
 
-  const handleDownloadCSV = (rows = filteredSales) => {
+  const debtOf = useCallback(
+    (sale: SaleRecord) =>
+      computeInvoiceDebtBreakdown(
+        {
+          isOfficial: sale.is_official,
+          subtotalAmount: sale.subtotal_amount,
+          vatAmount: sale.vat_amount ?? sale.vat_total,
+          grandTotal: sale.grand_total ?? sale.total_amount,
+          totalAmount: sale.total_amount,
+          paidAmount: sale.paid_amount,
+          remainingBalance:
+            sale.remaining_balance != null && Number(sale.remaining_balance) > 0
+              ? sale.remaining_balance
+              : getSaleRemaining(sale),
+          payments: sale.payments,
+        },
+        vatAccountIds
+      ),
+    [vatAccountIds]
+  );
+
+  // Columns of the list (prompt 24c): today's set, then the standard and optional columns that
+  // LIST_COLUMNS offers. Header, cells and the Excel export all follow the visible set.
+  const columnDefs = useMemo<TableColumn<SaleRecord>[]>(
+    () => [
+      { key: "doc_no", labelKey: "sales.docNo", defaultVisible: true, required: true, thClassName: "min-w-[7rem]", tdClassName: "font-mono font-bold text-app-accent", cell: (s) => s.doc_no ?? "-" },
+      { key: "doc_date", labelKey: "listColumns.invoiceDate", offLabelKey: "common.date", defaultVisible: true, thClassName: "min-w-[6rem]", exportType: "date", exportValue: (s) => s.doc_date, cell: (s) => s.doc_date ?? "-" },
+      { key: "customer", labelKey: "sales.customer", defaultVisible: true, thClassName: "min-w-[10rem]", tdClassName: "font-semibold text-app", cell: (s) => s.customer_name || t("common.anonymousCustomer") },
+      { key: "warehouse", labelKey: "sales.warehouse", defaultVisible: true, thClassName: "min-w-[8rem]", tdClassName: "text-app-muted", cell: (s) => getSaleWarehouseLabel(s) },
+      { key: "total_amount", labelKey: "sales.totalAmount", defaultVisible: true, numeric: true, thClassName: "min-w-[7rem]", tdClassName: "font-bold", exportValue: (s) => Number(s.total_amount || 0), cell: (s) => formatSaleAmount(s.total_amount, t("common.currency")) },
+      { key: "paid_amount", labelKey: "sales.paid", defaultVisible: true, numeric: true, thClassName: "min-w-[6rem]", tdClassName: "text-emerald-600", exportValue: (s) => Number(s.paid_amount || 0), cell: (s) => formatSaleAmount(s.paid_amount, t("common.currency")) },
+      {
+        key: "remaining",
+        labelKey: "sales.remaining",
+        defaultVisible: true,
+        numeric: true,
+        thClassName: "min-w-[7rem]",
+        exportValue: (s) => debtOf(s).totalRemaining,
+        cell: (s) => {
+          const debtBreakdown = debtOf(s);
+          return (
+            <InvoiceRemainingBalanceCell
+              breakdown={debtBreakdown}
+              currencyLabel={t("common.currency")}
+              splitLabel={t("official.remainingSplit", {
+                base: debtBreakdown.remainingBase.toFixed(2),
+                vat: debtBreakdown.remainingVat.toFixed(2),
+              })}
+              totalRemainingLabel={t("official.totalRemaining")}
+            />
+          );
+        },
+      },
+      { key: "doc_status", labelKey: "sales.docStatus", defaultVisible: true, thClassName: "min-w-[6rem]", exportValue: (s) => t(docStatusLabelKey(normalizeSalesDocumentStatus(s.status))), cell: (s) => <SalesDocumentStatusBadge status={s.status} /> },
+      {
+        key: "send_status",
+        labelKey: "sales.sendStatus",
+        defaultVisible: true,
+        thClassName: "min-w-[7rem]",
+        exportValue: (s) => t(warehouseStateLabelKey(s.warehouse_sent, s.warehouse_slip_status)),
+        cell: (s) => <WarehouseSendBadge warehouseSent={s.warehouse_sent === true} warehouseSlipStatus={s.warehouse_slip_status ?? null} />,
+      },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, thClassName: "min-w-[9rem]", tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (s) => s.created_at, cell: (s) => (s.created_at ? formatDateTime(s.created_at) : "—") },
+      // Salesperson: the issuer's name, else the stored seller name (as mapSaleToInvoicePrint).
+      { key: "salesperson", labelKey: "listColumns.salesperson", defaultVisible: true, standard: true, thClassName: "min-w-[8rem]", cell: (s) => dash(s.issued_by_name || s.seller_name) },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, thClassName: "min-w-[8rem]", cell: (s) => dash(s.created_by_name) },
+      { key: "vat", labelKey: "sales.engine.fields.vat", defaultVisible: false, numeric: true, exportValue: (s) => Number(s.vat_amount ?? s.vat_total ?? 0), cell: (s) => formatSaleAmount(s.vat_amount ?? s.vat_total, t("common.currency")) },
+      { key: "due_date", labelKey: "sales.engine.fields.dueDate", defaultVisible: false, exportType: "date", exportValue: (s) => s.due_date, cell: (s) => dash(s.due_date) },
+      { key: "payment_type", labelKey: "sales.engine.fields.paymentType", defaultVisible: false, cell: (s) => { const key = paymentTypeLabelKey(s.payment_type); return key ? t(key) : dash(s.payment_type); } },
+      { key: "currency", labelKey: "sales.engine.fields.currency", defaultVisible: false, cell: (s) => dash(s.currency) },
+      { key: "official", labelKey: "sales.engine.fields.official", defaultVisible: false, cell: (s) => (s.is_official ? t("views.yes") : t("views.no")) },
+      { key: "note", labelKey: "sales.engine.fields.note", defaultVisible: false, tdClassName: "max-w-[16rem] truncate", cell: (s) => dash(s.note) },
+    ],
+    [t, formatDateTime, debtOf]
+  );
+  const columns = useTableColumns(SALES_LIST_KEY, columnDefs);
+
+  // Excel (prompt 24c, without the flag): every filtered row (or the selection); today's export
+  // columns while LIST_COLUMNS is off, the columns the user sees while it is on.
+  const handleExport = (rows = filteredSales) => {
     if (rows.length === 0) return;
-    const headers = [
-      t("sales.docNo"),
-      t("common.date"),
-      t("sales.customer"),
-      t("sales.warehouse"),
-      t("common.total"),
-      t("sales.paid"),
-      t("sales.remaining"),
+    const legacyColumns: XlsxColumn<SaleRecord>[] = [
+      { header: t("sales.docNo"), value: (s) => s.doc_no },
+      { header: t("common.date"), type: "date", value: (s) => s.doc_date },
+      { header: t("sales.customer"), value: (s) => s.customer_name },
+      { header: t("sales.warehouse"), value: (s) => getSaleWarehouseLabel(s) },
+      { header: t("common.total"), type: "money", value: (s) => Number(s.total_amount || 0) },
+      { header: t("sales.paid"), type: "money", value: (s) => Number(s.paid_amount || 0) },
+      { header: t("sales.remaining"), type: "money", value: (s) => Number(getSaleRemaining(s) || 0) },
     ];
-    const csvRows = rows.map((s) => [
-      s.doc_no ?? "",
-      s.doc_date ?? "",
-      `"${s.customer_name ?? ""}"`,
-      getSaleWarehouseLabel(s),
-      Number(s.total_amount || 0).toFixed(2),
-      Number(s.paid_amount || 0).toFixed(2),
-      Number(getSaleRemaining(s) || 0).toFixed(2),
-    ]);
-    const csvContent =
-      "data:text/csv;charset=utf-8,\uFEFF" +
-      [headers.join(","), ...csvRows.map((e) => e.join(","))].join("\n");
-    const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
-    link.download = `${t("sales.csvFilename")}_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void exportXlsx(xlsxFileName(t("sales.csvFilename"), new Date()), {
+      sheetName: t("sales.title"),
+      columns: columns.enabled ? columns.exportColumns : legacyColumns,
+      rows,
+    });
   };
 
   return (
@@ -235,9 +306,9 @@ export default function SalesPage() {
             createDisabled={!canCreateInvoice}
             extraActions={
               <>
-                <Button type="button" variant="secondary" onClick={() => handleDownloadCSV()}>
+                <Button type="button" variant="secondary" onClick={() => handleExport()}>
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                  {t("common.csvDownload")}
+                  {t("common.excelDownload")}
                 </Button>
               </>
             }
@@ -269,6 +340,7 @@ export default function SalesPage() {
               onRefresh={() => void loadData()}
               loading={loading}
             />
+            {columns.picker}
           </>
         }
         contentClassName="pb-6"
@@ -286,7 +358,7 @@ export default function SalesPage() {
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => handleDownloadCSV(bulk.selectedItems)}
+                onClick={() => handleExport(bulk.selectedItems)}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
                 {t("table.exportSelected")}
@@ -313,13 +385,13 @@ export default function SalesPage() {
                   <THead>
                     <tr>
                       <SelectTh checked={false} onChange={() => {}} />
-                      {Array.from({ length: 9 }).map((_, index) => (
+                      {Array.from({ length: columns.visible.length }).map((_, index) => (
                         <Th key={index}>&nbsp;</Th>
                       ))}
                     </tr>
                   </THead>
                   <tbody>
-                    <TableSkeletonRows columns={9} rows={10} withActions />
+                    <TableSkeletonRows columns={columns.visible.length} rows={10} withActions />
                   </tbody>
                 </Table>
               </TableWrap>
@@ -350,36 +422,13 @@ export default function SalesPage() {
                         indeterminate={bulk.someSelected}
                         onChange={bulk.toggleAll}
                       />
-                      <Th className="min-w-[7rem]">{t("sales.docNo")}</Th>
-                      <Th className="min-w-[6rem]">{t("common.date")}</Th>
-                      <Th className="min-w-[10rem]">{t("sales.customer")}</Th>
-                      <Th className="min-w-[8rem]">{t("sales.warehouse")}</Th>
-                      <Th numeric className="min-w-[7rem]">{t("sales.totalAmount")}</Th>
-                      <Th numeric className="min-w-[6rem]">{t("sales.paid")}</Th>
-                      <Th numeric className="min-w-[7rem]">{t("sales.remaining")}</Th>
-                      <Th className="min-w-[6rem]">{t("sales.docStatus")}</Th>
-                      <Th className="min-w-[7rem]">{t("sales.sendStatus")}</Th>
+                      <ListHeadCells columns={columns.visible} />
                       <ActionsTh>{t("common.actions")}</ActionsTh>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {paginatedSales.map((sale) => {
-                      const debtBreakdown = computeInvoiceDebtBreakdown(
-                        {
-                          isOfficial: sale.is_official,
-                          subtotalAmount: sale.subtotal_amount,
-                          vatAmount: sale.vat_amount ?? sale.vat_total,
-                          grandTotal: sale.grand_total ?? sale.total_amount,
-                          totalAmount: sale.total_amount,
-                          paidAmount: sale.paid_amount,
-                          remainingBalance:
-                            sale.remaining_balance != null && Number(sale.remaining_balance) > 0
-                              ? sale.remaining_balance
-                              : getSaleRemaining(sale),
-                          payments: sale.payments,
-                        },
-                        vatAccountIds
-                      );
+                      const debtBreakdown = debtOf(sale);
 
                       return (
                       <Tr key={sale.id}>
@@ -387,42 +436,7 @@ export default function SalesPage() {
                           checked={bulk.isSelected(sale)}
                           onChange={() => bulk.toggle(sale)}
                         />
-                        <Td className="font-mono font-bold text-app-accent">
-                          {sale.doc_no ?? "-"}
-                        </Td>
-                        <Td>{sale.doc_date ?? "-"}</Td>
-                        <Td className="font-semibold text-app">
-                          {sale.customer_name || t("common.anonymousCustomer")}
-                        </Td>
-                        <Td className="text-app-muted">
-                          {getSaleWarehouseLabel(sale)}
-                        </Td>
-                        <Td numeric className="font-bold">
-                          {formatSaleAmount(sale.total_amount, t("common.currency"))}
-                        </Td>
-                        <Td numeric className="text-emerald-600">
-                          {formatSaleAmount(sale.paid_amount, t("common.currency"))}
-                        </Td>
-                        <Td numeric>
-                          <InvoiceRemainingBalanceCell
-                            breakdown={debtBreakdown}
-                            currencyLabel={t("common.currency")}
-                            splitLabel={t("official.remainingSplit", {
-                              base: debtBreakdown.remainingBase.toFixed(2),
-                              vat: debtBreakdown.remainingVat.toFixed(2),
-                            })}
-                            totalRemainingLabel={t("official.totalRemaining")}
-                          />
-                        </Td>
-                        <Td>
-                          <SalesDocumentStatusBadge status={sale.status} />
-                        </Td>
-                        <Td>
-                          <WarehouseSendBadge
-                            warehouseSent={sale.warehouse_sent === true}
-                            warehouseSlipStatus={sale.warehouse_slip_status ?? null}
-                          />
-                        </Td>
+                        <ListBodyCells columns={columns.visible} row={sale} />
                         <ActionsTd>
                           <DocumentListActions
                             onView={() => void openView(sale)}

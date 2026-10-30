@@ -7,7 +7,12 @@ import { fetchPartnerPayments } from "@/lib/payments/fetchPayments";
 import type { PartnerPaymentRecord } from "@/lib/payments/types";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Plus, RefreshCw, Search, Wallet } from "lucide-react";
+import { FileSpreadsheet, Plus, RefreshCw, Search, Wallet } from "lucide-react";
+import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+
+/** Column choice key of this list (prompt 24c). */
+const PAYMENTS_LIST_KEY = "accounting.payments";
 
 function formatMoney(value: number): string {
   return `${value.toFixed(2)} AZN`;
@@ -20,7 +25,7 @@ function formatDate(value: string): string {
 }
 
 export default function PaymentsPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_finance");
 
@@ -52,6 +57,37 @@ export default function PaymentsPage() {
     );
   }, [rows, search]);
 
+  // Columns of the list (prompt 24c); payments have no salesperson.
+  const columnDefs = useMemo<TableColumn<PartnerPaymentRecord>[]>(
+    () => [
+      { key: "payment_date", labelKey: "listColumns.documentDate", offLabelKey: "common.date", defaultVisible: true, required: true, exportType: "date", exportValue: (r) => r.payment_date?.slice(0, 10) || null, cell: (r) => formatDate(r.payment_date) },
+      { key: "partner", labelKey: "payments.partner", defaultVisible: true, tdClassName: "font-semibold", cell: (r) => r.partner_name },
+      {
+        key: "type",
+        labelKey: "payments.type",
+        defaultVisible: true,
+        exportValue: (r) => (r.payment_type === "in" ? t("payments.typeIn") : t("payments.typeOut")),
+        cell: (r) => (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${r.payment_type === "in" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+            {r.payment_type === "in" ? t("payments.typeIn") : t("payments.typeOut")}
+          </span>
+        ),
+      },
+      { key: "method", labelKey: "payments.method", defaultVisible: true, cell: (r) => (r.payment_method === "bank" ? t("payments.methodBank") : t("payments.methodCash")) },
+      { key: "amount", labelKey: "payments.amount", defaultVisible: true, numeric: true, tdClassName: "font-mono font-semibold", exportValue: (r) => r.amount, cell: (r) => formatMoney(r.amount) },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (r) => r.created_at, cell: (r) => (r.created_at ? formatDateTime(r.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (r) => dash(r.created_by_name) },
+      { key: "cash_account", labelKey: "payments.cashAccount", defaultVisible: false, cell: (r) => dash(r.cash_account_name) },
+      { key: "reference", labelKey: "payments.reference", defaultVisible: false, cell: (r) => dash(r.reference_note) },
+    ],
+    [t, formatDateTime]
+  );
+  const columns = useTableColumns(PAYMENTS_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!filtered.length) return;
+    void exportXlsx(xlsxFileName(t("payments.pageTitle"), new Date()), { sheetName: t("payments.pageTitle"), columns: columns.exportColumns, rows: filtered });
+  };
+
   return (
     <PageLayout>
       <header className="app-glass flex flex-wrap items-center justify-between gap-4 border-b border-app px-6 py-4">
@@ -73,6 +109,14 @@ export default function PaymentsPage() {
             <RefreshCw className="h-4 w-4" />
             {t("common.refresh")}
           </button>
+          {/* Excel and the column picker come with LIST_COLUMNS (prompt 24c). */}
+          {columns.enabled ? (
+            <button type="button" onClick={handleExport} className="btn-secondary">
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              {t("common.excelDownload")}
+            </button>
+          ) : null}
+          {columns.picker}
         </div>
       </header>
 
@@ -92,42 +136,30 @@ export default function PaymentsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-app-card-hover text-xs font-bold uppercase text-app-muted">
               <tr>
-                <th className="p-3">{t("common.date")}</th>
-                <th className="p-3">{t("payments.partner")}</th>
-                <th className="p-3">{t("payments.type")}</th>
-                <th className="p-3">{t("payments.method")}</th>
-                <th className="p-3 text-right">{t("payments.amount")}</th>
+                {columns.visible.map((c) => (
+                  <th key={c.key} className={c.numeric ? "p-3 text-right" : "p-3"}>
+                    {c.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-app">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
+                  <td colSpan={columns.visible.length} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-app-muted">{t("payments.empty")}</td>
+                  <td colSpan={columns.visible.length} className="p-6 text-center text-app-muted">{t("payments.empty")}</td>
                 </tr>
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="hover:bg-app-card-hover/60">
-                    <td className="p-3">{formatDate(row.payment_date)}</td>
-                    <td className="p-3 font-semibold">{row.partner_name}</td>
-                    <td className="p-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                          row.payment_type === "in"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {row.payment_type === "in" ? t("payments.typeIn") : t("payments.typeOut")}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {row.payment_method === "bank" ? t("payments.methodBank") : t("payments.methodCash")}
-                    </td>
-                    <td className="p-3 text-right font-mono font-semibold">{formatMoney(row.amount)}</td>
+                    {columns.visible.map((c) => (
+                      <td key={c.key} className={["p-3", c.numeric ? "text-right" : "", c.tdClassName ?? ""].join(" ").trim()}>
+                        {c.cell(row)}
+                      </td>
+                    ))}
                   </tr>
                 ))
               )}

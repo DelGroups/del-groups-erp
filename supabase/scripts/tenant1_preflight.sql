@@ -120,6 +120,18 @@ union all
 select 'pending', '20261029100000_backdated_invoices_payments: invoice date on every record, admin edit of posted invoices',
        case when to_regprocedure('public.document_timestamp()') is null or to_regclass('public.invoice_amendments') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261028140000_profile_display_names: user names for list columns',
+       case when to_regprocedure('public.profile_display_names(uuid[])') is null then 'missing' else 'present' end
+union all
+select 'pending', '20261028141000_purchases_created_by: purchases.created_by',
+       case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'purchases' and column_name = 'created_by') then 'present' else 'missing' end
+union all
+select 'pending', '20261028142000_inventory_writeoffs_created_by: inventory_writeoffs.created_by',
+       case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'inventory_writeoffs' and column_name = 'created_by') then 'present' else 'missing' end
+union all
+select 'pending', '20261028143000_contracts_created_by: contracts.created_by',
+       case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'contracts' and column_name = 'created_by') then 'present' else 'missing' end
+union all
 select 'pending', '20261029200000_stock_per_warehouse: functions (every stock exit per warehouse)',
        case when to_regprocedure('public.stock_move(uuid,uuid,numeric,boolean)') is null then 'missing' else 'present' end
 union all

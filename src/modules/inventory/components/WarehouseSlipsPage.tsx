@@ -24,7 +24,14 @@ import StatusBadge from "@/components/ui/status-badge";
 import { Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import { useToast } from "@/hooks/useToast";
 import type { WarehouseSlip, WarehouseSlipStatus } from "@/types/database.types";
-import { CheckCircle2, ClipboardList, Printer, XCircle } from "lucide-react";
+import { CheckCircle2, ClipboardList, FileSpreadsheet, Printer, XCircle } from "lucide-react";
+import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { useProfileNames } from "@/components/lists/useProfileNames";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+import { profileName } from "@/lib/profiles/displayNames";
+
+/** Column choice key of this list (prompt 24c). */
+const SLIPS_LIST_KEY = "inventory.slips";
 
 type TabFilter = "pending" | "approved" | "rejected" | "all";
 
@@ -77,6 +84,40 @@ export default function WarehouseSlipsPage() {
     );
   }, [slips, searchTerm, t]);
 
+  // Columns of the list (prompt 24c): a slip is dated when it is created; no salesperson.
+  const names = useProfileNames(useMemo(() => slips.map((s) => s.created_by), [slips]));
+  const columnDefs = useMemo<TableColumn<WarehouseSlip>[]>(
+    () => [
+      { key: "slip_number", labelKey: "warehouseSlips.slipNo", defaultVisible: true, required: true, tdClassName: "font-mono font-bold", cell: (s) => s.slip_number },
+      { key: "type", labelKey: "warehouseSlips.type", defaultVisible: true, cell: (s) => t(`warehouseSlips.types.${s.type}`) },
+      { key: "source", labelKey: "warehouseSlips.invoiceNo", defaultVisible: true, tdClassName: "font-mono", cell: (s) => s.source_document_no || "-" },
+      { key: "warehouse", labelKey: "warehouseSlips.warehouse", defaultVisible: true, cell: (s) => s.warehouse_name || "-" },
+      { key: "created_at", labelKey: "listColumns.issuedAt", offLabelKey: "warehouseSlips.invoiceDate", defaultVisible: true, exportType: "datetime", exportValue: (s) => s.created_at, cell: (s) => formatDateTime(s.created_at) },
+      {
+        key: "status",
+        labelKey: "common.status",
+        defaultVisible: true,
+        exportValue: (s) => t(`warehouseSlips.statuses.${s.status}`),
+        cell: (s) => (
+          <StatusBadge tone={s.status === "pending" ? "draft" : s.status === "approved" ? "posted" : "cancelled"}>
+            {t(`warehouseSlips.statuses.${s.status}`)}
+          </StatusBadge>
+        ),
+      },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (s) => dash(profileName(names, s.created_by)) },
+      { key: "delivery_due_at", labelKey: "inventory.engine.deliveryDue", defaultVisible: false, exportType: "datetime", exportValue: (s) => s.delivery_due_at, cell: (s) => (s.delivery_due_at ? formatDateTime(s.delivery_due_at) : "—") },
+      { key: "approved_at", labelKey: "inventory.engine.approvedAt", defaultVisible: false, exportType: "datetime", exportValue: (s) => s.approved_at, cell: (s) => (s.approved_at ? formatDateTime(s.approved_at) : "—") },
+      { key: "item_count", labelKey: "inventory.engine.lines", defaultVisible: false, numeric: true, exportType: "integer", exportValue: (s) => s.items.length, cell: (s) => s.items.length },
+      { key: "notes", labelKey: "inventoryCount.notes", defaultVisible: false, tdClassName: "max-w-xs truncate", cell: (s) => dash(s.notes) },
+    ],
+    [t, formatDateTime, names]
+  );
+  const columns = useTableColumns(SLIPS_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!filtered.length) return;
+    void exportXlsx(xlsxFileName(t("warehouseSlips.title"), new Date()), { sheetName: t("warehouseSlips.title"), columns: columns.exportColumns, rows: filtered });
+  };
+
   const handleApproveAndPrint = async (slip: WarehouseSlip) => {
     if (!canApprove) {
       showError(t("warehouseSlips.noApprovePermission"));
@@ -123,6 +164,15 @@ export default function WarehouseSlipsPage() {
         icon={<ClipboardList className="h-6 w-6 text-indigo-600" />}
         title={t("warehouseSlips.title")}
         description={t("warehouseSlips.description")}
+        extraActions={
+          // Excel comes with LIST_COLUMNS (prompt 24c): this list had no export.
+          columns.enabled ? (
+            <Button type="button" variant="secondary" onClick={handleExport}>
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              {t("common.excelDownload")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
@@ -147,6 +197,7 @@ export default function WarehouseSlipsPage() {
           onRefresh={() => void loadSlips(tab)}
           loading={loading}
         />
+        {columns.picker ? <div className="flex justify-end">{columns.picker}</div> : null}
 
         {loadError && (
           <div className="rounded-xl alert-danger rounded-xl px-4 py-3 text-xs">
@@ -169,35 +220,15 @@ export default function WarehouseSlipsPage() {
                 <Table>
                   <THead>
                     <tr>
-                      <Th>{t("warehouseSlips.slipNo")}</Th>
-                      <Th>{t("warehouseSlips.type")}</Th>
-                      <Th>{t("warehouseSlips.invoiceNo")}</Th>
-                      <Th>{t("warehouseSlips.warehouse")}</Th>
-                      <Th>{t("warehouseSlips.invoiceDate")}</Th>
-                      <Th>{t("common.status")}</Th>
+                      <ListHeadCells columns={columns.visible} />
                       <Th className="text-center">{t("common.actions")}</Th>
                     </tr>
                   </THead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filtered.map((slip) => {
-                      const tone =
-                        slip.status === "pending"
-                          ? "draft"
-                          : slip.status === "approved"
-                            ? "posted"
-                            : "cancelled";
                       return (
                         <tr key={slip.id} className="hover:bg-app-card-hover">
-                          <Td className="font-mono font-bold">{slip.slip_number}</Td>
-                          <Td>{t(`warehouseSlips.types.${slip.type}`)}</Td>
-                          <Td className="font-mono">{slip.source_document_no || "-"}</Td>
-                          <Td>{slip.warehouse_name || "-"}</Td>
-                          <Td>{formatDateTime(slip.created_at)}</Td>
-                          <Td>
-                            <StatusBadge tone={tone}>
-                              {t(`warehouseSlips.statuses.${slip.status}`)}
-                            </StatusBadge>
-                          </Td>
+                          <ListBodyCells columns={columns.visible} row={slip} />
                           <Td>
                             <div className="flex items-center justify-center gap-1">
                               {slip.status === "pending" && canApprove && (

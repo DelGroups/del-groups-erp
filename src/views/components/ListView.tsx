@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
-import { displayValue, fieldLabel, fieldMap, formatNumber, groupRecords, isNumericField, nextSort, sumBy, type Formatter, type RecordGroup } from "../logic";
+import { displayValue, fieldMap, formatNumber, groupRecords, isNumericField, listFieldLabel, nextSort, sumBy, type Formatter, type RecordGroup } from "../logic";
 import type { FieldDef, SortSpec, ViewDefinition, ViewRecord } from "../types";
 
 export interface ListViewProps<R extends ViewRecord> {
@@ -17,6 +17,12 @@ export interface ListViewProps<R extends ViewRecord> {
   /** Where a row opens; without it rows are plain (report lines). */
   openHref?: (record: R) => string;
   fmt: Formatter;
+  /** Visible columns in order (prompt 24c); default: the definition's list columns. */
+  columns?: readonly string[];
+  /** The column picker, shown at the end of the header row. */
+  picker?: React.ReactNode;
+  /** LIST_COLUMNS is on (list-specific headers such as "Invoice date"). */
+  listColumns?: boolean;
 }
 
 /**
@@ -24,10 +30,12 @@ export interface ListViewProps<R extends ViewRecord> {
  * nested collapsible groups with counts and sums, and a totals row. Each row opens the record;
  * its first cell is a real link, so keyboard and middle-click work.
  */
-export function ListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt }: ListViewProps<R>) {
+export function ListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, picker, listColumns = false }: ListViewProps<R>) {
   const router = useRouter();
   const fields = useMemo(() => fieldMap(def), [def]);
-  const columns = def.list.columns.map((c) => fields.get(c)).filter((f): f is FieldDef => !!f);
+  const columns = (shown ?? def.list.columns).map((c) => fields.get(c)).filter((f): f is FieldDef => !!f);
+  // The picker cell closes every row, so header, body, group and total rows keep one width.
+  const endCell = picker ? <td aria-hidden className="w-10" /> : null;
   const sums = useMemo(() => (def.list.sums ?? []).filter((s) => fields.has(s)), [def.list.sums, fields]);
   const groups = useMemo(() => groupRecords(records, def, groupBy, sums, fmt), [records, def, groupBy, sums, fmt]);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -61,6 +69,7 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
           )}
         </td>
       ))}
+      {endCell}
     </tr>
   );
 
@@ -82,6 +91,7 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
               {sums.includes(f.name) ? sumCell(f, g.sums[f.name] ?? 0) : null}
             </td>
           ))}
+          {endCell}
         </tr>,
         ...(expanded ? (g.children.length ? groupRows(g.children, depth + 1) : g.records.map((r) => row(r, depth + 1))) : []),
       ];
@@ -99,15 +109,20 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
                 <th key={f.name} scope="col" aria-sort={active === "asc" ? "ascending" : active === "desc" ? "descending" : undefined} className={["px-3 py-2 ds-label font-semibold", isNumericField(f) ? "text-right" : ""].join(" ")}>
                   {sortable ? (
                     <button type="button" onClick={() => onSort(nextSort(sort, f.name))} className={["inline-flex items-center gap-1 uppercase", isNumericField(f) ? "flex-row-reverse" : ""].join(" ")}>
-                      {fieldLabel(f, fmt)}
+                      {listFieldLabel(f, def, listColumns, fmt)}
                       {active === "asc" ? <ArrowUp className="h-3 w-3" aria-hidden /> : active === "desc" ? <ArrowDown className="h-3 w-3" aria-hidden /> : null}
                     </button>
                   ) : (
-                    fieldLabel(f, fmt)
+                    listFieldLabel(f, def, listColumns, fmt)
                   )}
                 </th>
               );
             })}
+            {picker ? (
+              <th scope="col" className="w-10 px-2 py-1 text-right">
+                {picker}
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>{groupBy.length ? groupRows(groups, 0) : records.map((r) => row(r, 0))}</tbody>
@@ -119,6 +134,7 @@ export function ListView<R extends ViewRecord>({ definition: def, records, group
                   {i === 0 ? fmt.t("views.total") : sums.includes(f.name) ? sumCell(f, sumBy(records, f.name)) : null}
                 </td>
               ))}
+              {endCell}
             </tr>
           </tfoot>
         ) : null}

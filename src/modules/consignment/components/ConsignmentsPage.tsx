@@ -40,6 +40,13 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { useProfileNames } from "@/components/lists/useProfileNames";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+import { profileName } from "@/lib/profiles/displayNames";
+
+/** Column choice key of the history list (prompt 24c). */
+const HISTORY_LIST_KEY = "consignment.documents";
 
 type TabId = "inventory" | "history" | "partners" | "alerts";
 
@@ -52,8 +59,15 @@ interface HistoryRow {
   date: string;
   total_value: number;
   created_at: string | null;
+  /** Prompt 24c: creator of the source row. */
+  created_by: string | null;
   raw: ConsignmentDispatch | ConsignmentReturn | ConsignmentMonthlyReport;
 }
+
+const creatorOf = (row: unknown): string | null => {
+  const id = (row as { created_by?: unknown }).created_by;
+  return typeof id === "string" && id ? id : null;
+};
 
 function downloadWorkbook(filename: string, sheetName: string, rows: (string | number)[][]) {
   const wb = XLSX.utils.book_new();
@@ -61,6 +75,14 @@ function downloadWorkbook(filename: string, sheetName: string, rows: (string | n
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, filename);
 }
+
+/** Text of a history document type (the badge's labels), for Excel. */
+const DOC_TYPE_LABEL: Record<ConsignmentDocumentType, string> = {
+  DISPATCH: "consignments.opTypeDispatch",
+  ACTUAL_SALE: "consignments.opTypeActualSale",
+  RETURN: "consignments.opTypeReturn",
+  INITIAL_BALANCE: "consignments.opTypeInitialBalance",
+};
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7);
@@ -71,7 +93,7 @@ function dispatchValue(items: ConsignmentDispatchItem[]): number {
 }
 
 export default function ConsignmentsPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const router = useRouter();
   const { can } = useAuth();
   const canManage = can("can_manage_consignments");
@@ -194,6 +216,7 @@ export default function ConsignmentsPage() {
       date: d.dispatch_date,
       total_value: dispatchValue(d.items),
       created_at: d.created_at,
+      created_by: creatorOf(d),
       raw: d,
     }));
     const fromReturns: HistoryRow[] = returns.map((r) => ({
@@ -205,6 +228,7 @@ export default function ConsignmentsPage() {
       date: r.return_date,
       total_value: dispatchValue(r.items),
       created_at: r.created_at,
+      created_by: creatorOf(r),
       raw: r,
     }));
     const fromReports: HistoryRow[] = reports.map((rep) => ({
@@ -216,12 +240,34 @@ export default function ConsignmentsPage() {
       date: `${rep.report_period}-01`,
       total_value: rep.total_amount,
       created_at: rep.created_at,
+      created_by: creatorOf(rep),
       raw: rep,
     }));
     return [...fromDispatches, ...fromReturns, ...fromReports].sort((a, b) =>
       (b.created_at || "").localeCompare(a.created_at || "")
     );
   }, [dispatches, returns, reports]);
+
+  // History columns (prompt 24c): the sales rep is the salesperson of consignment.
+  const names = useProfileNames(useMemo(() => historyRows.map((r) => r.created_by), [historyRows]));
+  const historyColumnDefs = useMemo<TableColumn<HistoryRow>[]>(
+    () => [
+      { key: "document_type", labelKey: "consignments.docType", defaultVisible: true, exportValue: (row) => t(DOC_TYPE_LABEL[row.document_type]), cell: (row) => <ConsignmentDocumentStatusBadge documentType={row.document_type} /> },
+      { key: "doc_no", labelKey: "consignments.docNo", defaultVisible: true, required: true, tdClassName: "font-semibold", cell: (row) => row.doc_no },
+      { key: "partner", labelKey: "consignments.partner", defaultVisible: true, cell: (row) => row.partner_name || "-" },
+      { key: "sales_rep", labelKey: "listColumns.salesperson", offLabelKey: "consignments.salesRep", defaultVisible: true, cell: (row) => row.sales_rep_name || "-" },
+      { key: "date", labelKey: "listColumns.documentDate", offLabelKey: "common.date", defaultVisible: true, exportType: "date", exportValue: (row) => row.date, cell: (row) => row.date },
+      { key: "total_value", labelKey: "consignments.totalValue", defaultVisible: true, numeric: true, tdClassName: "font-bold", exportValue: (row) => row.total_value, cell: (row) => `${row.total_value.toFixed(2)} ${t("common.currency")}` },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (row) => row.created_at, cell: (row) => (row.created_at ? formatDateTime(row.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (row) => dash(profileName(names, row.created_by)) },
+    ],
+    [t, formatDateTime, names]
+  );
+  const historyColumns = useTableColumns(HISTORY_LIST_KEY, historyColumnDefs);
+  const exportHistory = () => {
+    if (!historyRows.length) return;
+    void exportXlsx(xlsxFileName(t("consignments.tabHistory"), new Date()), { sheetName: t("consignments.tabHistory"), columns: historyColumns.exportColumns, rows: historyRows });
+  };
 
   const handleSavePartner = async () => {
     setSaving(true);
@@ -554,33 +600,37 @@ export default function ConsignmentsPage() {
               </section>
             )}
 
+            {tab === "history" && historyColumns.enabled ? (
+              // Excel and the column picker of the history come with LIST_COLUMNS (prompt 24c).
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn-secondary" onClick={exportHistory}>
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  {t("common.excelDownload")}
+                </button>
+                {historyColumns.picker}
+              </div>
+            ) : null}
             {tab === "history" && (
               <section className="overflow-x-auto rounded-xl border border-app">
                 <table className="min-w-full text-sm">
                   <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
                     <tr>
-                      <th className="px-3 py-2">{t("consignments.docType")}</th>
-                      <th className="px-3 py-2">{t("consignments.docNo")}</th>
-                      <th className="px-3 py-2">{t("consignments.partner")}</th>
-                      <th className="px-3 py-2">{t("consignments.salesRep")}</th>
-                      <th className="px-3 py-2">{t("common.date")}</th>
-                      <th className="px-3 py-2 text-right">{t("consignments.totalValue")}</th>
+                      {historyColumns.visible.map((c) => (
+                        <th key={c.key} className={c.numeric ? "px-3 py-2 text-right" : "px-3 py-2"}>
+                          {c.label}
+                        </th>
+                      ))}
                       <th className="px-3 py-2" />
                     </tr>
                   </thead>
                   <tbody>
                     {historyRows.map((row) => (
                       <tr key={row.id} className="border-t border-app">
-                        <td className="px-3 py-2">
-                          <ConsignmentDocumentStatusBadge documentType={row.document_type} />
-                        </td>
-                        <td className="px-3 py-2 font-semibold">{row.doc_no}</td>
-                        <td className="px-3 py-2">{row.partner_name || "-"}</td>
-                        <td className="px-3 py-2">{row.sales_rep_name || "-"}</td>
-                        <td className="px-3 py-2">{row.date}</td>
-                        <td className="px-3 py-2 text-right font-bold">
-                          {row.total_value.toFixed(2)} {t("common.currency")}
-                        </td>
+                        {historyColumns.visible.map((c) => (
+                          <td key={c.key} className={["px-3 py-2", c.numeric ? "text-right" : "", c.tdClassName ?? ""].join(" ").trim()}>
+                            {c.cell(row)}
+                          </td>
+                        ))}
                         <td className="px-3 py-2 text-right">
                           {row.document_type !== "RETURN" && row.document_type !== "INITIAL_BALANCE" && (
                             <button
@@ -596,7 +646,7 @@ export default function ConsignmentsPage() {
                     ))}
                     {historyRows.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-3 py-6 text-center text-app-muted">
+                        <td colSpan={historyColumns.visible.length + 1} className="px-3 py-6 text-center text-app-muted">
                           {t("consignments.historyEmpty")}
                         </td>
                       </tr>

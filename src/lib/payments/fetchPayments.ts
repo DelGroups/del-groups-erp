@@ -1,4 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { partnerDisplayName } from "@/lib/partners/fetchPartners";
 import type { PartnerRecord } from "@/lib/partners/types";
 import type { CashAccountOption, PartnerPaymentRecord } from "@/lib/payments/types";
@@ -9,10 +11,11 @@ function toAmount(value: unknown): number {
 }
 
 export async function fetchPartnerPayments(): Promise<PartnerPaymentRecord[]> {
-  const { data, error } = await supabase
+  // Untyped read: the generated types do not know payments.created_by (prompt 24c) yet.
+  const { data, error } = await (supabase as unknown as SupabaseClient)
     .from("payments")
     .select(
-      "id, payment_date, partner_id, amount, payment_type, payment_method, reference_note, cash_account_id, journal_entry_id, created_at, partners(name, full_name, company_name), accounts(name)"
+      "id, payment_date, partner_id, amount, payment_type, payment_method, reference_note, cash_account_id, journal_entry_id, created_at, created_by, partners(name, full_name, company_name), accounts(name)"
     )
     .order("payment_date", { ascending: false });
 
@@ -21,7 +24,7 @@ export async function fetchPartnerPayments(): Promise<PartnerPaymentRecord[]> {
     return [];
   }
 
-  return (data || []).map((row) => {
+  const payments: PartnerPaymentRecord[] = (data || []).map((row) => {
     const partnerRaw = row.partners as Record<string, unknown> | null;
     const partner = partnerRaw
       ? ({
@@ -44,8 +47,11 @@ export async function fetchPartnerPayments(): Promise<PartnerPaymentRecord[]> {
       cash_account_name: account?.name || null,
       journal_entry_id: typeof row.journal_entry_id === "string" ? row.journal_entry_id : null,
       created_at: typeof row.created_at === "string" ? row.created_at : null,
+      created_by: typeof row.created_by === "string" ? row.created_by : null,
     };
   });
+  // Creator names for the list columns (prompt 24c): one lookup for all rows.
+  return (await withProfileNames(supabase as unknown as ProfileNamesClient, payments, [["created_by", "created_by_name"]])) as PartnerPaymentRecord[];
 }
 
 export async function fetchCashAccountOptions(): Promise<CashAccountOption[]> {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import DamagedGoodsForm from "./DamagedGoodsForm";
@@ -19,7 +19,13 @@ import {
 import type { Warehouse } from "@/types/database.types";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Trash2 } from "lucide-react";
+import { FileSpreadsheet, Trash2 } from "lucide-react";
+import Button from "@/components/ui/button";
+import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
+import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
+
+/** Column choice key of this list (prompt 24c). */
+const WRITEOFFS_LIST_KEY = "inventory.writeoffs";
 
 function getWarehouseName(warehouses: Warehouse[], warehouseId: string | null): string {
   if (!warehouseId) return "-";
@@ -38,7 +44,7 @@ function toPrintData(record: WriteoffRecord, warehouses: Warehouse[]): DamagedGo
 }
 
 export default function DamagedGoodsPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [writeoffs, setWriteoffs] = useState<WriteoffRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +78,26 @@ export default function DamagedGoodsPage() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
+
+  // Columns of the list (prompt 24c): write-offs have no salesperson ("Checker" is a column).
+  const columnDefs = useMemo<TableColumn<WriteoffRecord>[]>(
+    () => [
+      { key: "document_number", labelKey: "common.docNo", defaultVisible: true, required: true, tdClassName: "font-mono font-bold text-app-accent", cell: (row) => row.document_number },
+      { key: "writeoff_date", labelKey: "listColumns.documentDate", offLabelKey: "common.date", defaultVisible: true, exportType: "date", exportValue: (row) => row.writeoff_date, cell: (row) => row.writeoff_date || "-" },
+      { key: "warehouse", labelKey: "common.warehouse", defaultVisible: true, cell: (row) => getWarehouseName(warehouses, row.warehouse_id) },
+      { key: "checker", labelKey: "common.checker", defaultVisible: true, tdClassName: "font-semibold text-app", cell: (row) => row.checker_name },
+      { key: "item_count", labelKey: "common.productCount", defaultVisible: true, exportType: "integer", exportValue: (row) => row.items.length, cell: (row) => row.items.length },
+      { key: "created_at", labelKey: "listColumns.issuedAt", defaultVisible: true, standard: true, tdClassName: "whitespace-nowrap text-app-muted", exportType: "datetime", exportValue: (row) => row.created_at, cell: (row) => (row.created_at ? formatDateTime(row.created_at) : "—") },
+      { key: "created_by", labelKey: "listColumns.createdBy", defaultVisible: true, standard: true, cell: (row) => dash(row.created_by_name) },
+      { key: "notes", labelKey: "inventoryCount.notes", defaultVisible: false, tdClassName: "max-w-xs truncate", cell: (row) => dash(row.notes) },
+    ],
+    [formatDateTime, warehouses]
+  );
+  const columns = useTableColumns(WRITEOFFS_LIST_KEY, columnDefs);
+  const handleExport = () => {
+    if (!filteredWriteoffs.length) return;
+    void exportXlsx(xlsxFileName(t("damagedGoods.pageTitle"), new Date()), { sheetName: t("damagedGoods.pageTitle"), columns: columns.exportColumns, rows: filteredWriteoffs });
+  };
 
   const openCreateForm = () => {
     setEditingWriteoff(null);
@@ -107,6 +133,15 @@ export default function DamagedGoodsPage() {
           onCreate={openCreateForm}
           createDisabled={warehouses.length === 0}
           backLink={{ href: "/products", label: t("products.backToList") }}
+          extraActions={
+            // Excel comes with LIST_COLUMNS (prompt 24c): this list had no export.
+            columns.enabled ? (
+              <Button type="button" variant="secondary" onClick={handleExport}>
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {t("common.excelDownload")}
+              </Button>
+            ) : undefined
+          }
         />
 
         <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
@@ -117,6 +152,7 @@ export default function DamagedGoodsPage() {
             onRefresh={() => void loadData()}
             loading={loading}
           />
+          {columns.picker ? <div className="flex justify-end">{columns.picker}</div> : null}
 
           <div className="app-table-wrap">
             {loading ? (
@@ -137,28 +173,22 @@ export default function DamagedGoodsPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-app bg-app-card-hover font-bold uppercase text-app">
                     <tr>
-                      <th className="px-4 py-3">{t("common.docNo")}</th>
-                      <th className="px-4 py-3">{t("common.date")}</th>
-                      <th className="px-4 py-3">{t("common.warehouse")}</th>
-                      <th className="px-4 py-3">{t("common.checker")}</th>
-                      <th className="px-4 py-3">{t("common.productCount")}</th>
+                      {columns.visible.map((c) => (
+                        <th key={c.key} className="px-4 py-3">
+                          {c.label}
+                        </th>
+                      ))}
                       <th className="px-4 py-3 text-center">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-app">
                     {filteredWriteoffs.map((row) => (
                       <tr key={row.id} className="transition-colors hover:bg-app-card-hover">
-                        <td className="px-4 py-3 font-mono font-bold text-app-accent">
-                          {row.document_number}
-                        </td>
-                        <td className="px-4 py-3">{row.writeoff_date || "-"}</td>
-                        <td className="px-4 py-3">
-                          {getWarehouseName(warehouses, row.warehouse_id)}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-app">
-                          {row.checker_name}
-                        </td>
-                        <td className="px-4 py-3">{row.items.length}</td>
+                        {columns.visible.map((c) => (
+                          <td key={c.key} className={["px-4 py-3", c.tdClassName ?? ""].join(" ").trim()}>
+                            {c.cell(row)}
+                          </td>
+                        ))}
                         <td className="px-4 py-3">
                           <DocumentListActions
                             onView={() => setViewingWriteoff(row)}
