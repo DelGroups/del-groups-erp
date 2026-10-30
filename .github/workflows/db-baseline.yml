@@ -148,6 +148,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/duplicate_product_names.sql | tee "$RUNNER_TEMP/duplicate_product_names.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/duplicate_product_names.txt"
+      # Imports (IMP-1): tables, numbering, atomic draft save, RLS by permission and financial figures.
+      - name: Imports core checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_core.sql | tee "$RUNNER_TEMP/imports_core.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_core.txt"
 
       - name: Server log on failure
         if: failure()

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
@@ -25,7 +25,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship };
 
 export interface ShellApp {
   id: string;
@@ -42,12 +42,12 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
   const { can, isAdmin } = useAuth();
   const { isEnabled } = useEnabledModules();
   const pathname = usePathname();
-  const { newCrm } = useNewUi();
+  const { newCrm, newImports } = useNewUi();
 
   const sections = useMemo(
     () =>
       visibleSections<NavItem, NavSection>(
-        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm }), (e) => ({
+        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm, newImports }), (e) => ({
           path: e.path,
           titleKey: e.titleKey,
           module: e.module as NavItem["module"],
@@ -61,7 +61,7 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
           can: (p) => can(p as Parameters<typeof can>[0]),
         }
       ),
-    [can, isAdmin, isEnabled, newCrm]
+    [can, isAdmin, isEnabled, newCrm, newImports]
   );
 
   const apps = useMemo<ShellApp[]>(

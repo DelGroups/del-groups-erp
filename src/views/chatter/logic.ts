@@ -6,7 +6,7 @@
 
 export const CHATTER_MODELS = [
   "accounts", "contracts", "customers", "deals", "employee_advances", "employee_leaves", "employees",
-  "expenses", "inventory_counts", "inventory_initial_balances", "inventory_writeoffs", "payments",
+  "expenses", "import_shipments", "inventory_counts", "inventory_initial_balances", "inventory_writeoffs", "payments",
   "payrolls", "production_orders", "products", "purchases", "sales", "sales_commissions", "suppliers", "todo_tasks",
   "transactions", "warehouse_slips",
 ] as const;
@@ -292,6 +292,8 @@ export function recordHref(model: string, id: string): string | null {
       return `/customers?record=${id}`;
     case "todo_tasks":
       return `/todo?record=${id}`;
+    case "import_shipments":
+      return `/imports/${id}`;
     default:
       return null;
   }

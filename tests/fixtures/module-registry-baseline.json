@@ -307,6 +307,10 @@
       "permission": "can_manage_settings"
     },
     {
+      "prefix": "/settings/imports",
+      "permission": "can_manage_settings"
+    },
+    {
       "prefix": "/settings/crm",
       "permission": "can_manage_settings"
     },
@@ -530,6 +534,10 @@
     {
       "prefix": "/documents",
       "permission": "can_view_dashboard"
+    },
+    {
+      "prefix": "/imports",
+      "permission": "can_view_imports"
     }
   ],
   "navPathPermissions": {
@@ -583,7 +591,9 @@
     "/settings/audit": "can_manage_settings",
     "/calendar": "can_view_dashboard",
     "/todo": "can_view_dashboard",
-    "/documents": "can_view_dashboard"
+    "/documents": "can_view_dashboard",
+    "/imports": "can_view_imports",
+    "/settings/imports": "can_manage_settings"
   },
   "permissionMatrix": [
     {
@@ -664,6 +674,30 @@
           "label": "Təsdiqlənmiş alış fakturasını dəyişmək",
           "labelKey": "invoice.amend.permissionPurchases",
           "legacyKey": "can_edit_posted_purchases"
+        }
+      ]
+    },
+    {
+      "id": "imports",
+      "title": "İdxal",
+      "permissions": [
+        {
+          "key": "view",
+          "label": "İdxal sənədlərini görmək",
+          "labelKey": "imports.permissions.view",
+          "legacyKey": "can_view_imports"
+        },
+        {
+          "key": "manage",
+          "label": "İdxal sənədlərini idarə etmək",
+          "labelKey": "imports.permissions.manage",
+          "legacyKey": "can_manage_imports"
+        },
+        {
+          "key": "approve",
+          "label": "İdxal sənədlərini təsdiqləmək",
+          "labelKey": "imports.permissions.approve",
+          "legacyKey": "can_approve_imports"
         }
       ]
     },

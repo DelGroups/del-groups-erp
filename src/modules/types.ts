@@ -30,6 +30,7 @@ export const MODULE_IDS = [
   "calendar",
   "todo",
   "documents",
+  "imports",
 ] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 
@@ -50,6 +51,7 @@ export type PermissionGroupId =
   | "dashboard"
   | "sales"
   | "purchases"
+  | "imports"
   | "consignments"
   | "inventory"
   | "production"
