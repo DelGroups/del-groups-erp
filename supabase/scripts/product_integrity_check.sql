@@ -32,6 +32,9 @@
 --                           completeness)
 --   duplicate_code          the same product code on several products
 --   duplicate_barcode       the same barcode on several products
+--   duplicate_name          the same name (lower, trimmed) on several stockable
+--                           products: maybe one item registered twice, its
+--                           stock counted twice. Review by hand (fix F4)
 -- ============================================================================
 
 WITH
@@ -61,6 +64,13 @@ p AS (
     COALESCE(pr.is_composite, FALSE) AS comp,
     pr.inventory_mode = 'polywood'   AS metric
   FROM public.products pr
+),
+same_name AS (
+  SELECT p.id, p.stock, lower(btrim(p.name)) AS name_key,
+         COUNT(*) OVER (PARTITION BY lower(btrim(p.name))) AS n_same
+  FROM p
+  WHERE NOT p.svc AND NOT p.comp
+    AND NULLIF(btrim(COALESCE(p.name, '')), '') IS NOT NULL
 ),
 issues AS (
   SELECT p.id, 'service_or_composite' AS issue,
@@ -142,11 +152,16 @@ issues AS (
   FROM p
   WHERE NULLIF(btrim(COALESCE(p.barcode, '')), '') IS NOT NULL
     AND (SELECT COUNT(*) FROM public.products o WHERE btrim(o.barcode) = btrim(p.barcode)) > 1
+
+  UNION ALL
+  SELECT n.id, 'duplicate_name', format('name = %s, stock = %s', n.name_key, COALESCE(n.stock, 0))
+  FROM same_name n
+  WHERE n.n_same > 1
 )
 SELECT i.issue, pr.code, pr.name, pr.category, pr.subcategory, i.details
 FROM issues i
 JOIN public.products pr ON pr.id = i.id
-ORDER BY i.issue, pr.name;
+ORDER BY i.issue, lower(btrim(pr.name)), pr.code;
 
 -- Summary (run separately if you only want the counts):
 -- SELECT issue, COUNT(*) FROM (<the query above>) t GROUP BY issue ORDER BY 2 DESC;

@@ -16,7 +16,14 @@ import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/com
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
 import { fetchStockIntegrityAction, fixStockIntegrityAction } from "../actions/stockIntegrity";
-import { groupStockIssues, remainingAutoFixable, type StockIssue, type StockIssueGroup, type StockIssueKind } from "../lib/stockIntegrity";
+import {
+  groupDuplicateNames,
+  groupStockIssues,
+  remainingAutoFixable,
+  type StockIssue,
+  type StockIssueGroup,
+  type StockIssueKind,
+} from "../lib/stockIntegrity";
 
 type PendingFix = { kind: StockIssueKind; productIds: string[] | null; count: number };
 
@@ -144,6 +151,39 @@ export default function StockIntegrityPage() {
                   ) : null}
                 </div>
 
+                {group.kind === "duplicate_name" ? (
+                  <TableWrap>
+                    <Table>
+                      <THead>
+                        <tr>
+                          <Th>{t("stockIntegrity.colProduct")}</Th>
+                          <Th>{t("stockIntegrity.colCode")}</Th>
+                          <Th numeric>{t("stockIntegrity.colStock")}</Th>
+                          <ActionsTh>{t("common.actions")}</ActionsTh>
+                        </tr>
+                      </THead>
+                      {groupDuplicateNames(group.rows).map((names) => (
+                        <tbody key={names.key} className="divide-y divide-app border-b-2 border-app">
+                          {names.rows.map((row) => (
+                            <Tr key={`${row.issue}-${row.product_id}`}>
+                              <Td className="font-medium text-app">{row.product_name}</Td>
+                              <Td className="font-mono text-xs">{row.product_code || "—"}</Td>
+                              <Td numeric>{fmt(row.stock_before)}</Td>
+                              <ActionsTd>
+                                <Link
+                                  href={`/products?highlight=${row.product_id}`}
+                                  className="text-xs font-semibold text-app-accent hover:underline"
+                                >
+                                  {t("stockIntegrity.openProduct")}
+                                </Link>
+                              </ActionsTd>
+                            </Tr>
+                          ))}
+                        </tbody>
+                      ))}
+                    </Table>
+                  </TableWrap>
+                ) : (
                 <TableWrap>
                   <Table>
                     <THead>
@@ -198,6 +238,7 @@ export default function StockIntegrityPage() {
                     </tbody>
                   </Table>
                 </TableWrap>
+                )}
               </section>
             ))}
           </div>

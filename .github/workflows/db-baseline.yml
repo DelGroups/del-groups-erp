@@ -143,6 +143,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/list_columns.sql | tee "$RUNNER_TEMP/list_columns.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/list_columns.txt"
+      # Duplicate product names (fix F4): duplicate_name in the stock integrity report.
+      - name: Duplicate product names checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/duplicate_product_names.sql | tee "$RUNNER_TEMP/duplicate_product_names.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/duplicate_product_names.txt"
 
       - name: Server log on failure
         if: failure()

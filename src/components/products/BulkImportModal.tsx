@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import Button from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import ToastMessage from "@/components/ui/ToastMessage";
+import { SameNameProductLink } from "@/components/products/DuplicateNameWarning";
 import {
   bulkImportRowToApiPayload,
   downloadBulkImportTemplate,
@@ -15,6 +16,7 @@ import {
   parseBulkImportCsv,
   type BulkImportRow,
 } from "@/lib/products/bulkImport";
+import { checkImportNames, rowsToImport, type NameCheckProduct } from "@/lib/products/duplicateNames";
 import { cn } from "@/lib/cn";
 
 const thClass =
@@ -22,32 +24,54 @@ const thClass =
 const tdClass =
   "px-3 py-2 text-xs text-[color:var(--erp-text-main)] border-b border-[color:var(--erp-border-default)]/70 whitespace-nowrap";
 
+const NO_PRODUCTS: NameCheckProduct[] = [];
+
 interface BulkImportModalProps {
   open: boolean;
+  /** The catalog, for the duplicate-name checks of the preview (fix F4). */
+  products?: readonly NameCheckProduct[];
   onClose: () => void;
   onImported?: () => void;
 }
 
-export default function BulkImportModal({ open, onClose, onImported }: BulkImportModalProps) {
+export default function BulkImportModal({ open, products = NO_PRODUCTS, onClose, onImported }: BulkImportModalProps) {
   const { t } = useI18n();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<BulkImportRow[]>([]);
-  const [validCount, setValidCount] = useState(0);
   const [invalidCount, setInvalidCount] = useState(0);
   const [parseError, setParseError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  /** Row numbers the user chose not to import (fix F4: flagged names). */
+  const [skipped, setSkipped] = useState<ReadonlySet<number>>(() => new Set());
+
+  // Fix F4: same name as an existing product or another row, or a code that looks like a name.
+  const nameChecks = useMemo(() => checkImportNames(rows, products), [rows, products]);
+  const flaggedRows = useMemo(
+    () => rows.filter((row) => row.isValid && nameChecks.has(row.rowNumber)).map((row) => row.rowNumber),
+    [rows, nameChecks]
+  );
+  const importCount = rowsToImport(rows, skipped).length;
+  const allFlaggedSkipped = flaggedRows.length > 0 && flaggedRows.every((number) => skipped.has(number));
+
+  const toggleSkip = (rowNumber: number, skip: boolean) =>
+    setSkipped((prev) => {
+      const next = new Set(prev);
+      if (skip) next.add(rowNumber);
+      else next.delete(rowNumber);
+      return next;
+    });
 
   const resetState = useCallback(() => {
     setDragActive(false);
     setFileName(null);
     setRows([]);
-    setValidCount(0);
     setInvalidCount(0);
     setParseError(null);
     setUploading(false);
+    setSkipped(new Set());
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -67,15 +91,14 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
     if (result.parseError) {
       setParseError(result.parseError);
       setRows([]);
-      setValidCount(0);
       setInvalidCount(0);
       setFileName(file.name);
       return;
     }
 
     setParseError(null);
+    setSkipped(new Set());
     setRows(result.rows);
-    setValidCount(result.validCount);
     setInvalidCount(result.invalidCount);
     setFileName(file.name);
   };
@@ -89,7 +112,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
   const hasParsedPreview = rows.length > 0;
 
   const handleUpload = async () => {
-    const validRows = rows.filter((row) => row.isValid);
+    const validRows = rowsToImport(rows, skipped);
     if (validRows.length === 0 || uploading) return;
 
     setUploading(true);
@@ -148,7 +171,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
           <Button
             type="button"
             onClick={() => void handleUpload()}
-            disabled={uploading || validCount === 0}
+            disabled={uploading || importCount === 0}
             loading={uploading}
           >
             {t("products.bulkImport.confirmUpload")}
@@ -191,6 +214,7 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                   {invalidCount > 0
                     ? ` · ${t("products.bulkImport.invalidCount", { count: invalidCount })}`
                     : null}
+                  {skipped.size > 0 ? ` · ${t("products.bulkImport.skippedCount", { count: skipped.size })}` : null}
                 </p>
               </div>
             </div>
@@ -257,12 +281,34 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
           </p>
         ) : null}
 
+        {hasParsedPreview && flaggedRows.length > 0 ? (
+          <div
+            role="status"
+            className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--erp-color-warning)]/30 bg-[color:var(--erp-color-warning)]/10 px-3 py-2 text-sm text-app"
+          >
+            <p className="flex min-w-0 flex-1 items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--erp-color-warning)]" aria-hidden />
+              {t("products.bulkImport.nameWarningSummary", { count: flaggedRows.length })}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSkipped(allFlaggedSkipped ? new Set() : new Set(flaggedRows))}
+            >
+              {allFlaggedSkipped
+                ? t("products.bulkImport.importFlagged")
+                : t("products.bulkImport.skipFlagged", { count: flaggedRows.length })}
+            </Button>
+          </div>
+        ) : null}
+
         {hasParsedPreview ? (
           <>
             <div
               className="min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-lg border border-[color:var(--erp-border-default)] shadow-inner"
             >
-              <table className="w-full min-w-[1500px] border-collapse text-left">
+              <table className="w-full min-w-[1700px] border-collapse text-left">
                 <thead className="sticky top-0 z-10 bg-[color:var(--erp-bg-table-header)] font-semibold shadow-[0_1px_0_var(--erp-border-default)]">
                   <tr>
                     <th className={cn(thClass, "min-w-[48px]")}>#</th>
@@ -276,14 +322,25 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colBuyPrice")}</th>
                     <th className={cn(thClass, "min-w-[120px]")}>{t("products.bulkImport.colSellPrice")}</th>
                     <th className={cn(thClass, "min-w-[90px]")}>{t("products.bulkImport.colUnit")}</th>
-                    <th className={cn(thClass, "min-w-[160px]")}>{t("products.bulkImport.status")}</th>
+                    <th className={cn(thClass, "min-w-[260px]")}>{t("products.bulkImport.status")}</th>
+                    <th className={cn(thClass, "min-w-[80px]")}>{t("products.bulkImport.colSkip")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {rows.map((row) => {
+                    const check = nameChecks.get(row.rowNumber);
+                    const isSkipped = skipped.has(row.rowNumber);
+                    return (
                     <tr
                       key={`${row.rowNumber}-${row.code}`}
-                      className={cn(row.isValid ? "bg-emerald-50/30" : "bg-rose-50/70")}
+                      className={cn(
+                        !row.isValid
+                          ? "bg-rose-50/70"
+                          : check
+                            ? "bg-[color:var(--erp-color-warning)]/10"
+                            : "bg-emerald-50/30",
+                        isSkipped && "opacity-60"
+                      )}
                     >
                       <td className={cn(tdClass, "text-app-muted")}>{row.rowNumber}</td>
                       <td
@@ -327,17 +384,53 @@ export default function BulkImportModal({ open, onClose, onImported }: BulkImpor
                         {formatBulkImportPricePair(row.sell_price_piece, row.sell_price_meter)}
                       </td>
                       <td className={tdClass}>{row.measure_unit || "—"}</td>
-                      <td className={cn(tdClass, "min-w-[160px] whitespace-normal")}>
-                        {row.isValid ? (
+                      <td className={cn(tdClass, "min-w-[260px] whitespace-normal")}>
+                        {!row.isValid ? (
+                          <span className="text-rose-700">{row.errors.join("; ") || "—"}</span>
+                        ) : isSkipped ? (
+                          <span className="font-semibold text-app-muted">{t("products.bulkImport.skipped")}</span>
+                        ) : (
                           <span className="font-semibold text-emerald-700">
                             {t("products.bulkImport.valid")}
                           </span>
-                        ) : (
-                          <span className="text-rose-700">{row.errors.join("; ") || "—"}</span>
                         )}
+                        {check ? (
+                          <ul className="mt-1 space-y-1 text-[color:var(--erp-text-main)]">
+                            {check.existing.length > 0 ? (
+                              <li>
+                                <span className="font-semibold">{t("products.bulkImport.nameExists")}</span>
+                                {check.existing.map((product) => (
+                                  <SameNameProductLink key={product.id} product={product} className="ms-2 flex" />
+                                ))}
+                              </li>
+                            ) : null}
+                            {check.fileRows.length > 0 ? (
+                              <li className="font-semibold">
+                                {t("products.bulkImport.nameInFile", { rows: check.fileRows.join(", ") })}
+                              </li>
+                            ) : null}
+                            {check.codeLooksLikeName ? (
+                              <li className="font-semibold">{t("products.bulkImport.codeLooksLikeName")}</li>
+                            ) : null}
+                          </ul>
+                        ) : null}
+                      </td>
+                      <td className={tdClass}>
+                        {row.isValid && check ? (
+                          <label className="inline-flex cursor-pointer items-center gap-1.5 py-1">
+                            <input
+                              type="checkbox"
+                              checked={isSkipped}
+                              onChange={(event) => toggleSkip(row.rowNumber, event.target.checked)}
+                              className="h-4 w-4 accent-[color:var(--erp-color-primary)]"
+                            />
+                            {t("products.bulkImport.skip")}
+                          </label>
+                        ) : null}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

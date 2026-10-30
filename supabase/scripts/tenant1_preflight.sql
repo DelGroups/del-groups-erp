@@ -135,6 +135,10 @@ union all
 select 'pending', '20261029200000_stock_per_warehouse: functions (every stock exit per warehouse)',
        case when to_regprocedure('public.stock_move(uuid,uuid,numeric,boolean)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261029300000_duplicate_product_names: duplicate_name in the stock integrity report',
+       case when coalesce(pg_get_functiondef(to_regprocedure('public.stock_integrity_report()')), '') like '%duplicate_name%'
+            then 'present' else 'missing' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

@@ -14,6 +14,7 @@ export const STOCK_ISSUE_KINDS = [
   "no_stock_row",
   "duplicate_code",
   "duplicate_barcode",
+  "duplicate_name",
   "no_category",
   "category_text_differs",
   "service_or_composite",
@@ -75,6 +76,24 @@ export function groupStockIssues(rows: readonly StockIssue[]): StockIssueGroup[]
       fixableCount: autoFix ? list.filter((row) => row.fixable).length : 0,
     };
   });
+}
+
+/** duplicate_name (fix F4): one group per normalised name, from the report's `name = <name>` details. */
+export interface DuplicateNameGroup {
+  key: string;
+  rows: StockIssue[];
+}
+
+export function groupDuplicateNames(rows: readonly StockIssue[]): DuplicateNameGroup[] {
+  const byKey = new Map<string, StockIssue[]>();
+  for (const row of rows) {
+    if (row.issue !== "duplicate_name") continue;
+    const key = row.details.startsWith("name = ") ? row.details.slice("name = ".length) : row.details;
+    const list = byKey.get(key) ?? [];
+    list.push(row);
+    byKey.set(key, list);
+  }
+  return [...byKey.entries()].map(([key, list]) => ({ key, rows: list }));
 }
 
 /** Number of rows "Fix all" would still correct; 0 means the page is clean. */
