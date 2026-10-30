@@ -35,6 +35,7 @@ import studio from "./studio/manifest";
 import calendar from "./calendar/manifest";
 import todo from "./todo/manifest";
 import documents from "./documents/manifest";
+import imports from "./imports/manifest";
 
 export { defineModule } from "./types";
 export type { ModuleId, ModuleManifest } from "./types";
@@ -61,6 +62,7 @@ export const MODULES: readonly ModuleManifest[] = [
   calendar,
   todo,
   documents,
+  imports,
 ];
 
 // ── Validation ──────────────────────────────────────────────────────────────

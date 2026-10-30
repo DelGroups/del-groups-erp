@@ -941,6 +941,16 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    // Imports module (IMP-1): import shipments and landed cost; admins have all three.
+    id: "imports",
+    title: "İdxal",
+    permissions: [
+      { key: "can_view_imports", label: "İdxal sənədlərini görmək" },
+      { key: "can_manage_imports", label: "İdxal sənədlərini idarə etmək" },
+      { key: "can_approve_imports", label: "İdxal sənədlərini təsdiqləmək" },
+    ],
+  },
+  {
     id: "consignments",
     title: "Əmanət Satışı",
     permissions: [

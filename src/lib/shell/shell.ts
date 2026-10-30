@@ -90,13 +90,16 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "crm", path: "/crm/leads", titleKey: "newShell.extra_crmLeads", module: "crm", icon: "Inbox", flag: "newCrm" },
   { section: "crm", path: "/crm/reports", titleKey: "newShell.extra_crmReports", module: "crm", icon: "ChartColumn", flag: "newCrm" },
   { section: "crm", path: "/crm/config", titleKey: "newShell.extra_crmConfig", module: "crm", icon: "SlidersHorizontal", flag: "newCrm" },
+  // Imports (IMP-1): only while NEW_IMPORTS is on; the route permissions are imports.view and settings.
+  { section: "trade", path: "/imports", titleKey: "newShell.extra_imports", module: "imports", icon: "Ship", flag: "newImports" },
+  { section: "settings", path: "/settings/imports", titleKey: "newShell.extra_importsSettings", module: "imports", icon: "Ship", flag: "newImports" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */
-export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean }): E[] {
+export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean }): E[] {
   return extras.filter((e) => {
     const flag = "flag" in e ? (e as { flag?: string }).flag : undefined;
-    return !flag || (flag === "newCrm" && flags.newCrm);
+    return !flag || (flag === "newCrm" && flags.newCrm) || (flag === "newImports" && flags.newImports === true);
   });
 }
 

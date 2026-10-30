@@ -26,6 +26,7 @@ export const PERMISSION_GROUP_DEFS: {
   { id: "dashboard", title: "Əsas Panel" },
   { id: "sales", title: "Satış" },
   { id: "purchases", title: "Alış" },
+  { id: "imports", title: "İdxal" },
   { id: "consignments", title: "Əmanət Satışı" },
   { id: "inventory", title: "Anbar və Məhsul", hasWarehouseScope: true },
   { id: "production", title: "İstehsalat" },

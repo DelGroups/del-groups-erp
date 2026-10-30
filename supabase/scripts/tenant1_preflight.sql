@@ -139,6 +139,9 @@ select 'pending', '20261029300000_duplicate_product_names: duplicate_name in the
        case when coalesce(pg_get_functiondef(to_regprocedure('public.stock_integrity_report()')), '') like '%duplicate_name%'
             then 'present' else 'missing' end
 union all
+select 'pending', '20261030100000_imports_core: Imports module tables (import_shipments ...)',
+       case when to_regclass('public.import_shipments') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

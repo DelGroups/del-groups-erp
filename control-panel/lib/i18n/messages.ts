@@ -548,6 +548,7 @@ const en = {
       calendar: "Calendar",
       todo: "To-do",
       documents: "Documents",
+      imports: "Imports",
     },
   },
   billingEmail: {
@@ -1131,6 +1132,7 @@ const az: Messages = {
       calendar: "Təqvim",
       todo: "Tapşırıqlar",
       documents: "Sənədlər",
+      imports: "İdxal",
     },
   },
   billingEmail: {
@@ -1712,6 +1714,7 @@ const ru: Messages = {
       calendar: "Календарь",
       todo: "Задачи",
       documents: "Документы",
+      imports: "Импорт",
     },
   },
   billingEmail: {

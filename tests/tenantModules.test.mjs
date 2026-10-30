@@ -42,7 +42,7 @@ test("an enabled module keeps its dependencies on", () => {
 
   // once nothing enabled needs it, it really is off
   const dependents = MODULES.filter((m) => m.depends.includes("inventory")).map((m) => m.id);
-  const rows = off("inventory", ...dependents, "payroll", "commissions", "contracts", "crm");
+  const rows = off("inventory", ...dependents, "payroll", "commissions", "contracts", "crm", "imports");
   const narrowed = resolveEnabledModules(rows);
   assert.equal(narrowed.has("inventory"), false, [...narrowed].join(","));
   assert.equal(moduleStates(rows).inventory, "disabled");
