@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ScanLine } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
@@ -8,17 +8,23 @@ import Button from "@/components/ui/button";
 import Select from "@/components/ui/select";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { Modal } from "@/components/ui/modal";
+import DuplicateNameWarning from "@/components/products/DuplicateNameWarning";
 import { buildProductInsert, createProduct } from "@/lib/products/api";
 import { fetchProductByBarcode } from "@/lib/products/barcode";
 import { resolveCategoryFromHint } from "@/lib/products/categoryHint";
+import { findSameNameProducts } from "@/lib/products/duplicateNames";
 import { parseFieldNumber } from "@/lib/forms/numericField";
 import type { Category, Product } from "@/types/database.types";
 import { cn } from "@/lib/cn";
+
+const NO_PRODUCTS: Product[] = [];
 
 interface QuickScanModalProps {
   open: boolean;
   onClose: () => void;
   categories: Category[];
+  /** The catalog, for the duplicate-name warning (fix F4). */
+  products?: Product[];
   onCreated?: () => void;
   onExistingProduct?: (product: Product) => void;
 }
@@ -40,6 +46,7 @@ export default function QuickScanModal({
   open,
   onClose,
   categories,
+  products = NO_PRODUCTS,
   onCreated,
   onExistingProduct,
 }: QuickScanModalProps) {
@@ -61,6 +68,9 @@ export default function QuickScanModal({
   const [saving, setSaving] = useState(false);
 
   const parentCategories = categories.filter((row) => !row.parent_id);
+  // Fix F4: warn (never block) when another stockable product has the same name.
+  const deferredName = useDeferredValue(name);
+  const sameNameProducts = useMemo(() => findSameNameProducts(deferredName, products), [deferredName, products]);
 
   const resetForm = () => {
     setBarcode("");
@@ -261,6 +271,7 @@ export default function QuickScanModal({
               className="app-input w-full"
             />
           </label>
+          {formUnlocked ? <DuplicateNameWarning products={sameNameProducts} className="col-span-2" /> : null}
 
           <label className="block space-y-1">
             <span className="text-xs font-semibold text-app">{t("products.metadata.brand")}</span>

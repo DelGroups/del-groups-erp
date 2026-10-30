@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import ListPageChrome from "@/components/layout/ListPageChrome";
 import ProductFiltersPanel from "@/components/products/ProductFiltersPanel";
@@ -92,6 +92,17 @@ export default function ProductsPage() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // `/products?highlight=<id>` (Stock integrity, duplicate-name warnings) opens that product once
+  // the catalog is loaded: its card for editors, otherwise the list filtered to its code.
+  const highlightId = useSearchParams().get("highlight");
+  const [handledHighlight, setHandledHighlight] = useState<string | null>(null);
+  if (catalog && highlightId && highlightId !== handledHighlight) {
+    setHandledHighlight(highlightId);
+    const target = products.find((product) => product.id === highlightId);
+    if (target && canManageProducts) setEditingProduct(target);
+    else if (target) setFilters({ ...DEFAULT_PRODUCT_FILTERS, code: target.code });
+  }
   const branding = useCompanyBranding();
   const { config: labelConfig } = useBarcodeLabelConfig();
   const [paperSize, setPaperSize] = useState<BarcodePaperSize>(labelConfig.paper_size);
@@ -360,6 +371,7 @@ export default function ProductsPage() {
 
       <BulkImportModal
         open={isBulkModalOpen}
+        products={products}
         onClose={() => setIsBulkModalOpen(false)}
         onImported={() => void loadData()}
       />
@@ -368,6 +380,7 @@ export default function ProductsPage() {
         open={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
         categories={categories}
+        products={products}
         onCreated={() => void loadData()}
         onExistingProduct={(product) => {
           setIsScanModalOpen(false);

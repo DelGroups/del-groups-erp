@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Save } from "lucide-react";
 import type { Category, Product, ProductInsert, Warehouse } from "@/types/database.types";
 import ProductPriceRowsEditor from "@/components/products/ProductPriceRowsEditor";
@@ -14,6 +14,8 @@ import {
 } from "@/lib/products/productPriceRows";
 import ProductBarcodePanel from "@/components/products/ProductBarcodePanel";
 import ProductImageField from "@/components/products/ProductImageField";
+import DuplicateNameWarning from "@/components/products/DuplicateNameWarning";
+import { findSameNameProducts } from "@/lib/products/duplicateNames";
 import { getCategoryFullName, updateProduct } from "@/lib/products/api";
 import { FetchTimeoutError, fetchWithTimeout } from "@/lib/fetchWithTimeout";
 import { PRODUCT_CREATE_REQUEST_TIMEOUT_MS } from "@/lib/products/productCreateConstants";
@@ -208,6 +210,16 @@ export default function ProductForm({
   // A metric unit implies a dimensional product (see handleUnitChange and the payload), so it also shows them.
   const showDimensionInputs = showDimensionFields && (form.is_dimensional || metricMeasureUnit);
   const showPriceRows = showDimensionFields;
+
+  // Fix F4: warn (never block) when another stockable product has the same name.
+  const deferredName = useDeferredValue(form.name);
+  const sameNameProducts = useMemo(
+    () =>
+      isServiceCategorySelected || isComposite
+        ? []
+        : findSameNameProducts(deferredName, catalogProducts, isEditMode ? initialProduct?.id : null),
+    [catalogProducts, deferredName, initialProduct?.id, isComposite, isEditMode, isServiceCategorySelected]
+  );
 
   const handleUnitChange = (unit: string) => {
     const metric = isMetricMeasureUnit(unit);
@@ -591,6 +603,7 @@ export default function ProductForm({
                           onChange={(e) => set({ name: e.target.value })}
                           className={formInputClass}
                         />
+                        <DuplicateNameWarning products={sameNameProducts} className="mt-2" />
                       </FormField>
                       <div className={metaRowClass}>
                         <FormField label={t("forms.productCode")}>
@@ -645,6 +658,7 @@ export default function ProductForm({
                             onChange={(e) => set({ name: e.target.value })}
                             className={formInputClass}
                           />
+                          <DuplicateNameWarning products={sameNameProducts} className="mt-2" />
                         </FormField>
                         <FormField label={t("forms.productCode")}>
                           <input
