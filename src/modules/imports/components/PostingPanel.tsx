@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, CheckCircle2, Lock, PackageCheck, Plus, Printer, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
+import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
 import { useToast } from "@/design-system/components";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
 import { IMPORT_CURRENCIES, type ImportCurrency } from "@/lib/imports/cbar";
 import { methodsFor, type ImportsConfig } from "@/lib/imports/config";
+import { fxPayment } from "@/lib/imports/fx";
 import { COST_TYPES, round2, type CostType, type SplitMethod } from "@/lib/imports/landedCost";
 import { invalidateModel, figure, useFormatter } from "@/views";
 import {
@@ -20,13 +21,14 @@ import {
   finalizeCostAction,
   getPostingViewAction,
   payPayableAction,
+  prepayAction,
   receiveShipmentAction,
   reopenShipmentAction,
   type PayableView,
   type PostingResult,
   type PostingView,
 } from "../actions/posting";
-import type { ImportLookups } from "../actions/imports";
+import { cbarRateAction, type ImportLookups } from "../actions/imports";
 import {
   actionsFor,
   checkReceipt,
@@ -51,7 +53,7 @@ import ReceivingSheet, { type ReceivingSheetData } from "./ReceivingSheet";
 const today = () => new Date().toISOString().slice(0, 10);
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | null;
+type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | "prepay" | null;
 
 /**
  * Posting of an import shipment (IMP-2): Confirm, Receive, + Add cost, Pay, Close, Reopen and
@@ -84,7 +86,8 @@ export function PostingPanel({
       if (!r.success) throw new Error(r.error);
       return r.data;
     },
-    enabled: posted,
+    // Drafts too: their supplier prepayments (IMP-3).
+    enabled: !!draft.id,
   });
   const [dialog, setDialog] = useState<Dialogs>(null);
   const [opKey, setOpKey] = useState(newKey);
@@ -165,6 +168,12 @@ export function PostingPanel({
             <button type="button" className="ds-btn ds-btn-sm ds-btn-primary" disabled={dirty || busy} title={dirty ? t("importPosting.saveFirst") : undefined} onClick={() => open("confirm")}>
               <CheckCircle2 className="h-4 w-4" aria-hidden />
               {t("importPosting.confirm")}
+            </button>
+          ) : null}
+          {draft.status === "draft" && canManage ? (
+            <button type="button" className="ds-btn ds-btn-sm" disabled={busy || dirty || !draft.supplierId} title={dirty ? t("importPosting.saveFirst") : undefined} onClick={() => open("prepay")}>
+              <HandCoins className="h-4 w-4" aria-hidden />
+              {t("importPosting.prepay")}
             </button>
           ) : null}
           {actions.includes("receive") ? (
@@ -256,6 +265,28 @@ export function PostingPanel({
         onSubmit={(d) => run(() => confirmShipmentAction(id, d, opKey), t("importPosting.confirmed"))}
       />
 
+      {view.data?.prepayments.length ? (
+        <ul className="flex flex-col gap-1 text-[length:var(--ds-text-sm)]" aria-label={t("importPosting.prepayments")}>
+          {view.data.prepayments.map((p) => (
+            <li key={p.id} className="tabular-nums">
+              {t("importPosting.prepaymentLine", { date: formatDate(p.paymentDate), amount: `${p.amountFc} ${p.currencyCode}`, rate: p.rate, azn: money(p.amountAzn) })}
+              <span className="ms-2 ds-chip ds-chip-flat">{t(`importPosting.prepaymentStatus.${p.status}`)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {dialog === "prepay" ? (
+        <PrepayDialog
+          draft={draft}
+          busy={busy}
+          accounts={lookups.accounts}
+          money={money}
+          onClose={() => setDialog(null)}
+          onSubmit={(d, note, amountFc, rate, splits) => run(() => prepayAction(id, d, note, amountFc, rate, splits, opKey), t("importPosting.prepaid"))}
+        />
+      ) : null}
+
       {dialog === "receive" && view.data ? (
         <ReceiveDialog
           busy={busy}
@@ -306,8 +337,8 @@ export function PostingPanel({
           accounts={lookups.accounts}
           money={money}
           onClose={() => setPaying(null)}
-          onSubmit={async (d, note, splits) => {
-            const ok = await run(() => payPayableAction(paying.id, d, note, splits, opKey), t("importPosting.paid"));
+          onSubmit={async (d, note, splits, amountFc, rate) => {
+            const ok = await run(() => payPayableAction(paying.id, d, note, splits, opKey, amountFc, rate), t("importPosting.paid"));
             if (ok) setPaying(null);
             return ok;
           }}
@@ -693,15 +724,43 @@ function PayDialog({
   accounts: ImportLookups["accounts"];
   money: (n: number) => string;
   onClose: () => void;
-  onSubmit: (date: string, note: string | null, splits: { account_id: string; amount: number }[]) => Promise<boolean>;
+  onSubmit: (date: string, note: string | null, splits: { account_id: string; amount: number }[], amountFc: number | null, rate: number | null) => Promise<boolean>;
 }) {
   const { t, formatDate } = useI18n();
+  const { toast } = useToast();
+  const foreign = payable.currencyCode !== "AZN";
   const [day, setDay] = useState(() => (today() < payable.documentDate ? payable.documentDate : today()));
   const [note, setNote] = useState("");
-  const [splits, setSplits] = useState<PaySplit[]>(() => [newSplit(null, payable.openAzn)]);
-  const totals = payTotals(payable.openAzn, splits);
+  // IMP-3: a foreign-currency debt is paid in its currency at the payment-date rate.
+  const [amountFc, setAmountFc] = useState<number | null>(foreign ? payable.openFc : null);
+  const [rate, setRate] = useState<number | null>(foreign ? payable.bookingRate : null);
+  const [rateBusy, setRateBusy] = useState(false);
+  const fx = fxPayment({ currencyCode: payable.currencyCode, openFc: payable.openFc, openAzn: payable.openAzn, amountFc: foreign ? amountFc ?? 0 : 0, rate: rate ?? 0 });
+  const [splits, setSplits] = useState<PaySplit[]>(() => [newSplit(null, foreign ? fx.paidAzn : payable.openAzn)]);
+  const totals = payTotals(foreign ? fx.paidAzn : payable.openAzn, splits);
   const tooEarly = day < payable.documentDate;
+  const fxMismatch = foreign && Math.abs(totals.thisPayment - fx.paidAzn) > 0.011;
   const set = (key: string, patch: Partial<PaySplit>) => setSplits((s) => s.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+  // One account: it follows the amount × rate as they change.
+  const follow = (paid: number) => setSplits((s) => (s.length === 1 ? [{ ...s[0], amount: paid }] : s));
+
+  const getRate = async () => {
+    setRateBusy(true);
+    const r = await cbarRateAction(payable.currencyCode, day);
+    setRateBusy(false);
+    if (!r.success) {
+      toast(t("imports.rate.failed"), t(r.error), "error");
+      return;
+    }
+    setRate(r.data.rate);
+    follow(fxPayment({ currencyCode: payable.currencyCode, openFc: payable.openFc, openAzn: payable.openAzn, amountFc: amountFc ?? 0, rate: r.data.rate }).paidAzn);
+    if (r.data.date !== day) toast(t("imports.rate.applied", { currency: payable.currencyCode, rate: r.data.rate }), t("imports.rate.otherDate", { date: formatDate(r.data.date) }), "success");
+  };
+
+  const canSubmit = foreign
+    ? (amountFc ?? 0) > 0 && (rate ?? 0) > 0 && !fx.overpay && totals.complete && !totals.duplicateAccount && !fxMismatch && !tooEarly
+    : totals.complete && !totals.overpay && !totals.duplicateAccount && totals.thisPayment > 0 && !tooEarly;
+
   return (
     <ImportDialog
       open
@@ -711,11 +770,11 @@ function PayDialog({
       cancelLabel={t("common.cancel")}
       submitLabel={t("importPosting.pay")}
       busy={busy}
-      canSubmit={totals.complete && !totals.overpay && !totals.duplicateAccount && totals.thisPayment > 0 && !tooEarly}
-      onSubmit={() => void onSubmit(day, note.trim() || null, paySplitsPayload(splits))}
+      canSubmit={canSubmit}
+      onSubmit={() => void onSubmit(day, note.trim() || null, paySplitsPayload(splits), foreign ? amountFc : null, foreign ? rate : null)}
     >
       <p className="tabular-nums">
-        {t("importPosting.openBalance")}: <strong>{money(payable.openAzn)}</strong>
+        {t("importPosting.openBalance")}: <strong>{foreign ? `${figureFc(payable.openFc)} ${payable.currencyCode} · ` : ""}{money(payable.openAzn)}</strong>
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <DialogField label={t("importPosting.paymentDate")} hint={t("importPosting.notBefore", { date: formatDate(payable.documentDate) })}>
@@ -724,6 +783,46 @@ function PayDialog({
         <DialogField label={t("importPosting.note")}>
           <input className="ds-input" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
         </DialogField>
+        {foreign ? (
+          <>
+            <DialogField label={t("importPosting.amountFc", { currency: payable.currencyCode })}>
+              <input
+                className="ds-input ds-mono tabular-nums"
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                value={amountFc ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? null : Number(e.target.value);
+                  setAmountFc(v);
+                  follow(fxPayment({ currencyCode: payable.currencyCode, openFc: payable.openFc, openAzn: payable.openAzn, amountFc: v ?? 0, rate: rate ?? 0 }).paidAzn);
+                }}
+              />
+            </DialogField>
+            <DialogField label={t("importPosting.paymentRate")} hint={t("importPosting.bookingRate", { rate: payable.bookingRate })}>
+              <span className="flex gap-2">
+                <input
+                  className="ds-input ds-mono tabular-nums flex-1"
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={rate ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? null : Number(e.target.value);
+                    setRate(v);
+                    follow(fxPayment({ currencyCode: payable.currencyCode, openFc: payable.openFc, openAzn: payable.openAzn, amountFc: amountFc ?? 0, rate: v ?? 0 }).paidAzn);
+                  }}
+                />
+                <button type="button" className="ds-btn ds-btn-sm" onClick={() => void getRate()} disabled={rateBusy}>
+                  <RefreshCw className={`h-4 w-4 ${rateBusy ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                  {t("imports.rate.getCbar")}
+                </button>
+              </span>
+            </DialogField>
+          </>
+        ) : null}
       </div>
       <fieldset className="flex flex-col gap-2">
         <legend className="ds-label mb-1">{t("importPosting.payFrom")}</legend>
@@ -760,13 +859,137 @@ function PayDialog({
       <dl className="grid grid-cols-2 gap-2 tabular-nums" aria-live="polite">
         <dt className="ds-muted">{t("importPosting.thisPayment")}</dt>
         <dd className="text-end font-semibold">{money(totals.thisPayment)}</dd>
-        <dt className="ds-muted">{t("importPosting.remainingAfter")}</dt>
-        <dd className="text-end">{money(Math.max(0, totals.remainingAfter))}</dd>
+        {foreign ? (
+          <>
+            <dt className="ds-muted">{t("importPosting.settledBooking")}</dt>
+            <dd className="text-end">{money(fx.settledAzn)}</dd>
+            <dt className="ds-muted">{fx.differenceAzn > 0 ? t("importPosting.fxLoss") : t("importPosting.fxGain")}</dt>
+            <dd className="text-end">{money(Math.abs(fx.differenceAzn))}</dd>
+            <dt className="ds-muted">{t("importPosting.remainingAfter")}</dt>
+            <dd className="text-end">{figureFc(Math.max(0, fx.remainingFc))} {payable.currencyCode} · {money(Math.max(0, fx.remainingAzn))}</dd>
+          </>
+        ) : (
+          <>
+            <dt className="ds-muted">{t("importPosting.remainingAfter")}</dt>
+            <dd className="text-end">{money(Math.max(0, totals.remainingAfter))}</dd>
+          </>
+        )}
       </dl>
-      {totals.overpay ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.overpay", { amount: money(payable.openAzn) })}</p> : null}
+      {(foreign ? fx.overpay : totals.overpay) ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.overpay", { amount: foreign ? `${figureFc(payable.openFc)} ${payable.currencyCode}` : money(payable.openAzn) })}</p> : null}
+      {fxMismatch ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.fxMismatch", { amount: money(fx.paidAzn) })}</p> : null}
       {totals.duplicateAccount ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.duplicateAccount")}</p> : null}
       {tooEarly ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.notBefore", { date: formatDate(payable.documentDate) })}</p> : null}
-      {payable.currencyCode !== "AZN" ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("importPosting.fxNote", { currency: payable.currencyCode, rate: payable.bookingRate })}</p> : null}
+      {foreign ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("importPosting.fxNote", { currency: payable.currencyCode, rate: payable.bookingRate })}</p> : null}
+    </ImportDialog>
+  );
+}
+
+const figureFc = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
+
+/** IMP-3: a supplier prepayment while the shipment is a draft, in the shipment currency. */
+function PrepayDialog({
+  draft,
+  busy,
+  accounts,
+  money,
+  onClose,
+  onSubmit,
+}: {
+  draft: ShipmentDraft;
+  busy: boolean;
+  accounts: ImportLookups["accounts"];
+  money: (n: number) => string;
+  onClose: () => void;
+  onSubmit: (date: string, note: string | null, amountFc: number, rate: number, splits: { account_id: string; amount: number }[]) => Promise<boolean>;
+}) {
+  const { t, formatDate } = useI18n();
+  const { toast } = useToast();
+  const foreign = draft.currencyCode !== "AZN";
+  const [day, setDay] = useState(today);
+  const [note, setNote] = useState("");
+  const [amountFc, setAmountFc] = useState<number | null>(null);
+  const [rate, setRate] = useState<number | null>(foreign ? draft.invoiceRate : 1);
+  const [rateBusy, setRateBusy] = useState(false);
+  const azn = round2((amountFc ?? 0) * (foreign ? rate ?? 0 : 1));
+  const [splits, setSplits] = useState<PaySplit[]>(() => [newSplit()]);
+  const totals = payTotals(azn, splits);
+  const mismatch = Math.abs(totals.thisPayment - azn) > 0.011;
+  const follow = (paid: number) => setSplits((s) => (s.length === 1 ? [{ ...s[0], amount: paid }] : s));
+  const getRate = async () => {
+    setRateBusy(true);
+    const r = await cbarRateAction(draft.currencyCode, day);
+    setRateBusy(false);
+    if (!r.success) {
+      toast(t("imports.rate.failed"), t(r.error), "error");
+      return;
+    }
+    setRate(r.data.rate);
+    follow(round2((amountFc ?? 0) * r.data.rate));
+    if (r.data.date !== day) toast(t("imports.rate.applied", { currency: draft.currencyCode, rate: r.data.rate }), t("imports.rate.otherDate", { date: formatDate(r.data.date) }), "success");
+  };
+  return (
+    <ImportDialog
+      open
+      onOpenChange={(o) => (o ? undefined : onClose())}
+      title={t("importPosting.prepayTitle")}
+      description={t("importPosting.prepayHint")}
+      closeLabel={t("common.close")}
+      cancelLabel={t("common.cancel")}
+      submitLabel={t("importPosting.prepay")}
+      busy={busy}
+      canSubmit={(amountFc ?? 0) > 0 && (rate ?? 0) > 0 && totals.complete && !totals.duplicateAccount && !mismatch}
+      onSubmit={() => void onSubmit(day, note.trim() || null, amountFc ?? 0, foreign ? rate ?? 0 : 1, paySplitsPayload(splits))}
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <DialogField label={t("importPosting.paymentDate")}>
+          <input type="date" className="ds-input" value={day} onChange={(e) => setDay(e.target.value)} required />
+        </DialogField>
+        <DialogField label={t("importPosting.note")}>
+          <input className="ds-input" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+        </DialogField>
+        <DialogField label={t("importPosting.amountFc", { currency: draft.currencyCode })}>
+          <input className="ds-input ds-mono tabular-nums" type="number" min={0} step="0.01" inputMode="decimal" value={amountFc ?? ""} onChange={(e) => {
+            const v = e.target.value === "" ? null : Number(e.target.value);
+            setAmountFc(v);
+            follow(round2((v ?? 0) * (foreign ? rate ?? 0 : 1)));
+          }} />
+        </DialogField>
+        {foreign ? (
+          <DialogField label={t("importPosting.paymentRate")}>
+            <span className="flex gap-2">
+              <input className="ds-input ds-mono tabular-nums flex-1" type="number" min={0} step="any" inputMode="decimal" value={rate ?? ""} onChange={(e) => {
+                const v = e.target.value === "" ? null : Number(e.target.value);
+                setRate(v);
+                follow(round2((amountFc ?? 0) * (v ?? 0)));
+              }} />
+              <button type="button" className="ds-btn ds-btn-sm" onClick={() => void getRate()} disabled={rateBusy}>
+                <RefreshCw className={`h-4 w-4 ${rateBusy ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+                {t("imports.rate.getCbar")}
+              </button>
+            </span>
+          </DialogField>
+        ) : null}
+      </div>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="ds-label mb-1">{t("importPosting.payFrom")}</legend>
+        {splits.map((s, i) => (
+          <div key={s.key} className="flex flex-wrap items-center gap-2">
+            <select className="ds-input min-w-[12rem] flex-1" aria-label={t("importPosting.splitAccount", { n: i + 1 })} value={s.accountId ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, accountId: e.target.value || null } : y)))}>
+              <option value="">{t("common.select")}</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <input className="ds-input ds-mono w-32 tabular-nums" type="number" min={0} step="0.01" aria-label={t("importPosting.splitAmount", { n: i + 1 })} value={s.amount ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, amount: e.target.value === "" ? null : Number(e.target.value) } : y)))} />
+          </div>
+        ))}
+        <button type="button" className="ds-btn ds-btn-sm ds-btn-ghost self-start" onClick={() => setSplits((x) => [...x, newSplit(null, Math.max(0, round2(totals.remainingAfter)))])}>
+          <Plus className="h-4 w-4" aria-hidden />
+          {t("importPosting.addAccount")}
+        </button>
+      </fieldset>
+      <p className="tabular-nums" aria-live="polite">{t("importPosting.thisPayment")}: <strong>{money(azn)}</strong></p>
+      {mismatch && totals.thisPayment > 0 ? <p role="alert" style={{ color: "var(--ds-danger, #e11d48)" }}>{t("importPosting.fxMismatch", { amount: money(azn) })}</p> : null}
     </ImportDialog>
   );
 }

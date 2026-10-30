@@ -199,6 +199,27 @@ export async function payPayableAction(payableId: string, onDate: string | null,
   }
 }
 
+/** IMP-3: a supplier prepayment while the shipment is a draft (amount in its currency, rate). */
+export async function prepayAction(shipmentId: string, onDate: string | null, note: string | null, amountFc: number, rate: number, splits: unknown, idempotencyKey: string): Promise<PostingResult<Row>> {
+  try {
+    await guard("can_manage_imports");
+    if (!isUuid(shipmentId)) return { success: false, error: "imports.errors.notFound" };
+    const paid = cleanSplits(splits);
+    if (!paid || !paid.length) return { success: false, error: "importPosting.errors.splits_required" };
+    return await rpc("prepay_import_supplier", {
+      p_shipment_id: shipmentId,
+      p_payment_date: date(onDate),
+      p_note: typeof note === "string" ? note.slice(0, 500) : null,
+      p_amount_fc: Number(amountFc) || 0,
+      p_rate: Number(rate) || 0,
+      p_splits: paid,
+      p_idempotency_key: key(idempotencyKey),
+    });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export async function closeShipmentAction(id: string, idempotencyKey: string): Promise<PostingResult<Row>> {
   try {
     await guard("can_approve_imports");
@@ -242,7 +263,21 @@ export interface PayableView {
   amountAzn: number;
   paidAzn: number;
   openAzn: number;
+  /** IMP-3: the running balance in the payable's currency. */
+  paidFc: number;
+  openFc: number;
   status: "open" | "paid" | "cancelled";
+}
+
+export interface PrepaymentView {
+  id: string;
+  paymentDate: string;
+  currencyCode: string;
+  amountFc: number;
+  rate: number;
+  amountAzn: number;
+  status: "open" | "applied" | "cancelled";
+  note: string | null;
 }
 
 export interface ReceiptView {
@@ -276,7 +311,19 @@ export interface JournalEntryView {
 
 export interface PostingView {
   payables: PayableView[];
-  payments: { id: string; payableId: string; paymentDate: string; amountAzn: number; note: string | null; splits: { accountId: string; amountAzn: number }[] }[];
+  payments: {
+    id: string;
+    payableId: string;
+    paymentDate: string;
+    amountAzn: number;
+    note: string | null;
+    currencyCode: string | null;
+    amountFc: number | null;
+    paymentRate: number | null;
+    fxDifferenceAzn: number;
+    splits: { accountId: string; amountAzn: number }[];
+  }[];
+  prepayments: PrepaymentView[];
   receipts: ReceiptView[];
   journal: JournalEntryView[];
   transitBalance: number;
@@ -289,13 +336,14 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
     await guard("can_view_imports");
     if (!isUuid(shipmentId)) return { success: false, error: "imports.errors.notFound" };
     const admin = (await createSupabaseAdminClient()) as unknown as Client;
-    const [payables, payments, receipts, entries, costs, transit] = await Promise.all([
+    const [payables, payments, receipts, entries, costs, transit, prepayments] = await Promise.all([
       rows(admin.from("import_payables").select("*").eq("shipment_id", shipmentId).order("created_at")),
       rows(admin.from("import_payments").select("*").eq("shipment_id", shipmentId).order("payment_date")),
       rows(admin.from("import_receipts").select("*").eq("shipment_id", shipmentId).order("created_at")),
       rows(admin.from("journal_entries").select("id, entry_no, entry_date, document_type, description, reversal_of, reversed_by, posted_at").eq("document_id", shipmentId).like("document_type", "import_%").order("posted_at")),
       rows(admin.from("import_cost_lines").select("id, cost_type").eq("shipment_id", shipmentId)),
       admin.rpc("import_shipment_transit_balance", { p_shipment_id: shipmentId }),
+      rows(admin.from("import_prepayments").select("*").eq("shipment_id", shipmentId).order("payment_date")),
     ]);
     const paymentIds = payments.map((p) => p.id);
     const receiptIds = receipts.map((r) => r.id);
@@ -340,6 +388,8 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
             amountAzn: amount,
             paidAzn: paid,
             openAzn: Math.round((amount - paid) * 100) / 100,
+            paidFc: num(p.paid_fc),
+            openFc: Math.round((num(p.amount_fc) - num(p.paid_fc)) * 100) / 100,
             status: p.status === "paid" || p.status === "cancelled" ? p.status : "open",
           } satisfies PayableView;
         }),
@@ -349,6 +399,10 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
           paymentDate: String(p.payment_date),
           amountAzn: num(p.amount_azn),
           note: (p.note as string | null) ?? null,
+          currencyCode: (p.currency_code as string | null) ?? null,
+          amountFc: p.amount_fc === null || p.amount_fc === undefined ? null : num(p.amount_fc),
+          paymentRate: p.payment_rate === null || p.payment_rate === undefined ? null : num(p.payment_rate),
+          fxDifferenceAzn: num(p.fx_difference_azn),
           splits: splits.filter((s) => s.payment_id === p.id).map((s) => ({ accountId: String(s.account_id), amountAzn: num(s.amount_azn) })),
         })),
         receipts: receipts.map((r) => ({
@@ -392,6 +446,16 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
             .sort((a, b) => b.debit - a.debit),
         })),
         transitBalance: num((transit as { data?: unknown }).data),
+        prepayments: prepayments.map((p) => ({
+          id: String(p.id),
+          paymentDate: String(p.payment_date),
+          currencyCode: String(p.currency_code),
+          amountFc: num(p.amount_fc),
+          rate: num(p.rate),
+          amountAzn: num(p.amount_azn),
+          status: p.status === "applied" || p.status === "cancelled" ? p.status : "open",
+          note: (p.note as string | null) ?? null,
+        })),
       },
     };
   } catch (err) {

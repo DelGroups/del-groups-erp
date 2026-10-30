@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
@@ -25,7 +25,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship, "/imports/reports": BarChart3 };
 
 export interface ShellApp {
   id: string;

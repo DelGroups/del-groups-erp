@@ -145,6 +145,9 @@ union all
 select 'pending', '20261030110000_imports_posting: Imports posting (import_payables, confirm_import_shipment ...)',
        case when to_regprocedure('public.confirm_import_shipment(uuid,date,text)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261030120000_imports_fx: Imports exchange differences and prepayments',
+       case when to_regprocedure('public.prepay_import_supplier(uuid,date,text,numeric,numeric,jsonb,text)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

@@ -22,7 +22,7 @@ export default defineModule({
     { prefix: "/imports", permission: "can_view_imports" },
     { prefix: "/settings/imports", permission: "can_manage_settings" },
   ],
-  links: ["/imports", "/settings/imports"],
+  links: ["/imports", "/settings/imports", "/imports/reports"],
   aiTools: [],
   settings: [{ key: "imports_config", type: "json" }],
 });
