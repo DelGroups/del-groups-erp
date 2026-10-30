@@ -1,3 +1,4 @@
+import { dateFormat } from "@/lib/dates/localeDate";
 /**
  * Date rules of an inventory count (fix F2). The database enforces the same rules
  * (trg_inventory_count_date_rules); these keep the form and the server actions in step.
@@ -14,7 +15,7 @@ export type CountDateProblem = "invalid" | "future" | "past_admin_only";
 /** YYYY-MM-DD of `now` in Baku. */
 export function countToday(now: Date = new Date()): string {
   // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat("en-CA", {
+  return dateFormat("en-CA", {
     timeZone: COUNT_TIME_ZONE,
     year: "numeric",
     month: "2-digit",

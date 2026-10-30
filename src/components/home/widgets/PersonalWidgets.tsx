@@ -40,6 +40,7 @@ import { WidgetFrame, WidgetState } from "../WidgetFrame";
 import { useWidgetData } from "../useWidgetData";
 import { useFigures } from "./format";
 import { frameProps, type WidgetProps } from "./types";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 /** The current time, ticking once a second (or a minute when only minutes are shown). */
 function useNow(stepMs = 1000) {
@@ -52,7 +53,7 @@ function useNow(stepMs = 1000) {
 }
 
 function hourIn(date: Date, timeZone: string): number {
-  return Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(date));
+  return Number(dateFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(date));
 }
 
 // ── Greeting ────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ export function GreetingWidget(props: WidgetProps) {
         {first ? t(`home.greeting.${part}Named`, { name: first }) : t(`home.greeting.${part}`)}
       </p>
       <p className="mt-1 ds-muted">
-        {new Intl.DateTimeFormat(locale, { timeZone: HOME_TIME_ZONE, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now)}
+        {dateFormat(locale, { timeZone: HOME_TIME_ZONE, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now)}
         {company ? <span className="ds-subtle"> · {company}</span> : null}
       </p>
     </WidgetFrame>
@@ -85,13 +86,13 @@ export function ClockWidget(props: WidgetProps) {
   const timeZone = props.placement.settings?.timeZone || HOME_TIME_ZONE;
   const analogue = props.placement.settings?.face === "analogue";
   const now = useNow(1000);
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const parts = dateFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(now);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   const h = get("hour");
   const m = get("minute");
   const s = get("second");
-  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: "2-digit", minute: "2-digit" }).format(now);
-  const date = new Intl.DateTimeFormat(locale, { timeZone, weekday: "short", day: "numeric", month: "short" }).format(now);
+  const time = dateFormat(locale, { timeZone, hour: "2-digit", minute: "2-digit" }).format(now);
+  const date = dateFormat(locale, { timeZone, weekday: "short", day: "numeric", month: "short" }).format(now);
   const big = props.placement.size === "M";
   return (
     <WidgetFrame {...frameProps(props)}>
@@ -171,7 +172,7 @@ export function WeatherWidget(props: WidgetProps) {
               const DayIcon = WEATHER_ICONS[d.condition];
               return (
                 <li key={d.date} className="flex flex-col items-center gap-1 rounded-[var(--ds-radius-md)] py-2" style={{ background: "var(--ds-surface-sunken)" }}>
-                  <span className="text-[length:var(--ds-text-xs)] ds-muted">{new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(`${d.date}T12:00:00`))}</span>
+                  <span className="text-[length:var(--ds-text-xs)] ds-muted">{dateFormat(locale, { weekday: "short" }).format(new Date(`${d.date}T12:00:00`))}</span>
                   <DayIcon className="h-5 w-5" aria-label={t(`home.weather.${d.condition}`)} />
                   <span className="text-[length:var(--ds-text-xs)] ds-mono">
                     {d.max}° <span className="ds-subtle">{d.min}°</span>
@@ -200,10 +201,10 @@ export function CalendarWidget(props: WidgetProps) {
   const [month, setMonth] = useState(today.slice(0, 7));
   const q = useWidgetData<CalendarData>("calendar", { month }, !props.preview);
   const weeks = monthGrid(month);
-  const dows = useMemo(() => Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(new Date(Date.UTC(2024, 0, 1 + i)))), [locale]);
+  const dows = useMemo(() => Array.from({ length: 7 }, (_, i) => dateFormat(locale, { weekday: "narrow" }).format(new Date(Date.UTC(2024, 0, 1 + i)))), [locale]);
   const days = q.data?.data.days ?? {};
   const linkDays = q.data?.data.calendarModule ?? false;
-  const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(`${month}-15T12:00:00`));
+  const title = dateFormat(locale, { month: "long", year: "numeric" }).format(new Date(`${month}-15T12:00:00`));
   return (
     <WidgetFrame
       {...props}
@@ -233,7 +234,7 @@ export function CalendarWidget(props: WidgetProps) {
                 const info = days[day];
                 const isToday = day === today;
                 const dots = info ? (info.events ? 1 : 0) + (info.activities ? 1 : 0) : 0;
-                const label = `${new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(new Date(`${day}T12:00:00`))}${info ? `: ${t("home.calendar.dayInfo", { events: info.events, activities: info.activities })}` : ""}`;
+                const label = `${dateFormat(locale, { day: "numeric", month: "long" }).format(new Date(`${day}T12:00:00`))}${info ? `: ${t("home.calendar.dayInfo", { events: info.events, activities: info.activities })}` : ""}`;
                 const inner = (
                   <span className="relative mx-auto grid h-7 w-7 place-items-center rounded-full ds-mono" style={isToday ? { background: "var(--ds-brand)", color: "var(--ds-on-brand, #fff)", fontWeight: 600 } : undefined}>
                     {Number(day.slice(8))}
@@ -337,7 +338,7 @@ export function MyActivitiesWidget(props: WidgetProps) {
               <li key={a.id} className="flex items-center gap-2 py-1.5" style={{ borderTop: "1px solid var(--ds-border)" }}>
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: STATE_COLOR[a.state] }} aria-hidden />
                 {a.href ? <Link href={a.href} className="min-w-0 flex-1 truncate hover:underline">{a.summary}</Link> : <span className="min-w-0 flex-1 truncate">{a.summary}</span>}
-                <span className="shrink-0 text-[length:var(--ds-text-xs)] ds-subtle">{new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${a.due_date}T12:00:00`))}</span>
+                <span className="shrink-0 text-[length:var(--ds-text-xs)] ds-subtle">{dateFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${a.due_date}T12:00:00`))}</span>
               </li>
             ))}
           </ul>
@@ -359,7 +360,7 @@ export function AgendaWidget(props: WidgetProps) {
   const q = useWidgetData<AgendaData>("agenda", {}, !props.preview);
   const items = q.data?.data.items ?? [];
   const now = useNow(60_000).getTime();
-  const time = (iso: string) => new Intl.DateTimeFormat(locale, { timeZone: HOME_TIME_ZONE, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const time = (iso: string) => dateFormat(locale, { timeZone: HOME_TIME_ZONE, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
   return (
     <WidgetFrame {...frameProps(props)} action={<Link href="/calendar" className="ds-btn ds-btn-ghost ds-btn-sm">{t("home.agenda.open")}</Link>}>
       <WidgetState status={props.preview ? "success" : q.status} onRetry={() => void q.refetch()} empty={!props.preview && !items.length} emptyIcon={CalendarDays} emptyTitle={t("home.empty.agenda")}>
@@ -427,7 +428,7 @@ export function MyTodosWidget(props: WidgetProps) {
               <span className="min-w-0 flex-1 truncate">{i.title}</span>
               {i.due_date ? (
                 <span className="shrink-0 text-[length:var(--ds-text-xs)]" style={{ color: i.overdue ? "var(--ds-danger-strong)" : undefined }}>
-                  {i.overdue ? t("home.todos.overdue") : t("home.todos.today")} · {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${i.due_date}T12:00:00`))}
+                  {i.overdue ? t("home.todos.overdue") : t("home.todos.today")} · {dateFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${i.due_date}T12:00:00`))}
                 </span>
               ) : null}
             </motion.li>
@@ -507,7 +508,7 @@ export function RecentDocumentsWidget(props: WidgetProps) {
             <li key={d.id} className="flex items-center gap-2 py-1.5" style={{ borderTop: "1px solid var(--ds-border)" }}>
               <FileText className="h-4 w-4 shrink-0 ds-muted" aria-hidden />
               <Link href={d.href} className="min-w-0 flex-1 truncate hover:underline">{d.name}</Link>
-              <span className="shrink-0 text-[length:var(--ds-text-xs)] ds-subtle">{new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(d.created_at))}</span>
+              <span className="shrink-0 text-[length:var(--ds-text-xs)] ds-subtle">{dateFormat(locale, { day: "numeric", month: "short" }).format(new Date(d.created_at))}</span>
             </li>
           ))}
         </ul>

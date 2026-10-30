@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate as formatLocaleDate } from "@/lib/dates/localeDate";
 import React, { useEffect, useMemo, useState } from "react";
 import { Calculator, X } from "lucide-react";
 import type { Employee, SalesCommission } from "@/types/database.types";
@@ -49,7 +50,7 @@ export default function PayrollModal({
     if (!isOpen || !employee) return;
     setAccountId(accounts[0]?.id || "");
     setMonthYear(
-      new Date().toLocaleDateString(intlTag, { month: "long", year: "numeric" })
+      formatLocaleDate(intlTag, new Date(), { month: "long", year: "numeric" })
     );
     setDeductions("");
     setNotes("");

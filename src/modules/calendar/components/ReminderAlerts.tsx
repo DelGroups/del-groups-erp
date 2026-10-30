@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useNow } from "@/views/chatter/data";
 import { dueReminders, type DueReminder } from "../lib/calendar";
 import { calendarKeys, fetchEvents, markDelivered, useDeliveries } from "../lib/data";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 /**
  * In-app reminders (phase 20) in the new shell: checks the user's events every minute and shows
@@ -45,7 +46,7 @@ export function ReminderAlerts() {
     setHidden((h) => new Set(h).add(`${r.reminder_id}|${r.occurrence_start}`));
     void markDelivered(r.reminder_id, r.occurrence_start).then(() => client.invalidateQueries({ queryKey: calendarKeys.deliveries(userId!) }));
   };
-  const time = (iso: string) => new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const time = (iso: string) => dateFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
   return (
     <div className="pointer-events-none fixed bottom-20 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 md:bottom-4" aria-live="assertive">

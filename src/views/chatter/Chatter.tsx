@@ -56,6 +56,7 @@ import {
   type ChatterMessage,
   type ChatterModel,
 } from "./logic";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 export const ACTIVITY_ICON: Record<ActivityIcon, React.ComponentType<{ className?: string }>> = { todo: ListTodo, call: Phone, meeting: Users, email: Mail, document: FileText };
 const STATE_COLOR: Record<ActivityState, string> = { overdue: "var(--ds-danger-strong)", today: "var(--ds-warning)", planned: "var(--ds-success)", done: "var(--ds-text-subtle)" };
@@ -749,7 +750,7 @@ function MessageRow({
   onError: (err: unknown) => void;
 }) {
   const { t, locale } = fmt;
-  const time = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(m.created_at));
+  const time = dateFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(m.created_at));
   if (m.kind === "log") return <LogRow message={m} fmt={fmt} types={types} time={time} />;
   return (
     <article className="flex gap-2">

@@ -10,6 +10,7 @@ import { useFormatter, ViewScope } from "@/views";
 import { addMonths, forecastByMonth, funnel, lostReasonLabel, lostReasons, stageKind, stagesForTeam, targetProgress, teamLabel, weightedValue, winRateByUser, type PipelineDeal } from "../../lib/pipeline";
 import { fetchReportDeals } from "../../lib/pipelineData";
 import { usePipeline } from "../../hooks/usePipeline";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 /** CRM reports (prompt 21, NEW_CRM): funnel, forecast by month, win rate by salesperson, lost reasons, targets. */
 export function CrmReportsScreen() {
@@ -70,7 +71,7 @@ function Reports() {
   const lostMax = Math.max(1, ...lost.map((l) => l.count));
   const progress = targetProgress(teamId ? targets.filter((x) => x.team_id === teamId) : targets, deals, stages, month);
   const elapsed = now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const monthLabel = (m: string) => new Intl.DateTimeFormat(fmt.locale, { month: "short", year: "numeric" }).format(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1));
+  const monthLabel = (m: string) => dateFormat(fmt.locale, { month: "short", year: "numeric" }).format(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1));
 
   return (
     <div className="flex flex-col gap-4">

@@ -11,6 +11,7 @@ import { WidgetFrame, WidgetState } from "../WidgetFrame";
 import { useWidgetData } from "../useWidgetData";
 import { useFigures } from "./format";
 import { frameProps, type WidgetProps } from "./types";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 // ── Apps (pinned) ───────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export function AwayTodayWidget(props: WidgetProps) {
               </span>
               <span className="min-w-0 flex-1 truncate">{l.name}</span>
               <span className="shrink-0 text-[length:var(--ds-text-xs)] ds-subtle">
-                {t("home.away.until", { date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${l.until}T12:00:00`)) })}
+                {t("home.away.until", { date: dateFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${l.until}T12:00:00`)) })}
               </span>
             </li>
           ))}

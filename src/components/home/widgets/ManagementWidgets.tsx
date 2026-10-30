@@ -14,6 +14,7 @@ import { WidgetFrame, WidgetState } from "../WidgetFrame";
 import { useWidgetData } from "../useWidgetData";
 import { useFigures } from "./format";
 import { frameProps, type WidgetProps } from "./types";
+import { dateFormat } from "@/lib/dates/localeDate";
 
 /** A big figure with its delta against the previous period. */
 function Headline({ value, previous, money, label }: { value: number; previous?: number | null; money: (n: number) => string; label?: string }) {
@@ -94,7 +95,7 @@ export function RevenueTrendWidget(props: WidgetProps) {
   const max = Math.max(1, ...points.flatMap((p) => [p.sales, p.expenses]));
   const totals = points.reduce((s, p) => ({ sales: s.sales + p.sales, expenses: s.expenses + p.expenses }), { sales: 0, expenses: 0 });
   const label = (iso: string) =>
-    new Intl.DateTimeFormat(locale, q.data?.data.bucket === "month" ? { month: "short" } : { day: "numeric", month: "short" }).format(new Date(`${iso}T12:00:00`));
+    dateFormat(locale, q.data?.data.bucket === "month" ? { month: "short" } : { day: "numeric", month: "short" }).format(new Date(`${iso}T12:00:00`));
   const choose = (r: TrendRange) => {
     setRange(r);
     props.setSettings({ ...(props.placement.settings ?? {}), range: r });
@@ -289,7 +290,7 @@ export function PayablesDueWidget(props: WidgetProps) {
             <li key={p.id} className="flex items-center gap-2 py-1.5" style={{ borderTop: "1px solid var(--ds-border)" }}>
               <Link href={`/purchases/${p.id}`} className="min-w-0 flex-1 truncate hover:underline">{p.supplier ?? p.number}</Link>
               <span className="shrink-0 text-[length:var(--ds-text-xs)]" style={{ color: p.due_date < today ? "var(--ds-danger-strong)" : undefined }}>
-                {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${p.due_date}T12:00:00`))}
+                {dateFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${p.due_date}T12:00:00`))}
               </span>
               <span className="shrink-0 ds-mono">{money(p.amount)}</span>
             </li>

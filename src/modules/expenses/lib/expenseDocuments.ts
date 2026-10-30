@@ -1,3 +1,4 @@
+import { dateFormat } from "@/lib/dates/localeDate";
 /**
  * Expense documents (public.expenses): shared types and pure helpers.
  * Safe to import from client components.
@@ -187,7 +188,7 @@ export function summarizeExpenses(rows: ExpenseDocument[]): ExpenseSummary {
 
 /** Today in Baku, as YYYY-MM-DD. */
 export function todayIsoDate(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  return dateFormat("en-CA", {
     timeZone: "Asia/Baku",
     year: "numeric",
     month: "2-digit",

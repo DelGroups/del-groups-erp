@@ -1,3 +1,4 @@
+import { formatDate as formatLocaleDate } from "@/lib/dates/localeDate";
 import { supabase } from "@/lib/supabase";
 import { FINANCIAL_REPORT_SELECT_ATTEMPTS } from "@/lib/finance/transactionQueries";
 import { isRetryableSelectError } from "@/lib/supabase/schemaFallback";
@@ -25,7 +26,7 @@ import {
 
 function monthLabel(year: number, month: number): string {
   const d = new Date(year, month, 1);
-  return d.toLocaleDateString("az-AZ", { month: "short", year: "numeric" });
+  return formatLocaleDate("az-AZ", d, { month: "short", year: "numeric" });
 }
 
 async function fetchRecentTransactionsForDashboard() {

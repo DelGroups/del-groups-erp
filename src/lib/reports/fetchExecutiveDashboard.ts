@@ -1,3 +1,4 @@
+import { formatDate as formatLocaleDate } from "@/lib/dates/localeDate";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CONTRACTOR_COMMISSION } from "@/modules/production";
 import type {
@@ -285,7 +286,7 @@ async function fetchCashFlowForecast(): Promise<{
     running += bucket.inflows - bucket.outflows;
     points.push({
       date: key,
-      label: date.toLocaleDateString("az-AZ", { day: "2-digit", month: "short" }),
+      label: formatLocaleDate("az-AZ", date, { day: "2-digit", month: "short" }),
       inflows: bucket.inflows,
       outflows: bucket.outflows,
       net: bucket.inflows - bucket.outflows,
