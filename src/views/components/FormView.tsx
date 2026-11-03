@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Loader2 } from "lucide-react";
 import { recordLayoutId, transitions } from "@/design-system/motion";
@@ -10,6 +10,7 @@ import { changedValues, displayValue, fieldLabel, fieldMap, missingRequired, opt
 import type { FieldDef, ViewDefinition, ViewRecord } from "../types";
 import { Cell } from "./ListView";
 import { Chatter } from "../chatter/Chatter";
+import { ACTION_PARAM, forgetRowAction, hasRowActionIntent, requestedAction, withoutAction } from "../rowActions";
 import { chatterEnabledFor, type ChatterModel } from "../chatter/logic";
 
 export interface FormAction {
@@ -63,6 +64,31 @@ export function FormView<R extends ViewRecord>({ definition: def, record, canWri
   // Bumped on save and discard: the inputs start again from the record.
   const [version, setVersion] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // A list row's "…" menu opens the record with ?do=<action> (UI-5, views/rowActions.ts). Run it
+  // once, only if the user just picked it in the menu (a bookmarked, shared or reloaded link never
+  // runs anything) and this form offers it for this record. Some actions appear once the form's
+  // data has loaded, so wait for them while the intent is fresh.
+  const ranRequested = useRef(false);
+  useEffect(() => {
+    if (ranRequested.current) return;
+    const { pathname, search, hash } = window.location;
+    const key = new URLSearchParams(search).get(ACTION_PARAM);
+    if (!key) return;
+    const store = window.sessionStorage;
+    const strip = () => window.history.replaceState(window.history.state, "", `${withoutAction(pathname, search)}${hash}`);
+    if (!hasRowActionIntent(store, pathname, key, Date.now())) {
+      ranRequested.current = true;
+      strip();
+      return;
+    }
+    const action = requestedAction(actions, key);
+    if (!action) return;
+    ranRequested.current = true;
+    forgetRowAction(store);
+    strip();
+    action.onClick();
+  }, [actions]);
 
   const current = useMemo(() => ({ ...record, ...draft }) as R, [record, draft]);
   const allFields = useMemo(() => [def.form.title, ...def.form.fields, ...(def.form.tabs ?? []).flatMap((tab) => tab.fields)].map((n) => fields.get(n)).filter((f): f is FieldDef => !!f), [def, fields]);

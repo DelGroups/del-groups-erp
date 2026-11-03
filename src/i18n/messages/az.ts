@@ -4819,11 +4819,11 @@ export const azMessages = {
       dayInfo: "{events} tədbir, {activities} fəaliyyət",
     },
     quick: {
-      sale: "Yeni satış",
-      purchase: "Yeni alış",
-      customer: "Yeni müştəri",
-      task: "Yeni tapşırıq",
-      expense: "Yeni xərc",
+      sale: "Satış fakturası yarat",
+      purchase: "Alış fakturası yarat",
+      customer: "Müştəri əlavə et",
+      task: "Tapşırıq əlavə et",
+      expense: "Xərc əlavə et",
     },
     activities: {
       overdue: "Gecikmiş",
@@ -5036,7 +5036,7 @@ export const azMessages = {
       },
       quick_actions: {
         title: "Tez əməliyyatlar",
-        description: "Yeni satış, alış, müştəri, tapşırıq, xərc",
+        description: "Satış, alış, müştəri, tapşırıq və xərc üçün qısayollar",
       },
       approvals: {
         title: "Təsdiq gözləyənlər",
@@ -5683,6 +5683,9 @@ export const azMessages = {
       note: "Qeyd",
       grid: "Satış fakturaları (DataGrid)",
       classic: "Satış fakturaları (köhnə cədvəl)",
+      pageFrame: "Səhifə çərçivəsi: bir sürüşdürmə",
+      pageFrameHint: "Qabıq, siyahı başlığı, uzun cədvəl və sənəd sətirləri: səhifədə yalnız bir şaquli sürüşdürmə olmalıdır.",
+      pageFrameFilters: "Hamısı · Qaralama · Təsdiqlənib",
     },
   },
   lookup: {

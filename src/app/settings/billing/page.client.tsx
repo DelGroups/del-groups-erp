@@ -73,7 +73,7 @@ export default function BillingSettingsPage() {
       <PermissionGuard permission="can_manage_settings">
         <SettingsTabs activeTab="billing" />
 
-        <div className="flex-1 overflow-y-auto bg-app p-6">
+        <div className="bg-app p-6">
           <div className="mx-auto max-w-4xl space-y-6">
             <header>
               <h1 className="flex items-center gap-2 text-xl font-bold text-app">

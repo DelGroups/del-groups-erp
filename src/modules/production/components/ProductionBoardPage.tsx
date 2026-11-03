@@ -227,7 +227,7 @@ export default function ProductionBoardPage() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 md:p-6">
+      <div className="p-4 md:p-6">
         {error && (
           <div className="mb-4 rounded-lg alert-danger px-4 py-3 text-sm">
             {error}
@@ -383,7 +383,7 @@ export default function ProductionBoardPage() {
         />
       )}
       {showCreate && (!lookups || loadingLookups) && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center app-scrim p-4">
+        <div className="fixed inset-0 z-[var(--ds-z-modal)] flex items-center justify-center app-scrim p-4">
           <div className="app-modal w-full max-w-sm p-6 text-center">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-app-accent border-t-transparent" />
             <p className="mt-4 text-sm font-semibold text-app">{t("common.loading")}</p>

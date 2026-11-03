@@ -4820,11 +4820,11 @@ export const enMessages: Messages = {
       dayInfo: "{events} events, {activities} activities",
     },
     quick: {
-      sale: "New sale",
-      purchase: "New purchase",
-      customer: "New customer",
-      task: "New task",
-      expense: "New expense",
+      sale: "Create sales invoice",
+      purchase: "Create purchase invoice",
+      customer: "Add customer",
+      task: "Add task",
+      expense: "Add expense",
     },
     activities: {
       overdue: "Overdue",
@@ -5037,7 +5037,7 @@ export const enMessages: Messages = {
       },
       quick_actions: {
         title: "Quick actions",
-        description: "New sale, purchase, customer, task, expense",
+        description: "Shortcuts to sales, purchases, customers, tasks and expenses",
       },
       approvals: {
         title: "Waiting for my approval",
@@ -5684,6 +5684,9 @@ export const enMessages: Messages = {
       note: "Note",
       grid: "Sales invoices (DataGrid)",
       classic: "Sales invoices (classic table)",
+      pageFrame: "Page frame: one scroll",
+      pageFrameHint: "Shell, list header, a long grid and document lines: the page must have exactly one vertical scroll.",
+      pageFrameFilters: "All · Draft · Posted",
     },
   },
   lookup: {

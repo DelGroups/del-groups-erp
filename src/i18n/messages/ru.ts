@@ -4821,11 +4821,11 @@ export const ruMessages: Messages = {
       dayInfo: "событий: {events}, дел: {activities}",
     },
     quick: {
-      sale: "Новая продажа",
-      purchase: "Новая закупка",
-      customer: "Новый клиент",
-      task: "Новая задача",
-      expense: "Новый расход",
+      sale: "Создать счёт продажи",
+      purchase: "Создать счёт закупки",
+      customer: "Добавить клиента",
+      task: "Добавить задачу",
+      expense: "Добавить расход",
     },
     activities: {
       overdue: "Просрочено",
@@ -5038,7 +5038,7 @@ export const ruMessages: Messages = {
       },
       quick_actions: {
         title: "Быстрые действия",
-        description: "Новая продажа, закупка, клиент, задача, расход",
+        description: "Быстрый переход к продажам, закупкам, клиентам, задачам и расходам",
       },
       approvals: {
         title: "Ждут моего утверждения",
@@ -5685,6 +5685,9 @@ export const ruMessages: Messages = {
       note: "Примечание",
       grid: "Счета продаж (DataGrid)",
       classic: "Счета продаж (старая таблица)",
+      pageFrame: "Каркас страницы: одна прокрутка",
+      pageFrameHint: "Оболочка, заголовок списка, длинная таблица и строки документа: на странице должна быть ровно одна вертикальная прокрутка.",
+      pageFrameFilters: "Все · Черновик · Проведён",
     },
   },
   lookup: {

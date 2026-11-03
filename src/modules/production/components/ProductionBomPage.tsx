@@ -123,7 +123,7 @@ export default function ProductionBomPage() {
         description={t("production.bomDescription")}
         backLink={{ href: "/production", label: t("common.back") }}
       />
-      <div className="flex-1 overflow-auto p-4 md:p-6">
+      <div className="p-4 md:p-6">
         {loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
         ) : (

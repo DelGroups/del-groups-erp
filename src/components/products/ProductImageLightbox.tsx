@@ -32,7 +32,7 @@ export default function ProductImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-[calc(var(--ds-z-modal-nested)+1)] flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"

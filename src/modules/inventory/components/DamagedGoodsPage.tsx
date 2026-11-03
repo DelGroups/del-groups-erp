@@ -157,7 +157,7 @@ export default function DamagedGoodsPage() {
           }
         />
 
-        <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
+        <main className="app-page-content flex-1 space-y-3 md:space-y-4">
           <DocumentListSearchBar
             value={searchTerm}
             onChange={setSearchTerm}

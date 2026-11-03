@@ -690,7 +690,7 @@ export default function ProductionOrderDetailPage() {
         backLink={{ href: "/production", label: t("production.boardTitle") }}
       />
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-w-0">
         <div className="sticky top-0 z-30 border-b border-app bg-app-surface/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
             <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl border border-app bg-app p-1">

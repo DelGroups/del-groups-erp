@@ -587,7 +587,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
+      <main className="app-page-content flex-1 space-y-4">
         {activeTab !== "categories" ? (
           <>
             <section className="app-card space-y-3 p-4">

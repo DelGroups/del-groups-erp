@@ -221,7 +221,7 @@ export default function WarehouseSlipsPage() {
         }
       />
 
-      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
+      <main className="app-page-content flex-1 space-y-3 md:space-y-4">
         <div className="flex flex-wrap gap-2">
           {tabs.map((item) => (
             <Button

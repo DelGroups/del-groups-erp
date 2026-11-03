@@ -25,7 +25,7 @@ export function RecordPanel({ open, onClose, title, closeLabel, children }: { op
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount aria-describedby={undefined}>
               <motion.div
-                className="fixed inset-y-0 right-0 z-[61] flex w-full max-w-5xl flex-col"
+                className="fixed inset-y-0 right-0 z-[var(--ds-z-modal-content)] flex w-full max-w-5xl flex-col"
                 style={{ background: "var(--ds-bg)", boxShadow: "var(--ds-elevation-4)" }}
                 initial={reduced ? { opacity: 0 } : { x: "100%" }}
                 animate={reduced ? { opacity: 1 } : { x: 0 }}

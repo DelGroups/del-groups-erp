@@ -171,9 +171,10 @@ test("every --erp-* token is an alias of a --ds-* token under html[data-ui-stand
   const aliases = new Map([...css.matchAll(/(--erp-[a-z0-9-]+):\s*var\((--ds-[a-z0-9-]+)\)/g)].map((m) => [m[1], m[2]]));
   const missing = [...legacy].filter((t) => !aliases.has(t));
   assert.deepEqual(missing, []);
-  // Every --ds-* target exists in theme.css.
+  // Every --ds-* target exists in theme.css (or, for the z-index scale, layers.css: UI-5).
   const theme = read("src/design-system/theme.css");
-  const unknown = [...new Set(aliases.values())].filter((t) => !theme.includes(`${t}:`));
+  const defined = theme + read("src/design-system/layers.css");
+  const unknown = [...new Set(aliases.values())].filter((t) => !defined.includes(`${t}:`));
   assert.deepEqual(unknown, []);
   // The changes apply only under the attribute; the old full-width input stays without it.
   for (const line of css.split("\n").filter((l) => /^\s*[^/*\s@}].*\{\s*$/.test(l))) assert.match(line, /html\[data-ui-standard\]/, line);

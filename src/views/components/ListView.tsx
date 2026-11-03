@@ -4,7 +4,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
-import { DataGrid, useUiStandard, type GridColumn, type GridItem } from "@/design-system/components";
+import { DataGrid, RowActionsMenu, useUiStandard, type GridColumn, type GridItem, type RowMenuItem } from "@/design-system/components";
 import type { GridDensity } from "@/design-system/grid";
 import { dataGridLabels } from "@/i18n/uiStandardLabels";
 import { displayValue, fieldMap, flattenGroups, formatNumber, gridColumnType, groupRecords, isNumericField, listFieldLabel, nextSort, optionLabel, sumBy, type Formatter, type RecordGroup } from "../logic";
@@ -28,6 +28,10 @@ export interface ListViewProps<R extends ViewRecord> {
   listColumns?: boolean;
   /** UI_STANDARD (UI-2): the grid's user settings and its toolbar. */
   grid?: ListGridSettings;
+  /** The row's "…" menu (UI-5): the record's actions (views/rowActions.ts rowMenu). */
+  rowActions?: (record: R) => RowMenuItem[];
+  /** A module's own row menu component instead (it brings its dialogs), e.g. the ledger's. */
+  renderRowActions?: (record: R) => React.ReactNode;
 }
 
 export interface ListGridSettings {
@@ -169,7 +173,7 @@ function ClassicListView<R extends ViewRecord>({ definition: def, records, group
  * resizable columns, group rows with their sums, keyboard rows. The column picker sits in the
  * grid's toolbar ("Columns"), never in a header cell.
  */
-function GridListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, listColumns = false, grid }: ListViewProps<R>) {
+function GridListView<R extends ViewRecord>({ definition: def, records, groupBy, sort, onSort, openHref, fmt, columns: shown, listColumns = false, grid, rowActions, renderRowActions }: ListViewProps<R>) {
   const router = useRouter();
   const fields = useMemo(() => fieldMap(def), [def]);
   const columns = useMemo(() => (shown ?? def.list.columns).map((c) => fields.get(c)).filter((f): f is FieldDef => !!f), [shown, def.list.columns, fields]);
@@ -221,6 +225,7 @@ function GridListView<R extends ViewRecord>({ definition: def, records, groupBy,
   }, [groupBy.length, records, groups, open, columns, sums, toggle, sumText]);
 
   const totals = sums.length && records.length ? Object.fromEntries(columns.filter((f) => sums.includes(f.name)).map((f) => [f.name, sumText(f, sumBy(records, f.name))])) : null;
+  const labels = dataGridLabels(fmt.t);
 
   return (
     <DataGrid<R>
@@ -228,12 +233,13 @@ function GridListView<R extends ViewRecord>({ definition: def, records, groupBy,
       items={items}
       rowKey={(r) => String(r.id)}
       label={def.model.key}
-      labels={dataGridLabels(fmt.t)}
+      labels={labels}
       sort={sort ? { key: sort.field, dir: sort.dir } : null}
       onSort={(key) => onSort(nextSort(sort, key))}
       onOpen={openHref ? (r) => router.push(openHref(r)) : undefined}
       rowHref={openHref}
       linkAs={Link}
+      rowActions={renderRowActions ?? (rowActions ? (r) => <RowActionsMenu items={rowActions(r)} label={labels.actions} linkAs={Link} /> : undefined)}
       totals={totals}
       widths={grid?.widths}
       onWidthChange={grid?.onWidthChange}

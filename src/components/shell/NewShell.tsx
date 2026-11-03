@@ -47,6 +47,7 @@ import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } 
 import { ShellBackButton } from "./ShellBackButton";
 import { MyActivitiesButton } from "./MyActivitiesButton";
 import { ReminderAlerts } from "@/modules/calendar";
+import { ShellHeaderSlotContext } from "./ShellHeaderSlot";
 
 function initials(name: string): string {
   return (
@@ -435,7 +436,7 @@ function MobileDrawer({ open, onOpenChange, apps, current, currentItemPath }: { 
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount aria-describedby={undefined}>
               <motion.div
-                className="fixed inset-y-0 right-0 z-[61] flex w-[80%] max-w-xs flex-col"
+                className="fixed inset-y-0 right-0 z-[var(--ds-z-modal-content)] flex w-[80%] max-w-xs flex-col"
                 style={{ background: "var(--ds-surface)", boxShadow: "var(--ds-elevation-4)" }}
                 initial={reduced ? { opacity: 0 } : { x: "100%" }}
                 animate={reduced ? { opacity: 1 } : { x: 0 }}
@@ -553,6 +554,8 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const quickActions = useQuickActions();
   const mod = useModifierKey();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // UI-5: page actions in the top bar (ShellHeaderSlot), e.g. home's "Customise" icon.
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const dsTheme = theme === "daylight" ? "light" : "dark";
   const aiEnabled = isEnabled("ai");
@@ -580,7 +583,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const openAi = () => window.dispatchEvent(new CustomEvent(AI_OPEN_EVENT));
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[color:var(--erp-bg-main)]">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[color:var(--erp-bg-main)]">
       <DesignScope theme={dsTheme} brand={brand}>
         <header className="ds-shell-header">
           <div className="flex h-14 items-center gap-1.5 px-3 md:gap-2 md:px-4">
@@ -611,6 +614,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
               </button>
             </div>
 
+            <span ref={setHeaderSlot} className="flex items-center gap-1" data-shell-page-actions="" />
             <span className="md:hidden">
               <button type="button" className="ds-icon-btn" aria-label={t("newShell.search")} onClick={() => setPaletteOpen(true)}>
                 <Search className="h-5 w-5" aria-hidden />
@@ -685,9 +689,11 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
         <MobileDrawer key={pathname} open={drawerOpen} onOpenChange={setDrawerOpen} apps={apps} current={current} currentItemPath={currentItemPath} />
       </DesignScope>
 
-      <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-[var(--erp-content-padding-x)] py-[var(--erp-content-padding-y)] pb-24 md:pb-[var(--erp-content-padding-y)] ${contentClassName ?? ""}`}>
+      {/* The one vertical scroller of every page (UI-5, docs/ui-standard.md "Page scroll"). Page wrappers,
+          list chrome and grids never scroll vertically themselves; they stick inside this box. */}
+      <div data-scroll-root="" className={`ds-scroll-root ds-scroll-root-tabbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-[var(--erp-content-padding-x)] py-[var(--erp-content-padding-y)] pb-24 md:pb-[var(--erp-content-padding-y)] ${contentClassName ?? ""}`}>
         {pageTitle ? <h3 className="erp-page-title">{pageTitle}</h3> : null}
-        {children}
+        <ShellHeaderSlotContext.Provider value={headerSlot}>{children}</ShellHeaderSlotContext.Provider>
       </div>
 
       <DesignScope theme={dsTheme} brand={brand}>

@@ -21,11 +21,16 @@ export interface MetricCardProps {
   seriesLabel: string;
 }
 
-export function DeltaChip({ delta, label }: { delta: number; label?: string }) {
+/**
+ * A change in percent: the arrow follows the sign, the colour follows whether it is good news.
+ * `invert` for figures where up is bad (expenses): an increase is shown in the danger colour.
+ */
+export function DeltaChip({ delta, label, invert = false }: { delta: number; label?: string; invert?: boolean }) {
   const kind = deltaKind(delta);
   const Icon = kind === "up" ? ArrowUpRight : kind === "down" ? ArrowDownRight : ArrowRight;
+  const tone = kind === "flat" ? "flat" : invert ? (kind === "up" ? "down" : "up") : kind;
   return (
-    <span className={`ds-chip ds-chip-${kind === "flat" ? "flat" : kind}`}>
+    <span className={`ds-chip ds-chip-${tone}`}>
       <Icon className="h-3 w-3" aria-hidden />
       <span className="ds-mono">
         {delta > 0 ? "+" : ""}

@@ -6,6 +6,7 @@
  * is off or the user lacks the read permission). New-UI only: use inside <DesignScope>.
  */
 export * from "./types";
+export { ACTION_PARAM, actionHref, rowMenu, type RowActionSpec, type RowActionItem } from "./rowActions";
 export { useViewData, useViewRecord, useViewAccess, useRecordMutation, useFavorites, invalidateModel, type ViewData, type RecordData, type ViewStatus } from "./data";
 export { ViewEngine, type ViewEngineProps } from "./components/ViewEngine";
 export { FormView, StatusBar, Tabs, type FormAction, type FormTab, type FormViewProps } from "./components/FormView";

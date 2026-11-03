@@ -15,7 +15,7 @@ import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { fetchProductsCatalog } from "@/lib/products/api";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import type { WarehouseSlip, WarehouseSlipItem } from "@/types/database.types";
-import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import { fetchWarehouseStockDashboard } from "../lib/fetchWarehouseStockDashboard";
 import { approveWarehouseSlipAction, fetchWarehouseSlipsAction, rejectWarehouseSlipAction } from "../actions/warehouseSlips";
 import { deleteInventoryCountAction, fetchInventoryCountsAction } from "../actions/inventoryCount";
@@ -122,6 +122,11 @@ export function InventoryStockScreen() {
         </Link>
       }
       recordTitle={(r) => r.name}
+      // UI-5: each screen's row "…" menu has the same actions as its record form (?do=).
+      rowActions={(): RowActionSpec[] => [
+        { key: "transfer", label: t("inventory.actions.transfer"), icon: <ArrowRightLeft className="h-4 w-4" /> },
+        { key: "kardex", label: t("inventory.actions.kardex"), icon: <History className="h-4 w-4" /> },
+      ]}
       renderRecord={(r) => <StockRecordView record={r} />}
     />
   );
@@ -142,12 +147,19 @@ function StockRecordView({ record }: { record: StockRecord }) {
 
 export function WarehouseSlipsScreen() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canApprove = can("can_approve_warehouse_slips");
   return (
     <EngineScreen
       definition={SLIPS}
       title={t("warehouseSlips.title")}
       kpis={(records, fmt, ctx) => slipKpis(records, fmt, ctx.now)}
       recordTitle={(r) => r.slip_number}
+      rowActions={(r): RowActionSpec[] => [
+        { key: "approve", label: t("warehouseSlips.approveAndPrint"), icon: <CheckCircle2 className="h-4 w-4" />, hidden: !(r.status === "pending" && canApprove) },
+        { key: "reprint", label: t("warehouseSlips.reprint"), icon: <Printer className="h-4 w-4" />, hidden: r.status !== "approved" },
+        { key: "reject", label: t("warehouseSlips.reject"), icon: <XCircle className="h-4 w-4" />, destructive: true, hidden: !(r.status === "pending" && canApprove) },
+      ]}
       renderRecord={(r) => <SlipRecordView record={r} />}
     />
   );
@@ -251,6 +263,10 @@ export function InventoryCountsScreen() {
         </>
       }
       recordTitle={(r) => r.document_number}
+      rowActions={(r): RowActionSpec[] => [
+        { key: "open", label: t("inventory.engine.openCount"), icon: <ExternalLink className="h-4 w-4" /> },
+        { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: r.status === "posted" },
+      ]}
       renderRecord={(r, { close }) => <CountRecordView record={r} close={close} />}
     />
   );
@@ -326,6 +342,15 @@ export function InitialBalanceScreen() {
         ) : null
       }
       recordTitle={(r) => r.document_number}
+      rowActions={(r): RowActionSpec[] => {
+        const draft = r.status === "draft";
+        const manage = can("can_manage_products");
+        return [
+          { key: "open", label: draft && manage ? t("common.edit") : t("common.view"), icon: draft && manage ? <PencilLine className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" /> },
+          { key: "unpost", label: t("initialBalance.revertToDraft"), icon: <Undo2 className="h-4 w-4" />, hidden: !(r.status === "posted" && can("can_unpost_inventory")) },
+          { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !(draft && manage) },
+        ];
+      }}
       renderRecord={(r, { close }) => <IntakeRecordView record={r} close={close} />}
     />
   );
@@ -450,6 +475,10 @@ export function DamagedGoodsScreen() {
         </RecordPanel>
       }
       recordTitle={(r) => r.document_number}
+      rowActions={(): RowActionSpec[] => [
+        { key: "edit", label: t("common.edit"), icon: <PencilLine className="h-4 w-4" /> },
+        { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" /> },
+      ]}
       renderRecord={(r) => <WriteoffRecordView record={r} />}
     />
   );

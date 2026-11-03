@@ -5,7 +5,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { MotionConfig, Reorder, motion, useDragControls, useReducedMotion } from "motion/react";
 import { Building2, Check, LayoutGrid, Plus, RotateCcw, Settings2, X } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
-import { DesignScope, ToastProvider, useDesignScope, useToast } from "@/design-system/components";
+import { DesignScope, IconButton, ToastProvider, useDesignScope, useToast } from "@/design-system/components";
+import { ShellHeaderActions } from "@/components/shell/ShellHeaderSlot";
 import { motionPreset, overlayVariants } from "@/design-system/motion";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -129,8 +130,10 @@ function Home() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {editing ? (
+      {/* UI-5: no row of its own for "Customise": an icon in the shell's top bar; the edit toolbar
+          shows only while editing. */}
+      {editing ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <>
             <p className="me-auto ds-muted" role="status">{t("home.edit.hint")}</p>
             <button type="button" className="ds-btn ds-btn-sm" onClick={() => setAdding(true)}>
@@ -153,13 +156,12 @@ function Home() {
               {t("common.save")}
             </button>
           </>
-        ) : (
-          <button type="button" className="ds-btn ds-btn-sm" onClick={() => setDraft(home.layout)}>
-            <LayoutGrid className="h-4 w-4" aria-hidden />
-            {t("home.edit.customise")}
-          </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ShellHeaderActions fallbackClassName="flex justify-end">
+          <IconButton label={t("home.edit.customise")} icon={<LayoutGrid className="h-4 w-4" />} onClick={() => setDraft(home.layout)} />
+        </ShellHeaderActions>
+      )}
 
       <p className="sr-only" aria-live="polite">{announce}</p>
 
@@ -316,7 +318,7 @@ function WidgetItem({
         const target = typeof e.clientX === "number" ? dropTarget(e.clientX, e.clientY) : null;
         if (target && target.column !== column) onMove(placement.id, target.column, target.index);
       }}
-      whileDrag={{ scale: 1.02, zIndex: 20, boxShadow: "var(--ds-elevation-3, 0 12px 32px rgba(0,0,0,.18))" }}
+      whileDrag={{ scale: 1.02, zIndex: "var(--ds-z-raised)" as unknown as number, boxShadow: "var(--ds-elevation-3, 0 12px 32px rgba(0,0,0,.18))" }}
     >
       <Component
         def={def}
@@ -357,7 +359,7 @@ function AddWidgetSheet({ open, onOpenChange, options, onAdd }: { open: boolean;
         </Dialog.Overlay>
         <Dialog.Content asChild>
           <motion.aside
-            className="ds-panel fixed inset-y-0 end-0 z-[61] flex w-full max-w-md flex-col gap-4 overflow-y-auto p-5"
+            className="ds-panel fixed inset-y-0 end-0 z-[var(--ds-z-modal-content)] flex w-full max-w-md flex-col gap-4 overflow-y-auto p-5"
             initial={reduced ? { opacity: 0 } : { x: "100%" }}
             animate={reduced ? { opacity: 1 } : { x: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
@@ -440,7 +442,7 @@ function SettingsForm({ id, placement, onClose, onSave }: { id: string; placemen
     <Dialog.Root open onOpenChange={(o) => (o ? undefined : onClose())}>
       <Dialog.Portal container={portalContainer ?? undefined}>
         <Dialog.Overlay className="ds-overlay" />
-        <Dialog.Content className="ds-panel fixed left-1/2 top-1/2 z-[61] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 p-5" onOpenAutoFocus={(e) => { e.preventDefault(); first.current?.focus(); }}>
+        <Dialog.Content className="ds-panel fixed left-1/2 top-1/2 z-[var(--ds-z-modal-content)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 p-5" onOpenAutoFocus={(e) => { e.preventDefault(); first.current?.focus(); }}>
           <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
             <Dialog.Title className="flex items-center gap-2 font-semibold">
               <Settings2 className="h-4 w-4" aria-hidden />

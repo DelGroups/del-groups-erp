@@ -12,7 +12,7 @@ import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/In
 import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
-import { EngineScreen, FormView, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import { listConsignmentDispatchesAction, listConsignmentInventoryAction, listConsignmentReportsAction, listConsignmentReturnsAction } from "../actions/consignment";
 import { mapConsignmentReportToInvoicePrint } from "../lib/mapConsignmentReportToInvoicePrint";
 import type { ConsignmentDispatch, ConsignmentMonthlyReport, ConsignmentReturn } from "../lib/types";
@@ -136,6 +136,8 @@ function DocumentsTab() {
           </section>
         )}
         recordTitle={(r) => r.doc_no}
+        // UI-5: the row "…" menu, the same action as the document's form (?do=).
+        rowActions={(): RowActionSpec[] => [{ key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" /> }]}
         renderRecord={(r, { close }) => (
           <DocumentRecordView
             record={r}

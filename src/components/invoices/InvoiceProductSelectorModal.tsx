@@ -356,7 +356,7 @@ export default function InvoiceProductSelectorModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto app-scrim p-4">
+    <div className="fixed inset-0 z-[calc(var(--ds-z-modal-nested)+1)] flex items-start justify-center overflow-y-auto app-scrim p-4">
       <div className="my-4 flex w-full max-w-4xl flex-col app-modal">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>

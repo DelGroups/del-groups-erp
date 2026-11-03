@@ -1,0 +1,22 @@
+/*
+ * Layers (UI-5): the one z-index scale of the whole app. On :root, so classic screens and every
+ * [data-ds] scope (custom properties inherit) use the same layers; Z_LAYERS in theme.ts mirrors
+ * it (tests/uiAudit.test.mjs). While UI_STANDARD is on, the legacy --erp-z-* tokens alias these
+ * (ui-standard.css).
+ *
+ * Order: in-page sticky parts < shell < dialogs < dialogs opened from dialogs < dropdowns <
+ * toasts < tooltips. Dropdowns sit above dialogs on purpose: a lookup, date picker or menu opened
+ * inside a dialog must show over it.
+ */
+:root {
+  --ds-z-grid-head: 4; /* a grid's sticky header and totals strips, above its sticky cells */
+  --ds-z-raised: 10; /* a card lifted while it is dragged (home widgets) */
+  --ds-z-sticky: 30; /* sticky page and list headers */
+  --ds-z-sidebar: 50;
+  --ds-z-modal: 60; /* dialog / drawer backdrop */
+  --ds-z-modal-content: 61;
+  --ds-z-modal-nested: 70; /* a dialog opened from a dialog: + 0…9 in opening order */
+  --ds-z-dropdown: 80; /* every popover, menu, lookup list and date picker */
+  --ds-z-toast: 90;
+  --ds-z-tooltip: 95;
+}

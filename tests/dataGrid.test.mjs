@@ -195,13 +195,9 @@ test("group rows flatten in screen order; closed groups hide their rows", () => 
 });
 
 test("classic columns get a grid type from their Excel type, numeric flag or key", async () => {
-  const { classicGridType } = await import("../src/components/lists/listTable.tsx").catch(() => ({}));
-  if (!classicGridType) {
-    // listTable.tsx imports React components; check the rule in its source instead.
-    const src = read("src/components/lists/listTable.tsx");
-    for (const needle of ['exportType === "date"', 'exportType === "datetime"', '"money"', '"status"', "doc_no|number|code|slip_no"]) assert.ok(src.includes(needle), needle);
-    return;
-  }
+  // UI-5: the rule lives in a pure module (gridType.ts), re-exported by listTable.tsx.
+  const { classicGridType } = await import("../src/components/lists/gridType.ts");
+  assert.match(read("src/components/lists/listTable.tsx"), /export \{ classicGridType \} from "\.\/gridType";/);
   assert.equal(classicGridType({ key: "doc_date", exportType: "date" }), "date");
   assert.equal(classicGridType({ key: "total", numeric: true }), "money");
   assert.equal(classicGridType({ key: "doc_status" }), "status");

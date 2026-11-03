@@ -86,7 +86,7 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="p-6">
         {loading || !sale ? (
           <div className="app-card p-12 text-center text-sm text-app-muted">{t("common.loading")}</div>
         ) : (

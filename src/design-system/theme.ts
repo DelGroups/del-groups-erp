@@ -46,3 +46,34 @@ export function scopeAttributes(options: ScopeOptions): {
     style: brandCssVars(options.brand),
   };
 }
+
+/**
+ * The one z-index scale (UI-5), mirrored from layers.css (`--ds-z-*` on :root). In-page sticky
+ * parts < shell < dialogs < dialogs opened from dialogs < dropdowns < toasts < tooltips: a
+ * dropdown always shows over the dialog it was opened from.
+ */
+export const Z_LAYERS = {
+  gridHead: 4,
+  raised: 10,
+  sticky: 30,
+  sidebar: 50,
+  modal: 60,
+  modalContent: 61,
+  modalNested: 70,
+  dropdown: 80,
+  toast: 90,
+  tooltip: 95,
+} as const;
+
+export type ZLayer = keyof typeof Z_LAYERS;
+
+/** CSS variable of a layer, e.g. "var(--ds-z-dropdown)". */
+export function zVar(layer: ZLayer): string {
+  return `var(--ds-z-${layer.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)})`;
+}
+
+/** Scope classes that also belong on its overlay layer (fonts), not layout or background ones (UI-5). */
+export function layerClassName(className?: string): string {
+  const keep = (className ?? "").split(/\s+/).filter((c) => c && !c.startsWith("ds-scope"));
+  return ["ds-layer", ...keep].join(" ");
+}

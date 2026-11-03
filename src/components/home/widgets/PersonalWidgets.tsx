@@ -286,18 +286,23 @@ export function QuickActionsWidget(props: WidgetProps) {
   return (
     <WidgetFrame {...frameProps(props)}>
       {shown.length ? (
-        <ul className={`grid gap-2 ${props.placement.size === "L" ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2"}`}>
-          {shown.map((a) => (
-            <li key={a.id}>
-              <Link href={a.href} className="ds-btn w-full justify-start gap-2" style={{ minHeight: "2.75rem" }}>
-                <span className="grid h-7 w-7 place-items-center rounded-[var(--ds-radius-sm)]" style={{ background: "var(--ds-brand-soft)", color: "var(--ds-brand)" }} aria-hidden>
-                  <a.icon className="h-4 w-4" />
-                </span>
-                <span className="truncate">{t(`home.quick.${a.id}`)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        // UI-5: full labels with their icon, never cut. The card decides the layout (container
+        // query, not the window): one-line buttons when it is wide, an icon grid with the label
+        // centred under the icon (two lines at most) when it is narrow.
+        <div className="ds-quick">
+          <ul className="ds-quick-list">
+            {shown.map((a) => (
+              <li key={a.id}>
+                <Link href={a.href} className="ds-quick-item">
+                  <span className="ds-quick-icon" aria-hidden>
+                    <a.icon className="h-4 w-4" />
+                  </span>
+                  <span className="ds-quick-label">{t(`home.quick.${a.id}`)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <p className="ds-muted">{t("home.empty.quick")}</p>
       )}

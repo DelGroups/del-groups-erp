@@ -107,7 +107,7 @@ export default function EmployeeDepartmentManagerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center app-scrim p-4">
+    <div className="fixed inset-0 z-[var(--ds-z-modal)] flex items-center justify-center app-scrim p-4">
       <div className="app-modal flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <h3 className="font-bold text-app">{t("employees.departments.title")}</h3>

@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import StatusBadge from "@/components/ui/status-badge";
 import { ClassicInvoiceTable, GridLab } from "./GridLab";
 import { LineGridLab } from "./LineGridLab";
+import { PageFrameLab } from "./PageFrameLab";
 import { LookupFieldView } from "@/components/lookups";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
@@ -57,8 +58,15 @@ export const LAB_WIDTHS = [280, 360, 768, 1280] as const;
 const DENSITIES: DsDensity[] = ["comfortable", "compact"];
 const THEMES = ["light", "dark"] as const;
 
-export default function UiLab({ fontClassName, standard }: { fontClassName: string; standard: boolean }) {
+export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" }) {
   const { t } = useI18n();
+  if (frame === "page") {
+    return (
+      <DesignScope theme="light" className={fontClassName}>
+        <PageFrameLab />
+      </DesignScope>
+    );
+  }
   return (
     <DesignScope theme="light" className={`${fontClassName} min-h-screen p-4`}>
       <PageHeader title={t("uiStandard.lab.title")} description={t("uiStandard.lab.description")} />

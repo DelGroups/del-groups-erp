@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { deleteContractAction } from "@/lib/actions/entityDelete";
-import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import { fetchContracts, fetchLinkedDocuments, updateContract, type Contract } from "../lib/api";
 import { contractKpis, contractsDefinition, CONTRACTS_VIEW_KEY, type ContractRecord } from "../views/contracts";
 import ContractAttachmentButton from "./ContractAttachmentButton";
@@ -24,12 +24,22 @@ const DEFINITION = contractsDefinition({ fetchAll });
 /** Contracts on the view engine (new UI). Creating and editing contracts stays in the classic page. */
 export default function ContractsScreen() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canManage = can("can_create_invoice") || can("can_view_purchases");
   return (
     <EngineScreen
       definition={DEFINITION}
       title={t("official.contractsPageTitle")}
       kpis={(records, fmt, ctx) => contractKpis(records, fmt, ctx.now)}
       recordTitle={(r) => `${r.contract_number} · ${r.title}`}
+      // UI-5: the row "…" menu, the same actions as the record's form (which runs them, ?do=).
+      rowActions={(r): RowActionSpec[] => [
+        { key: "print", label: t("official.printContract"), icon: <Printer className="h-4 w-4" /> },
+        r.status === "cancelled"
+          ? { key: "status", label: t("official.reactivateContract"), icon: <RotateCcw className="h-4 w-4" />, hidden: !canManage }
+          : { key: "status", label: t("official.cancelContract"), icon: <Ban className="h-4 w-4" />, destructive: true, hidden: !canManage },
+        { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !canManage },
+      ]}
       renderRecord={(r, { close }) => <ContractRecordView record={r} close={close} />}
     />
   );

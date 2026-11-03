@@ -72,7 +72,7 @@ export default function MergePartnersDialog({
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
+      <div className="fixed inset-0 z-[var(--ds-z-modal-nested)] flex items-center justify-center app-scrim p-4">
         <div className="app-modal w-full max-w-lg">
           <div className="flex items-center justify-between border-b border-app px-5 py-4">
             <h3 className="flex items-center gap-2 text-sm font-bold text-app">

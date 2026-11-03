@@ -244,6 +244,32 @@ body {
   color: var(--erp-text-main);
 }
 
+/* ── Page scroll (UI-5, docs/ui-standard.md "Page scroll") ─────────────────────────────
+   The shell's content area ([data-scroll-root]) is the one vertical scroller of every page.
+   Nothing inside it sets a viewport height or scrolls vertically on its own; headers that must
+   stay visible use position: sticky inside it. */
+.ds-scroll-root {
+  /* Sticky parts stick inside the scroller's padding; these offsets move them onto its edges so
+     no row shows through the padding above a sticky header or below the sticky totals. */
+  --ds-scroll-pad-top: var(--erp-content-padding-y);
+  --ds-sticky-top: calc(-1 * var(--ds-scroll-pad-top));
+  --ds-sticky-bottom: calc(-1 * var(--erp-content-padding-y));
+}
+@media (max-width: 767.98px) {
+  /* Phone tab bar (4rem + safe area) over the bottom 6rem padding (pb-24) of the new shell. */
+  .ds-scroll-root-tabbar {
+    --ds-sticky-bottom: calc(env(safe-area-inset-bottom) - 2rem);
+  }
+}
+/* A list page's title and filters stay visible at the top of the page scroller. */
+.ds-list-chrome-bar {
+  position: sticky;
+  top: calc(-1 * var(--ds-scroll-pad-top, 0px));
+  z-index: var(--ds-z-sticky);
+  margin-top: calc(-1 * var(--ds-scroll-pad-top, 0px));
+  padding-top: var(--ds-scroll-pad-top, 0px);
+}
+
 /* Page content density wrapper */
 .app-page-content {
   padding: 1rem;
@@ -770,7 +796,7 @@ html[data-theme="daylight"] .alert-danger {
 .app-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--ds-z-modal);
   display: flex;
   align-items: center;
   justify-content: center;

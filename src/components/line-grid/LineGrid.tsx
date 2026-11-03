@@ -7,7 +7,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Reorder, useDragControls, useReducedMotion, motion } from "motion/react";
 import { ArrowDown, ArrowUp, Columns3Cog, Copy, GripVertical, MoreHorizontal, PanelRightOpen, Plus, Trash2, X } from "lucide-react";
 import { IconButton, Truncate, useDesignScope } from "@/design-system/components";
-import { ACTIONS_COLUMN_WIDTH, GRID_ROW_HEIGHT, distributeSurplus, edgeShadows, initialColumnWidth, type GridColumnType, type GridDensity } from "@/design-system/grid";
+import { ACTIONS_COLUMN_WIDTH, GRID_ROW_HEIGHT, columnAlign, distributeSurplus, edgeShadows, initialColumnWidth, type GridColumnType, type GridDensity } from "@/design-system/grid";
 import { isTextTruncated } from "@/design-system/logic";
 import { motionPreset, panelVariants } from "@/design-system/motion";
 import { LookupScope } from "@/components/lookups/LookupScope";
@@ -341,7 +341,7 @@ function LineGridInner<L>({
                 <IconButton size="sm" label={labels.columns} icon={<Columns3Cog className="h-4 w-4" />} tabIndex={-1} />
               </Popover.Trigger>
               <Popover.Portal container={portalContainer ?? undefined}>
-                <Popover.Content align="end" sideOffset={6} collisionPadding={12} className="z-[70] outline-none">
+                <Popover.Content align="end" sideOffset={6} collisionPadding={12} className="z-[var(--ds-z-dropdown)] outline-none">
                   <motion.div className="ds-panel w-64 p-2" initial="initial" animate="enter" variants={motionPreset(panelVariants, reduced)}>
                     <p className="px-2 pb-1 text-[length:var(--ds-text-xs)] font-semibold ds-muted">{labels.optionalColumns}</p>
                     {optional.map((c) => (
@@ -569,8 +569,9 @@ function LineGridInner<L>({
   );
 }
 
+/** End-aligned column: the one alignment rule of every grid (grid.ts columnAlign, UI-5). */
 function isNum<L>(c: LineColumn<L>) {
-  return c.type === "number" || c.type === "money";
+  return columnAlign(c.type) === "end";
 }
 
 /** One line: a plain row, or a draggable one (motion Reorder) with a handle in the first column. */

@@ -35,7 +35,7 @@ export default function MaterialShortageConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[10003] flex items-center justify-center app-scrim p-4">
+    <div className="fixed inset-0 z-[calc(var(--ds-z-modal-nested)+5)] flex items-center justify-center app-scrim p-4">
       <div className="app-modal w-full max-w-lg overflow-hidden">
         <div className="flex items-start justify-between border-b border-app px-5 py-4">
           <div className="flex items-center gap-2">

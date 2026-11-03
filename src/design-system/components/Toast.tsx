@@ -43,7 +43,7 @@ export function ToastProvider({ children, closeLabel }: { children: React.ReactN
   const value = useMemo(() => ({ toast, dismiss }), [toast, dismiss]);
 
   const stack = (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[70] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2" aria-live="polite">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-[var(--ds-z-toast)] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2" aria-live="polite">
       <AnimatePresence initial={false}>
         {toasts.map((t) => {
           const Icon = ICON[t.variant];

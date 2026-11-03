@@ -187,7 +187,7 @@ export function Combobox({
           align="start"
           sideOffset={6}
           collisionPadding={12}
-          className="z-[70] outline-none"
+          className="z-[var(--ds-z-dropdown)] outline-none"
           style={{ minWidth: "var(--radix-popover-trigger-width)" }}
         >
           <motion.div className="ds-menu ds-combobox-panel" initial="initial" animate="enter" variants={motionPreset(panelVariants, reduced)}>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, GripVertical, MoreHorizontal, RefreshCw, Settings2, X, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, GripVertical, MoreHorizontal, RefreshCw, Settings2, X, type LucideIcon } from "lucide-react";
 import { EmptyState, Skeleton } from "@/design-system/components";
 import { useI18n } from "@/i18n/I18nProvider";
 import { MenuItem, MenuLabel, MenuSeparator, ViewMenu } from "@/views/components/Menu";
@@ -52,10 +52,10 @@ export function WidgetFrame({
 
   if (bare) {
     return (
-      <section aria-labelledby={editing ? headingId : undefined} className="relative h-full" data-size={size}>
+      <section aria-labelledby={editing ? headingId : undefined} className="ds-home-card relative h-full" data-size={size}>
         {tools ? (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-[var(--ds-radius-md)] px-2 py-1" style={{ background: "var(--ds-surface-sunken)" }}>
-            <h2 id={headingId} className="truncate text-[length:var(--ds-text-sm)] font-medium">{name}</h2>
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-2 rounded-[var(--ds-radius-md)] px-2 py-1" style={{ background: "var(--ds-surface-sunken)" }}>
+            <h2 id={headingId} className="min-w-0 flex-1 truncate text-[length:var(--ds-text-sm)] font-medium">{name}</h2>
             {tools}
           </div>
         ) : null}
@@ -65,9 +65,10 @@ export function WidgetFrame({
   }
 
   return (
-    <section aria-labelledby={headingId} className="ds-card flex h-full flex-col" data-size={size} style={editing ? { outline: "1.5px dashed var(--ds-border-strong)", outlineOffset: 2 } : undefined}>
-      <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
-        <h2 id={headingId} className="truncate text-[length:var(--ds-text-sm)] font-medium ds-muted">{name}</h2>
+    <section aria-labelledby={headingId} className="ds-card ds-home-card flex h-full min-w-0 flex-col" data-size={size} style={editing ? { outline: "1.5px dashed var(--ds-border-strong)", outlineOffset: 2 } : undefined}>
+      {/* UI-5: the title shrinks (min-w-0) so the edit tools always stay inside the card. */}
+      <header className="flex min-w-0 items-center justify-between gap-2 px-4 pb-1 pt-3">
+        <h2 id={headingId} className="min-w-0 flex-1 truncate text-[length:var(--ds-text-sm)] font-medium ds-muted">{name}</h2>
         {tools ?? action}
       </header>
       <div className={`flex min-h-0 flex-1 flex-col px-4 pb-4 ${editing ? "pointer-events-none select-none" : ""}`} aria-hidden={editing || undefined}>
@@ -92,7 +93,7 @@ function EditTools({ def, name, size, controls }: { def: WidgetDef; name: string
         <GripVertical className="h-4 w-4" aria-hidden />
       </button>
       {def.sizes.length > 1 ? (
-        <div role="radiogroup" aria-label={t("home.edit.size", { name })} className="inline-flex gap-0.5 p-0.5" style={{ background: "var(--ds-surface-sunken)", borderRadius: "var(--ds-radius-md)" }}>
+        <div role="radiogroup" aria-label={t("home.edit.size", { name })} className="ds-home-sizes inline-flex gap-0.5 p-0.5" style={{ background: "var(--ds-surface-sunken)", borderRadius: "var(--ds-radius-md)" }}>
           {def.sizes.map((s) => (
             <button
               key={s}
@@ -119,6 +120,21 @@ function EditTools({ def, name, size, controls }: { def: WidgetDef; name: string
           </button>
         }
       >
+        {/* Sizes also here: a narrow card hides the size buttons (container query) to keep its tools inside. */}
+        {def.sizes.length > 1 ? (
+          <>
+            <MenuLabel>{t("home.edit.size", { name })}</MenuLabel>
+            {def.sizes.map((s) => (
+              <MenuItem key={s} onSelect={() => controls.onResize(s)}>
+                <span className="grid h-4 w-4 place-items-center" aria-hidden>
+                  {s === size ? <Check className="h-4 w-4" /> : null}
+                </span>
+                {t(`home.edit.size${s}`)}
+              </MenuItem>
+            ))}
+            <MenuSeparator />
+          </>
+        ) : null}
         {index > 0 ? <MenuItem onSelect={() => controls.onMove(column, index - 1)}><ArrowUp className="h-4 w-4" aria-hidden />{t("home.edit.moveUp")}</MenuItem> : null}
         {index < count - 1 ? <MenuItem onSelect={() => controls.onMove(column, index + 1)}><ArrowDown className="h-4 w-4" aria-hidden />{t("home.edit.moveDown")}</MenuItem> : null}
         <MenuSeparator />

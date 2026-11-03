@@ -23,7 +23,7 @@ import { voidPurchaseAction } from "@/lib/actions/entityDelete";
 import { sendPurchaseToWarehouseAction } from "@/lib/actions/sendToWarehouse";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 import type { PurchaseRecord } from "@/types/database.types";
-import { EngineScreen, FormView, invalidateModel, RECORD_PARAM, useFormatter, useViewRecord, ViewScope, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, RECORD_PARAM, useFormatter, useViewRecord, ViewScope, type FormAction, type RowActionSpec } from "@/views";
 import { recordPurchasePaymentAction } from "../actions/payments";
 import { fetchPurchaseFormData } from "../lib/fetchPurchases";
 import { PURCHASES_DEFINITION } from "../hooks/usePurchasesDefinition";
@@ -66,6 +66,7 @@ function RequisitionsTab() {
 
 function InvoicesTab() {
   const { t } = useI18n();
+  const { can } = useAuth();
   return (
     <EngineScreen
       definition={PURCHASES_DEFINITION}
@@ -79,9 +80,29 @@ function InvoicesTab() {
         </Link>
       }
       recordTitle={(r) => r.invoice_number}
+      rowActions={(r) => purchaseRowActions(r, t, can)}
       renderRecord={(r, { close }) => <PurchaseRecordView id={r.id} close={close} />}
     />
   );
+}
+
+/**
+ * The row "…" menu of the purchase list (UI-5): the classic list's actions, as the row's status
+ * allows; PurchaseRecordView's form runs them (?do=).
+ */
+function purchaseRowActions(r: PurchaseListRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"]): RowActionSpec[] {
+  const draft = r.doc_status === "draft";
+  const cancelled = r.doc_status === "cancelled";
+  const icon = (C: typeof Printer) => <C className="h-4 w-4" />;
+  return [
+    { key: "edit", label: draft ? t("sales.engine.actions.editDraft") : t("common.edit"), icon: icon(PencilLine), hidden: cancelled || !(draft ? can("can_edit_purchases") : can("can_edit_posted_purchases")) },
+    { key: "pay", label: t("purchases.engine.registerPayment"), icon: icon(Banknote), hidden: cancelled || !(r.remaining > 0) },
+    { key: "print", label: t("common.print"), icon: icon(Printer) },
+    { key: "send", label: t("sales.engine.actions.sendToWarehouse"), icon: icon(Truck), hidden: !(r.doc_status === "posted" && (r.warehouse_state === "not_sent" || r.warehouse_state === "rejected")) },
+    { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: icon(FileCode2), hidden: cancelled },
+    { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: icon(FileJson), hidden: cancelled },
+    { key: "void", label: t("common.void"), icon: icon(Ban), destructive: true, hidden: cancelled || !can("can_delete_purchases") },
+  ];
 }
 
 /** One purchase invoice in the side panel: read-only form with the classic actions. */

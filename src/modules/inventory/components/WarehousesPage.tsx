@@ -115,7 +115,7 @@ export default function WarehousesPage() {
           }
         />
 
-        <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
+        <main className="app-page-content flex-1 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardMeta>{t("warehouses.activeCount")}</CardMeta>

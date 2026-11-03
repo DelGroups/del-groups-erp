@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { Banknote, Ban, Eye, MoreHorizontal, Printer } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { dataGridLabels } from "@/i18n/uiStandardLabels";
 import StatusBadge from "@/components/ui/status-badge";
 import { Table, TableWrap, THead, TBody, Th, Td, Tr } from "@/components/ui/table";
-import { DataGrid, IconButton, type GridColumn } from "@/design-system/components";
+import { DataGrid, IconButton, RowActionsMenu, type GridColumn } from "@/design-system/components";
 import type { GridDensity } from "@/design-system/grid";
 import { formatGridDate, formatGridDateTime, formatMoney, formatQuantity } from "@/lib/dates/localeDate";
 
@@ -71,7 +71,12 @@ export const LAB_INVOICES: LabInvoice[] = Array.from({ length: 8 }, (_, i) => ({
   note: "Müştəri ilə razılaşdırılmış xüsusi endirim və çatdırılma şərtləri tətbiq edilib",
 }));
 
-export function GridLab() {
+/** The lab's rows repeated `times` times (page-scroll checks need a long list). */
+export function labInvoices(times: number): LabInvoice[] {
+  return Array.from({ length: times }, (_, n) => LAB_INVOICES.map((r) => ({ ...r, id: `${r.id}-${n}`, docNo: `${r.docNo}-${n}` }))).flat();
+}
+
+export function GridLab({ rows = LAB_INVOICES, menu = false }: { rows?: LabInvoice[]; menu?: boolean } = {}) {
   const { t, locale } = useI18n();
   const [density, setDensity] = useState<GridDensity>("comfortable");
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -116,7 +121,7 @@ export function GridLab() {
     <div data-ui-grid-lab="" className="min-w-0">
       <DataGrid<LabInvoice>
         columns={columns}
-        rows={LAB_INVOICES}
+        rows={rows}
         rowKey={(r) => r.id}
         label={l("grid")}
         labels={dataGridLabels(t)}
@@ -127,13 +132,27 @@ export function GridLab() {
         selection={{
           isSelected: (r) => selected.has(r.id),
           toggle,
-          allSelected: selected.size === LAB_INVOICES.length,
+          allSelected: selected.size === rows.length,
           someSelected: selected.size > 0,
-          toggleAll: () => setSelected((prev) => (prev.size === LAB_INVOICES.length ? new Set() : new Set(LAB_INVOICES.map((r) => r.id)))),
+          toggleAll: () => setSelected((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id)))),
         }}
-        rowActions={() => <IconButton size="sm" label={l("actions")} icon={<MoreHorizontal className="h-4 w-4" />} />}
+        rowActions={() =>
+          menu ? (
+            <RowActionsMenu
+              label={l("actions")}
+              items={[
+                { key: "view", label: t("common.view"), icon: <Eye className="h-4 w-4" />, onSelect: () => undefined },
+                { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" />, onSelect: () => undefined },
+                { key: "pay", label: t("sales.engine.actions.registerPayment"), icon: <Banknote className="h-4 w-4" />, onSelect: () => undefined },
+                { key: "void", label: t("common.void"), icon: <Ban className="h-4 w-4" />, destructive: true, onSelect: () => undefined },
+              ]}
+            />
+          ) : (
+            <IconButton size="sm" label={l("actions")} icon={<MoreHorizontal className="h-4 w-4" />} />
+          )
+        }
         totals={totals}
-        count={t("uiStandard.grid.count", { count: LAB_INVOICES.length })}
+        count={t("uiStandard.grid.count", { count: rows.length })}
         onExport={() => undefined}
         sort={{ key: "date", dir: "desc" }}
         onSort={() => undefined}

@@ -21,4 +21,5 @@ export { Chip, MoneyCell, NumberCell, DateCell, type ChipTone } from "./Cells";
 export { DateField, DateTimeField, type DateFieldLabels, type ControlWidth } from "./DateField";
 export { Combobox, type ComboboxProps, type ComboboxLabels, type ComboOption } from "./Combobox";
 // DataGrid (UI-2, docs/ui-standard.md "Lists")
+export { RowActionsMenu, type RowActionsMenuProps, type RowMenuItem } from "./RowActionsMenu";
 export { DataGrid, type DataGridProps, type DataGridLabels, type GridColumn, type GridItem, type GridSelection } from "./DataGrid";

@@ -88,7 +88,7 @@ export default function ProductCombobox({
       top: rect.bottom + 4,
       left: rect.left,
       width: Math.max(rect.width, 320),
-      zIndex: 9999,
+      zIndex: "var(--ds-z-dropdown)" as unknown as number,
     });
   }, []);
 

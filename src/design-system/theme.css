@@ -134,14 +134,6 @@ html[data-ui-standard] {
   --ds-shell-sidebar-w-collapsed: 5rem;
   --ds-shell-topbar-h: 3.5625rem;
 
-  /* ── Layers ────────────────────────────────────────────────────────── */
-  --ds-z-sticky: 30;
-  --ds-z-dropdown: 40;
-  --ds-z-sidebar: 50;
-  --ds-z-modal: 60;
-  --ds-z-modal-content: 61;
-  --ds-z-toast: 70;
-
   /* ── Motion budget 200–300 ms (motion.ts mirrors these) ───────────── */
   --ds-duration-fast: 200ms;
   --ds-duration-base: 240ms;
