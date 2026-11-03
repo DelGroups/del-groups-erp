@@ -7,6 +7,8 @@ import {
   type DocumentAdditionalExpense,
 } from "@/lib/forms/documentExpenses";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { EntityLookup } from "@/components/lookups";
 import { fetchDocumentExpenseCategoriesAction } from "@/lib/actions/finance";
 import type { ExpenseCategoryOption } from "@/lib/finance/financialCategories";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
@@ -36,6 +38,10 @@ export default function DocumentAdditionalExpensesSection({
   className = "",
 }: DocumentAdditionalExpensesSectionProps) {
   const { t } = useI18n();
+  const uiStandard = useUiStandard();
+  // Accounts created in place: the parent's list is the user's scope, plus these.
+  const [createdAccounts, setCreatedAccounts] = useState<AccountOption[]>([]);
+  const accountScope = [...accounts.map((acc) => acc.id), ...createdAccounts.map((acc) => acc.id)];
   const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
   const [quickAddRowId, setQuickAddRowId] = useState<string | null>(null);
 
@@ -177,6 +183,20 @@ export default function DocumentAdditionalExpensesSection({
                       </label>
                     </td>
                     <td className="px-2 py-1.5">
+                      {uiStandard ? (
+                        <EntityLookup
+                          entity="account"
+                          size="sm"
+                          value={row.account_id}
+                          selectedLabel={[...accounts, ...createdAccounts].find((acc) => acc.id === row.account_id)?.name}
+                          allowedIds={accountScope}
+                          disabled={disabled || !row.paid_immediately}
+                          placeholder={t("forms.selectPaymentAccount")}
+                          onCreated={(record) => setCreatedAccounts((list) => [...list, { ...record, id: record.id, name: String(record.name ?? "") } as AccountOption])}
+                          onChange={(id) => updateRow(row.id, { account_id: id ?? "" })}
+                          aria-label={t("forms.selectPaymentAccount")}
+                        />
+                      ) : (
                       <select
                         className={FIELD_INPUT}
                         value={row.account_id}
@@ -190,6 +210,7 @@ export default function DocumentAdditionalExpensesSection({
                           </option>
                         ))}
                       </select>
+                      )}
                     </td>
                     <td className="px-1 py-1.5 text-center">
                       <button

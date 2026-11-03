@@ -6,6 +6,8 @@ import type { PayrollRun } from "@/types/database.types";
 import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
 import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface PayPayrollModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export default function PayPayrollModal({
   onSubmit,
 }: PayPayrollModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): lookups through EntityLookup with quick-create.
+  const uiStandard = useUiStandard();
   const [accountId, setAccountId] = useState("");
 
   useEffect(() => {
@@ -57,6 +61,18 @@ export default function PayPayrollModal({
 
           <label className="block text-xs font-semibold text-app">
             {t("employees.payroll.paymentAccount")} *
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="account"
+                  value={accountId}
+                  selectedLabel={accounts.find((a) => a.id === accountId)?.name}
+                  required
+                  aria-label={t("lookup.entities.account")}
+                  onChange={(id) => setAccountId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               required
               value={accountId}
@@ -70,6 +86,7 @@ export default function PayPayrollModal({
                 </option>
               ))}
             </select>
+            )}
           </label>
 
           <div className="flex justify-end gap-2 border-t border-app pt-4">

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { Employee } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface AdvanceFormModalProps {
   isOpen: boolean;
@@ -29,6 +31,8 @@ export default function AdvanceFormModal({
   onSubmit,
 }: AdvanceFormModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): lookups through EntityLookup with quick-create.
+  const uiStandard = useUiStandard();
   const [employeeId, setEmployeeId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -73,6 +77,18 @@ export default function AdvanceFormModal({
         >
           <label className="block text-xs font-semibold text-app">
             {t("employees.employee")} *
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="employee"
+                  value={employeeId}
+                  selectedLabel={employees.find((e) => e.id === employeeId)?.full_name}
+                  required
+                  aria-label={t("lookup.entities.employee")}
+                  onChange={(id) => setEmployeeId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               required
               value={employeeId}
@@ -88,6 +104,7 @@ export default function AdvanceFormModal({
                   </option>
                 ))}
             </select>
+            )}
           </label>
 
           <label className="block text-xs font-semibold text-app">
@@ -105,6 +122,18 @@ export default function AdvanceFormModal({
 
           <label className="block text-xs font-semibold text-app">
             {t("employees.advance.paymentAccount")} *
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="account"
+                  value={accountId}
+                  selectedLabel={accounts.find((a) => a.id === accountId)?.name}
+                  required
+                  aria-label={t("lookup.entities.account")}
+                  onChange={(id) => setAccountId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               required
               value={accountId}
@@ -118,6 +147,7 @@ export default function AdvanceFormModal({
                 </option>
               ))}
             </select>
+            )}
           </label>
 
           <label className="block text-xs font-semibold text-app">

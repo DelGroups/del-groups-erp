@@ -10,6 +10,8 @@ import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
 import { fetchPendingCommissionsForEmployee } from "@/modules/commissions";
 import { parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface PayrollModalProps {
   isOpen: boolean;
@@ -37,6 +39,8 @@ export default function PayrollModal({
   onSubmit,
 }: PayrollModalProps) {
   const { t, intlTag } = useI18n();
+  // UI_STANDARD (UI-2 lookups): lookups through EntityLookup with quick-create.
+  const uiStandard = useUiStandard();
   const { config: taxConfig } = useTaxPayrollConfig();
   const [pending, setPending] = useState<SalesCommission[]>([]);
   const [loadingCommissions, setLoadingCommissions] = useState(false);
@@ -116,6 +120,18 @@ export default function PayrollModal({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="block text-xs font-semibold text-app">
               {t("modals.payroll.paymentAccount")}
+              {uiStandard ? (
+                <div className="mt-1">
+                  <EntityLookup
+                    entity="account"
+                    value={accountId}
+                    selectedLabel={accounts.find((a) => a.id === accountId)?.name}
+                    required
+                    aria-label={t("lookup.entities.account")}
+                    onChange={(id) => setAccountId(id ?? "")}
+                  />
+                </div>
+              ) : (
               <select
                 required
                 value={accountId}
@@ -129,6 +145,7 @@ export default function PayrollModal({
                   </option>
                 ))}
               </select>
+              )}
             </label>
             <label className="block text-xs font-semibold text-app">
               {t("modals.payroll.period")}

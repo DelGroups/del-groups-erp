@@ -83,6 +83,8 @@ import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT, createEmptyPurchaseLineItems } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import {
   filterLegalSuppliers,
   isLegalEntityWithVoen,
@@ -240,6 +242,8 @@ export default function PurchaseForm({
   const { can } = useAuth();
   const canEditPosted = can("can_edit_posted_purchases");
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): supplier, warehouse and payment account through EntityLookup.
+  const uiStandard = useUiStandard();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
   const { config: procurementConfig } = useProcurementConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
@@ -889,6 +893,30 @@ export default function PurchaseForm({
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("forms.supplier")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="supplier"
+                  value={supplierId}
+                  selectedLabel={selectedSupplier ? supplierDisplayName(selectedSupplier) : undefined}
+                  where={isOfficial ? { entity_type: "legal" } : undefined}
+                  createDefaults={{ legal: isOfficial }}
+                  disabled={documentLocked}
+                  aria-label={t("forms.supplier")}
+                  onChange={(nextId, row) => {
+                    const id = nextId ?? "";
+                    if (row) setSupplierList((prev) => mergeRecord(prev, row as unknown as Supplier));
+                    setSupplierId(id);
+                    const voen = (row?.voen as string | null | undefined) ?? null;
+                    if (isOfficial && voen) setVoenVerification(voen);
+                    if (!id) {
+                      setContractId(null);
+                      setVoenVerification("");
+                    }
+                  }}
+                />
+              </div>
+            ) : (
             <div className="mt-1 flex gap-1">
               <Select
                 value={supplierId}
@@ -924,9 +952,23 @@ export default function PurchaseForm({
                 <Plus className="h-4 w-4" />
               </button>
             </div>
+            )}
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("forms.targetWarehouse")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="warehouse"
+                  value={warehouseId}
+                  selectedLabel={warehouses.find((w) => w.id === warehouseId)?.name}
+                  disabled={documentLocked}
+                  clearable={false}
+                  aria-label={t("forms.targetWarehouse")}
+                  onChange={(id) => setWarehouseId(id ?? "")}
+                />
+              </div>
+            ) : (
             <Select
               value={warehouseId}
               disabled={documentLocked}
@@ -940,6 +982,7 @@ export default function PurchaseForm({
                 </option>
               ))}
             </Select>
+            )}
           </label>
           <div className="block text-xs font-semibold text-app">
             <span className="flex items-center gap-1.5">
@@ -1305,6 +1348,23 @@ export default function PurchaseForm({
               <div key={pay.id} className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-end">
                 <label className="md:col-span-4 block text-[11px] font-semibold text-app-muted">
                   {t("forms.paymentAccount")}
+                  {uiStandard ? (
+                    <div className="mt-1">
+                      <EntityLookup
+                        entity="account"
+                        value={pay.account_id}
+                        selectedLabel={(() => {
+                          const acc = accounts.find((a) => a.id === pay.account_id);
+                          return acc ? formatTreasuryAccountLabel(acc, t) : undefined;
+                        })()}
+                        aria-label={t("forms.paymentAccount")}
+                        onChange={(id, row) => {
+                          if (row) setAccounts((prev) => mergeRecord(prev, row as unknown as Account));
+                          handleAccountChange(pay.id, id ?? "");
+                        }}
+                      />
+                    </div>
+                  ) : (
                   <select
                     value={pay.account_id}
                     onChange={(e) => handleAccountChange(pay.id, e.target.value)}
@@ -1317,6 +1377,7 @@ export default function PurchaseForm({
                       </option>
                     ))}
                   </select>
+                  )}
                 </label>
                 <label className="md:col-span-2 block text-[11px] font-semibold text-app-muted">
                   {t("forms.paymentAmount")}

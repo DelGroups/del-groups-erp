@@ -34,6 +34,8 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface InitialBalanceFormProps {
   products: Product[];
@@ -51,6 +53,9 @@ export default function InitialBalanceForm({
   onSuccess,
 }: InitialBalanceFormProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the warehouse through EntityLookup; one created here joins the list.
+  const uiStandard = useUiStandard();
+  const [createdWarehouses, setCreatedWarehouses] = useState<Warehouse[]>([]);
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const isPosted = initialDocument?.status === "posted";
   const isLocked = isPosted || initialDocument?.status === "cancelled";
@@ -106,7 +111,7 @@ export default function InitialBalanceForm({
   }, [warehouseId, productIds]);
 
   const warehouseName =
-    warehouses.find((warehouse) => warehouse.id === warehouseId)?.name || "";
+    [...warehouses, ...createdWarehouses].find((warehouse) => warehouse.id === warehouseId)?.name || "";
 
   const totalAmount = useMemo(
     () => items.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
@@ -337,6 +342,21 @@ export default function InitialBalanceForm({
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("common.warehouse")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="warehouse"
+                  value={warehouseId}
+                  selectedLabel={warehouseName || undefined}
+                  allowedIds={[...warehouses, ...createdWarehouses].map((w) => w.id)}
+                  disabled={isLocked}
+                  clearable={false}
+                  aria-label={t("common.warehouse")}
+                  onCreated={(row) => setCreatedWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse))}
+                  onChange={(id) => setWarehouseId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               value={warehouseId}
               disabled={isLocked}
@@ -349,6 +369,7 @@ export default function InitialBalanceForm({
                 </option>
               ))}
             </select>
+            )}
           </label>
           <label className="block text-xs font-semibold text-app">
             {t("initialBalance.entryType")}

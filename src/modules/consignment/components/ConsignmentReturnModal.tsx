@@ -5,6 +5,8 @@ import { Modal } from "@/components/ui/modal";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { ConsignmentLookups } from "../actions/consignment";
 import type { ConsignmentInventoryRow } from "../lib/types";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 export interface ConsignmentReturnModalProps {
   open: boolean;
@@ -25,6 +27,8 @@ export interface ConsignmentReturnModalProps {
 
 export default function ConsignmentReturnModal(props: ConsignmentReturnModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const uiStandard = useUiStandard();
   const { lookups, partnerId, setPartnerId, partnerInventory, saving } = props;
 
   return (
@@ -46,6 +50,19 @@ export default function ConsignmentReturnModal(props: ConsignmentReturnModalProp
       <div className="space-y-4">
         <div>
           <label className="mb-1 block text-xs font-semibold text-app-muted">{t("consignments.partner")}</label>
+          {uiStandard ? (
+            <EntityLookup
+              entity="consignmentPartner"
+              value={partnerId}
+              selectedLabel={(() => {
+                const p = (lookups?.partners || []).find((x) => x.id === partnerId);
+                return p ? p.company_name || p.name : undefined;
+              })()}
+              placeholder={t("consignments.partner")}
+              aria-label={t("consignments.partner")}
+              onChange={(id) => setPartnerId(id ?? "")}
+            />
+          ) : (
           <select
             className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
             value={partnerId}
@@ -58,10 +75,20 @@ export default function ConsignmentReturnModal(props: ConsignmentReturnModalProp
               </option>
             ))}
           </select>
+          )}
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-app-muted">{t("common.warehouse")}</label>
+          {uiStandard ? (
+            <EntityLookup
+              entity="warehouse"
+              value={props.returnWarehouseId}
+              selectedLabel={(lookups?.warehouses || []).find((w) => w.id === props.returnWarehouseId)?.name}
+              aria-label={t("common.warehouse")}
+              onChange={(id) => props.setReturnWarehouseId(id ?? "")}
+            />
+          ) : (
           <select
             className="w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
             value={props.returnWarehouseId}
@@ -74,6 +101,7 @@ export default function ConsignmentReturnModal(props: ConsignmentReturnModalProp
               </option>
             ))}
           </select>
+          )}
         </div>
 
         {!partnerId ? (

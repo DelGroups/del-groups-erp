@@ -20,6 +20,8 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import { DocumentFooter, DocumentFooterMain, DocumentFooterTotals } from "@/components/documents/DocumentFooter";
 
 interface InvoiceFormProps {
@@ -55,6 +57,8 @@ export default function UniversalInvoiceForm({
   onSuccess,
 }: InvoiceFormProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): customer and payment accounts through EntityLookup.
+  const uiStandard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [docNo] = useState("SS-2026-77154");
   const [docDate, setDocDate] = useState(new Date().toISOString().split("T")[0]);
@@ -136,9 +140,10 @@ export default function UniversalInvoiceForm({
     if (prod) setProductsList(prod);
   };
 
-  const handleCustomerChange = (id: string) => {
+  /** `record`: a customer picked or just created in the lookup (not in `customers` yet). */
+  const handleCustomerChange = (id: string, record?: Record<string, unknown> | null) => {
     setSelectedCustomerId(id);
-    const cust = customers.find((c) => c.id === id);
+    const cust = record ?? customers.find((c) => c.id === id);
     setSelectedCustomer(cust || null);
     if (cust && cust.address) setDeliveryAddress(cust.address);
   };
@@ -276,12 +281,14 @@ export default function UniversalInvoiceForm({
               <h3 className="font-bold text-app flex items-center gap-1.5">
                 <UserCheck className="w-4 h-4 text-app-accent" /> MÜŞTƏRİ MƏLUMATLARI
               </h3>
+              {uiStandard ? null : (
               <button type="button" onClick={() => setShowAddCustomer(!showAddCustomer)} className="text-app-accent font-bold flex items-center gap-1 text-[11px]">
                 <UserPlus className="w-3.5 h-3.5" /> + Yeni Müştəri
               </button>
+              )}
             </div>
 
-            {showAddCustomer && (
+            {!uiStandard && showAddCustomer && (
               <div className="bg-[color:var(--app-accent-soft)]/80 p-2.5 rounded-lg border border-[color:var(--app-accent-ring)] space-y-2">
                 <input type="text" placeholder="Ad / Şirkət *" value={newCustomerData.full_name} onChange={(e) => setNewCustomerData({ ...newCustomerData, full_name: e.target.value })} className="w-full p-1.5 border rounded text-xs" />
                 <div className="flex justify-end gap-2">
@@ -291,10 +298,23 @@ export default function UniversalInvoiceForm({
               </div>
             )}
 
+            {uiStandard ? (
+              <EntityLookup
+                entity="customer"
+                value={selectedCustomerId}
+                selectedLabel={selectedCustomer ? String(selectedCustomer.full_name || selectedCustomer.name || "") : undefined}
+                aria-label={t("lookup.entities.customer")}
+                onChange={(id, row) => {
+                  if (row) setCustomers((prev) => mergeRecord(prev, row));
+                  handleCustomerChange(id ?? "", row);
+                }}
+              />
+            ) : (
             <select value={selectedCustomerId} onChange={(e) => handleCustomerChange(e.target.value)} className="w-full p-2 border rounded-lg bg-app-card-hover font-semibold">
               <option value="">-- Müştərini Seçin --</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.full_name || c.name}</option>)}
             </select>
+            )}
           </div>
         </div>
 
@@ -360,9 +380,25 @@ export default function UniversalInvoiceForm({
             <h4 className="font-bold text-app flex items-center gap-1.5 border-b pb-2"><CreditCard className="w-4 h-4 text-app-accent" /> ÖDƏNİŞ (ÇOXLU ÖDƏNİŞ)</h4>
             {payments.map((p) => (
               <div key={p.id} className="flex gap-2">
+                {uiStandard ? (
+                  <div className="w-1/2">
+                    <EntityLookup
+                      entity="account"
+                      size="sm"
+                      value={p.account_id}
+                      clearable={false}
+                      aria-label={t("lookup.entities.account")}
+                      onChange={(id, row) => {
+                        if (row) setAccounts((prev) => mergeRecord(prev, row));
+                        setPayments(payments.map((x) => (x.id === p.id ? { ...x, account_id: id ?? "", method: row ? String(row.name ?? x.method) : x.method } : x)));
+                      }}
+                    />
+                  </div>
+                ) : (
                 <select value={p.account_id} onChange={(e) => setPayments(payments.map(x => x.id === p.id ? { ...x, account_id: e.target.value } : x))} className="w-1/2 p-1 border rounded">
                   {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
                 </select>
+                )}
                 <input type="number" placeholder="Məbləğ" value={p.amount} onChange={(e) => setPayments(payments.map(x => x.id === p.id ? { ...x, amount: parseFloat(e.target.value) || 0 } : x))} className="w-1/2 p-1 border rounded text-right font-bold" />
               </div>
             ))}

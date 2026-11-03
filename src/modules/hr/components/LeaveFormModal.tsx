@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import type { Employee, LeaveType } from "@/types/database.types";
 import { calcLeaveDays } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface LeaveFormModalProps {
   isOpen: boolean;
@@ -28,6 +30,8 @@ export default function LeaveFormModal({
   onSubmit,
 }: LeaveFormModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): lookups through EntityLookup with quick-create.
+  const uiStandard = useUiStandard();
   const [employeeId, setEmployeeId] = useState("");
   const [leaveType, setLeaveType] = useState<LeaveType>("PAID");
   const [startDate, setStartDate] = useState("");
@@ -66,6 +70,18 @@ export default function LeaveFormModal({
         >
           <label className="block text-xs font-semibold text-app">
             {t("employees.employee")} *
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="employee"
+                  value={employeeId}
+                  selectedLabel={employees.find((e) => e.id === employeeId)?.full_name}
+                  required
+                  aria-label={t("lookup.entities.employee")}
+                  onChange={(id) => setEmployeeId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               required
               value={employeeId}
@@ -79,6 +95,7 @@ export default function LeaveFormModal({
                 </option>
               ))}
             </select>
+            )}
           </label>
 
           <label className="block text-xs font-semibold text-app">

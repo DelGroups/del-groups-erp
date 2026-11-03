@@ -111,6 +111,8 @@ import {
 } from "../lib/resolveInvoiceLinePrice";
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import Button from "@/components/ui/button";
 import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
 import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
@@ -446,6 +448,8 @@ export default function UniversalInvoiceForm({
   /** Reason of the admin change in progress; null = not amending. */
   const [amendReason, setAmendReason] = useState<string | null>(null);
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): customer and payment accounts through EntityLookup.
+  const uiStandard = useUiStandard();
   const { config: taxConfig } = useTaxPayrollConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const canSaveInvoice = can("can_create_invoice");
@@ -677,9 +681,10 @@ export default function UniversalInvoiceForm({
     setOpenReceivables(Number(customer?.balance) || 0);
   };
 
-  const handleCustomerChange = (id: string) => {
+  /** `record`: a customer picked or just created in the lookup (not in `customers` yet). */
+  const handleCustomerChange = (id: string, record?: Customer | null) => {
     setSelectedCustomerId(id);
-    const found = customers.find((c) => c.id === id) || null;
+    const found = record ?? (customers.find((c) => c.id === id) || null);
     setSelectedCustomer(found);
     if (found?.address) setDeliveryAddress(found.address);
     if (isOfficial && found?.voen) setVoenVerification(found.voen);
@@ -1813,6 +1818,7 @@ export default function UniversalInvoiceForm({
                 <Building2 className="h-4 w-4 text-emerald-600" />
                 {t("invoice.customerInfo")}
               </h3>
+              {uiStandard ? null : (
               <Button
                 type="button"
                 variant="ghost"
@@ -1823,9 +1829,10 @@ export default function UniversalInvoiceForm({
                 <UserPlus className="h-3.5 w-3.5" />
                 {t("invoice.newCustomer")}
               </Button>
+              )}
             </div>
 
-            {showAddCustomer && (
+            {!uiStandard && showAddCustomer && (
               <div className="space-y-2 rounded-lg border border-[color:var(--app-accent-ring)] bg-[color:var(--app-accent-soft)] p-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -1896,6 +1903,22 @@ export default function UniversalInvoiceForm({
               </div>
             )}
 
+            {uiStandard ? (
+              <EntityLookup
+                entity="customer"
+                value={selectedCustomerId}
+                selectedLabel={selectedCustomer ? customerLabel(selectedCustomer, t) : undefined}
+                where={isOfficial ? { entity_type: "legal" } : undefined}
+                createDefaults={{ legal: isOfficial }}
+                placeholder={t("invoice.selectCustomer")}
+                aria-label={t("invoice.customerInfo")}
+                onChange={(id, row) => {
+                  const customer = (row as unknown as Customer | null) ?? null;
+                  if (customer) setCustomers((prev) => mergeRecord(prev, customer));
+                  handleCustomerChange(id ?? "", customer);
+                }}
+              />
+            ) : (
             <select
               value={selectedCustomerId}
               onChange={(e) => handleCustomerChange(e.target.value)}
@@ -1909,6 +1932,7 @@ export default function UniversalInvoiceForm({
                 </option>
               ))}
             </select>
+            )}
             {isOfficial && customerOptions.length === 0 && (
               <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalCustomers")}</p>
             )}
@@ -2958,6 +2982,23 @@ export default function UniversalInvoiceForm({
                   key={p.id}
                   className="grid grid-cols-1 gap-2 rounded-xl border border-app bg-app-card-hover p-2 sm:grid-cols-[minmax(0,1fr)_9rem_8rem_auto]"
                 >
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="account"
+                      value={p.account_id}
+                      selectedLabel={(() => {
+                        const acc = accounts.find((a) => a.id === p.account_id);
+                        return acc ? formatTreasuryAccountLabel(acc, t) : undefined;
+                      })()}
+                      placeholder={t("invoice.accountOption")}
+                      disabled={paymentsLocked}
+                      aria-label={t("invoice.accountOption")}
+                      onChange={(id, row) => {
+                        if (row) setAccounts((prev) => mergeRecord(prev, row as unknown as Account));
+                        handleAccountChange(p.id, id ?? "");
+                      }}
+                    />
+                  ) : (
                   <select
                     value={p.account_id}
                     disabled={paymentsLocked}
@@ -2971,6 +3012,7 @@ export default function UniversalInvoiceForm({
                       </option>
                     ))}
                   </select>
+                  )}
                   <input
                     type="date"
                     aria-label={t("invoice.paymentDate")}

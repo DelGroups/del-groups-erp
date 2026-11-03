@@ -10,6 +10,8 @@ import { fetchCashAccountOptions } from "@/lib/payments/fetchPayments";
 import type { CashAccountOption, PaymentMethod, PaymentType } from "@/lib/payments/types";
 import { fetchPartnerList, partnerDisplayName } from "@/lib/partners/fetchPartners";
 import type { PartnerRecord } from "@/lib/partners/types";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 type PaymentFormModalProps = {
   open: boolean;
@@ -41,6 +43,9 @@ export default function PaymentFormModal({
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [referenceNote, setReferenceNote] = useState("");
+  // UI_STANDARD (UI-2 lookups): partner and cash account through EntityLookup.
+  const uiStandard = useUiStandard();
+  const [createdAccountIds, setCreatedAccountIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,6 +131,23 @@ export default function PaymentFormModal({
               <>
                 <label className="block font-semibold text-app">
                   {t("payments.partner")}
+                  {uiStandard ? (
+                    <div className="mt-1">
+                      <EntityLookup
+                        entity="partner"
+                        value={partnerId}
+                        selectedLabel={(() => {
+                          const partner = partners.find((p) => p.id === partnerId);
+                          return partner ? partnerDisplayName(partner) : undefined;
+                        })()}
+                        placeholder={t("payments.selectPartner")}
+                        createDefaults={{ partnerRoles: { customer: paymentType === "in", supplier: paymentType === "out" } }}
+                        required
+                        aria-label={t("payments.partner")}
+                        onChange={(id) => setPartnerId(id ?? "")}
+                      />
+                    </div>
+                  ) : (
                   <select
                     value={partnerId}
                     onChange={(e) => setPartnerId(e.target.value)}
@@ -139,6 +161,7 @@ export default function PaymentFormModal({
                       </option>
                     ))}
                   </select>
+                  )}
                 </label>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -168,6 +191,26 @@ export default function PaymentFormModal({
 
                 <label className="block font-semibold text-app">
                   {t("payments.cashAccount")}
+                  {uiStandard ? (
+                    <div className="mt-1">
+                      <EntityLookup
+                        entity="account"
+                        value={cashAccountId}
+                        selectedLabel={accounts.find((a) => a.id === cashAccountId)?.name}
+                        allowedIds={[...filteredAccounts.map((a) => a.id), ...createdAccountIds]}
+                        createDefaults={{ accountType: paymentMethod === "bank" ? "Bank" : "Kassa" }}
+                        clearable={false}
+                        required
+                        aria-label={t("payments.cashAccount")}
+                        onCreated={(row) => {
+                          setCreatedAccountIds((prev) => [...prev, row.id]);
+                          // Into the loaded list too, or the "first account of the method" default would replace it.
+                          setAccounts((prev) => mergeRecord(prev, row as unknown as CashAccountOption));
+                        }}
+                        onChange={(id) => setCashAccountId(id ?? "")}
+                      />
+                    </div>
+                  ) : (
                   <select
                     value={cashAccountId}
                     onChange={(e) => setCashAccountId(e.target.value)}
@@ -180,6 +223,7 @@ export default function PaymentFormModal({
                       </option>
                     ))}
                   </select>
+                  )}
                 </label>
 
                 <div className="grid gap-3 sm:grid-cols-2">

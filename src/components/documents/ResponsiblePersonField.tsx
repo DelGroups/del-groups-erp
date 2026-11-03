@@ -6,6 +6,9 @@ import {
   useResponsiblePerson,
   type EmployeeLike,
 } from "@/hooks/useResponsiblePerson";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface ResponsiblePersonFieldProps {
   employees: EmployeeLike[];
@@ -32,6 +35,9 @@ export default function ResponsiblePersonField({
   className = "",
 }: ResponsiblePersonFieldProps) {
   const { locked, lockedEmployeeId, lockedName } = useResponsiblePerson(employees);
+  // UI_STANDARD (UI-2 lookups): the free choice goes through EntityLookup (employee quick-create).
+  const uiStandard = useUiStandard();
+  const { t } = useI18n();
 
   const baseClass = `w-full rounded-lg border border-app bg-app-card-hover p-2 font-semibold ${className}`;
 
@@ -59,6 +65,21 @@ export default function ResponsiblePersonField({
           Satış nümayəndəsi yalnız öz adınıza təyin olunur
         </p>
       </div>
+    );
+  }
+
+  if (uiStandard) {
+    const current = employees.find((employee) => employee.id === value);
+    return (
+      <EntityLookup
+        entity="employee"
+        value={value}
+        selectedLabel={current ? employeeName(current) : undefined}
+        placeholder={placeholder}
+        className={className}
+        aria-label={t("lookup.entities.employee")}
+        onChange={(id, row) => onChange(id ?? "", row ? String(row.full_name || row.name || "") : "")}
+      />
     );
   }
 

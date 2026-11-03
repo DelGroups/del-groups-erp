@@ -23,6 +23,8 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { generateConsignmentDocNo } from "../lib/types";
 import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackagePlus, Trash2 } from "lucide-react";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface InitialBalanceLine {
   id: string;
@@ -54,6 +56,8 @@ function createEmptyLine(): InitialBalanceLine {
 
 export default function ConsignmentInitialBalanceNewPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const uiStandard = useUiStandard();
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
 
@@ -220,6 +224,19 @@ export default function ConsignmentInitialBalanceNewPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.partner")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="consignmentPartner"
+                      value={partnerId}
+                      selectedLabel={(() => {
+                        const p = (lookups?.partners || []).find((x) => x.id === partnerId);
+                        return p ? p.company_name || p.name : undefined;
+                      })()}
+                      placeholder={t("consignments.partner")}
+                      aria-label={t("consignments.partner")}
+                      onChange={(id) => setPartnerId(id ?? "")}
+                    />
+                  ) : (
                   <Select value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
                     <option value="">{t("consignments.partner")}</option>
                     {(lookups?.partners || []).map((p) => (
@@ -228,6 +245,7 @@ export default function ConsignmentInitialBalanceNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1 lg:col-span-3">
                   <label className="erp-label">{t("common.notes")}</label>

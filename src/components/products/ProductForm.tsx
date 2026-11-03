@@ -59,7 +59,8 @@ interface ProductFormProps {
   /** When duplicating, load BOM from the source product id while creating a new row. */
   cloneSourceId?: string | null;
   isClone?: boolean;
-  onSuccess?: () => void;
+  /** Gets the created product on create (the lookup quick-create selects it); nothing on edit. */
+  onSuccess?: (created?: Product) => void;
   onCancel?: () => void;
   /** When true, renders inside a drawer without a fixed viewport footer. */
   embedded?: boolean;
@@ -494,7 +495,7 @@ export default function ProductForm({
       if (action === "SAVE_AND_DUPLICATE") {
         resetForDuplicate();
       } else {
-        onSuccess?.();
+        onSuccess?.(body.data);
       }
     } catch (error) {
       if (error instanceof FetchTimeoutError) {

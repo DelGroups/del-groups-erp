@@ -27,6 +27,8 @@ import { generateConsignmentDocNo, type ConsignmentDispatch } from "../lib/types
 import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface DispatchLine {
   id: string;
@@ -60,6 +62,12 @@ function createEmptyLine(): DispatchLine {
 
 export default function ConsignmentDispatchNewPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const uiStandard = useUiStandard();
+  // Names of a rep / warehouse picked or created in a lookup that `lookups` does not list yet.
+  const [pickedRepName, setPickedRepName] = useState<string | null>(null);
+  const [pickedWarehouseName, setPickedWarehouseName] = useState<string | null>(null);
+  const [createdWarehouseIds, setCreatedWarehouseIds] = useState<string[]>([]);
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const { printData, setPrintData } = useDocumentPrint<ConsignmentDispatch>();
@@ -225,11 +233,11 @@ export default function ConsignmentDispatchNewPage() {
       dispatch_no: docNo,
       partner_id: partnerId,
       warehouse_id: warehouseId,
-      warehouse_name: warehouse?.name || null,
+      warehouse_name: warehouse?.name || pickedWarehouseName || null,
       dispatch_date: dispatchDate,
       notes,
       sales_rep_id: salesRepId || null,
-      sales_rep_name: rep?.full_name || null,
+      sales_rep_name: rep?.full_name || pickedRepName || null,
       items: validLines.map((line) => ({
         product_id: line.product_id,
         product_code: line.product_code,
@@ -288,6 +296,19 @@ export default function ConsignmentDispatchNewPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.salesRep")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="employee"
+                      value={salesRepId}
+                      selectedLabel={(lookups?.salesReps || []).find((r) => r.id === salesRepId)?.full_name}
+                      placeholder={t("consignments.selectSalesRep")}
+                      aria-label={t("consignments.salesRep")}
+                      onChange={(id, row) => {
+                        setSalesRepId(id ?? "");
+                        setPickedRepName(row ? String(row.full_name ?? "") : null);
+                      }}
+                    />
+                  ) : (
                   <Select value={salesRepId} onChange={(e) => setSalesRepId(e.target.value)}>
                     <option value="">{t("consignments.selectSalesRep")}</option>
                     {(lookups?.salesReps || []).map((rep) => (
@@ -296,9 +317,23 @@ export default function ConsignmentDispatchNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.partner")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="consignmentPartner"
+                      value={partnerId}
+                      selectedLabel={(() => {
+                        const p = (lookups?.partners || []).find((x) => x.id === partnerId);
+                        return p ? p.company_name || p.name : undefined;
+                      })()}
+                      placeholder={t("consignments.partner")}
+                      aria-label={t("consignments.partner")}
+                      onChange={(id) => setPartnerId(id ?? "")}
+                    />
+                  ) : (
                   <Select value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
                     <option value="">{t("consignments.partner")}</option>
                     {(lookups?.partners || []).map((p) => (
@@ -307,9 +342,24 @@ export default function ConsignmentDispatchNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.sourceWarehouse")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="warehouse"
+                      value={warehouseId}
+                      selectedLabel={warehouseOptions.find((w) => w.id === warehouseId)?.name}
+                      allowedIds={[...warehouseOptions.map((w) => w.id), ...createdWarehouseIds]}
+                      aria-label={t("consignments.sourceWarehouse")}
+                      onCreated={(row) => setCreatedWarehouseIds((prev) => [...prev, row.id])}
+                      onChange={(id, row) => {
+                        setWarehouseId(id ?? "");
+                        setPickedWarehouseName(row ? String(row.name ?? "") : null);
+                      }}
+                    />
+                  ) : (
                   <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
                     <option value="">{t("common.warehouse")}</option>
                     {warehouseOptions.map((w) => (
@@ -318,6 +368,7 @@ export default function ConsignmentDispatchNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1 lg:col-span-3">
                   <label className="erp-label">{t("common.notes")}</label>

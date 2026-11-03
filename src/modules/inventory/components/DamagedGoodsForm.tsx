@@ -18,6 +18,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import Button from "@/components/ui/button";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
@@ -39,6 +41,9 @@ export default function DamagedGoodsForm({
   const isEdit = mode === "edit" && !!initialWriteoff;
   const { displayName, isAdmin, loading: authLoading } = useAuth();
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the warehouse through EntityLookup (role scope + any created here).
+  const uiStandard = useUiStandard();
+  const [createdWarehouses, setCreatedWarehouses] = useState<Warehouse[]>([]);
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const lockChecker = !authLoading && !isAdmin;
 
@@ -211,6 +216,20 @@ export default function DamagedGoodsForm({
 
           <label className="block text-xs font-semibold text-app">
             {t("common.warehouse")} *
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="warehouse"
+                  value={warehouseId}
+                  selectedLabel={[...warehouses, ...createdWarehouses].find((w) => w.id === warehouseId)?.name}
+                  allowedIds={[...warehouses, ...createdWarehouses].map((w) => w.id)}
+                  required
+                  aria-label={t("common.warehouse")}
+                  onCreated={(row) => setCreatedWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse))}
+                  onChange={(id) => setWarehouseId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
@@ -223,6 +242,7 @@ export default function DamagedGoodsForm({
                 </option>
               ))}
             </select>
+            )}
           </label>
 
           <label className="block text-xs font-semibold text-app">

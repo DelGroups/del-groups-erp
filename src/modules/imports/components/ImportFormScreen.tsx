@@ -7,7 +7,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, BarChart3, Lock, Printer, RefreshCw, Save, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
-import { EmptyState, SkeletonList, useToast } from "@/design-system/components";
+import { Combobox, DateField, EmptyState, SkeletonList, useToast, useUiStandard } from "@/design-system/components";
+import { EntityLookup, type LookupRecord } from "@/components/lookups";
+import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRecordCrumb } from "@/components/shell/useShell";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -49,6 +51,22 @@ async function unwrap<T>(p: Promise<{ success: true; data: T } | { success: fals
   const r = await p;
   if (!r.success) throw new Error(r.error);
   return r.data;
+}
+
+/** A record created in a lookup, in the shape the import lookups keep (UI-2 lookups). */
+function importProductOf(row: LookupRecord): ImportLookups["products"][number] {
+  return {
+    id: row.id,
+    code: String(row.code ?? ""),
+    name: String(row.name ?? ""),
+    unit: (row.unit as string | null) ?? null,
+    sheetLengthM: row.inventory_mode === "polywood" && Number(row.full_sheet_length_m) > 0 ? Number(row.full_sheet_length_m) : null,
+    barcode: (row.barcode as string | null) ?? null,
+  };
+}
+
+function supplierNameOf(row: LookupRecord): string {
+  return String(row.company_name || row.full_name || "");
 }
 
 /** One import shipment (IMP-1): header, product lines, costs and the live landed cost. id "new" = a new draft. */
@@ -123,7 +141,7 @@ function NumberField({
 }
 
 function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: ImportLookups; config: ImportsConfig }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const { can } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -139,7 +157,26 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
   const [rateBusy, setRateBusy] = useState<string | null>(null);
   const [productQuery, setProductQuery] = useState("");
   const [showIssues, setShowIssues] = useState(false);
+  const uiStandard = useUiStandard();
   useRecordCrumb(draft.number ?? t("imports.newShipment"));
+
+  // UI-2 lookups: a record picked or created in a lookup joins the loaded lookups, so names,
+  // the posting panel and the cost sheet know it without a reload (the form keeps its state).
+  const remember = (patch: { supplier?: LookupRecord; product?: LookupRecord; warehouse?: LookupRecord; account?: LookupRecord }) => {
+    client.setQueryData<ImportLookups>(LOOKUPS_KEY, (prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      if (patch.supplier && !prev.suppliers.some((x) => x.id === patch.supplier!.id)) next.suppliers = [{ id: patch.supplier.id, name: supplierNameOf(patch.supplier) }, ...prev.suppliers];
+      if (patch.product && !prev.products.some((x) => x.id === patch.product!.id)) next.products = [importProductOf(patch.product), ...prev.products];
+      if (patch.warehouse && !prev.warehouses.some((x) => x.id === patch.warehouse!.id)) next.warehouses = [...prev.warehouses, { id: patch.warehouse.id, name: String(patch.warehouse.name ?? ""), isDefault: false }];
+      if (patch.account && !prev.accounts.some((x) => x.id === patch.account!.id)) next.accounts = [...prev.accounts, { id: patch.account.id, name: [patch.account.code, patch.account.name].filter(Boolean).join(" · ") }];
+      return next;
+    });
+  };
+  const addProductRecord = (row: LookupRecord) => {
+    remember({ product: row });
+    setDraft((d) => ({ ...d, lines: [...d.lines, newLine(importProductOf(row))] }));
+  };
 
   const editable = draft.status === "draft" && view.financials && can("can_manage_imports");
   const products = useMemo(() => new Map(lookups.products.map((p) => [p.id, p])), [lookups.products]);
@@ -274,29 +311,70 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
         <section className="ds-card ds-card-pad grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={t("imports.sections.header")}>
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="ds-label">{label("supplier")} *</span>
+            {uiStandard ? (
+              <EntityLookup
+                entity="supplier"
+                value={draft.supplierId}
+                selectedLabel={supplierOptions.find((x) => x.id === draft.supplierId)?.name}
+                onChange={(id, row) => {
+                  if (row) remember({ supplier: row });
+                  set({ supplierId: id });
+                }}
+                disabled={!editable}
+                aria-label={label("supplier")}
+              />
+            ) : (
             <select className="ds-input" value={draft.supplierId ?? ""} onChange={(e) => set({ supplierId: e.target.value || null })}>
               <option value="">{t("common.select")}</option>
               {supplierOptions.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
+            )}
           </label>
           <label className="flex flex-col gap-1">
             <span className="ds-label">{label("currency")}</span>
+            {uiStandard ? (
+              <Combobox
+                value={draft.currencyCode}
+                onChange={(next) => next && set({ currencyCode: next as ImportCurrency, ...(next === "AZN" ? { invoiceRate: 1 } : {}) })}
+                options={IMPORT_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                labels={comboboxLabels(t)}
+                locale={locale}
+                clearable={false}
+                disabled={!editable}
+                width="full"
+                aria-label={label("currency")}
+              />
+            ) : (
             <select className="ds-input" value={draft.currencyCode} onChange={(e) => set({ currencyCode: e.target.value as ImportCurrency, ...(e.target.value === "AZN" ? { invoiceRate: 1 } : {}) })}>
               {IMPORT_CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
+            )}
           </label>
           <label className="flex flex-col gap-1">
             <span className="ds-label">{label("incoterm")}</span>
+            {uiStandard ? (
+              <Combobox
+                value={draft.incoterm ?? null}
+                onChange={(next) => set({ incoterm: (next || null) as ShipmentDraft["incoterm"] })}
+                options={INCOTERMS.map((i) => ({ value: i, label: i }))}
+                labels={comboboxLabels(t)}
+                locale={locale}
+                disabled={!editable}
+                width="full"
+                aria-label={label("incoterm")}
+              />
+            ) : (
             <select className="ds-input" value={draft.incoterm ?? ""} onChange={(e) => set({ incoterm: (e.target.value || null) as ShipmentDraft["incoterm"] })}>
               <option value="">—</option>
               {INCOTERMS.map((i) => (
                 <option key={i} value={i}>{i}</option>
               ))}
             </select>
+            )}
           </label>
           <label className="flex flex-col gap-1">
             <span className="ds-label">{label("invoiceNo")}</span>
@@ -304,7 +382,11 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
           </label>
           <label className="flex flex-col gap-1">
             <span className="ds-label">{label("invoiceDate")}</span>
+            {uiStandard ? (
+              <DateField value={draft.invoiceDate ?? null} onChange={(v) => set({ invoiceDate: v })} locale={locale} labels={dateFieldLabels(t)} disabled={!editable} width="full" aria-label={label("invoiceDate")} />
+            ) : (
             <input className="ds-input" type="date" value={draft.invoiceDate ?? ""} onChange={(e) => set({ invoiceDate: e.target.value || null })} />
+            )}
           </label>
           <div className="flex flex-col gap-1 sm:col-span-2">
             <span className="ds-label" id="imports-invoice-rate">{label("invoiceRate")} *</span>
@@ -328,7 +410,11 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
           </label>
           <label className="flex flex-col gap-1">
             <span className="ds-label">{label("customsDeclarationDate")}</span>
+            {uiStandard ? (
+              <DateField value={draft.customsDeclarationDate ?? null} onChange={(v) => set({ customsDeclarationDate: v })} locale={locale} labels={dateFieldLabels(t)} disabled={!editable} width="full" aria-label={label("customsDeclarationDate")} />
+            ) : (
             <input className="ds-input" type="date" value={draft.customsDeclarationDate ?? ""} onChange={(e) => set({ customsDeclarationDate: e.target.value || null })} />
+            )}
           </label>
           <div className="flex flex-col gap-1 sm:col-span-2">
             <span className="ds-label">{label("customsRate")}</span>
@@ -347,12 +433,26 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
           </div>
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className="ds-label">{label("defaultWarehouse")}</span>
+            {uiStandard ? (
+              <EntityLookup
+                entity="warehouse"
+                value={draft.defaultWarehouseId}
+                selectedLabel={lookups.warehouses.find((w) => w.id === draft.defaultWarehouseId)?.name}
+                onChange={(id, row) => {
+                  if (row) remember({ warehouse: row });
+                  set({ defaultWarehouseId: id });
+                }}
+                disabled={!editable}
+                aria-label={label("defaultWarehouse")}
+              />
+            ) : (
             <select className="ds-input" value={draft.defaultWarehouseId ?? ""} onChange={(e) => set({ defaultWarehouseId: e.target.value || null })}>
               <option value="">—</option>
               {lookups.warehouses.map((w) => (
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
             </select>
+            )}
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
             <span className="ds-label">{label("notes")}</span>
@@ -364,7 +464,21 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
         <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="imports-lines">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h2 id="imports-lines" className="font-semibold">{t("imports.sections.lines")}</h2>
-            {editable ? (
+            {editable && uiStandard ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="ds-label truncate">{t("imports.addProduct")}</span>
+                <EntityLookup
+                  entity="product"
+                  value={null}
+                  where={{ is_service: false, is_composite: false }}
+                  onChange={(_id, row) => row && addProductRecord(row)}
+                  placeholder={t("imports.addProductPlaceholder")}
+                  clearable={false}
+                  width="lg"
+                  aria-label={t("imports.addProduct")}
+                />
+              </div>
+            ) : editable ? (
               <label className="flex items-center gap-2">
                 <span className="ds-label">{t("imports.addProduct")}</span>
                 <input
@@ -442,12 +556,29 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
                           <NumberField className="w-16" label={`${label("dutyRatePct")}: ${name}`} value={l.dutyRatePct} onChange={(v) => setLine(l.key, { dutyRatePct: Math.min(100, v ?? 0) })} disabled={!editable} />
                         </td>
                         <td className="px-2 py-1.5">
+                          {uiStandard ? (
+                            <EntityLookup
+                              entity="warehouse"
+                              size="sm"
+                              width="md"
+                              value={l.warehouseId}
+                              selectedLabel={lookups.warehouses.find((w) => w.id === l.warehouseId)?.name}
+                              placeholder={t("imports.headerWarehouse")}
+                              onChange={(id, row) => {
+                                if (row) remember({ warehouse: row });
+                                setLine(l.key, { warehouseId: id });
+                              }}
+                              disabled={!editable}
+                              aria-label={`${label("warehouse")}: ${name}`}
+                            />
+                          ) : (
                           <select className="ds-input" aria-label={`${label("warehouse")}: ${name}`} value={l.warehouseId ?? ""} onChange={(e) => setLine(l.key, { warehouseId: e.target.value || null })}>
                             <option value="">{t("imports.headerWarehouse")}</option>
                             {lookups.warehouses.map((w) => (
                               <option key={w.id} value={w.id}>{w.name}</option>
                             ))}
                           </select>
+                          )}
                         </td>
                         <td className="px-2 py-1.5 text-end">
                           {editable ? (
@@ -472,7 +603,20 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
               <h2 id="imports-costs" className="font-semibold">{t("imports.sections.costs")}</h2>
               <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("imports.costsHint")}</p>
             </div>
-            {editable ? (
+            {editable && uiStandard ? (
+              <Combobox
+                value={null}
+                onChange={(next) => {
+                  if (next) setDraft((d) => ({ ...d, costs: [...d.costs, newCost(next as CostType, config)] }));
+                }}
+                options={COST_TYPES.map((c) => ({ value: c, label: costTypeLabel(c, config, t) }))}
+                labels={{ ...comboboxLabels(t), placeholder: `+ ${t("imports.addCost")}` }}
+                locale={locale}
+                clearable={false}
+                width="md"
+                aria-label={t("imports.addCost")}
+              />
+            ) : editable ? (
               <label className="flex items-center gap-2">
                 <span className="ds-label">{t("imports.addCost")}</span>
                 <select
@@ -509,6 +653,7 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
                   onChange={(patch) => setCost(c.key, patch)}
                   onRemove={() => setDraft((d) => ({ ...d, costs: d.costs.filter((x) => x.key !== c.key) }))}
                   onFetchRate={() => void fetchRate(c.key, c.currencyCode, draft.customsDeclarationDate || draft.invoiceDate, (rate) => setCost(c.key, { rateToAzn: rate }))}
+                  onRemember={remember}
                 />
               ))}
             </ul>
@@ -564,6 +709,7 @@ function CostRow({
   onChange,
   onRemove,
   onFetchRate,
+  onRemember,
 }: {
   cost: CostLineDraft;
   index: number;
@@ -576,8 +722,10 @@ function CostRow({
   onChange: (patch: Partial<CostLineDraft>) => void;
   onRemove: () => void;
   onFetchRate: () => void;
+  onRemember: (patch: { supplier?: LookupRecord; account?: LookupRecord }) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const uiStandard = useUiStandard();
   const name = cost.description || `${costTypeLabel(cost.costType, config, t)} ${index + 1}`;
   const duty = cost.splitMethod === "per_line_duty";
   const vat = cost.costType === "customs_vat";
@@ -587,12 +735,32 @@ function CostRow({
       <div className="flex flex-wrap items-end gap-2">
         <span className="ds-chip ds-chip-flat">{costTypeLabel(cost.costType, config, t)}</span>
         <input className="ds-input min-w-[10rem] flex-1" aria-label={f("description")} placeholder={t("imports.costFields.description")} value={cost.description ?? ""} maxLength={500} onChange={(e) => onChange({ description: e.target.value || null })} />
+        {uiStandard ? (
+          // "Paid to": carriers, customs offices and brokers are suppliers; a missing one is created here.
+          <span className="inline-flex min-w-0 items-center gap-1" title={t("lookup.audit.paidToHint")}>
+            <span className="ds-label shrink-0">{t("lookup.audit.paidTo")}</span>
+            <EntityLookup
+              entity="supplier"
+              value={cost.partnerId}
+              selectedLabel={lookups.suppliers.find((x) => x.id === cost.partnerId)?.name}
+              placeholder={t("imports.costFields.noPartner")}
+              onChange={(id, row) => {
+                if (row) onRemember({ supplier: row });
+                onChange({ partnerId: id });
+              }}
+              disabled={!editable}
+              width="lg"
+              aria-label={f("partner")}
+            />
+          </span>
+        ) : (
         <select className="ds-input" aria-label={f("partner")} value={cost.partnerId ?? ""} onChange={(e) => onChange({ partnerId: e.target.value || null })}>
           <option value="">{t("imports.costFields.noPartner")}</option>
           {lookups.suppliers.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
+        )}
         {editable ? (
           <button type="button" className="ds-btn ds-btn-sm ds-btn-ghost" aria-label={t("imports.removeCost", { name })} onClick={onRemove}>
             <Trash2 className="h-4 w-4" aria-hidden />
@@ -607,11 +775,25 @@ function CostRow({
         ) : (
           <>
             <NumberField label={f("amount")} value={cost.amount} onChange={(v) => onChange({ amount: v ?? 0 })} disabled={!editable} className="w-28" />
+            {uiStandard ? (
+              <Combobox
+                value={cost.currencyCode}
+                onChange={(next) => next && onChange({ currencyCode: next as ImportCurrency, ...(next === "AZN" ? { rateToAzn: 1 } : {}) })}
+                options={IMPORT_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                labels={comboboxLabels(t)}
+                locale={locale}
+                clearable={false}
+                disabled={!editable}
+                width="xs"
+                aria-label={f("currency")}
+              />
+            ) : (
             <select className="ds-input" aria-label={f("currency")} value={cost.currencyCode} onChange={(e) => onChange({ currencyCode: e.target.value as ImportCurrency, ...(e.target.value === "AZN" ? { rateToAzn: 1 } : {}) })}>
               {IMPORT_CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
+            )}
             {cost.currencyCode !== "AZN" ? (
               <span className="inline-flex items-center gap-1">
                 <span className="text-[length:var(--ds-text-xs)] ds-muted">{t("imports.costFields.rate")}</span>
@@ -640,11 +822,25 @@ function CostRow({
               <input type="checkbox" checked={cost.isCapitalized} onChange={(e) => onChange({ isCapitalized: e.target.checked })} />
               {t("imports.costFields.capitalized")}
             </label>
+            {uiStandard ? (
+              <Combobox
+                value={cost.splitMethod}
+                onChange={(next) => next && onChange({ splitMethod: next as SplitMethod })}
+                options={methodsFor(cost.costType).map((m) => ({ value: m, label: t(`imports.methods.${m}`) }))}
+                labels={comboboxLabels(t)}
+                locale={locale}
+                clearable={false}
+                disabled={!cost.isCapitalized || !editable}
+                width="md"
+                aria-label={f("method")}
+              />
+            ) : (
             <select className="ds-input" aria-label={f("method")} value={cost.splitMethod} onChange={(e) => onChange({ splitMethod: e.target.value as SplitMethod })} disabled={!cost.isCapitalized || !editable}>
               {methodsFor(cost.costType).map((m) => (
                 <option key={m} value={m}>{t(`imports.methods.${m}`)}</option>
               ))}
             </select>
+            )}
           </>
         ) : (
           <span className="text-[length:var(--ds-text-xs)] ds-muted">{t("imports.costFields.customsVatHint")}</span>
@@ -658,12 +854,27 @@ function CostRow({
           {t("imports.costFields.paidNow")}
         </label>
         {cost.paidNow ? (
+          uiStandard ? (
+            <EntityLookup
+              entity="account"
+              value={cost.cashAccountId}
+              selectedLabel={lookups.accounts.find((a) => a.id === cost.cashAccountId)?.name}
+              onChange={(id, row) => {
+                if (row) onRemember({ account: row });
+                onChange({ cashAccountId: id });
+              }}
+              disabled={!editable}
+              width="md"
+              aria-label={f("account")}
+            />
+          ) : (
           <select className="ds-input" aria-label={f("account")} value={cost.cashAccountId ?? ""} onChange={(e) => onChange({ cashAccountId: e.target.value || null })}>
             <option value="">{t("common.select")}</option>
             {lookups.accounts.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
+          )
         ) : null}
       </div>
       {cost.splitMethod === "manual" && cost.isCapitalized ? (
