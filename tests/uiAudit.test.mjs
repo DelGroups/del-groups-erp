@@ -257,3 +257,32 @@ test("page checks: nested scroll, page side-scroll, empty band, actions column, 
   assert.match(read("scripts/ui-guard.mjs"), /frame=page/, "ui:guard opens the page frame");
 });
 
+// ── Imports: delete a draft (UI-5 item a) ─────────────────────────────────────
+
+test("imports: a draft with nothing posted is deleted; a prepaid draft and confirmed ones are cancelled", async () => {
+  const { removalFor } = await import("../src/modules/imports/lib/posting.ts");
+  assert.equal(removalFor("draft", false), "delete");
+  assert.equal(removalFor("draft", true), "cancel");
+  for (const s of ["confirmed", "cleared", "partially_received", "received"]) assert.equal(removalFor(s, false), "cancel", s);
+  assert.equal(removalFor("closed", false), null, "a closed import is reopened first");
+  assert.equal(removalFor("cancelled", false), null);
+});
+
+test("imports: the delete migration is atomic, checked, and the direct-delete policy refuses the same cases", () => {
+  const sql = read("supabase/migrations/20261103100000_imports_delete_draft.sql");
+  assert.match(sql, /CREATE OR REPLACE FUNCTION public\.delete_import_draft\(p_id UUID\)/);
+  assert.match(sql, /_imports_require\('manage'\)/);
+  assert.match(sql, /FOR UPDATE/);
+  assert.match(sql, /imports_delete_draft_only/);
+  assert.match(sql, /imports_delete_has_postings/);
+  assert.match(sql, /import_prepayments p WHERE p\.shipment_id = p_shipment/);
+  assert.match(sql, /CREATE POLICY import_shipments_delete[\s\S]*status = 'draft' AND NOT public\.import_shipment_has_postings\(id\)/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public\.delete_import_draft\(UUID\) FROM PUBLIC, anon;/);
+  assert.match(read(".github/workflows/db-baseline.yml"), /supabase\/tests\/imports_delete_draft\.sql/);
+  const actions = read("src/modules/imports/actions/posting.ts");
+  assert.match(actions, /deleteDraftShipmentAction[\s\S]*guard\("can_manage_imports"\)[\s\S]*rpc\("delete_import_draft"/);
+  for (const l of ["az", "en", "ru"]) {
+    const m = read(`src/i18n/messages/${l}.ts`);
+    for (const k of ["delete_draft_only:", "delete_has_postings:", "deleteDraft:", "deleteTitle:", "deleted:"]) assert.ok(m.includes(k), `${l} ${k}`);
+  }
+});

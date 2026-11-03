@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
-import { useToast, useUiStandard } from "@/design-system/components";
+import { TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { EntityLookup } from "@/components/lookups";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -13,11 +14,13 @@ import { IMPORT_CURRENCIES, type ImportCurrency } from "@/lib/imports/cbar";
 import { methodsFor, type ImportsConfig } from "@/lib/imports/config";
 import { fxPayment } from "@/lib/imports/fx";
 import { COST_TYPES, round2, type CostType, type SplitMethod } from "@/lib/imports/landedCost";
-import { invalidateModel, figure, useFormatter } from "@/views";
+import { ACTION_PARAM, invalidateModel, figure, useFormatter } from "@/views";
+import { forgetRowAction, hasRowActionIntent } from "@/views/rowActions";
 import {
   addCostAction,
   cancelShipmentAction,
   closeShipmentAction,
+  deleteDraftShipmentAction,
   confirmShipmentAction,
   finalizeCostAction,
   getPostingViewAction,
@@ -32,6 +35,7 @@ import {
 import { cbarRateAction, type ImportLookups } from "../actions/imports";
 import {
   actionsFor,
+  removalFor,
   checkReceipt,
   costTotalAzn,
   initialReceiveRows,
@@ -54,7 +58,7 @@ import ReceivingSheet, { type ReceivingSheetData } from "./ReceivingSheet";
 const today = () => new Date().toISOString().slice(0, 10);
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | "prepay" | null;
+type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | "prepay" | "delete" | null;
 
 /**
  * Posting of an import shipment (IMP-2): Confirm, Receive, + Add cost, Pay, Close, Reopen and
@@ -135,6 +139,32 @@ export function PostingPanel({
   const actions = actionsFor(draft.status).filter((a) =>
     a === "reopen" ? isAdmin : a === "addCost" || a === "pay" ? canManage : canApprove
   );
+  // UI-5: a draft with nothing posted is deleted; a prepaid draft and anything confirmed are
+  // cancelled with a reason (removalFor). The database checks both again.
+  const removal = view.data ? removalFor(draft.status, view.data.prepayments.length > 0) : null;
+  const canDelete = removal === "delete" && canManage;
+  const canCancel = removal === "cancel" && canApprove;
+  const router = useRouter();
+  // The list's row menu opens the shipment with ?do=delete or ?do=cancel (views/rowActions.ts):
+  // open that dialog once, only right after the user picked it there.
+  const requested = useRef(false);
+  useEffect(() => {
+    if (requested.current || !view.data) return;
+    const { pathname, search, hash } = window.location;
+    const params = new URLSearchParams(search);
+    const key = params.get(ACTION_PARAM);
+    if (!key) return;
+    requested.current = true;
+    params.delete(ACTION_PARAM);
+    window.history.replaceState(window.history.state, "", `${pathname}${params.size ? `?${params}` : ""}${hash}`);
+    const store = window.sessionStorage;
+    if (!hasRowActionIntent(store, pathname, key, Date.now())) return;
+    forgetRowAction(store);
+    if (!((key === "delete" && canDelete) || (key === "cancel" && canCancel))) return;
+    // Opened after this render (a dialog is state, not something to set while rendering).
+    const timer = window.setTimeout(() => open(key), 0);
+    return () => window.clearTimeout(timer);
+  }, [view.data, canDelete, canCancel]);
   const received = (view.data?.receipts ?? []).flatMap((r) => r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, qtyStockUnit: l.qtyStockUnit })));
   const lines = receiveLines(draft, products, received);
   const estimates = draft.costs.filter((c) => c.isEstimate);
@@ -201,10 +231,16 @@ export function PostingPanel({
               {t("importPosting.reopen")}
             </button>
           ) : null}
-          {actions.includes("cancel") && posted ? (
+          {canCancel ? (
             <button type="button" className="ds-btn ds-btn-sm ds-btn-ghost" disabled={busy} onClick={() => open("cancel")}>
               <Ban className="h-4 w-4" aria-hidden />
               {t("importPosting.cancel")}
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button type="button" className="ds-btn ds-btn-sm ds-btn-ghost" style={{ color: "var(--ds-danger-strong)" }} disabled={busy || dirty} title={dirty ? t("importPosting.saveFirst") : undefined} onClick={() => open("delete")}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+              {t("importPosting.deleteDraft")}
             </button>
           ) : null}
         </div>
@@ -360,6 +396,33 @@ export function PostingPanel({
         {null}
       </ImportDialog>
 
+      <TypeToConfirmDialog
+        open={dialog === "delete"}
+        onOpenChange={(o) => setDialog(o ? "delete" : null)}
+        confirmText={draft.number ?? ""}
+        consequences={[t("importPosting.deleteHint")]}
+        labels={{
+          title: t("importPosting.deleteTitle"),
+          description: t("importPosting.deleteHint"),
+          instruction: t("importPosting.deleteType"),
+          copy: t("sales.engine.void.copy"),
+          cancel: t("common.cancel"),
+          confirm: t("importPosting.deleteDraft"),
+          working: t("common.loading"),
+          audit: t("importPosting.deleteAudit"),
+        }}
+        onConfirm={async () => {
+          const result = await deleteDraftShipmentAction(id);
+          if (!result.success) {
+            toast(t("common.error"), t(result.error) + (result.detail ? ` ${result.detail}` : ""), "error");
+            return;
+          }
+          toast(t("importPosting.deleted"), undefined, "success");
+          setDialog(null);
+          await invalidateModel(client, IMPORTS_VIEW_KEY);
+          router.push("/imports");
+        }}
+      />
       <CancelDialog open={dialog === "cancel"} busy={busy} onOpenChange={(o) => setDialog(o ? "cancel" : null)} onSubmit={(reason) => run(() => cancelShipmentAction(id, reason, opKey), t("importPosting.cancelled"))} />
 
       {printData ? createPortal(<div className="print-area"><ReceivingSheet data={printData} /></div>, document.body) : null}

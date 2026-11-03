@@ -238,6 +238,20 @@ export async function reopenShipmentAction(id: string): Promise<PostingResult<Ro
   }
 }
 
+/**
+ * Deletes a draft with nothing posted (UI-5, delete_import_draft): its lines, costs and splits go
+ * with it. A prepaid draft or a confirmed import is refused (they are cancelled instead).
+ */
+export async function deleteDraftShipmentAction(id: string): Promise<PostingResult<Row>> {
+  try {
+    if (!isUuid(id)) return { success: false, error: "importPosting.errors.not_found" };
+    await guard("can_manage_imports");
+    return await rpc("delete_import_draft", { p_id: id });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export async function cancelShipmentAction(id: string, reason: string, idempotencyKey: string): Promise<PostingResult<Row>> {
   try {
     await guard("can_approve_imports");

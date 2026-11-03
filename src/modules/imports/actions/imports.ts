@@ -69,19 +69,22 @@ export async function listShipmentsAction(): Promise<ImportsResult<ShipmentListR
     const client = await admin();
     const shipments = await rows(client.from("import_shipments").select("*").order("created_at", { ascending: false }).limit(2000));
     const ids = shipments.map((s) => s.id);
-    const [lines, costs] = ids.length
+    const [lines, costs, prepayments] = ids.length
       ? await Promise.all([
           rows(client.from("import_shipment_lines").select("id, shipment_id, qty_purchase_unit, unit_price_fc").in("shipment_id", ids)),
           rows(client.from("import_cost_lines").select("id, shipment_id, amount, rate_to_azn, vat_amount_azn, cost_type").in("shipment_id", ids)),
+          // UI-5: which drafts were prepaid (those are cancelled, not deleted).
+          rows(client.from("import_prepayments").select("shipment_id").in("shipment_id", ids)),
         ])
-      : [[], []];
+      : [[], [], []];
+    const prepaid = new Set(prepayments.map((p) => String(p.shipment_id)));
     const costIds = costs.map((c) => c.id);
     const allocations = costIds.length ? await rows(client.from("import_cost_allocations").select("cost_line_id, amount_azn").in("cost_line_id", costIds)) : [];
     const supplierIds = [...new Set(shipments.map((s) => s.supplier_id).filter(isUuid))];
     const suppliers = supplierIds.length ? await rows(client.from("suppliers").select("id, full_name, company_name").in("id", supplierIds)) : [];
     const creatorIds = [...new Set(shipments.map((s) => s.created_by).filter(isUuid))];
     const names = creatorIds.length ? await fetchProfileDisplayNames(client as unknown as ProfileNamesClient, creatorIds) : new Map<string, string>();
-    return { success: true, data: shipmentListRows({ shipments, lines, costs, allocations, suppliers, names, financials }) };
+    return { success: true, data: shipmentListRows({ shipments, lines, costs, allocations, suppliers, names, financials, prepaid }) };
   } catch (err) {
     return fail(err);
   }

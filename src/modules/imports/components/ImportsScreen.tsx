@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Settings2 } from "lucide-react";
+import { Ban, Plus, Settings2, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { EngineScreen } from "@/views";
+import { EngineScreen, type RowActionSpec } from "@/views";
 import { listShipmentsAction } from "../actions/imports";
 import { importKpis, importsDefinition } from "../views/imports";
+import { removalFor } from "../lib/posting";
 
 async function fetchAll(): Promise<Record<string, unknown>[]> {
   const result = await listShipmentsAction();
@@ -26,6 +27,15 @@ export default function ImportsScreen() {
       title={t("imports.title")}
       kpis={(records, fmt) => importKpis(records, fmt)}
       openHref={(r) => `/imports/${r.id}`}
+      // UI-5: the row "…" menu. A draft with nothing posted is deleted, anything else cancelled
+      // (removalFor); the shipment page opens the confirm / reason dialog (?do=delete / ?do=cancel).
+      rowActions={(r): RowActionSpec[] => {
+        const removal = removalFor(r.status, r.has_prepayment);
+        return [
+          { key: "cancel", label: t("importPosting.cancel"), icon: <Ban className="h-4 w-4" />, destructive: true, hidden: !(removal === "cancel" && can("can_approve_imports")) },
+          { key: "delete", label: t("importPosting.deleteDraft"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !(removal === "delete" && can("can_manage_imports")) },
+        ];
+      }}
       actions={
         <div className="flex flex-wrap gap-2">
           {can("can_manage_settings") ? (

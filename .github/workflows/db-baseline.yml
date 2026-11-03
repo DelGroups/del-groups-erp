@@ -165,6 +165,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_fx.sql | tee "$RUNNER_TEMP/imports_fx.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_fx.txt"
 
+      # Deleting a draft import (UI-5): only a draft with nothing posted; prepaid / confirmed are cancelled.
+      - name: Imports delete draft checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_delete_draft.sql | tee "$RUNNER_TEMP/imports_delete_draft.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_delete_draft.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

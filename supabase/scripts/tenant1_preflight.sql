@@ -148,6 +148,9 @@ union all
 select 'pending', '20261030120000_imports_fx: Imports exchange differences and prepayments',
        case when to_regprocedure('public.prepay_import_supplier(uuid,date,text,numeric,numeric,jsonb,text)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261103100000_imports_delete_draft: Delete a draft import (nothing posted)',
+       case when to_regprocedure('public.delete_import_draft(uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
