@@ -1,4 +1,5 @@
 import type { ComboboxLabels, DataGridLabels, DateFieldLabels } from "@/design-system/components";
+import type { LineGridLabels } from "@/components/line-grid/LineGrid";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
@@ -39,5 +40,28 @@ export function dataGridLabels(t: T): DataGridLabels {
     resize: t("uiStandard.grid.resize", { column: "{column}" }),
     loading: t("uiStandard.grid.loading"),
     total: t("uiStandard.grid.total"),
+  };
+}
+
+/** Texts of LineGrid in the current language (group uiStandard.lineGrid). */
+export function lineGridLabels(t: T): LineGridLabels {
+  const k = (key: string) => t(`uiStandard.lineGrid.${key}`);
+  return {
+    addLine: k("addLine"),
+    addLineShortcut: k("addLineShortcut"),
+    empty: k("empty"),
+    columns: k("columns"),
+    optionalColumns: k("optionalColumns"),
+    actions: k("actions"),
+    rowActions: k("rowActions"),
+    duplicate: k("duplicate"),
+    remove: k("remove"),
+    details: k("details"),
+    moveUp: k("moveUp"),
+    moveDown: k("moveDown"),
+    drag: k("drag"),
+    total: k("total"),
+    cancel: k("cancel"),
+    close: k("close"),
   };
 }

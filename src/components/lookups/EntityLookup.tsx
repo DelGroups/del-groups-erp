@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { comboboxLabels } from "@/i18n/uiStandardLabels";
 import type { PermissionKey } from "@/types/database.types";
+import { isBarcodeLike } from "@/components/line-grid/logic";
 import { fetchLookupById, fetchLookupByIds, searchLookup } from "./data";
 import { orderWithRecent, parseRecent, pushRecent, recentStorageKey, restrictToIds } from "./logic";
 import { LookupScope } from "./LookupScope";
@@ -45,6 +46,16 @@ export interface EntityLookupProps {
   className?: string;
   "aria-label"?: string;
   "aria-describedby"?: string;
+  /** false: no "+" next to the field ("+ New …" stays under the list), for narrow table cells. */
+  inlineAdd?: boolean;
+  /** Opens the list and focuses the field on mount (a new line's product cell, UI-3). */
+  autoOpen?: boolean;
+  /**
+   * A barcode scanned (or typed) into the search and confirmed with Enter is looked up exactly
+   * and picked when one record has it (products, UI-3). Gets the code when none has it.
+   */
+  onBarcodeMiss?: (code: string) => void;
+  scanBarcodes?: boolean;
 }
 
 function readRecent(entity: LookupEntity): string[] {
@@ -89,6 +100,10 @@ export function EntityLookup({
   width = "full",
   size = "md",
   className,
+  inlineAdd = true,
+  autoOpen,
+  scanBarcodes,
+  onBarcodeMiss,
   ...aria
 }: EntityLookupProps) {
   const { t } = useI18n();
@@ -163,6 +178,25 @@ export function EntityLookup({
 
   const createText = t(`lookup.create.${entity}`);
 
+  // A scanner types the code and Enter at once, before the debounced search has answered.
+  const onQueryEnter =
+    scanBarcodes && entity === "product"
+      ? (query: string) => {
+          if (!isBarcodeLike(query)) return false;
+          const parsedWhere = JSON.parse(whereKey) as LookupWhere | null;
+          void searchLookup(entity, query, { where: parsedWhere ?? undefined })
+            .then((rows) => {
+              const hits = rows.filter((row) => String(row.barcode ?? "") === query);
+              if (hits.length === 1) {
+                records.current.set(hits[0].id, hits[0]);
+                pick(hits[0].id);
+              } else onBarcodeMiss?.(query);
+            })
+            .catch(() => onBarcodeMiss?.(query));
+          return true;
+        }
+      : undefined;
+
   return (
     <LookupScope className={className}>
       <LookupFieldView
@@ -180,6 +214,9 @@ export function EntityLookup({
         size={size}
         createLabel={createText}
         onCreate={mayCreate ? openCreate : undefined}
+        inlineAdd={inlineAdd}
+        autoOpen={autoOpen}
+        onQueryEnter={onQueryEnter}
         aria-label={aria["aria-label"]}
         aria-describedby={aria["aria-describedby"]}
       />
@@ -216,6 +253,10 @@ export interface LookupFieldViewProps {
   createLabel: string;
   /** Opens the quick-create with what was typed; without it there is no "+". */
   onCreate?: (query: string) => void;
+  /** false: no "+" next to the field (table cells); "+ New …" stays under the list. */
+  inlineAdd?: boolean;
+  autoOpen?: boolean;
+  onQueryEnter?: (query: string) => boolean;
   "aria-label"?: string;
   "aria-describedby"?: string;
 }
@@ -241,6 +282,9 @@ export function LookupFieldView({
   size = "md",
   createLabel,
   onCreate,
+  inlineAdd = true,
+  autoOpen,
+  onQueryEnter,
   ...aria
 }: LookupFieldViewProps) {
   const { t, locale } = useI18n();
@@ -263,6 +307,9 @@ export function LookupFieldView({
         width={width}
         aria-label={aria["aria-label"]}
         aria-describedby={aria["aria-describedby"]}
+        defaultOpen={autoOpen}
+        autoFocus={autoOpen}
+        onQueryEnter={onQueryEnter}
         footer={
           onCreate
             ? ({ query, close }) => (
@@ -283,7 +330,7 @@ export function LookupFieldView({
             : undefined
         }
       />
-      {onCreate ? (
+      {onCreate && inlineAdd ? (
         <IconButton
           size={size === "sm" ? "sm" : "md"}
           variant="outline"

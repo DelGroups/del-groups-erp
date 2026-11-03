@@ -91,6 +91,24 @@ Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach
 9. **RTL-safe:** logical properties only (`inset-inline-start`, `padding-inline`, `text-align: start`).
 10. **Global resizer:** `TableColumnResizer` skips grids (`.ds-grid`, `data-col-resize="manual"`). It stays for old tables until they move to the grid.
 
+## Line grids
+
+Every editable list of document lines (products, services, costs) is one `LineGrid` (`src/components/line-grid`). Behind `UI_STANDARD`; with the flag off every form keeps its old editor. Migrated so far: import product lines (`ImportLinesGrid`), purchase lines (`PurchaseLinesGrid`).
+
+1. **Same look as `DataGrid`:** one-line rows of a fixed height (compact by default), a sticky one-line header, the grid's own horizontal scroll with edge shadows, a sticky first column (the product) and a sticky actions column, totals that stick to the bottom.
+2. **Cells look like text** until hovered or focused (`LineNumberCell`, `LineTextCell`, `LineSelectCell`, `LineProductCell`; computed values `LineText`).
+   - Numbers are right-aligned with tabular figures; the unit is a muted suffix in the same cell ("12 vərəq").
+   - An error is a red outline and a tooltip (`error` on the column), never an extra line.
+3. **Adding a line:** the "+ Add a line" row at the bottom, or Ctrl+Enter. Never a box at the top of the grid.
+   - Forms whose lines may start empty pass `onAddLine`: the grid adds the line and focuses its first cell.
+   - Product-first documents pass `newLineCell`: a new row opens with only a product search, which opens on its own; picking (or creating) the product adds the line.
+   - The product cell searches by name, code and barcode; "+ New product" under the list creates one in a dialog and puts it in the row; a barcode scanned into the search and confirmed with Enter picks the product.
+4. **Keyboard:** Tab / Shift+Tab move across the cells (nothing else takes a tab stop), Enter goes down the same column and adds a line at the last row, Shift+Enter goes up, Ctrl+Delete removes the line, Esc puts back the value the cell had when it got the focus.
+5. **Row menu (⋯):** more fields (the details drawer), duplicate, move up / down, remove. With `onReorder` a drag handle (motion `Reorder`) sits before the first column.
+6. **Rarely used fields** (HS code, weight, volume, warehouse per line, rate of a foreign currency) are `optional` columns: hidden until the user shows them with the Columns button in the header, always editable in the details drawer. The default columns fit a 1280 px window (`tests/lineGrid.test.mjs`).
+7. **Business rules stay in the form** (prices, units, sheet metres, VAT, discounts, stock checks); the grid only shows and edits the lines.
+8. **UI lab:** a 30-line grid with long names (`/dev/ui-lab`), checked by `npm run ui:guard`.
+
 ## Which component (`@/design-system/components`)
 
 | Need | Component |
@@ -108,6 +126,7 @@ Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach
 | Money / number / date in a table | `MoneyCell` / `NumberCell` / `DateCell` |
 | Choice from a fixed list | `Combobox` (fixed or async options, clear, empty state, `footer` slot) |
 | Field that points to a record | `EntityLookup` (`@/components/lookups`): search + quick-create |
+| Editable document lines | `LineGrid` (`@/components/line-grid`) |
 | Date / date and time | `DateField` / `DateTimeField` |
 
 ## Lookups

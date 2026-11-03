@@ -50,6 +50,15 @@ export interface ComboboxProps {
   "aria-describedby"?: string;
   /** Slot under the list, e.g. "+ Create “…”" (prompt UI-2); gets the typed text and a close(). */
   footer?: (ctx: { query: string; close: () => void }) => React.ReactNode;
+  /** Opens the list on mount (a new line's product cell, UI-3). */
+  defaultOpen?: boolean;
+  /** Focuses the control on mount. */
+  autoFocus?: boolean;
+  /**
+   * Enter in the search box before the list has loaded (a barcode scanner types and presses
+   * Enter at once): return true to take the text yourself; the list then closes.
+   */
+  onQueryEnter?: (query: string) => boolean;
 }
 
 const DEBOUNCE_MS = 200;
@@ -75,9 +84,12 @@ export function Combobox({
   width,
   className,
   footer,
+  defaultOpen = false,
+  autoFocus,
+  onQueryEnter,
   ...aria
 }: ComboboxProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [query, setQuery] = useState("");
   const [remote, setRemote] = useState<ComboOption[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,6 +159,7 @@ export function Combobox({
               aria-required={required || undefined}
               aria-label={aria["aria-label"]}
               aria-describedby={aria["aria-describedby"]}
+              autoFocus={autoFocus}
               className="ds-combobox-trigger"
               onKeyDown={(e) => {
                 // Type to search: a printable key opens the list with that letter typed.
@@ -193,6 +206,10 @@ export function Combobox({
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
                     e.preventDefault();
+                    close();
+                  } else if (e.key === "Enter" && onQueryEnter && query.trim() && onQueryEnter(query.trim())) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     close();
                   }
                 }}
