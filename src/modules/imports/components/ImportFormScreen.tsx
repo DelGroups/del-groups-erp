@@ -43,6 +43,7 @@ import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { costTypeLabel, LandedCostPanel } from "./LandedCostPanel";
 import { PostingPanel } from "./PostingPanel";
 import CostSheet, { type CostSheetData } from "./CostSheet";
+import { ImportLinesGrid } from "./ImportLinesGrid";
 
 const LOOKUPS_KEY = ["imports", "lookups"] as const;
 const CONFIG_KEY = ["imports", "config"] as const;
@@ -172,10 +173,6 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
       if (patch.account && !prev.accounts.some((x) => x.id === patch.account!.id)) next.accounts = [...prev.accounts, { id: patch.account.id, name: [patch.account.code, patch.account.name].filter(Boolean).join(" · ") }];
       return next;
     });
-  };
-  const addProductRecord = (row: LookupRecord) => {
-    remember({ product: row });
-    setDraft((d) => ({ ...d, lines: [...d.lines, newLine(importProductOf(row))] }));
   };
 
   const editable = draft.status === "draft" && view.financials && can("can_manage_imports");
@@ -461,24 +458,26 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
         </section>
 
         {/* Product lines */}
+        {uiStandard ? (
+          // UI-3: the standard line grid ("+ Add a line" at the bottom, product search in the cell).
+          <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="imports-lines">
+            <h2 id="imports-lines" className="font-semibold">{t("imports.sections.lines")}</h2>
+            <ImportLinesGrid
+              draft={draft}
+              setDraft={setDraft}
+              editable={editable}
+              products={products}
+              lookups={lookups}
+              showIssues={showIssues}
+              importProductOf={importProductOf}
+              onRemember={remember}
+            />
+          </section>
+        ) : (
         <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="imports-lines">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h2 id="imports-lines" className="font-semibold">{t("imports.sections.lines")}</h2>
-            {editable && uiStandard ? (
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="ds-label truncate">{t("imports.addProduct")}</span>
-                <EntityLookup
-                  entity="product"
-                  value={null}
-                  where={{ is_service: false, is_composite: false }}
-                  onChange={(_id, row) => row && addProductRecord(row)}
-                  placeholder={t("imports.addProductPlaceholder")}
-                  clearable={false}
-                  width="lg"
-                  aria-label={t("imports.addProduct")}
-                />
-              </div>
-            ) : editable ? (
+            {editable ? (
               <label className="flex items-center gap-2">
                 <span className="ds-label">{t("imports.addProduct")}</span>
                 <input
@@ -595,6 +594,7 @@ function ShipmentForm({ view, lookups, config }: { view: ShipmentView; lookups: 
             </div>
           )}
         </section>
+        )}
 
         {/* Cost lines */}
         <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="imports-costs">

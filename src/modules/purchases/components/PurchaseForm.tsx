@@ -83,7 +83,9 @@ import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT, createEmptyPurchaseLineItems } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
-import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { EntityLookup, mergeRecord, type LookupRecord } from "@/components/lookups";
+import { reorderByKeys } from "@/components/line-grid";
+import { PurchaseLinesGrid } from "./PurchaseLinesGrid";
 import { useUiStandard } from "@/design-system/components";
 import {
   filterLegalSuppliers,
@@ -453,8 +455,25 @@ export default function PurchaseForm({
     });
   };
 
-  const handleProductSelect = (rowId: string, productId: string) => {
-    const product = productList.find((p) => p.id === productId);
+  const handleProductSelect = (rowId: string, productId: string) =>
+    applyProductToRow(rowId, productList.find((p) => p.id === productId));
+
+  // UI-3 line grid: a product picked or created in a line's cell joins the list, then fills the row.
+  const handleProductRecord = (rowId: string, record: LookupRecord | null) => {
+    if (!record) {
+      applyProductToRow(rowId, undefined);
+      return;
+    }
+    const product = productList.find((p) => p.id === record.id) ?? (record as unknown as Product);
+    if (!productList.some((p) => p.id === product.id)) setProductList((prev) => mergeRecord(prev, product));
+    applyProductToRow(rowId, product);
+  };
+
+  const duplicateRow = (id: string) =>
+    setItems((prev) => prev.flatMap((row) => (row.id === id ? [row, { ...row, id: createEmptyPurchaseLineItem().id }] : [row])));
+  const reorderRows = (ids: string[]) => setItems((prev) => reorderByKeys(prev, ids, (row) => row.id));
+
+  const applyProductToRow = (rowId: string, product: Product | undefined) => {
     if (!product) {
       updateItem(rowId, {
         product_id: "",
@@ -1018,6 +1037,8 @@ export default function PurchaseForm({
         <div className="app-table-wrap">
           <div className="app-table-section-bar text-xs font-bold">
             <span>{t("forms.receivedProducts")}</span>
+            {/* UI-3: lines are added from the grid's own "+ Add a line" row. */}
+            {uiStandard ? null : (
             <button
               type="button"
               onClick={addRow}
@@ -1026,9 +1047,10 @@ export default function PurchaseForm({
               <Plus className="h-3.5 w-3.5" />
               {t("forms.addRow")}
             </button>
+            )}
           </div>
 
-          {selectedRowIds.size > 0 ? (
+          {!uiStandard && selectedRowIds.size > 0 ? (
             <div className="flex items-center justify-between gap-3 border-b border-rose-200 bg-rose-50 px-4 py-2">
               <span className="text-xs font-semibold text-rose-800">
                 {t("invoice.rowsSelectedCount", { count: selectedRowIds.size })}
@@ -1055,6 +1077,25 @@ export default function PurchaseForm({
             />
           </div>
 
+          {uiStandard ? (
+            <div className="p-2">
+              <PurchaseLinesGrid
+                items={items}
+                productList={productList}
+                locked={documentLocked}
+                isOfficial={isOfficial}
+                saving={saving}
+                onUpdate={updateItem}
+                onProduct={handleProductRecord}
+                onMetricChange={handleMetricIntakeChange}
+                onAdd={addRow}
+                onRemove={removeRow}
+                onDuplicate={duplicateRow}
+                onReorder={reorderRows}
+                onBarcodeMiss={(barcode) => showToastError(t("invoice.barcodeNotFound", { barcode }))}
+              />
+            </div>
+          ) : (
           <div ref={gridContainerRef} className="w-full overflow-x-auto overflow-y-visible">
             <table {...gridTableProps} className="app-table w-full text-left text-sm">
               <thead>
@@ -1267,6 +1308,7 @@ export default function PurchaseForm({
               </tbody>
             </table>
           </div>
+          )}
         </div>
 
         <DocumentFooter>

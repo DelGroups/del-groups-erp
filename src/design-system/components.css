@@ -1141,6 +1141,256 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   background: transparent;
 }
 
+/* ══ LineGrid (UI-3, docs/ui-standard.md "Line grids") ═══════════════════════════════════ */
+[data-ds] .ds-line-grid {
+  --ds-control-h: calc(var(--ds-grid-row-h) - 4px);
+}
+[data-ds] .ds-line-grid .ds-grid th,
+[data-ds] .ds-line-grid .ds-grid td {
+  padding: 0 0.25rem;
+}
+[data-ds] .ds-line-grid .ds-grid thead th {
+  padding: 0 0.5rem;
+}
+[data-ds] .ds-line-grid .ds-grid td[data-invalid] {
+  box-shadow: inset 0 0 0 1px var(--ds-danger-strong);
+}
+/* Cells look like text until hovered or focused. */
+[data-ds] .ds-line-input {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: var(--ds-control-h);
+  padding: 0 0.375rem;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-ds] .ds-line-input:hover:not([readonly]) {
+  border-color: var(--ds-border-strong);
+}
+[data-ds] .ds-line-input:focus {
+  outline: none;
+  border-color: var(--ds-brand);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-line-input[readonly] {
+  cursor: default;
+}
+[data-ds] .ds-line-input[aria-invalid="true"] {
+  border-color: var(--ds-danger-strong);
+}
+[data-ds] .ds-line-num {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+[data-ds] .ds-line-grid .is-num .ds-line-input {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-line-suffix {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  padding-inline-end: 0.25rem;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-ds] .ds-line-text {
+  display: flex;
+  align-items: center;
+  justify-content: inherit;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0 0.375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-ds] .ds-line-grid .is-num .ds-line-text {
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+/* Lookups and selects in a cell: borderless until hovered or focused. */
+[data-ds] .ds-line-lookup,
+[data-ds] .ds-line-lookup .ds-lookup {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+[data-ds] .ds-line-lookup .ds-combobox {
+  width: 100%;
+  border-color: transparent;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+}
+[data-ds] .ds-line-lookup .ds-combobox:hover {
+  border-color: var(--ds-border-strong);
+}
+[data-ds] .ds-line-lookup .ds-combobox:focus-within {
+  border-color: var(--ds-brand);
+  background: var(--ds-surface);
+  box-shadow: none;
+}
+[data-ds] .ds-line-lookup .ds-combobox[data-invalid] {
+  border-color: var(--ds-danger-strong);
+  box-shadow: none;
+}
+[data-ds] .ds-line-lookup .ds-combobox-trigger {
+  padding-inline: 0.375rem 0.25rem;
+}
+[data-ds] .ds-line-grid .ds-line-lookup .ds-combobox-trigger svg {
+  opacity: 0;
+}
+[data-ds] .ds-line-grid .ds-line-lookup .ds-combobox:hover .ds-combobox-trigger svg,
+[data-ds] .ds-line-grid .ds-line-lookup .ds-combobox:focus-within .ds-combobox-trigger svg {
+  opacity: 0.6;
+}
+/* Drag handle column. */
+[data-ds] .ds-line-grid .ds-line-drag {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  padding: 0;
+  text-align: center;
+}
+[data-ds] .ds-line-grid thead .ds-line-drag,
+[data-ds] .ds-line-grid tfoot .ds-line-drag {
+  z-index: 3;
+}
+[data-ds] .ds-line-drag-handle {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.5rem;
+  color: var(--ds-text-subtle);
+  cursor: grab;
+  touch-action: none;
+}
+[data-ds] .ds-line-drag-handle:active {
+  cursor: grabbing;
+}
+/* The "+ Add a line" row at the bottom. */
+[data-ds] .ds-line-grid .ds-line-add > td {
+  padding: 0 0.5rem;
+  border-bottom: 0;
+}
+[data-ds] .ds-line-grid .ds-line-add:hover > td {
+  background: var(--ds-grid-bg);
+}
+[data-ds] .ds-line-add-inner {
+  position: sticky;
+  inset-inline-start: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: min(100%, calc(100vw - 4rem));
+  min-width: 0;
+}
+[data-ds] .ds-line-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  height: calc(var(--ds-grid-row-h) - 6px);
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-brand);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+[data-ds] .ds-line-add-btn:hover,
+[data-ds] .ds-line-add-btn:focus-visible {
+  background: var(--ds-brand-soft);
+}
+[data-ds] .ds-line-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+[data-ds] .ds-line-add-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  white-space: nowrap;
+}
+[data-ds] .ds-line-kbd {
+  padding: 0 0.3rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-surface-sunken);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.125rem;
+}
+[data-ds] .ds-line-grid .ds-line-pending > td {
+  background: color-mix(in srgb, var(--ds-brand) 5%, var(--ds-grid-bg));
+}
+[data-ds] .ds-menu-item.ds-line-danger {
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-menu-item[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+/* Details drawer: the optional fields of one line. */
+[data-ds] .ds-line-drawer-overlay {
+  z-index: 90;
+}
+[data-ds] .ds-line-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 91;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, 100vw);
+  border-radius: 0;
+  outline: none;
+}
+[data-ds] .ds-line-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--ds-border);
+}
+[data-ds] .ds-line-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
+}
+[data-ds] .ds-line-drawer-control .ds-line-input,
+[data-ds] .ds-line-drawer-control .ds-line-lookup .ds-combobox {
+  --ds-control-h: 2.25rem;
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-line-drawer-control .is-num,
+[data-ds] .ds-line-drawer-control .ds-line-num .ds-line-input {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Lookup field with quick-create (UI-2 lookups, src/components/lookups) ── */
 [data-ds] .ds-lookup {
   display: flex;

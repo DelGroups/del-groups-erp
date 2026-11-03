@@ -61,7 +61,7 @@ field unchanged. The component lives in `src/components/lookups/` (see docs/ui-s
 
 | Form | Field | Entity | Reason |
 | --- | --- | --- | --- |
-| Invoice, purchase, polywood, consignment, opening balance line items; QuotationBuilderModal, InvoiceProductSelectorModal, QuickScanModal | Product cell of a line | product | Line-item grids are UI-3 (new editable grid). EntityLookup already works in a cell (`size="sm"`, portal dropdown); the purchase form keeps its existing QuickAddProductModal until then. |
+| Invoice, purchase, polywood, consignment, opening balance line items; QuotationBuilderModal, InvoiceProductSelectorModal, QuickScanModal | Product cell of a line | product | UI-3 `LineGrid` (`src/components/line-grid`): the product cell is an EntityLookup with "+ New product" and barcode scan. Migrated: import product lines, purchase lines. The other forms keep their editor (and the purchase form its QuickAddProductModal with the flag off) until they move to LineGrid. |
 | Damaged goods, production material issue (`ProductionOrderDetailPage`, `ProductionInProgressPhase`) | Product / warehouse to take stock from | product, warehouse | Picks existing stock: a record created now has no stock to issue or write off. |
 | Document forms (invoice, purchase) | Contract | contract | The contract picker already has its own quick-create (ContractQuickCreateModal). |
 | Expense, document expenses, ledger row actions, official transaction | Expense category | expenseCategory | ExpenseCategorySelect already has a quick-add (QuickAddExpenseCategoryModal). The new expense form uses the lookup. |

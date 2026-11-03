@@ -5,6 +5,7 @@ import { Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import StatusBadge from "@/components/ui/status-badge";
 import { ClassicInvoiceTable, GridLab } from "./GridLab";
+import { LineGridLab } from "./LineGridLab";
 import { LookupFieldView } from "@/components/lookups";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
@@ -242,6 +243,10 @@ function LabContent() {
       {/* UI-2: the list standard. 20 columns, long az texts; ui:guard checks one-line rows. */}
       <Section title={l("grid")} variant="card">
         <GridLab />
+      </Section>
+      {/* UI-3: the line-items standard. 30 lines, long names; ui:guard checks one-line rows. */}
+      <Section title={l("lineGrid")} variant="card">
+        <LineGridLab />
       </Section>
       <Section title={l("classic")} variant="card">
         <ClassicInvoiceTable />

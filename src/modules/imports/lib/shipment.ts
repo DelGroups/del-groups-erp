@@ -132,6 +132,21 @@ export function newLine(product: ImportProduct, qty = 1): ShipmentLineDraft {
   };
 }
 
+/** The line with another product (line grid, UI-3): its purchase unit, stock quantity from the same purchase quantity. */
+export function changeLineProduct(line: ShipmentLineDraft, product: ImportProduct): ShipmentLineDraft {
+  return { ...line, productId: product.id, purchaseUnit: product.unit, qtyStock: stockQuantity(line.qtyPurchase, product.sheetLengthM) };
+}
+
+/** The line with a new purchase quantity; sheet products follow in metres (stock is kept in metres). */
+export function setLineQtyPurchase(line: ShipmentLineDraft, qty: number, product: ImportProduct | undefined): ShipmentLineDraft {
+  return { ...line, qtyPurchase: qty, ...(product?.sheetLengthM ? { qtyStock: stockQuantity(qty, product.sheetLengthM) } : {}) };
+}
+
+/** A copy of the line with its own key (line grid "Duplicate"). */
+export function duplicateLine(line: ShipmentLineDraft): ShipmentLineDraft {
+  return { ...line, key: newRowKey("l") };
+}
+
 /** A new cost line with the defaults of its type (settings page). */
 export function newCost(costType: CostType, config: ImportsConfig): CostLineDraft {
   const defaults = config.costTypes[costType];
