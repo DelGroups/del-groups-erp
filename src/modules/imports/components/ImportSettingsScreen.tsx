@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, Save } from "lucide-react";
-import { EmptyState, SkeletonList, useToast } from "@/design-system/components";
+import { EmptyState, SkeletonList, useToast, useUiStandard } from "@/design-system/components";
+import { EntityLookup } from "@/components/lookups";
 import { useI18n } from "@/i18n/I18nProvider";
 import { methodsFor, type ImportCostTypeConfig, type ImportsConfig } from "@/lib/imports/config";
 import { COST_TYPES, type CostType, type SplitMethod } from "@/lib/imports/landedCost";
@@ -50,6 +51,7 @@ function Settings() {
 
 function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; suppliers: { id: string; name: string }[] }) {
   const { t } = useI18n();
+  const uiStandard = useUiStandard();
   const { toast } = useToast();
   const client = useQueryClient();
   const [config, setConfig] = useState(initial);
@@ -150,12 +152,23 @@ function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; supplier
                       </span>
                     </td>
                     <td className="px-2 py-1.5">
+                      {uiStandard ? (
+                        <EntityLookup
+                          entity="supplier"
+                          size="sm"
+                          value={row.defaultPartnerId}
+                          selectedLabel={suppliers.find((s) => s.id === row.defaultPartnerId)?.name}
+                          onChange={(id) => setType(type, { defaultPartnerId: id })}
+                          aria-label={`${t("imports.settings.col_partner")}: ${builtIn}`}
+                        />
+                      ) : (
                       <select className="ds-input" aria-label={`${t("imports.settings.col_partner")}: ${builtIn}`} value={row.defaultPartnerId ?? ""} onChange={(e) => setType(type, { defaultPartnerId: e.target.value || null })}>
                         <option value="">—</option>
                         {suppliers.map((s) => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                       </select>
+                      )}
                     </td>
                   </tr>
                 );

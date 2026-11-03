@@ -5,6 +5,7 @@ import { Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import StatusBadge from "@/components/ui/status-badge";
 import { ClassicInvoiceTable, GridLab } from "./GridLab";
+import { LookupFieldView } from "@/components/lookups";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
   Chip,
@@ -96,6 +97,15 @@ function LabContent() {
   const [stamp, setStamp] = useState<string | null>("2026-10-17T13:00");
   const [partner, setPartner] = useState<string | null>("1");
   const [cost, setCost] = useState<string | null>("2");
+  // Lookup demo: "creating" adds a fixed row and selects it (the lab has no database).
+  const [lookupRows, setLookupRows] = useState<ComboOption[]>(PARTNERS);
+  const [lookupValue, setLookupValue] = useState<string | null>("1");
+  const [cellValue, setCellValue] = useState<string | null>("3");
+  const createDemo = (query: string) => {
+    const row = { value: `new-${lookupRows.length}`, label: query.trim() || LONG.freight, hint: "SUP-0001" };
+    setLookupRows((rows) => [row, ...rows]);
+    setLookupValue(row.value);
+  };
   const l = (key: string) => t(`uiStandard.lab.${key}`);
   const dateLabels = dateFieldLabels(t);
   const comboLabels = comboboxLabels(t);
@@ -155,6 +165,39 @@ function LabContent() {
           <input className="ds-input ds-mono ds-w-xs" aria-label={l("quantity")} defaultValue="250" />
           <IconButton label={l("remove")} icon={<Trash2 className="h-4 w-4" />} size="sm" />
         </InlineGroup>
+      </Section>
+
+      {/* UI-2 lookups: the look of EntityLookup ("+ New …" under the list, "+" next to the field). */}
+      <Section title={l("lookup")} variant="card">
+        <FormGrid columns={2}>
+          <Field label={l("partner")}>
+            {({ id }) => (
+              <LookupFieldView
+                id={id}
+                value={lookupValue}
+                onChange={setLookupValue}
+                options={lookupRows}
+                selectedLabel={lookupRows.find((row) => row.value === lookupValue)?.label}
+                createLabel={t("lookup.create.supplier")}
+                onCreate={createDemo}
+              />
+            )}
+          </Field>
+          <Field label={t("lookup.entities.warehouse")}>
+            {({ id }) => (
+              <LookupFieldView
+                id={id}
+                size="sm"
+                value={cellValue}
+                onChange={setCellValue}
+                options={lookupRows}
+                selectedLabel={lookupRows.find((row) => row.value === cellValue)?.label}
+                createLabel={t("lookup.create.warehouse")}
+                onCreate={createDemo}
+              />
+            )}
+          </Field>
+        </FormGrid>
       </Section>
 
       {/* Markup that exists on screens today: what UI_STANDARD fixes without touching the screen. */}

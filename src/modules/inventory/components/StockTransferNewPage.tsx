@@ -22,6 +22,8 @@ import {
 import { fetchTransferSourceStock } from "../actions/stockTransfer";
 import type { Warehouse } from "@/types/database.types";
 import { generateStockTransferDocumentNumber } from "@/types/database.types";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 function createLineId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -43,6 +45,8 @@ function createEmptyLine(): StockTransferLineInput {
 
 export default function StockTransferNewPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): both warehouses through EntityLookup.
+  const uiStandard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const { printData, setPrintData } = useDocumentPrint<StockTransferPrintData>();
 
@@ -208,6 +212,18 @@ export default function StockTransferNewPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-3">
                 <label className="erp-label">{t("stockTransfer.sourceWarehouse")}</label>
+                {uiStandard ? (
+                  <EntityLookup
+                    entity="warehouse"
+                    value={fromWarehouseId}
+                    selectedLabel={warehouses.find((w) => w.id === fromWarehouseId)?.name}
+                    allowedIds={warehouses.map((w) => w.id)}
+                    clearable={false}
+                    aria-label={t("stockTransfer.sourceWarehouse")}
+                    onCreated={(row) => setWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse))}
+                    onChange={(id) => setFromWarehouseId(id ?? "")}
+                  />
+                ) : (
                 <Select
                   value={fromWarehouseId}
                   onChange={(event) => setFromWarehouseId(event.target.value)}
@@ -218,9 +234,22 @@ export default function StockTransferNewPage() {
                     </option>
                   ))}
                 </Select>
+                )}
               </div>
               <div className="space-y-3">
                 <label className="erp-label">{t("stockTransfer.destinationWarehouse")}</label>
+                {uiStandard ? (
+                  <EntityLookup
+                    entity="warehouse"
+                    value={toWarehouseId}
+                    selectedLabel={warehouses.find((w) => w.id === toWarehouseId)?.name}
+                    allowedIds={warehouses.map((w) => w.id)}
+                    clearable={false}
+                    aria-label={t("stockTransfer.destinationWarehouse")}
+                    onCreated={(row) => setWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse))}
+                    onChange={(id) => setToWarehouseId(id ?? "")}
+                  />
+                ) : (
                 <Select
                   value={toWarehouseId}
                   onChange={(event) => setToWarehouseId(event.target.value)}
@@ -231,6 +260,7 @@ export default function StockTransferNewPage() {
                     </option>
                   ))}
                 </Select>
+                )}
               </div>
               <div className="space-y-3">
                 <label className="erp-label">{t("stockTransfer.date")}</label>

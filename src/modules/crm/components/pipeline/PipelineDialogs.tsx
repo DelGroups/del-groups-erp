@@ -5,6 +5,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { checkDeal, lostReasonLabel, stagesForTeam, teamLabel, type CrmLostReason, type CrmStage, type CrmTeam, type DealType } from "../../lib/pipeline";
 import type { PipelineDealInput } from "../../actions/pipeline";
 import { CrmDialog, Field } from "./CrmDialog";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 type Customer = { id: string; full_name: string; company_name: string | null };
 
@@ -31,6 +33,8 @@ export function QuickCreateDialog(props: QuickCreateProps) {
 
 function QuickCreateForm({ onOpenChange, type, teams, stages, customers, initialStageId, busy, onSubmit }: QuickCreateProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the customer through EntityLookup, created in place when missing.
+  const uiStandard = useUiStandard();
   const initial = stages.find((s) => s.id === initialStageId);
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
@@ -80,6 +84,19 @@ function QuickCreateForm({ onOpenChange, type, teams, stages, customers, initial
         <input className="ds-input" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus maxLength={240} placeholder={t("crm.pipeline.quick.titleHint")} />
       </Field>
       <Field label={t("crm.pipeline.fields.customer")}>
+        {uiStandard ? (
+          <EntityLookup
+            entity="customer"
+            value={clientId}
+            selectedLabel={(() => {
+              const c = customers.find((x) => x.id === clientId);
+              return c ? (c.company_name ? `${c.full_name} (${c.company_name})` : c.full_name) : undefined;
+            })()}
+            placeholder={t("crm.pipeline.quick.noCustomer")}
+            aria-label={t("crm.pipeline.fields.customer")}
+            onChange={(id) => setClientId(id ?? "")}
+          />
+        ) : (
         <select className="ds-input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
           <option value="">{t("crm.pipeline.quick.noCustomer")}</option>
           {customers.map((c) => (
@@ -88,6 +105,7 @@ function QuickCreateForm({ onOpenChange, type, teams, stages, customers, initial
             </option>
           ))}
         </select>
+        )}
       </Field>
       {!clientId ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -194,6 +212,7 @@ export function ConvertDialog(props: ConvertProps) {
 
 function ConvertForm({ onOpenChange, lead, customers, canCreateCustomer, busy, onSubmit }: ConvertProps) {
   const { t } = useI18n();
+  const uiStandard = useUiStandard();
   const [mode, setMode] = useState<"create" | "link" | "none">(
     lead.client_id ? "link" : canCreateCustomer && (lead.contact_name || lead.company_name) ? "create" : "none"
   );
@@ -224,7 +243,18 @@ function ConvertForm({ onOpenChange, lead, customers, canCreateCustomer, busy, o
           <input type="radio" name="convert-mode" checked={mode === "link"} onChange={() => setMode("link")} />
           {t("crm.pipeline.convert.link")}
         </label>
-        {mode === "link" ? (
+        {mode === "link" && uiStandard ? (
+          <EntityLookup
+            entity="customer"
+            value={clientId}
+            selectedLabel={(() => {
+              const c = customers.find((x) => x.id === clientId);
+              return c ? (c.company_name ? `${c.full_name} (${c.company_name})` : c.full_name) : undefined;
+            })()}
+            aria-label={t("crm.pipeline.fields.customer")}
+            onChange={(id) => setClientId(id ?? "")}
+          />
+        ) : mode === "link" ? (
           <select className="ds-input" value={clientId} onChange={(e) => setClientId(e.target.value)} aria-label={t("crm.pipeline.fields.customer")}>
             <option value="">{t("common.select")}</option>
             {customers.map((c) => (

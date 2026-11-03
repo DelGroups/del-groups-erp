@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
-import { useToast } from "@/design-system/components";
+import { useToast, useUiStandard } from "@/design-system/components";
+import { EntityLookup } from "@/components/lookups";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -569,6 +570,7 @@ function ReceiveDialog({
   onSubmit: (payload: ReturnType<typeof checkReceipt>["payload"], date: string, note: string | null) => Promise<boolean>;
 }) {
   const { t } = useI18n();
+  const uiStandard = useUiStandard();
   const [rows, setRows] = useState<ReceiveRow[]>(() => initialReceiveRows(lines));
   const [day, setDay] = useState(today);
   const [note, setNote] = useState("");
@@ -654,12 +656,23 @@ function ReceiveDialog({
                   </th>
                   <td className="px-2 py-1.5 text-end tabular-nums">{both(line.remaining)}</td>
                   <td className="px-2 py-1.5">
+                    {uiStandard ? (
+                      <EntityLookup
+                        entity="warehouse"
+                        size="sm"
+                        value={row.warehouseId}
+                        selectedLabel={warehouses.find((w) => w.id === row.warehouseId)?.name}
+                        onChange={(id) => set(row.key, { warehouseId: id })}
+                        aria-label={`${t("importPosting.receiveCols.warehouse")}: ${name}`}
+                      />
+                    ) : (
                     <select className="ds-input" aria-label={`${t("importPosting.receiveCols.warehouse")}: ${name}`} value={row.warehouseId ?? ""} onChange={(e) => set(row.key, { warehouseId: e.target.value || null })}>
                       <option value="">{t("common.select")}</option>
                       {warehouses.map((w) => (
                         <option key={w.id} value={w.id}>{w.name}</option>
                       ))}
                     </select>
+                    )}
                   </td>
                   <td className="px-2 py-1.5 text-end">
                     <QtyInput label={`${t("importPosting.receiveCols.expected")}: ${name}`} value={row.expected} sheetLength={line.sheetLengthM} onChange={(v) => set(row.key, { expected: v ?? 0 })} />
@@ -727,6 +740,7 @@ function PayDialog({
   onSubmit: (date: string, note: string | null, splits: { account_id: string; amount: number }[], amountFc: number | null, rate: number | null) => Promise<boolean>;
 }) {
   const { t, formatDate } = useI18n();
+  const uiStandard = useUiStandard();
   const { toast } = useToast();
   const foreign = payable.currencyCode !== "AZN";
   const [day, setDay] = useState(() => (today() < payable.documentDate ? payable.documentDate : today()));
@@ -828,12 +842,23 @@ function PayDialog({
         <legend className="ds-label mb-1">{t("importPosting.payFrom")}</legend>
         {splits.map((s, i) => (
           <div key={s.key} className="flex flex-wrap items-center gap-2">
+            {uiStandard ? (
+              <EntityLookup
+                entity="account"
+                className="min-w-[12rem] flex-1"
+                value={s.accountId}
+                selectedLabel={accounts.find((a) => a.id === s.accountId)?.name}
+                onChange={(id) => set(s.key, { accountId: id })}
+                aria-label={t("importPosting.splitAccount", { n: i + 1 })}
+              />
+            ) : (
             <select className="ds-input min-w-[12rem] flex-1" aria-label={t("importPosting.splitAccount", { n: i + 1 })} value={s.accountId ?? ""} onChange={(e) => set(s.key, { accountId: e.target.value || null })}>
               <option value="">{t("common.select")}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
+            )}
             <input
               className="ds-input ds-mono w-32 tabular-nums"
               type="number"
@@ -903,6 +928,7 @@ function PrepayDialog({
   onSubmit: (date: string, note: string | null, amountFc: number, rate: number, splits: { account_id: string; amount: number }[]) => Promise<boolean>;
 }) {
   const { t, formatDate } = useI18n();
+  const uiStandard = useUiStandard();
   const { toast } = useToast();
   const foreign = draft.currencyCode !== "AZN";
   const [day, setDay] = useState(today);
@@ -974,12 +1000,23 @@ function PrepayDialog({
         <legend className="ds-label mb-1">{t("importPosting.payFrom")}</legend>
         {splits.map((s, i) => (
           <div key={s.key} className="flex flex-wrap items-center gap-2">
+            {uiStandard ? (
+              <EntityLookup
+                entity="account"
+                className="min-w-[12rem] flex-1"
+                value={s.accountId}
+                selectedLabel={accounts.find((a) => a.id === s.accountId)?.name}
+                onChange={(id) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, accountId: id } : y)))}
+                aria-label={t("importPosting.splitAccount", { n: i + 1 })}
+              />
+            ) : (
             <select className="ds-input min-w-[12rem] flex-1" aria-label={t("importPosting.splitAccount", { n: i + 1 })} value={s.accountId ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, accountId: e.target.value || null } : y)))}>
               <option value="">{t("common.select")}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
+            )}
             <input className="ds-input ds-mono w-32 tabular-nums" type="number" min={0} step="0.01" aria-label={t("importPosting.splitAmount", { n: i + 1 })} value={s.amount ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, amount: e.target.value === "" ? null : Number(e.target.value) } : y)))} />
           </div>
         ))}
@@ -1012,6 +1049,7 @@ function CostDialog({
   onSubmit: (cost: CostLineDraft, splits: { account_id: string; amount: number }[] | null, date: string) => Promise<boolean>;
 }) {
   const { t } = useI18n();
+  const uiStandard = useUiStandard();
   const [cost, setCost] = useState<CostLineDraft>(initial);
   const [payNow, setPayNow] = useState(false);
   const [splits, setSplits] = useState<PaySplit[]>(() => [newSplit()]);
@@ -1095,6 +1133,18 @@ function CostDialog({
           </DialogField>
         ) : null}
         {!settle ? (
+          uiStandard ? (
+            <DialogField label={t("lookup.audit.paidTo")} hint={t("lookup.audit.paidToHint")}>
+              <EntityLookup
+                entity="supplier"
+                value={cost.partnerId}
+                selectedLabel={lookups.suppliers.find((s) => s.id === cost.partnerId)?.name}
+                onChange={(id) => set({ partnerId: id })}
+                placeholder={t("imports.costFields.noPartner")}
+                aria-label={t("lookup.audit.paidTo")}
+              />
+            </DialogField>
+          ) : (
           <DialogField label={t("imports.costFields.partner")}>
             <select className="ds-input" value={cost.partnerId ?? ""} onChange={(e) => set({ partnerId: e.target.value || null })}>
               <option value="">{t("imports.costFields.noPartner")}</option>
@@ -1103,6 +1153,7 @@ function CostDialog({
               ))}
             </select>
           </DialogField>
+          )
         ) : null}
         <DialogField label={t("importPosting.date")}>
           <input type="date" className="ds-input" value={day} onChange={(e) => setDay(e.target.value)} required />
@@ -1131,12 +1182,23 @@ function CostDialog({
           <legend className="ds-label mb-1">{t("importPosting.payFrom")}</legend>
           {splits.map((s, i) => (
             <div key={s.key} className="flex flex-wrap items-center gap-2">
+              {uiStandard ? (
+                <EntityLookup
+                  entity="account"
+                  className="min-w-[12rem] flex-1"
+                  value={s.accountId}
+                  selectedLabel={lookups.accounts.find((a) => a.id === s.accountId)?.name}
+                  onChange={(id) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, accountId: id } : y)))}
+                  aria-label={t("importPosting.splitAccount", { n: i + 1 })}
+                />
+              ) : (
               <select className="ds-input min-w-[12rem] flex-1" aria-label={t("importPosting.splitAccount", { n: i + 1 })} value={s.accountId ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, accountId: e.target.value || null } : y)))}>
                 <option value="">{t("common.select")}</option>
                 {lookups.accounts.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
+              )}
               <input className="ds-input ds-mono w-32 tabular-nums" type="number" min={0} step="0.01" aria-label={t("importPosting.splitAmount", { n: i + 1 })} value={s.amount ?? ""} onChange={(e) => setSplits((x) => x.map((y) => (y.key === s.key ? { ...y, amount: e.target.value === "" ? null : Number(e.target.value) } : y)))} />
             </div>
           ))}

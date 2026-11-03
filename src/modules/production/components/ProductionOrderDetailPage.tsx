@@ -13,6 +13,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { EntityLookup } from "@/components/lookups";
 import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import { mergeContractDetailFormState } from "../lib/contractInsert";
 import { sanitizeAddProductionMaterialInput } from "../lib/materialInsert";
@@ -61,6 +63,7 @@ type ProjectTab = "overview" | "materials" | "expenses";
 const PROJECT_TABS: ProjectTab[] = ["overview", "materials", "expenses"];
 
 export default function ProductionOrderDetailPage() {
+  const uiStandard = useUiStandard();
   const params = useParams<{ id: string }>();
   const id = params.id;
   const { t } = useI18n();
@@ -102,6 +105,8 @@ export default function ProductionOrderDetailPage() {
 
   const [outDesc, setOutDesc] = useState("");
   const [outSupplierId, setOutSupplierId] = useState("");
+  // Name of a supplier picked or created in the lookup (not yet in the loaded list).
+  const [pickedSupplierName, setPickedSupplierName] = useState<string | null>(null);
   const [outSqm, setOutSqm] = useState("0");
   const [outPrice, setOutPrice] = useState("0");
 
@@ -553,7 +558,7 @@ export default function ProductionOrderDetailPage() {
       async () => {
       const result = await addProductionOutsourcingAction(id, {
         supplier_id: outSupplierId || null,
-        supplier_name: supplier ? supplier.company_name || supplier.full_name || "" : null,
+        supplier_name: supplier ? supplier.company_name || supplier.full_name || "" : pickedSupplierName,
         material_description: outDesc,
         sqm_quantity: Number(outSqm) || 0,
         price_per_sqm: Number(outPrice) || 0,
@@ -909,6 +914,18 @@ export default function ProductionOrderDetailPage() {
                 {Number(advance) > 0 && !isDelivered && (
                   <label className="text-xs font-semibold text-app xl:col-span-6">
                     {t("production.advanceAccount")}
+                    {uiStandard ? (
+                      <EntityLookup
+                        entity="account"
+                        className="mt-1"
+                        value={advanceAccountId}
+                        selectedLabel={(lookups?.accounts || []).find((account) => account.id === advanceAccountId)?.name}
+                        disabled={!canManage || order.advance_transaction_id != null}
+                        placeholder={t("production.selectAdvanceAccount")}
+                        onChange={(nextId) => setAdvanceAccountId(nextId ?? "")}
+                        aria-label={t("production.advanceAccount")}
+                      />
+                    ) : (
                     <select
                       className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2 text-sm"
                       value={advanceAccountId}
@@ -923,6 +940,7 @@ export default function ProductionOrderDetailPage() {
                         </option>
                       ))}
                     </select>
+                    )}
                     {order.advance_transaction_id ? (
                       <p className="mt-1 text-[11px] text-emerald-600">{t("production.advancePosted")}</p>
                     ) : null}
@@ -1039,6 +1057,19 @@ export default function ProductionOrderDetailPage() {
                       value={outDesc}
                       onChange={(e) => setOutDesc(e.target.value)}
                     />
+                    {uiStandard ? (
+                      <EntityLookup
+                        entity="supplier"
+                        value={outSupplierId}
+                        selectedLabel={pickedSupplierName ?? undefined}
+                        placeholder={t("purchases.supplier")}
+                        onChange={(nextId, record) => {
+                          setOutSupplierId(nextId ?? "");
+                          setPickedSupplierName(record ? String(record.company_name || record.full_name || "") : null);
+                        }}
+                        aria-label={t("purchases.supplier")}
+                      />
+                    ) : (
                     <select
                       className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
                       value={outSupplierId}
@@ -1051,6 +1082,7 @@ export default function ProductionOrderDetailPage() {
                         </option>
                       ))}
                     </select>
+                    )}
                     <input
                       type="number"
                       className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
@@ -1083,6 +1115,19 @@ export default function ProductionOrderDetailPage() {
                 )}
                 {canManage && (
                   <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto] items-end">
+                    {uiStandard ? (
+                      <EntityLookup
+                        entity="employee"
+                        value={contractorId}
+                        selectedLabel={contractorName || undefined}
+                        placeholder={t("production.selectTeam")}
+                        onChange={(nextId, record) => {
+                          setContractorId(nextId ?? "");
+                          if (record?.full_name) setContractorName(String(record.full_name));
+                        }}
+                        aria-label={t("production.selectTeam")}
+                      />
+                    ) : (
                     <select
                       className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
                       value={contractorId}
@@ -1099,6 +1144,7 @@ export default function ProductionOrderDetailPage() {
                         </option>
                       ))}
                     </select>
+                    )}
                     <input
                       className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
                       placeholder={t("production.contractorName")}

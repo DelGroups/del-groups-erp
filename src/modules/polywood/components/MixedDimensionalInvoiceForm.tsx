@@ -55,6 +55,8 @@ import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
 import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import {
   filterLegalCustomers,
   isLegalEntityWithVoen,
@@ -162,6 +164,8 @@ export default function MixedDimensionalInvoiceForm({
   onSuccess,
 }: MixedDimensionalInvoiceFormProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): customer, warehouse and payment accounts through EntityLookup.
+  const uiStandard = useUiStandard();
   const { profile } = useAuth();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
@@ -666,6 +670,31 @@ export default function MixedDimensionalInvoiceForm({
 
           <label className="text-xs font-semibold text-app">
             {t("common.customer")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="customer"
+                  value={customerId}
+                  selectedLabel={customerName || undefined}
+                  where={isOfficial ? { entity_type: "legal" } : undefined}
+                  createDefaults={{ legal: isOfficial }}
+                  placeholder={t("invoice.anonymousCustomer")}
+                  aria-label={t("common.customer")}
+                  onChange={(nextId, row) => {
+                    const id = nextId ?? "";
+                    const c = (row as unknown as Customer | null) ?? null;
+                    if (c) setCustomers((prev) => mergeRecord(prev, c));
+                    setCustomerId(id);
+                    setCustomerName(c ? customerLabel(c) : "");
+                    if (isOfficial && c?.voen) setVoenVerification(c.voen);
+                    if (!id) {
+                      setContractId(null);
+                      setVoenVerification("");
+                    }
+                  }}
+                />
+              </div>
+            ) : (
             <select
               value={customerId}
               onChange={(e) => {
@@ -688,6 +717,7 @@ export default function MixedDimensionalInvoiceForm({
                 </option>
               ))}
             </select>
+            )}
             {isOfficial && customerOptions.length === 0 && (
               <p className="mt-1 text-[11px] text-amber-600">{t("official.noLegalCustomers")}</p>
             )}
@@ -710,6 +740,21 @@ export default function MixedDimensionalInvoiceForm({
 
           <label className="text-xs font-semibold text-app">
             {t("common.warehouse")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="warehouse"
+                  value={warehouseId}
+                  selectedLabel={warehouses.find((w) => w.id === warehouseId)?.name}
+                  clearable={false}
+                  aria-label={t("common.warehouse")}
+                  onChange={(id, row) => {
+                    if (row) setWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse));
+                    setWarehouseId(id ?? "");
+                  }}
+                />
+              </div>
+            ) : (
             <select
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
@@ -721,6 +766,7 @@ export default function MixedDimensionalInvoiceForm({
                 </option>
               ))}
             </select>
+            )}
           </label>
         </div>
 
@@ -931,6 +977,25 @@ export default function MixedDimensionalInvoiceForm({
             ) : (
               payments.map((pay) => (
                 <div key={pay.id} className="grid grid-cols-12 gap-2">
+                  {uiStandard ? (
+                    <div className="col-span-7">
+                      <EntityLookup
+                        entity="account"
+                        size="sm"
+                        value={pay.account_id}
+                        selectedLabel={(() => {
+                          const acc = accounts.find((a) => a.id === pay.account_id);
+                          return acc ? formatTreasuryAccountLabel(acc, t) : undefined;
+                        })()}
+                        placeholder={t("modals.payment.selectAccount")}
+                        aria-label={t("modals.payment.selectAccount")}
+                        onChange={(id, row) => {
+                          if (row) setAccounts((prev) => mergeRecord(prev, row as unknown as AccountRow));
+                          handleAccountChange(pay.id, id ?? "");
+                        }}
+                      />
+                    </div>
+                  ) : (
                   <select
                     value={pay.account_id}
                     onChange={(e) => handleAccountChange(pay.id, e.target.value)}
@@ -943,6 +1008,7 @@ export default function MixedDimensionalInvoiceForm({
                       </option>
                     ))}
                   </select>
+                  )}
                   <input
                     type="number"
                     min="0"

@@ -18,6 +18,8 @@ import { allocateOfficialPaymentSplit } from "@/lib/finance/vatEngine";
 import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface Account {
   id: string;
@@ -75,6 +77,9 @@ export default function DocumentPaymentModal({
   onSubmit,
 }: DocumentPaymentModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the payment account through EntityLookup (the VAT split keeps its
+  // two filtered lists: main and VAT accounts are chosen from the accounts already set up).
+  const uiStandard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const resolvedTitle = title ?? t("modals.payment.title");
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -397,6 +402,21 @@ export default function DocumentPaymentModal({
           ) : (
             <label className="block space-y-1 text-xs">
               <span className="font-semibold text-app">{t("modals.payment.account")}</span>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="account"
+                  value={accountId}
+                  selectedLabel={accounts.find((a) => a.id === accountId)?.name}
+                  clearable={false}
+                  required
+                  aria-label={t("modals.payment.account")}
+                  onChange={(nextId, row) => {
+                    if (row) setAccounts((prev) => mergeRecord(prev, row as unknown as Account));
+                    setAccountId(nextId ?? "");
+                    if (row) setMethod(String(row.name ?? ""));
+                  }}
+                />
+              ) : (
               <select
                 value={accountId}
                 onChange={(e) => {
@@ -418,6 +438,7 @@ export default function DocumentPaymentModal({
                   </option>
                 ))}
               </select>
+              )}
             </label>
           )}
 

@@ -10,6 +10,9 @@ import {
 } from "../actions/production";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import ProductionInProgressPhase from "./ProductionInProgressPhase";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
+import { useI18n } from "@/i18n/I18nProvider";
 import {
   calcProductionCosting,
   remainingBalanceFromOrder,
@@ -47,6 +50,11 @@ export default function ProductionWorkflowModal({
 
   const [projectName, setProjectName] = useState(order.project_name);
   const [customerId, setCustomerId] = useState(order.customer_id || "");
+  // UI_STANDARD (UI-2 lookups): customer, installer and account through EntityLookup; the name of
+  // a customer picked or created there (not in `lookups` yet) is kept for the save.
+  const uiStandard = useUiStandard();
+  const { t } = useI18n();
+  const [pickedCustomerName, setPickedCustomerName] = useState<string | null>(null);
   const [notes, setNotes] = useState(order.notes || order.project_scope || "");
   const [totalPrice, setTotalPrice] = useState(order.total_project_price);
 
@@ -104,7 +112,7 @@ export default function ProductionWorkflowModal({
     const result = await updateProductionOrderAction(order.id, {
       project_name: projectName.trim(),
       customer_id: customerId || null,
-      customer_name: customer ? customer.full_name || customer.name || null : order.customer_name,
+      customer_name: customer ? customer.full_name || customer.name || null : pickedCustomerName ?? order.customer_name,
       total_project_price: totalPrice,
       notes: notes.trim() || null,
       project_scope: notes.trim() || null,
@@ -191,6 +199,20 @@ export default function ProductionWorkflowModal({
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">Müştəri</span>
+                {uiStandard ? (
+                  <div className="mt-1">
+                    <EntityLookup
+                      entity="customer"
+                      value={customerId}
+                      selectedLabel={customerId === order.customer_id ? order.customer_name ?? undefined : undefined}
+                      aria-label={t("lookup.entities.customer")}
+                      onChange={(id, row) => {
+                        setCustomerId(id ?? "");
+                        setPickedCustomerName(row ? String(row.full_name || row.name || "") : null);
+                      }}
+                    />
+                  </div>
+                ) : (
                 <select
                   className="input-field mt-1 w-full"
                   value={customerId}
@@ -201,6 +223,7 @@ export default function ProductionWorkflowModal({
                     <option key={c.id} value={c.id}>{c.full_name || c.name}</option>
                   ))}
                 </select>
+                )}
               </label>
               <label className="block text-sm">
                 <span className="text-app-muted">Layihə qiyməti</span>
@@ -254,12 +277,18 @@ export default function ProductionWorkflowModal({
               </label>
               <label className="text-sm">
                 <span className="text-app-muted">Məsul usta</span>
+                {uiStandard ? (
+                  <div className="mt-1">
+                    <EntityLookup entity="employee" value={installerId} aria-label={t("lookup.entities.employee")} onChange={(id) => setInstallerId(id ?? "")} />
+                  </div>
+                ) : (
                 <select className="input-field mt-1 w-full" value={installerId} onChange={(e) => setInstallerId(e.target.value)}>
                   <option value="">—</option>
                   {(lookups?.employees || []).map((e) => (
                     <option key={e.id} value={e.id}>{e.full_name}</option>
                   ))}
                 </select>
+                )}
               </label>
               <label className="text-sm">
                 <span className="text-app-muted">Çatdırılma xərci</span>
@@ -320,12 +349,16 @@ export default function ProductionWorkflowModal({
                 <p>Qalıq: <strong className="text-rose-400">{remaining.toFixed(2)} AZN</strong></p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
+                {uiStandard ? (
+                  <EntityLookup entity="account" value={paymentAccountId} aria-label={t("lookup.entities.account")} onChange={(id) => setPaymentAccountId(id ?? "")} />
+                ) : (
                 <select className="input-field" value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)}>
                   <option value="">Hesab</option>
                   {(lookups?.accounts || []).map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
                 </select>
+                )}
                 <input
                   type="number"
                   className="input-field"

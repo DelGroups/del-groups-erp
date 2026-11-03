@@ -50,6 +50,8 @@ const CONTRACTS_LIST_KEY = "contracts.list";
 import { supabase } from "@/lib/supabase";
 import type { Customer, Supplier } from "@/types/database.types";
 import { ListGrid } from "@/components/lists/ListGrid";
+import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 const TYPE_TABS: Array<"all" | ContractType> = ["all", "sale", "purchase", "service"];
 const STATUS_TABS: Array<"all" | ContractStatus> = [
@@ -61,6 +63,8 @@ const STATUS_TABS: Array<"all" | ContractStatus> = [
 
 export default function ContractsPageClient() {
   const { t, formatDateTime } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the contract party through EntityLookup (legal entities only).
+  const uiStandard = useUiStandard();
   const { can } = useAuth();
   const canManage = can("can_create_invoice") || can("can_view_purchases");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -595,7 +599,23 @@ export default function ContractsPageClient() {
 
               <label className="block space-y-1">
                 <span className="font-semibold">{t("official.party")}</span>
-                {partyOptions.length === 0 ? (
+                {uiStandard ? (
+                  <EntityLookup
+                    key={form.type}
+                    entity={form.type === "purchase" ? "supplier" : "customer"}
+                    value={form.party_id}
+                    selectedLabel={partyOptions.find((p) => p.id === form.party_id)?.name}
+                    where={{ entity_type: "legal" }}
+                    createDefaults={{ legal: true }}
+                    required
+                    aria-label={t("official.party")}
+                    onChange={(id, row) => {
+                      if (row && form.type === "purchase") setSuppliers((prev) => mergeRecord(prev, row as unknown as Supplier));
+                      else if (row) setCustomers((prev) => mergeRecord(prev, row as unknown as Customer));
+                      setForm((f) => ({ ...f, party_id: id ?? "" }));
+                    }}
+                  />
+                ) : partyOptions.length === 0 ? (
                   <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700">
                     {t("official.noLegalParties")}
                   </p>

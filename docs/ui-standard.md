@@ -106,8 +106,33 @@ Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach
 | Status | `Chip` |
 | Any list of records | `DataGrid` (classic pages: `ListGrid`) |
 | Money / number / date in a table | `MoneyCell` / `NumberCell` / `DateCell` |
-| Lookup or choice | `Combobox` (fixed or async options, clear, empty state, `footer` slot for "+ create") |
+| Choice from a fixed list | `Combobox` (fixed or async options, clear, empty state, `footer` slot) |
+| Field that points to a record | `EntityLookup` (`@/components/lookups`): search + quick-create |
 | Date / date and time | `DateField` / `DateTimeField` |
+
+## Lookups
+
+Every field that points to another record (customer, supplier, carrier / customs / broker, product,
+warehouse, account, employee, expense or product category, consignment shop, partner) is an
+`EntityLookup` from `@/components/lookups`. The user never leaves a form to create the record.
+
+- **Search:** it searches the database as the user types (debounced, 20 rows, recent picks first),
+  with code / phone / VÖEN / stock on the second line, and re-reads every time it opens.
+- **Create in place:** "+ New …" under the list and a "+" next to the field open a quick-create
+  dialog. What was typed pre-fills the name; the dialog uses the same validation and write path as
+  the full page (products: POST /api/products, with the same-name warning and an "open full form"
+  drawer). The new record is selected, a toast confirms it, and the form keeps its state.
+- **Permissions:** the "+" shows only when the user may create that entity (`canQuickCreate`, the
+  same permission as the full page).
+- **Props to know:** `onChange(id, record)` gives the full record, so forms that keep their own list
+  merge it (`mergeRecord`) instead of reloading; `where` (e.g. legal suppliers only), `allowedIds`
+  (role-scoped warehouses / accounts, plus the ids created in place), `createDefaults`,
+  `size="sm"` for table cells (the dropdown is portaled).
+- **Registry:** a new entity is one entry in `src/components/lookups/registry.ts` (table, search
+  columns, label, hint, create permissions) plus its fields in `QuickCreateDialog.tsx`.
+- **Flag:** forms switch on `useUiStandard()` (`UI_STANDARD`); with the flag off the old field is
+  rendered unchanged. `docs/lookup-audit.md` lists every form and field, and the fields left out
+  with the reason; `tests/lookups.test.mjs` checks that every listed form keeps the flag switch.
 
 ## Guards
 

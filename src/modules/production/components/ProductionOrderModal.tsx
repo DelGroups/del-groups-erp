@@ -15,6 +15,9 @@ import {
 } from "../lib/models";
 import type { ProductionOrder } from "../lib/types";
 import type { Supplier } from "@/types/database.types";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface Props {
   open: boolean;
@@ -65,6 +68,14 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // UI_STANDARD (UI-2 lookups): customer, contractor, warehouse and account through EntityLookup.
+  // A record picked or created there may not be in `lookups` yet, so its name is kept here.
+  const uiStandard = useUiStandard();
+  const { t } = useI18n();
+  const [pickedCustomerName, setPickedCustomerName] = useState<string | null>(null);
+  const [pickedWarehouseName, setPickedWarehouseName] = useState<string | null>(null);
+  const [pickedSupplier, setPickedSupplier] = useState<Supplier | null>(null);
+  const [createdWarehouseIds, setCreatedWarehouseIds] = useState<string[]>([]);
 
   const destinationWarehouses = useMemo(
     () => (lookups?.warehouses || []).filter((row) => row.warehouse_type !== "polywood"),
@@ -79,8 +90,10 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
     [lookups?.boms, bomId]
   );
   const selectedSupplier = useMemo(
-    () => (lookups?.suppliers || []).find((row) => row.id === subcontractorId) || null,
-    [lookups?.suppliers, subcontractorId]
+    () =>
+      (lookups?.suppliers || []).find((row) => row.id === subcontractorId) ||
+      (pickedSupplier?.id === subcontractorId ? pickedSupplier : null),
+    [lookups?.suppliers, subcontractorId, pickedSupplier]
   );
 
   if (!open) return null;
@@ -143,12 +156,12 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
       custom_workflow: legacy.custom_workflow,
       project_name: name,
       customer_id: customerId,
-      customer_name: customer ? customerLabel(customer) : null,
+      customer_name: customer ? customerLabel(customer) : pickedCustomerName,
       notes: notes.trim() || null,
       total_project_price: price,
       expected_delivery_date: nullIfEmpty(expectedDeliveryDate),
       warehouse_id: resolvedWarehouseId,
-      warehouse_name: warehouse?.name || null,
+      warehouse_name: warehouse?.name || pickedWarehouseName || null,
       raw_material_warehouse_id: resolvedWarehouseId,
       furniture_warehouse_id: resolvedWarehouseId,
       advance_payment: advanceAmount,
@@ -243,6 +256,18 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
 
             <label className="block text-sm">
               <FieldLabel required>Müştəri</FieldLabel>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="customer"
+                  value={customerId}
+                  required
+                  aria-label={t("lookup.entities.customer")}
+                  onChange={(id, row) => {
+                    setCustomerId(id ?? "");
+                    setPickedCustomerName(row ? String(row.full_name || row.company_name || "") : null);
+                  }}
+                />
+              ) : (
               <select
                 className="input-field w-full"
                 value={customerId}
@@ -255,6 +280,7 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
                   </option>
                 ))}
               </select>
+              )}
             </label>
 
             <label className="block text-sm sm:col-span-2">
@@ -293,6 +319,18 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
             {productionType === "contractor_outsource" ? (
               <label className="block text-sm sm:col-span-2">
                 <FieldLabel required>Podratçı şirkət / Usta</FieldLabel>
+                {uiStandard ? (
+                  <EntityLookup
+                    entity="supplier"
+                    value={subcontractorId}
+                    required
+                    aria-label={t("lookup.entities.supplier")}
+                    onChange={(id, row) => {
+                      setSubcontractorId(id ?? "");
+                      setPickedSupplier((row as unknown as Supplier | null) ?? null);
+                    }}
+                  />
+                ) : (
                 <select
                   className="input-field w-full"
                   value={subcontractorId}
@@ -305,11 +343,26 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
                     </option>
                   ))}
                 </select>
+                )}
               </label>
             ) : null}
 
             <label className="block text-sm">
               <FieldLabel>Məhsul anbarı</FieldLabel>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="warehouse"
+                  value={warehouseId}
+                  // Polywood warehouses are not production destinations (as in the list below).
+                  allowedIds={[...destinationWarehouses.map((w) => w.id), ...createdWarehouseIds]}
+                  onCreated={(row) => setCreatedWarehouseIds((prev) => [...prev, row.id])}
+                  aria-label={t("lookup.entities.warehouse")}
+                  onChange={(id, row) => {
+                    setWarehouseId(id ?? "");
+                    setPickedWarehouseName(row ? String(row.name ?? "") : null);
+                  }}
+                />
+              ) : (
               <select
                 className="input-field w-full"
                 value={warehouseId}
@@ -322,6 +375,7 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
                   </option>
                 ))}
               </select>
+              )}
             </label>
 
             <label className="block text-sm">
@@ -383,6 +437,16 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
 
                 <label className="block text-sm">
                   <FieldLabel required={requiresAdvanceAccount}>Ödəniş kassası / Bank</FieldLabel>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="account"
+                      value={advanceAccountId}
+                      disabled={!requiresAdvanceAccount}
+                      required={requiresAdvanceAccount}
+                      aria-label={t("lookup.entities.account")}
+                      onChange={(id) => setAdvanceAccountId(id ?? "")}
+                    />
+                  ) : (
                   <select
                     className="input-field w-full disabled:cursor-not-allowed disabled:opacity-50"
                     value={advanceAccountId}
@@ -398,6 +462,7 @@ export default function ProductionOrderModal({ open, lookups, onClose, onCreated
                       </option>
                     ))}
                   </select>
+                  )}
                 </label>
               </div>
             </div>

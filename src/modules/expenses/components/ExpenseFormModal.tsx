@@ -4,6 +4,8 @@ import React, { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import ExpenseCategorySelect from "@/components/finance/ExpenseCategorySelect";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 import type { ExpenseFormOptions } from "../actions/expenses";
 import {
   guessVatAccountId,
@@ -45,6 +47,12 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
     vatRate: initial ? String(initial.vat_rate || 0) : "0",
   }));
   const [error, setError] = useState<string | null>(null);
+  // UI_STANDARD (UI-2 lookups): employee, category, supplier and accounts through EntityLookup.
+  const uiStandard = useUiStandard();
+  // Accounts this user may pay from (role scope), plus any created here a moment ago.
+  const [createdAccountIds, setCreatedAccountIds] = useState<string[]>([]);
+  const allowedAccountIds = useMemo(() => [...options.accounts.map((a) => a.id), ...createdAccountIds], [options.accounts, createdAccountIds]);
+  const accountName = (id: string) => options.accounts.find((a) => a.id === id)?.name;
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -142,6 +150,16 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
           {byEmployee ? (
             <div>
               <label className={label}>{t("expenses.doc.employeeRequired")}</label>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="employee"
+                  value={form.employeeId}
+                  selectedLabel={options.employees.find((emp) => emp.id === form.employeeId)?.name}
+                  placeholder={t("expenses.doc.selectEmployee")}
+                  aria-label={t("expenses.doc.employeeRequired")}
+                  onChange={(id) => set("employeeId", id ?? "")}
+                />
+              ) : (
               <select
                 value={form.employeeId}
                 onChange={(e) => set("employeeId", e.target.value)}
@@ -154,6 +172,7 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
                   </option>
                 ))}
               </select>
+              )}
               <p className="mt-1 text-[11px] text-app-muted">{t("expenses.doc.employeeHint")}</p>
             </div>
           ) : null}
@@ -178,6 +197,16 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
             </div>
             <div>
               <label className={label}>{t("expenses.categoryRequired")}</label>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="expenseCategory"
+                  value={form.categoryId}
+                  selectedLabel={options.categories.find((c) => c.id === form.categoryId)?.name}
+                  required
+                  aria-label={t("expenses.categoryRequired")}
+                  onChange={(id) => set("categoryId", id ?? "")}
+                />
+              ) : (
               <ExpenseCategorySelect
                 categories={options.categories}
                 value={form.categoryId}
@@ -185,10 +214,21 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
                 className={input}
                 required
               />
+              )}
             </div>
 
             <div>
               <label className={label}>{t("expenses.doc.supplier")}</label>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="supplier"
+                  value={form.supplierId}
+                  selectedLabel={options.suppliers.find((s) => s.id === form.supplierId)?.name}
+                  placeholder={t("expenses.doc.noSupplier")}
+                  aria-label={t("expenses.doc.supplier")}
+                  onChange={(id) => set("supplierId", id ?? "")}
+                />
+              ) : (
               <select
                 value={form.supplierId}
                 onChange={(e) => set("supplierId", e.target.value)}
@@ -201,6 +241,7 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
                   </option>
                 ))}
               </select>
+              )}
             </div>
             <div>
               <label className={label}>{t("expenses.doc.payee")}</label>
@@ -307,6 +348,18 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
           {byEmployee ? null : (
             <div>
               <label className={label}>{t("expenses.paymentAccountRequired")}</label>
+              {uiStandard ? (
+                <EntityLookup
+                  entity="account"
+                  value={form.accountId}
+                  selectedLabel={accountName(form.accountId)}
+                  allowedIds={allowedAccountIds}
+                  placeholder={t("expenses.selectAccount")}
+                  aria-label={t("expenses.paymentAccountRequired")}
+                  onCreated={(row) => setCreatedAccountIds((prev) => [...prev, row.id])}
+                  onChange={(id) => set("accountId", id ?? "")}
+                />
+              ) : (
               <select
                 value={form.accountId}
                 onChange={(e) => set("accountId", e.target.value)}
@@ -319,12 +372,25 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
                   </option>
                 ))}
               </select>
+              )}
               {overdraft ? (
                 <p className="mt-1 text-xs font-semibold text-rose-600">{t("expenses.doc.overdraft")}</p>
               ) : null}
               {totals.vat > 0 ? (
                 <div className="mt-3">
                   <label className={label}>{t("expenses.doc.vatAccount")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="account"
+                      value={form.vatAccountId}
+                      selectedLabel={accountName(form.vatAccountId)}
+                      allowedIds={allowedAccountIds}
+                      placeholder={t("expenses.doc.vatFromMain")}
+                      aria-label={t("expenses.doc.vatAccount")}
+                      onCreated={(row) => setCreatedAccountIds((prev) => [...prev, row.id])}
+                      onChange={(id) => set("vatAccountId", id ?? "")}
+                    />
+                  ) : (
                   <select
                     value={form.vatAccountId}
                     onChange={(e) => set("vatAccountId", e.target.value)}
@@ -337,6 +403,7 @@ export default function ExpenseFormModal({ options, initial, saving, onClose, on
                       </option>
                     ))}
                   </select>
+                  )}
                   <p className="mt-1 text-[11px] text-app-muted">
                     {splitVat
                       ? t("expenses.doc.vatSplitHint", {

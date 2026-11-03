@@ -23,6 +23,8 @@ import {
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { generateConsignmentDocNo } from "../lib/types";
 import type { ConsignmentInventoryRow } from "../lib/types";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7);
@@ -39,6 +41,9 @@ interface SettlementRow {
 
 export default function ConsignmentSettlementNewPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const uiStandard = useUiStandard();
+  const [pickedRepName, setPickedRepName] = useState<string | null>(null);
   const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const invoicePrint = useInvoicePrintSystem();
@@ -147,7 +152,7 @@ export default function ConsignmentSettlementNewPage() {
       notes,
       return_warehouse_id: returnWarehouseId || null,
       sales_rep_id: salesRepId || null,
-      sales_rep_name: rep?.full_name || null,
+      sales_rep_name: rep?.full_name || pickedRepName || null,
       lines,
     });
     setSubmitting(false);
@@ -193,6 +198,19 @@ export default function ConsignmentSettlementNewPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.partner")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="consignmentPartner"
+                      value={partnerId}
+                      selectedLabel={(() => {
+                        const p = (lookups?.partners || []).find((x) => x.id === partnerId);
+                        return p ? p.company_name || p.name : undefined;
+                      })()}
+                      placeholder={t("consignments.partner")}
+                      aria-label={t("consignments.partner")}
+                      onChange={(id) => setPartnerId(id ?? "")}
+                    />
+                  ) : (
                   <Select value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
                     <option value="">{t("consignments.partner")}</option>
                     {(lookups?.partners || []).map((p) => (
@@ -201,6 +219,7 @@ export default function ConsignmentSettlementNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.period")}</label>
@@ -208,6 +227,19 @@ export default function ConsignmentSettlementNewPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.salesRep")}</label>
+                  {uiStandard ? (
+                    <EntityLookup
+                      entity="employee"
+                      value={salesRepId}
+                      selectedLabel={(lookups?.salesReps || []).find((r) => r.id === salesRepId)?.full_name}
+                      placeholder={t("consignments.selectSalesRep")}
+                      aria-label={t("consignments.salesRep")}
+                      onChange={(id, row) => {
+                        setSalesRepId(id ?? "");
+                        setPickedRepName(row ? String(row.full_name ?? "") : null);
+                      }}
+                    />
+                  ) : (
                   <Select value={salesRepId} onChange={(e) => setSalesRepId(e.target.value)}>
                     <option value="">{t("consignments.selectSalesRep")}</option>
                     {(lookups?.salesReps || []).map((rep) => (
@@ -216,6 +248,7 @@ export default function ConsignmentSettlementNewPage() {
                       </option>
                     ))}
                   </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="erp-label">{t("consignments.returnWarehouse")}</label>

@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { EntityLookup } from "@/components/lookups";
+import { useUiStandard } from "@/design-system/components";
 
 interface DealFormModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ export default function DealFormModal({
   onSubmit,
 }: DealFormModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-2 lookups): the client through EntityLookup with quick-create.
+  const uiStandard = useUiStandard();
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [expectedValue, setExpectedValue] = useState("");
@@ -72,6 +76,20 @@ export default function DealFormModal({
           </label>
           <label className="block text-xs font-semibold">
             {t("crm.deal.client")}
+            {uiStandard ? (
+              <div className="mt-1">
+                <EntityLookup
+                  entity="customer"
+                  value={clientId}
+                  selectedLabel={(() => {
+                    const c = customers.find((x) => x.id === clientId);
+                    return c ? `${c.full_name}${c.company_name ? ` (${c.company_name})` : ""}` : undefined;
+                  })()}
+                  aria-label={t("crm.deal.client")}
+                  onChange={(id) => setClientId(id ?? "")}
+                />
+              </div>
+            ) : (
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -85,6 +103,7 @@ export default function DealFormModal({
                 </option>
               ))}
             </select>
+            )}
           </label>
           <label className="block text-xs font-semibold">
             {t("crm.deal.expectedValue")}

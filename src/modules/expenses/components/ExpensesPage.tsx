@@ -4,6 +4,8 @@ import PageLayout from "@/components/layout/PageLayout";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { EntityLookup } from "@/components/lookups";
 import {
   cancelExpenseAction,
   fetchExpenseFormOptionsAction,
@@ -106,6 +108,9 @@ function formatDate(iso: string): string {
 
 export default function ExpensesPage() {
   const { t, formatDateTime } = useI18n();
+  const uiStandard = useUiStandard();
+  // Accounts created in the reimburse dialog: the user's account scope plus these.
+  const [createdAccountIds, setCreatedAccountIds] = useState<string[]>([]);
   const { can } = useAuth();
   const canManageExpenses = can("can_manage_expenses");
   const canManageFinance = can("can_manage_finance");
@@ -948,6 +953,18 @@ export default function ExpensesPage() {
                 <label className="mb-1 block text-xs font-semibold text-app">
                   {t("expenses.paymentAccountRequired")}
                 </label>
+                {uiStandard ? (
+                  <EntityLookup
+                    entity="account"
+                    value={reimburseAccountId}
+                    selectedLabel={options.accounts.find((a) => a.id === reimburseAccountId)?.name}
+                    allowedIds={[...options.accounts.map((a) => a.id), ...createdAccountIds]}
+                    placeholder={t("expenses.selectAccount")}
+                    onCreated={(record) => setCreatedAccountIds((ids) => [...ids, record.id])}
+                    onChange={(nextId) => setReimburseAccountId(nextId ?? "")}
+                    aria-label={t("expenses.paymentAccountRequired")}
+                  />
+                ) : (
                 <select
                   value={reimburseAccountId}
                   onChange={(e) => setReimburseAccountId(e.target.value)}
@@ -960,6 +977,7 @@ export default function ExpensesPage() {
                     </option>
                   ))}
                 </select>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-app">{t("expenses.doc.payDate")}</label>
