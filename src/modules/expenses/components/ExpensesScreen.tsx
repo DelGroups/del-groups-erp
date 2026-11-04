@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Check, CheckCircle2, Paperclip, PencilLine, Plus, Send, Wallet, XCircle } from "lucide-react";
-import { useToast } from "@/design-system/components";
+import { useToast, useUiStandard } from "@/design-system/components";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
@@ -142,6 +143,7 @@ function ExpenseRecordView({ record, options, onEdit }: { record: ExpenseRecord;
   const [accountId, setAccountId] = useState("");
   const [payDate, setPayDate] = useState(() => todayIsoDate());
   const [attachments, setAttachments] = useState(false);
+  const uiStandard = useUiStandard();
   const canManage = can("can_manage_expenses");
   const canFinance = can("can_manage_finance");
   const byEmployee = record.payment_mode === "employee";
@@ -214,6 +216,31 @@ function ExpenseRecordView({ record, options, onEdit }: { record: ExpenseRecord;
           </button>
         </div>
       </form>
+    ) : step === "reimburse" && uiStandard ? (
+      // IMP-5: the one payment dialog; reimburse_expense_atomic pays from one account.
+      <PaymentDialog
+        open
+        onClose={() => setStep(null)}
+        direction="out"
+        title={t("expenses.doc.reimburseTitle", { code: record.code })}
+        counterpartyLabel={t("paymentDialog.employee")}
+        counterpartyName={record.employee_name ?? "—"}
+        counterpartyCode={null}
+        documentLabel={t("expenses.doc.code")}
+        documentNumber={record.code}
+        openBalance={record.amount}
+        fixedAmount={record.amount}
+        maxLines={1}
+        minDate={record.expense_date ?? null}
+        accounts={(options?.accounts ?? []).map((a) => ({ id: a.id, name: a.name, balance: a.balance }))}
+        submitLabel={t("expenses.doc.reimburse")}
+        onSubmit={async (p) => {
+          const account = p.lines[0]?.account_id;
+          if (!account) return { success: false, error: t("expenses.selectAccountAlert") };
+          const ok = await run(() => reimburseExpenseAction(record.id, account, p.paymentDate), "expenses.doc.reimbursedToast");
+          return ok ? { success: true } : { success: false };
+        }}
+      />
     ) : step === "reimburse" ? (
       <form
         className="ds-card ds-card-pad mt-4 flex flex-col gap-3"

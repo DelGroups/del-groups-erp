@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import type { SalePayment } from "@/types/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
+import { processInvoicePaymentLines } from "@/lib/payments/invoicePaymentLines";
 
 export interface RecordSalePaymentInput {
   saleId: string;
@@ -99,6 +100,13 @@ export async function recordSalePaymentWithClient(
       const splitTotal = splits.reduce((sum, s) => sum + s.amount, 0);
       if (Math.abs(splitTotal - input.amount) > 0.02) {
         return { success: false, error: "Əsas və ƏDV məbləğlərinin cəmi ödənişə uyğun gəlmir" };
+      }
+
+      // IMP-5: several accounts are one payment and one journal entry; a database without
+      // payment lines yet takes them one by one, as before.
+      if (splits.length > 1) {
+        const lines = await processInvoicePaymentLines(client, { documentType: "sale", documentId: input.saleId, splits, notes: input.notes, paymentDate: input.paymentDate });
+        if (!lines.legacy) return lines;
       }
 
       for (const split of splits) {

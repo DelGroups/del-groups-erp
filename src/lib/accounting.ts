@@ -214,6 +214,8 @@ export type CreatePartnerPaymentInput = {
   referenceNote?: string | null;
   cashAccountId?: string | null;
   idempotencyKey?: string | null;
+  /** IMP-5: several accounts in one payment (one journal entry); replaces cashAccountId / amount. */
+  lines?: { account_id: string; amount: number; method: string; note: string | null }[] | null;
 };
 
 export type CreatePartnerPaymentResult =
@@ -236,15 +238,50 @@ export async function createPartnerPayment(
 
   const paymentDate = toIsoDate(input.paymentDate);
 
+  // IMP-5: several accounts are one payment. payment_method "lines" makes a database without
+  // payment lines refuse it (instead of paying all from one default account); then each line is
+  // posted on its own, as before.
+  if (input.lines && input.lines.length > 1) {
+    const multi = await client.rpc("create_partner_payment", {
+      p_payload: {
+        partner_id: input.partnerId,
+        payment_type: input.paymentType,
+        payment_method: "lines",
+        payment_date: paymentDate,
+        reference_note: input.referenceNote || null,
+        idempotency_key: input.idempotencyKey || null,
+        lines: input.lines,
+      },
+    });
+    if (!multi.error || !/payment_method/.test(multi.error.message)) {
+      if (multi.error) return { success: false, error: multi.error.message };
+      const p = (multi.data || {}) as { success?: boolean; payment_id?: string; journal_entry_id?: string; transaction_id?: string; error?: string };
+      if (!p.success || !p.payment_id) return { success: false, error: p.error || "Ödəniş qeydə alınmadı" };
+      return { success: true, paymentId: String(p.payment_id), journalEntryId: p.journal_entry_id ? String(p.journal_entry_id) : undefined, transactionId: p.transaction_id ? String(p.transaction_id) : undefined };
+    }
+    let first: CreatePartnerPaymentResult | null = null;
+    for (const [i, line] of input.lines.entries()) {
+      const one = await createPartnerPayment(
+        { ...input, lines: null, amount: line.amount, cashAccountId: line.account_id, paymentMethod: line.method === "cash" ? "cash" : "bank",
+          referenceNote: line.note || input.referenceNote || null, idempotencyKey: input.idempotencyKey ? `${input.idempotencyKey}:${i + 1}` : null },
+        options
+      );
+      if (!one.success) return one;
+      first = first ?? one;
+    }
+    return first ?? { success: false, error: "Ödəniş qeydə alınmadı" };
+  }
+  const single = input.lines?.length === 1 ? input.lines[0] : null;
+
   const { data, error } = await client.rpc("create_partner_payment", {
     p_payload: {
       partner_id: input.partnerId,
-      amount: input.amount,
+      amount: single ? single.amount : input.amount,
       payment_type: input.paymentType,
-      payment_method: input.paymentMethod,
+      payment_method: single ? (single.method === "cash" ? "cash" : "bank") : input.paymentMethod,
       payment_date: paymentDate,
-      reference_note: input.referenceNote || null,
-      cash_account_id: input.cashAccountId || null,
+      reference_note: single?.note || input.referenceNote || null,
+      cash_account_id: single ? single.account_id : input.cashAccountId || null,
       idempotency_key: input.idempotencyKey || null,
     },
   });

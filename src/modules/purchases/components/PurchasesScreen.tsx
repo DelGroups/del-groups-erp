@@ -222,6 +222,7 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
       />
       {paying ? (
         <DocumentPaymentModal
+          direction="out"
           isOpen
           onClose={() => setPaying(false)}
           documentLabel={t("purchases.invoiceNo")}

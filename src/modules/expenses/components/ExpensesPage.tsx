@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useUiStandard } from "@/design-system/components";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { EntityLookup } from "@/components/lookups";
 import {
   cancelExpenseAction,
@@ -931,7 +932,32 @@ export default function ExpensesPage() {
         </div>
       ) : null}
 
-      {reimburseTarget ? (
+      {reimburseTarget && uiStandard ? (
+        // IMP-5: the one payment dialog; reimburse_expense_atomic pays from one account.
+        <PaymentDialog
+          open
+          onClose={() => setReimburseTarget(null)}
+          direction="out"
+          title={t("expenses.doc.reimburseTitle", { code: reimburseTarget.code })}
+          counterpartyLabel={t("paymentDialog.employee")}
+          counterpartyName={reimburseTarget.employee_name || "—"}
+          counterpartyCode={null}
+          documentLabel={t("expenses.doc.code")}
+          documentNumber={reimburseTarget.code}
+          openBalance={reimburseTarget.amount}
+          fixedAmount={reimburseTarget.amount}
+          maxLines={1}
+          minDate={reimburseTarget.expense_date}
+          accounts={options.accounts.map((a) => ({ id: a.id, name: a.name, balance: a.balance }))}
+          submitLabel={t("expenses.doc.reimburse")}
+          onSubmit={async (p) => {
+            const accountId = p.lines[0]?.account_id;
+            if (!accountId) return { success: false, error: t("expenses.selectAccountAlert") };
+            const ok = await runRowAction(reimburseTarget, () => reimburseExpenseAction(reimburseTarget.id, accountId, p.paymentDate), "expenses.doc.reimbursedToast");
+            return ok ? { success: true } : { success: false };
+          }}
+        />
+      ) : reimburseTarget ? (
         <div className="app-modal-overlay">
           <div className="app-modal w-full max-w-md">
             <div className="app-modal-header flex items-center justify-between bg-app-card-hover">

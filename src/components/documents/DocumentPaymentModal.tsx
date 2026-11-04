@@ -20,6 +20,8 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { methodForAccount } from "@/lib/payments/paymentLines";
 
 interface Account {
   id: string;
@@ -56,6 +58,8 @@ interface DocumentPaymentModalProps {
   documentVatAmount?: number;
   /** Invoice date (YYYY-MM-DD): the earliest allowed payment date. */
   documentDate?: string | null;
+  /** IMP-5: money in (a sale, default) or out (a purchase); the entry preview follows it. */
+  direction?: "in" | "out";
   onSubmit: (payload: DocumentPaymentPayload) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -74,6 +78,7 @@ export default function DocumentPaymentModal({
   documentSubtotalAmount = 0,
   documentVatAmount = 0,
   documentDate = null,
+  direction: paymentDirection = "in",
   onSubmit,
 }: DocumentPaymentModalProps) {
   const { t } = useI18n();
@@ -181,6 +186,61 @@ export default function DocumentPaymentModal({
           : t("modals.payment.date")
       : undefined;
   const blockingIssue = paymentPreflightIssue ?? paymentDateIssue;
+
+  // IMP-5 (UI_STANDARD): the one payment dialog; several accounts are one payment. The official
+  // base / VAT split is a preset of two lines (main account, VAT account).
+  if (uiStandard) {
+    return (
+      <PaymentDialog
+        open={isOpen}
+        onClose={onClose}
+        direction={paymentDirection}
+        title={resolvedTitle}
+        counterpartyLabel={counterpartyLabel}
+        counterpartyName={counterpartyName}
+        counterpartyCode={paymentDirection === "in" ? "1200" : "2100"}
+        documentLabel={documentLabel}
+        documentNumber={documentNumber}
+        openBalance={remainingAmount}
+        minDate={minDate ?? null}
+        presets={
+          canSplitTreasury
+            ? [
+                {
+                  key: "official",
+                  label: t("official.splitPreset"),
+                  build: (amount, list) => {
+                    const split = allocateOfficialPaymentSplit(amount, documentSubtotalAmount, documentVatAmount, totalAmount);
+                    const main = list.find((a) => !a.isVatAccount) ?? list[0];
+                    const vat = list.find((a) => a.isVatAccount);
+                    return [
+                      { accountId: main?.id ?? null, method: methodForAccount(main), amount: split.baseAmount, note: t("official.baseAmount") },
+                      ...(split.vatAmount > 0 ? [{ accountId: vat?.id ?? null, method: methodForAccount(vat), amount: split.vatAmount, note: t("official.vatAmount") }] : []),
+                    ];
+                  },
+                },
+              ]
+            : undefined
+        }
+        initialPreset={canSplitTreasury ? "official" : null}
+        onSubmit={async (p) => {
+          const label = (m: string) => t(`paymentDialog.methods.${m}`);
+          const result = await onSubmit({
+            amount: p.totalAzn,
+            accountId: p.lines[0]?.account_id ?? "",
+            method: label(p.lines[0]?.method ?? "cash"),
+            notes: p.note ?? undefined,
+            paymentDate: p.paymentDate,
+            treasurySplits:
+              p.lines.length > 1
+                ? p.lines.map((l) => ({ amount: l.amount, accountId: l.account_id, method: label(l.method), label: l.note || label(l.method), notes: l.note || undefined }))
+                : undefined,
+          });
+          return result.success ? result : { success: false, error: formatRpcError(result.error || t("modals.payment.paymentFailed"), t) };
+        }}
+      />
+    );
+  }
 
   if (!isOpen) return null;
 
