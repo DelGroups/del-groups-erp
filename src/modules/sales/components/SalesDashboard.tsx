@@ -35,7 +35,7 @@ export function SalesDashboard({ records, fmt, onFilter }: { records: readonly S
 
   return (
     <section aria-label={t("sales.engine.dashboard.title")} className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="ds-kpi-grid">
         {card(
           ["posted", "this_month"],
           t("sales.engine.dashboard.showMonth"),
@@ -114,12 +114,12 @@ export function SalesDashboard({ records, fmt, onFilter }: { records: readonly S
 
 function KpiTile({ label, value, hint, tone }: { label: string; value: string; hint: string; tone?: "attention" }) {
   return (
-    <div className="ds-card ds-card-pad flex h-full flex-col gap-3">
+    <div className="ds-card ds-card-pad ds-kpi flex h-full flex-col gap-3">
       <span className="ds-muted">{label}</span>
-      <span className="text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono" style={tone ? { color: "var(--ds-warning)" } : undefined}>
+      <span className="ds-kpi-value text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono" style={tone ? { color: "var(--ds-warning)" } : undefined}>
         {value}
       </span>
-      <span className="mt-auto ds-subtle text-[length:var(--ds-text-xs)]">{hint}</span>
+      <span className="ds-kpi-hint mt-auto ds-subtle text-[length:var(--ds-text-xs)]">{hint}</span>
     </div>
   );
 }

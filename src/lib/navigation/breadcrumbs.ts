@@ -58,6 +58,18 @@ const PATH_I18N: Record<string, string> = {
   "/settings/stock-integrity": "nav.items.stockIntegrity",
   "/users": "nav.items.users",
   "/dashboard/inventory/polywood/import": "breadcrumb.polywoodImport",
+  // Pages only the new shell lists (lib/shell/shell.ts SHELL_EXTRA_ITEMS): same labels as there.
+  "/comissions/report": "newShell.extra_commissionReport",
+  "/calendar": "newShell.extra_calendar",
+  "/todo": "newShell.extra_todo",
+  "/documents": "newShell.extra_documents",
+  "/crm/leads": "newShell.extra_crmLeads",
+  "/crm/reports": "newShell.extra_crmReports",
+  "/crm/config": "newShell.extra_crmConfig",
+  "/imports": "newShell.extra_imports",
+  "/imports/new": "imports.newShipment",
+  "/imports/reports": "newShell.extra_importsReports",
+  "/settings/imports": "newShell.extra_importsSettings",
 };
 
 /** Single URL segment → i18n key when no full-path match exists. */
@@ -99,7 +111,7 @@ function isAuthPath(pathname: string): boolean {
   return AUTH_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
-function isDynamicSegment(segment: string): boolean {
+export function isDynamicSegment(segment: string): boolean {
   if (/^\d+$/.test(segment)) return true;
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)) {
     return true;
@@ -133,6 +145,11 @@ function humanizeSegment(segment: string): string {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+/** A page with a fixed address (a list, a "new" form, a settings page), not one record. */
+export function isFixedPath(pathname: string): boolean {
+  return !pathname.split("/").filter(Boolean).some(isDynamicSegment);
 }
 
 export function shouldShowGlobalBreadcrumbs(pathname: string): boolean {

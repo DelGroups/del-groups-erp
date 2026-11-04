@@ -8,6 +8,8 @@
  * No React, Next or icon imports: item and section types are generic.
  */
 
+import { isFixedPath } from "../navigation/breadcrumbs";
+
 // ── Flag ─────────────────────────────────────────────────────────────────────
 
 /** Cookie with the user's choice ("1" = new shell, "0" = classic). Ignored unless NEW_UI is on. */
@@ -192,11 +194,14 @@ export const TRAIL_STORAGE_KEY = "erp_shell_trail";
  * Where a navigation came from: the shell's own navigation (launcher, app tabs, palette,
  * drawer) starts a new trail; any other link (a related record inside a page) extends it;
  * returning to a page already in the trail (Back, or its crumb) cuts the trail there.
+ * A page with a fixed address (a list, a "new" form) also starts a new trail: its path crumbs
+ * already say where it is, and a typed URL or a reload must not chain unrelated pages (UI-5).
  */
 export function nextTrail(trail: readonly TrailEntry[], entry: TrailEntry, fromShell: boolean): TrailEntry[] {
   if (fromShell || trail.length === 0) return [entry];
   const at = trail.findIndex((e) => e.path === entry.path);
   if (at >= 0) return [...trail.slice(0, at), { ...trail[at], label: entry.label || trail[at].label }];
+  if (isFixedPath(entry.path)) return [entry];
   return [...trail, entry].slice(-TRAIL_MAX);
 }
 

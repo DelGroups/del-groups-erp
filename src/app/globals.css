@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+/* `dark:` follows the app's theme (data-theme on <html>), not the OS setting: graphite and
+   midnight are dark, daylight is light (UI-5: dark titles were near-invisible on a dark theme
+   when the OS was set to light). */
+@custom-variant dark (&:where(html:not([data-theme="daylight"]) *));
 @import "../design-system/index.css";
 
 /* Tailwind v4 theme bridge — maps utilities to semantic ERP tokens */
@@ -495,11 +500,18 @@ button.app-card:hover {
   border-radius: 0.5rem;
   border: 1px solid var(--app-border);
   background-color: var(--app-input-bg);
-  padding: 0 0.75rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--app-text);
   transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* The padding sits in a layer so a utility (pl-9 next to a search icon) can replace it:
+   unlayered CSS always beats Tailwind's utilities layer (UI-5). */
+@layer components {
+  .app-input {
+    padding: 0 0.75rem;
+  }
 }
 
 .app-input::placeholder {

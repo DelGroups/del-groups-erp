@@ -2696,7 +2696,7 @@ export const enMessages: Messages = {
     issuedBy: "Salesperson / Issued by",
     auditTrail: "Issued by: {issuedBy} | Prepared by: {createdBy}",
     customerInfo: "Customer details",
-    newCustomer: "+ New customer",
+    newCustomer: "New customer",
     selectCustomer: "-- Select customer --",
     invoiceItems: "Invoice balance and product list",
     unit: "UNIT",

@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import ListPageChrome from "@/components/layout/ListPageChrome";
 import { GridLab, labInvoices } from "./GridLab";
 import { LineGridLab } from "./LineGridLab";
+import { KpiCards } from "@/views/components/KpiCards";
 
 /*
  * UI lab (UI-5): one page as the app builds it — a shell header, the shell's one vertical scroller
@@ -28,6 +29,16 @@ export function PageFrameLab() {
           filters={<p className="ds-muted text-[length:var(--ds-text-xs)]">{l("pageFrameFilters")}</p>}
         >
           <p className="ds-muted text-[length:var(--ds-text-xs)]">{l("pageFrameHint")}</p>
+          {/* Module KPI cards: two per row and compact on a phone (UI-5). */}
+          <KpiCards
+            label={l("pageFrame")}
+            kpis={[
+              { key: "month", label: t("sales.engine.dashboard.month"), value: "12.480 AZN", series: [3, 5, 2, 8, 6, 9], delta: 0.12 },
+              { key: "due", label: t("sales.engine.dashboard.receivables", { count: 4 }), value: "722 AZN", series: [1, 2, 1, 3, 2, 4] },
+              { key: "late", label: t("sales.engine.filters.overdue"), value: "1", hint: t("sales.engine.dashboard.overdueHint"), tone: "attention" },
+              { key: "drafts", label: t("sales.engine.dashboard.drafts"), value: "6", hint: t("sales.engine.dashboard.draftsHint", { notSent: 9 }) },
+            ]}
+          />
           <GridLab rows={labInvoices(5)} menu />
           <section data-ui-frame="page-lines" className="flex flex-col gap-2">
             <h2 className="font-semibold">{l("lineGrid")}</h2>

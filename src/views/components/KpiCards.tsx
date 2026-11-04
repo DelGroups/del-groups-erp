@@ -28,20 +28,20 @@ export interface Kpi {
 export function KpiCards({ kpis, onFilter, label }: { kpis: readonly Kpi[]; onFilter?: (filters: string[]) => void; label: string }) {
   if (!kpis.length) return null;
   return (
-    <section aria-label={label} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label={label} className="ds-kpi-grid">
       {kpis.map((k) => {
         const card = k.series?.length ? (
           <MetricCard label={k.label} value={k.value} delta={k.delta} deltaLabel={k.deltaLabel} series={k.series} seriesLabel={k.seriesLabel ?? k.label} />
         ) : (
-          <div className="ds-card ds-card-pad flex h-full flex-col gap-3">
+          <div className="ds-card ds-card-pad ds-kpi flex h-full flex-col gap-3">
             <span className="ds-muted">{k.label}</span>
             <span
-              className="text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono"
+              className="ds-kpi-value text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono"
               style={k.tone === "attention" ? { color: "var(--ds-warning)" } : k.tone === "good" ? { color: "var(--ds-success)" } : undefined}
             >
               {k.value}
             </span>
-            {k.hint ? <span className="mt-auto ds-subtle text-[length:var(--ds-text-xs)]">{k.hint}</span> : null}
+            {k.hint ? <span className="ds-kpi-hint mt-auto ds-subtle text-[length:var(--ds-text-xs)]">{k.hint}</span> : null}
           </div>
         );
         if (!k.filters || !onFilter) return <div key={k.key}>{card}</div>;

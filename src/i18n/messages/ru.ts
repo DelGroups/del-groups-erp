@@ -2697,7 +2697,7 @@ export const ruMessages: Messages = {
     issuedBy: "Продавец / Выдал",
     auditTrail: "Выдал: {issuedBy} | Подготовил: {createdBy}",
     customerInfo: "Данные клиента",
-    newCustomer: "+ Новый клиент",
+    newCustomer: "Новый клиент",
     selectCustomer: "-- Выберите клиента --",
     invoiceItems: "Баланс счёта и список товаров",
     unit: "ЕД.",

@@ -45,13 +45,13 @@ export function MetricCard({ label, value, delta, deltaLabel, series, seriesLabe
   const heights = sparklineHeights(series);
   const reduced = useReducedMotion();
   return (
-    <div className="ds-card ds-card-pad flex flex-col gap-3">
+    <div className="ds-card ds-card-pad ds-kpi flex flex-col gap-3">
       <span className="ds-muted">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono">{value}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="ds-kpi-value text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono">{value}</span>
         {delta !== undefined && delta !== null ? <DeltaChip delta={delta} label={deltaLabel} /> : null}
       </div>
-      <div className="flex h-10 items-end justify-between gap-1" role="img" aria-label={`${seriesLabel}: ${series.join(", ")}`}>
+      <div className="ds-kpi-series flex h-10 items-end justify-between gap-1" role="img" aria-label={`${seriesLabel}: ${series.join(", ")}`}>
         {heights.map((h, i) => (
           <motion.span
             key={i}

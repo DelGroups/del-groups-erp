@@ -286,3 +286,41 @@ test("imports: the delete migration is atomic, checked, and the direct-delete po
     for (const k of ["delete_draft_only:", "delete_has_postings:", "deleteDraft:", "deleteTitle:", "deleted:"]) assert.ok(m.includes(k), `${l} ${k}`);
   }
 });
+
+// ── Live-site audit fixes (UI-5, before screenshots of 2026-11-04) ────────────
+
+
+test("dark: follows the app theme (data-theme), not the OS colour preference", () => {
+  const css = read("src/app/globals.css");
+  assert.match(css, /@custom-variant dark \(&:where\(html:not\(\[data-theme="daylight"\]\) \*\)\);/);
+});
+
+test("app-input padding sits in a layer, so pl-* next to a search icon applies", () => {
+  const css = read("src/app/globals.css");
+  const base = css.slice(css.indexOf(".app-input {"), css.indexOf("}", css.indexOf(".app-input {")));
+  assert.doesNotMatch(base, /padding/);
+  assert.match(css, /@layer components \{\s*\.app-input \{\s*padding: 0 0\.75rem;/);
+});
+
+test("buttons that show a Plus icon carry no '+' in their label", async () => {
+  const { azMessages: az } = await import("../src/i18n/messages/az.ts");
+  const { enMessages: en } = await import("../src/i18n/messages/en.ts");
+  const { ruMessages: ru } = await import("../src/i18n/messages/ru.ts");
+  for (const m of [az, en, ru]) {
+    for (const v of [m.payments.newPayment, m.partners.newPartner, m.invoice.newCustomer]) assert.doesNotMatch(v, /^\+/);
+  }
+});
+
+test("breadcrumbs name the shell-only pages instead of humanising the URL", async () => {
+  const { buildBreadcrumbsFromPath } = await import("../src/lib/navigation/breadcrumbs.ts");
+  const t = (k) => k;
+  assert.deepEqual(buildBreadcrumbsFromPath("/imports/new", t).map((c) => c.label), ["newShell.extra_imports", "imports.newShipment"]);
+  assert.equal(buildBreadcrumbsFromPath("/calendar", t)[0].label, "newShell.extra_calendar");
+});
+
+test("module KPI cards: two per row on a phone, compact when narrow", () => {
+  const css = read("src/design-system/components.css");
+  assert.match(css, /\[data-ds\] \.ds-kpi-grid \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@container \(max-width: 14rem\)/);
+  for (const f of ["src/views/components/KpiCards.tsx", "src/modules/sales/components/SalesDashboard.tsx"]) assert.match(read(f), /className="ds-kpi-grid"/);
+});
