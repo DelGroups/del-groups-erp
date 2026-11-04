@@ -108,7 +108,7 @@ export const PAGE_SIZES = [
 ];
 
 /** Signed-in routes of the page checks (the main lists and forms). */
-export const MAIN_ROUTES = ["/", "/sales", "/purchases", "/payments", "/customers", "/products", "/sales/new", "/purchases/new", "/imports"];
+export const MAIN_ROUTES = ["/", "/sales", "/purchases", "/dashboard/payments", "/customers", "/products", "/sales/new", "/purchases/new", "/imports", "/imports/new"];
 
 const settle = (page, ms = 1200) => page.waitForTimeout(ms);
 const scrollRoot = (page, fraction) =>
