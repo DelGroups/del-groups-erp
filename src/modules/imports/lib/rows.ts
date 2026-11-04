@@ -87,6 +87,8 @@ export interface ShipmentListRow extends Row {
   invoice_date: string | null;
   customs_declaration_date: string | null;
   line_count: number;
+  /** A supplier prepayment was posted on it (UI-5: a prepaid draft is cancelled, not deleted). */
+  has_prepayment: boolean;
   /** Goods in the shipment currency; null without financial figures. */
   goods_fc: number | null;
   goods_azn: number | null;
@@ -110,6 +112,8 @@ export function shipmentListRows(input: {
   suppliers: readonly Row[];
   names: ReadonlyMap<string, string>;
   financials: boolean;
+  /** Shipment ids with a supplier prepayment (any status). */
+  prepaid?: ReadonlySet<string>;
 }): ShipmentListRow[] {
   const supplierName = new Map(input.suppliers.map((s) => [String(s.id), String(s.company_name || s.full_name || "")]));
   const costShipment = new Map(input.costs.map((c) => [String(c.id), String(c.shipment_id)]));
@@ -140,6 +144,7 @@ export function shipmentListRows(input: {
       invoice_date: str(s.invoice_date),
       customs_declaration_date: str(s.customs_declaration_date),
       line_count: lines.length,
+      has_prepayment: input.prepaid?.has(id) ?? false,
       goods_fc: money(cents(goodsFc)),
       goods_azn: money(goodsAzn),
       costs_azn: money(costsAzn),

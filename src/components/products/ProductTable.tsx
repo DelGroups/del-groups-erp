@@ -54,6 +54,8 @@ interface ProductTableProps {
   onDelete?: (product: Product) => void;
   onPrintLabel?: (product: Product) => void;
   emptyMessage?: string;
+  /** The page's count ("12 / 393 products"), shown in the grid toolbar (UI_STANDARD). */
+  countText?: string;
   bulkSelection?: {
     isSelected: (product: Product) => boolean;
     toggle: (product: Product) => void;
@@ -153,6 +155,7 @@ export default function ProductTable({
   onDelete,
   onPrintLabel,
   emptyMessage,
+  countText,
   bulkSelection,
 }: ProductTableProps) {
   const { t } = useI18n();
@@ -223,6 +226,7 @@ export default function ProductTable({
         columns={columns}
         loading={loading}
         emptyMessage={emptyMessage || t("products.empty")}
+        countText={countText}
         bulkSelection={bulkSelection}
         rowActions={canEdit || onPrintLabel ? rowActions : undefined}
       />
@@ -385,6 +389,7 @@ function ProductGrid({
   columns,
   loading,
   emptyMessage,
+  countText,
   bulkSelection,
   rowActions,
 }: {
@@ -394,6 +399,7 @@ function ProductGrid({
   columns: ProductColumnKey[];
   loading?: boolean;
   emptyMessage: string;
+  countText?: string;
   bulkSelection?: ProductTableProps["bulkSelection"];
   rowActions?: (product: Product) => React.ReactNode;
 }) {
@@ -452,6 +458,7 @@ function ProductGrid({
       label={t("products.title")}
       loading={loading}
       empty={<p className="text-sm ds-muted">{emptyMessage}</p>}
+      countText={countText}
       selection={bulkSelection}
       rowActions={rowActions}
     />

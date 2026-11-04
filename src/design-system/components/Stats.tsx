@@ -21,11 +21,16 @@ export interface MetricCardProps {
   seriesLabel: string;
 }
 
-export function DeltaChip({ delta, label }: { delta: number; label?: string }) {
+/**
+ * A change in percent: the arrow follows the sign, the colour follows whether it is good news.
+ * `invert` for figures where up is bad (expenses): an increase is shown in the danger colour.
+ */
+export function DeltaChip({ delta, label, invert = false }: { delta: number; label?: string; invert?: boolean }) {
   const kind = deltaKind(delta);
   const Icon = kind === "up" ? ArrowUpRight : kind === "down" ? ArrowDownRight : ArrowRight;
+  const tone = kind === "flat" ? "flat" : invert ? (kind === "up" ? "down" : "up") : kind;
   return (
-    <span className={`ds-chip ds-chip-${kind === "flat" ? "flat" : kind}`}>
+    <span className={`ds-chip ds-chip-${tone}`}>
       <Icon className="h-3 w-3" aria-hidden />
       <span className="ds-mono">
         {delta > 0 ? "+" : ""}
@@ -40,13 +45,13 @@ export function MetricCard({ label, value, delta, deltaLabel, series, seriesLabe
   const heights = sparklineHeights(series);
   const reduced = useReducedMotion();
   return (
-    <div className="ds-card ds-card-pad flex flex-col gap-3">
+    <div className="ds-card ds-card-pad ds-kpi flex flex-col gap-3">
       <span className="ds-muted">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono">{value}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="ds-kpi-value text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono">{value}</span>
         {delta !== undefined && delta !== null ? <DeltaChip delta={delta} label={deltaLabel} /> : null}
       </div>
-      <div className="flex h-10 items-end justify-between gap-1" role="img" aria-label={`${seriesLabel}: ${series.join(", ")}`}>
+      <div className="ds-kpi-series flex h-10 items-end justify-between gap-1" role="img" aria-label={`${seriesLabel}: ${series.join(", ")}`}>
         {heights.map((h, i) => (
           <motion.span
             key={i}

@@ -268,7 +268,7 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
         }
       />
 
-      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4">
+      <main className="app-page-content flex-1 space-y-3 md:space-y-4">
         <div className="flex flex-wrap gap-2 border-b border-app pb-3">
           {tabs.map((tab) => (
             <button

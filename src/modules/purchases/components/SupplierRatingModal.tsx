@@ -56,7 +56,7 @@ export default function SupplierRatingModal({
   const [deliverySpeedScore, setDeliverySpeedScore] = useState(5);
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center app-scrim p-4">
+    <div className="fixed inset-0 z-[calc(var(--ds-z-modal-nested)+1)] flex items-center justify-center app-scrim p-4">
       <div className="w-full max-w-md overflow-hidden rounded-2xl app-card shadow-xl">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>

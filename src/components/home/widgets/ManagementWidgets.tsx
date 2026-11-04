@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, BadgeCheck, Banknote, Boxes, ChartColumn, Minus, Scale, Target, Trophy, Wallet } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { CountUp, DeltaChip, FunnelSteps, GoalProgress } from "@/design-system/components";
+import { CountUp, DeltaChip, FunnelSteps, GoalProgress, Truncate } from "@/design-system/components";
 import { transitions } from "@/design-system/motion";
 import { deltaPercent, type TrendRange } from "@/lib/home/dates";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -403,36 +403,48 @@ export function WeekOverWeekWidget(props: WidgetProps) {
   return (
     <WidgetFrame {...frameProps(props)}>
       <WidgetState status={status(props, q)} onRetry={() => void q.refetch()} emptyIcon={ChartColumn} emptyTitle={t("home.empty.figures")}>
-        <table className="w-full border-collapse text-[length:var(--ds-text-sm)]">
-          <thead>
-            <tr>
-              <th scope="col" className="py-1 text-start ds-label"><span className="sr-only">{t("home.wow.metric")}</span></th>
-              <th scope="col" className="py-1 text-end ds-label">{t("home.wow.thisWeek")}</th>
-              <th scope="col" className="py-1 text-end ds-label">{t("home.wow.lastWeek")}</th>
-              <th scope="col" className="py-1 text-end ds-label">{t("home.wow.change")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {WOW_ROWS.map((r) => {
-              const cur = Number(d?.current[r.key] ?? 0);
-              const prev = Number(d?.previous[r.key] ?? 0);
-              const delta = deltaPercent(cur, prev);
-              const fmt = r.money ? money : count;
-              // More expenses is not good news: flip the colour (not the number).
-              const good = r.key === "expenses_total" ? (delta ?? 0) <= 0 : (delta ?? 0) >= 0;
-              return (
-                <tr key={r.key} style={{ borderTop: "1px solid var(--ds-border)" }}>
-                  <th scope="row" className="py-1.5 text-start font-normal">{t(`home.wow.${r.key}`)}</th>
-                  <td className="py-1.5 text-end ds-mono">{fmt(cur)}</td>
-                  <td className="py-1.5 text-end ds-mono ds-subtle">{fmt(prev)}</td>
-                  <td className="py-1.5 text-end ds-mono" style={{ color: delta === null ? undefined : good ? "var(--ds-success-strong, var(--ds-success))" : "var(--ds-danger-strong)" }}>
-                    {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}%`}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* UI-5: a compact delta table that works from a 280px card. Figures keep their width and
+            never wrap (tabular figures, the page font); the label takes the rest with an ellipsis
+            and a tooltip. A narrow card (container query) hides "last 7 days before"; its value
+            stays in the change cell's tooltip. */}
+        <div className="ds-wow">
+          <table className="ds-wow-table">
+            <thead>
+              <tr>
+                <th scope="col" className="ds-wow-label">
+                  <span className="sr-only">{t("home.wow.metric")}</span>
+                </th>
+                <th scope="col">{t("home.wow.thisWeek")}</th>
+                <th scope="col" className="ds-wow-prev">
+                  {t("home.wow.lastWeek")}
+                </th>
+                <th scope="col">{t("home.wow.change")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {WOW_ROWS.map((r) => {
+                const cur = Number(d?.current[r.key] ?? 0);
+                const prev = Number(d?.previous[r.key] ?? 0);
+                const delta = deltaPercent(cur, prev);
+                const fmt = r.money ? money : count;
+                const label = t(`home.wow.${r.key}`);
+                return (
+                  <tr key={r.key}>
+                    <th scope="row" className="ds-wow-label">
+                      <Truncate>{label}</Truncate>
+                    </th>
+                    <td>{fmt(cur)}</td>
+                    <td className="ds-wow-prev ds-subtle">{fmt(prev)}</td>
+                    <td title={`${t("home.wow.lastWeek")}: ${fmt(prev)}`}>
+                      {/* More expenses is not good news: the colour flips, not the number. */}
+                      {delta === null ? <span className="ds-subtle">—</span> : <DeltaChip delta={delta} invert={r.key === "expenses_total"} />}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </WidgetState>
     </WidgetFrame>
   );

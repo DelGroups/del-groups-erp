@@ -158,7 +158,7 @@ export default function InvoiceCutPieceModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[10004] flex items-center justify-center app-scrim p-4">
+    <div className="fixed inset-0 z-[calc(var(--ds-z-modal-nested)+6)] flex items-center justify-center app-scrim p-4">
       <Card className="w-full max-w-lg shadow-2xl">
         <div className="flex items-start gap-3 border-b border-app px-5 py-4">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">

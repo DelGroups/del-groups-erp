@@ -11,7 +11,7 @@ import { createAccountAction, deleteAccountAction, fetchAccountLedgerBalancesAct
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { fetchPartnerPayments } from "@/lib/payments/fetchPayments";
 import type { UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
-import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import {
   accountKpis,
   accountsDefinition,
@@ -54,7 +54,29 @@ export function FinanceLedgerScreen() {
       title={t("finance.title")}
       kpis={(records, fmt, ctx) => ledgerKpis(records, fmt, ctx.now)}
       recordTitle={(r) => `${r.category} · ${r.transaction_date}`}
+      // UI-5: the classic ledger row menu itself (view, edit, print receipt, delete, with its rules).
+      renderRowActions={(r) => <LedgerRowMenu record={r} />}
       renderRecord={(r) => <LedgerRecordView record={r} />}
+    />
+  );
+}
+
+/** The classic ledger row menu in a list row (UI-5), on the raw row the list read. */
+function LedgerRowMenu({ record }: { record: LedgerRecord }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const { can } = useAuth();
+  const { toast } = useToast();
+  const canManage = can("can_manage_finance") || can("can_manage_expenses");
+  const raw = (client.getQueryData(["views", LEDGER_VIEW_KEY, "rows"]) as UnifiedLedgerTransaction[] | undefined)?.find((x) => x.id === record.id);
+  if (!raw) return null;
+  return (
+    <UnifiedLedgerRowActions
+      transaction={raw}
+      canManage={canManage}
+      onChanged={() => void invalidateModel(client, LEDGER_VIEW_KEY)}
+      onError={(message) => toast(t("common.error"), message, "error")}
+      onSuccess={(message) => toast(message, undefined, "success")}
     />
   );
 }
@@ -113,6 +135,10 @@ export function CashBankScreen() {
           ) : null
         }
         recordTitle={(r) => r.name}
+        rowActions={(): RowActionSpec[] => [
+          { key: "edit", label: t("common.edit"), icon: <PencilLine className="h-4 w-4" />, hidden: !canManage },
+          { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !canManage },
+        ]}
         renderRecord={(r, { close }) => (
           <AccountRecordView
             record={r}

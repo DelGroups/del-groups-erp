@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { usePermissions } from "@/hooks/usePermissions";
-import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import { deleteProductionOrderAction, fetchProductionLookupsAction, getProductionOrderAction, listProductionOrdersAction, updateProductionStatusAction } from "../actions/production";
 import { withPrintableProductionContract } from "../lib/contracts";
 import type { ProductionOrder, ProductionStatus } from "../lib/types";
@@ -71,6 +71,17 @@ export default function ProductionScreen() {
           </>
         }
         recordTitle={(r) => `${r.order_no} · ${r.project_name}`}
+        // UI-5: the row "…" menu, the same actions as the order's form (which runs them, ?do=).
+        rowActions={(r): RowActionSpec[] => {
+          const advance = r.status === "Draft" ? t("production.workflow.sendToProduction") : r.status === "In-Progress" ? t("production.workflow.sendToLogistics") : r.status === "Ready" ? t("production.workflow.markDelivered") : null;
+          return [
+            { key: "open", label: t("production.engine.openOrder"), icon: <ExternalLink className="h-4 w-4" /> },
+            { key: "advance", label: advance ?? "", icon: <ArrowRight className="h-4 w-4" />, hidden: !(canManage && r.next_status && advance) },
+            { key: "workflow", label: t("common.edit"), icon: <PencilLine className="h-4 w-4" />, hidden: !canManage },
+            { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" /> },
+            { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !canManage },
+          ];
+        }}
         renderRecord={(r, { close }) => (
           <OrderRecordView
             record={r}

@@ -16,6 +16,8 @@ export interface ListGridProps<Row> {
   rows: readonly Row[];
   /** Records in the whole list when `rows` is one page (the toolbar count). */
   total?: number;
+  /** Replaces the toolbar count text ("12 / 393 products"), so a page shows one count (UI-5). */
+  countText?: string;
   rowKey: (row: Row) => string;
   /** Accessible name (the page title). */
   label: string;
@@ -38,7 +40,7 @@ export interface ListGridProps<Row> {
  * user's column prefs. Wrapped in the design scope in the user's theme, so the grid's tokens
  * apply on classic pages too.
  */
-export function ListGrid<Row>({ columns, rows, total, rowKey, label, selection, rowActions, actionsWidth, onOpen, loading, empty, footer, onExport, totals, toolbarStart }: ListGridProps<Row>) {
+export function ListGrid<Row>({ columns, rows, total, countText, rowKey, label, selection, rowActions, actionsWidth, onOpen, loading, empty, footer, onExport, totals, toolbarStart }: ListGridProps<Row>) {
   const { t } = useI18n();
   const { theme } = useTheme();
   const { brand } = useNewUi();
@@ -79,7 +81,7 @@ export function ListGrid<Row>({ columns, rows, total, rowKey, label, selection, 
         onExport={onExport}
         totals={totals}
         toolbarStart={toolbarStart}
-        count={loading ? undefined : t("uiStandard.grid.count", { count: total ?? rows.length })}
+        count={loading ? undefined : countText ?? t("uiStandard.grid.count", { count: total ?? rows.length })}
         columnsMenu={columns.pickerPanel ?? undefined}
         widths={prefs.widths}
         onWidthChange={(key, width) => setPrefs(width === null ? clearColumnWidths(prefs) : setColumnWidth(prefs, key, width))}

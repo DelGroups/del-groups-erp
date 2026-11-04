@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { getDepartmentLabel, type Employee, type EmployeeLeave } from "@/types/database.types";
-import { EngineScreen, FormView, invalidateModel, useFormatter, ViewScope, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, ViewScope, type FormAction, type RowActionSpec } from "@/views";
 import { createEmployeeAction, createEmployeeLeaveAction, deleteEmployeeAction, updateEmployeeAction, updateEmployeeLeaveStatusAction } from "../actions/hr";
 import { fetchAccounts, fetchEmployees } from "../lib/employees";
 import { fetchEmployeeDepartments } from "../lib/employeeDepartments";
@@ -111,6 +111,11 @@ function DirectoryTab({ tabs }: { tabs: EmployeesPageTab[] }) {
           ) : null
         }
         recordTitle={(r) => r.full_name}
+        // UI-5: the row "…" menu, the same actions as the employee's form (which runs them, ?do=).
+        rowActions={(): RowActionSpec[] => [
+          { key: "edit", label: t("employees.editEmployee"), icon: <PencilLine className="h-4 w-4" />, hidden: !canManage },
+          { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !canManage },
+        ]}
         renderRecord={(r, { close }) => (
           <EmployeeRecordView
             record={r}
@@ -218,6 +223,10 @@ function LeavesTab({ tabs }: { tabs: EmployeesPageTab[] }) {
           ) : null
         }
         recordTitle={(r) => r.employee_name ?? ""}
+        rowActions={(r): RowActionSpec[] => [
+          { key: "approve", label: t("employees.leaves.approve"), icon: <CheckCircle2 className="h-4 w-4" />, hidden: !(can("can_manage_hr") && r.status === "PENDING") },
+          { key: "reject", label: t("employees.leaves.reject"), icon: <XCircle className="h-4 w-4" />, destructive: true, hidden: !(can("can_manage_hr") && r.status === "PENDING") },
+        ]}
         renderRecord={(r) => <LeaveRecordView record={r} />}
       />
       <LeaveFormModal isOpen={creating} employees={employees.data ?? []} saving={saving} onClose={() => setCreating(false)} onSubmit={create} />

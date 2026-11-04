@@ -225,6 +225,16 @@ test("trail: related records extend it, going back cuts it, shell navigation res
   assert.equal(long.at(-1).path, "/p/11");
 });
 
+test("trail: a page with a fixed address starts a new trail (typed URL, reload, list tab)", () => {
+  let trail = nextTrail([], e("/sales"), false);
+  trail = nextTrail(trail, e("/purchases/new"), false);
+  assert.deepEqual(trail, [e("/purchases/new")]);
+  trail = nextTrail(trail, e("/imports"), false);
+  assert.deepEqual(trail, [e("/imports")]);
+  trail = nextTrail(trail, e("/imports/0b7e8c1a-1111-4222-8333-944455556666", "IMP-1"), false);
+  assert.deepEqual(trail.map((x) => x.path), ["/imports", "/imports/0b7e8c1a-1111-4222-8333-944455556666"]);
+});
+
 test("trail storage is read defensively", () => {
   assert.deepEqual(parseTrail(null), []);
   assert.deepEqual(parseTrail("{bad"), []);

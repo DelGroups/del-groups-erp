@@ -79,7 +79,7 @@ export function CommandPalette({ groups, open, onOpenChange, labels, hotkey = tr
         </Dialog.Overlay>
         <Dialog.Content asChild aria-describedby={undefined}>
           <motion.div
-            className="ds-panel fixed left-1/2 top-[12vh] z-[61] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden"
+            className="ds-panel fixed left-1/2 top-[12vh] z-[var(--ds-z-modal-content)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden"
             variants={motionPreset(panelVariants, reduced)}
             initial="initial"
             animate="enter"

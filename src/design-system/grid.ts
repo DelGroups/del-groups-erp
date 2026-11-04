@@ -151,6 +151,23 @@ export interface ScrollBox {
   clientWidth: number;
 }
 
+/** The box scrolls sideways (more than a rounding pixel). */
+export function hasHorizontalOverflow(box: Pick<ScrollBox, "scrollWidth" | "clientWidth">): boolean {
+  return box.scrollWidth - box.clientWidth > 1;
+}
+
+export type ColumnAlign = "start" | "end" | "center";
+
+/**
+ * The one alignment rule of every grid (UI-5, docs/ui-standard.md "Lists"): numbers, quantities,
+ * money and percentages at the end (tabular figures); text, names, codes, dates and statuses at
+ * the start. A header aligns like its cells; the actions column is centred.
+ */
+export function columnAlign(type: GridColumnType | "actions" | undefined): ColumnAlign {
+  if (type === "actions") return "center";
+  return type === "number" || type === "money" ? "end" : "start";
+}
+
 /**
  * Which sides hide columns, for the edge shadows. `scrollLeft` is 0 at the start in LTR and
  * 0 or negative in RTL (browsers count from the start edge), so the distance from the start

@@ -70,7 +70,7 @@ export function TypeToConfirmDialog({ open, onOpenChange, confirmText, consequen
         </Dialog.Overlay>
         <Dialog.Content asChild>
           <motion.div
-            className="ds-panel fixed left-1/2 top-1/2 z-[61] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6"
+            className="ds-panel fixed left-1/2 top-1/2 z-[var(--ds-z-modal-content)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6"
             variants={motionPreset(panelVariants, reduced)}
             initial="initial"
             animate="enter"

@@ -262,9 +262,12 @@ do $$ begin
 end $$;
 
 -- 6. Safe to run again. Later migrations tighten its write rules (IMP-2: direct writes only
--- while a draft), so they are applied again after it, in order, as a re-run must be.
+-- while a draft; UI-5: no direct delete of a draft with postings), so every later imports
+-- migration is applied again after it, in order, as a re-run must be. A new migration that
+-- changes these tables belongs at the end of this list.
 \ir ../migrations/20261030100000_imports_core.sql
 \ir ../migrations/20261030110000_imports_posting.sql
 \ir ../migrations/20261030120000_imports_fx.sql
+\ir ../migrations/20261103100000_imports_delete_draft.sql
 
 select 'ALL CHECKS PASSED';

@@ -153,6 +153,21 @@ warehouse, account, employee, expense or product category, consignment shop, par
   rendered unchanged. `docs/lookup-audit.md` lists every form and field, and the fields left out
   with the reason; `tests/lookups.test.mjs` checks that every listed form keeps the flag switch.
 
+## Page frame (UI-5)
+
+- **One vertical scroll per page.** Only the shell's `[data-scroll-root]` (`NewShell`, `ERPLayout`) scrolls. Pages, `PageContent`, `ListPageChrome` and grids never add `overflow-y-auto`; a side menu (`<aside>`) and overlays may scroll inside themselves.
+- **Sticky parts** (list toolbar, grid header, grid totals) stick inside that scroller. They use `--ds-sticky-top` / `--ds-sticky-bottom`, which `ListPageChrome` keeps in step with the toolbar height. A grid frame uses `overflow: clip`, never `hidden`, so `position: sticky` still works.
+- **No empty band** under the last content (more than 48 px fails the page check).
+- **Layers.** One z-index scale in `src/design-system/layers.css` (`--ds-z-grid-head` … `--ds-z-tooltip`; `Z_LAYERS` / `zVar()` in `theme.ts`). No raw z-index numbers: use `z-[var(--ds-z-modal)]` and the like. Popovers, menus and lookups render in one layer on `<body>` (`DesignScope`), so no card or grid can clip them; menus are limited to `--radix-popper-available-height` and scroll.
+- **Row menu.** Every list with record actions has a "…" menu in a pinned actions column (`RowActionsMenu`; view engine: `rowActions` → `rowMenu()`). "View" comes first, destructive actions last. An action that needs the record page links to it with `?do=<action>`; the page runs it once (a one-minute intent in sessionStorage) and removes the parameter.
+- **Column alignment.** `columnAlign()` in `grid.ts`: money and numbers end-aligned, the actions column centred, everything else start-aligned (header and cells alike).
+- **Status chips** are sentence case and never cut.
+- **KPI cards** of a module use `.ds-kpi-grid` (`KpiCards`, `MetricCard`): two per row on a phone, four from 80rem; a narrow card drops its sparkline and hint.
+- **Labels next to an icon** carry no "+" or other symbol in the text.
+- **`dark:` utilities** follow the app theme (`data-theme`: graphite and midnight are dark), not the OS setting.
+- **Inputs with a leading icon** use `app-input pl-9`; `.app-input` keeps its padding in `@layer components` so the utility wins.
+- **Breadcrumbs.** A page with a fixed address (a list, a "new" form) starts a new trail; record pages opened from it extend the trail. Every page has a translated crumb label (`lib/navigation/breadcrumbs.ts`).
+
 ## Guards
 
 - **Lint (`npm run lint`)** fails on a native `<select>`, `<input type="date">`, `<datalist>`, `toLocaleString`, `toLocaleDateString` or `Intl.DateTimeFormat` in `src/`.
@@ -175,3 +190,5 @@ warehouse, account, employee, expense or product category, consignment shop, par
 
   - Playwright must resolve: install it globally, or set `UI_GUARD_PLAYWRIGHT` to a playwright folder.
   - `UI_LAB_OPEN` works only under `next dev`.
+- **Page checks (UI-5)** run in `ui:guard` on `/dev/ui-lab?frame=page` (a shell, a list with row menus and totals, KPI cards and document lines) at 1440, 1366x768, 768 and 360x740 in az and ru. They fail on a second vertical scroller, the page scrolling sideways, an empty band, a missing or hidden actions column, a numeric column not end-aligned, a grid header gone while its rows show, and a clipped popover (a row menu and a lookup are opened low in the window). With `UI_TEST_EMAIL` and `UI_TEST_PASSWORD` set, the same checks run signed in on the main pages (`MAIN_ROUTES` in `scripts/ui-guard.mjs`; `UI_GUARD_ROUTES` overrides).
+- **Audit:** `docs/ui-audit-2026-11-03.md` lists what the live-site audit found and its status.

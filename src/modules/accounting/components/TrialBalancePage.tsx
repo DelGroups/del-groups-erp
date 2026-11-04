@@ -128,7 +128,7 @@ export default function TrialBalancePage() {
         </div>
       </header>
 
-      <main className="app-page-content flex-1 space-y-3 overflow-y-auto md:space-y-4 print:p-0">
+      <main className="app-page-content flex-1 space-y-3 md:space-y-4 print:p-0">
         <div className="print:hidden">
           <ReportFiltersPanel
             filters={filters}

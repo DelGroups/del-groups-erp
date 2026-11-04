@@ -470,8 +470,8 @@ function FullProductFormDrawer({ name, onClose, onCreated }: { name: string; onC
   const formId = "lookup-full-product-form";
   if (typeof document === "undefined") return null;
   return createPortal(
-    // Above classic modals (z 70): the drawer itself is z 50 inside this layer.
-    <div style={{ position: "relative", zIndex: 100 }}>
+    // Above any dialog it opens from (layers.css); the drawer itself is z 50 inside this layer.
+    <div style={{ position: "relative", zIndex: "calc(var(--ds-z-modal-nested) + 8)" as unknown as number }}>
       <Drawer
         open
         onClose={onClose}

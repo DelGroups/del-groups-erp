@@ -143,7 +143,7 @@ function DateControl({ value, onChange, locale, labels, id, disabled, invalid, r
         </div>
       </Popover.Anchor>
       <Popover.Portal container={portalContainer ?? undefined}>
-        <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-[70] outline-none">
+        <Popover.Content align="start" sideOffset={6} collisionPadding={12} className="z-[var(--ds-z-dropdown)] outline-none">
           <motion.div className="ds-menu ds-calendar" initial="initial" animate="enter" variants={motionPreset(panelVariants, reduced)}>
             <Calendar value={value?.slice(0, 10) ?? null} locale={locale} labels={labels} onPick={pick} onClear={() => { setShown(null); setText(""); onChange(null); setOpen(false); }} />
           </motion.div>

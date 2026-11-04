@@ -55,6 +55,7 @@ import {
   type BarcodePaperSize,
 } from "@/lib/barcode/labelConfig";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Button from "@/components/ui/button";
 import { SplitButton } from "@/components/ui/split-button";
@@ -142,6 +143,8 @@ export default function ProductsPage() {
     () => filterProducts(products, filters, warehouses),
     [products, filters, warehouses]
   );
+  const standard = useUiStandard();
+  const showingCount = t("products.showingCount", { filtered: filteredProducts.length, total: products.length });
 
   const bulk = useBulkSelection(filteredProducts, (product) => product.id);
 
@@ -281,14 +284,8 @@ export default function ProductsPage() {
         }
       >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-app-muted">
-              {loading
-                ? t("common.loading")
-                : t("products.showingCount", {
-                    filtered: filteredProducts.length,
-                    total: products.length,
-                  })}
-            </p>
+            {/* With UI_STANDARD the grid toolbar shows this count; one count per page (UI-5). */}
+            {standard ? <span /> : <p className="text-xs text-app-muted">{loading ? t("common.loading") : showingCount}</p>}
 
             <div className="flex items-center gap-2">
               <ColumnVisibilityPanel
@@ -346,6 +343,7 @@ export default function ProductsPage() {
             polywoodSummaries={polywoodSummaries}
             visibleColumns={columnVisibility}
             loading={loading}
+            countText={showingCount}
             canEdit={canManageProducts}
             onEdit={setEditingProduct}
             onClone={canManageProducts ? handleClone : undefined}

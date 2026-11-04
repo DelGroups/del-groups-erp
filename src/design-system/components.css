@@ -11,6 +11,14 @@
   font-size: var(--ds-text-sm);
   line-height: 1.5;
 }
+/* The overlay layer of a scope, directly under <body> (DesignScope, UI-5): same text styles as
+   the scope, no box and no background of its own; its children are fixed-position overlays. */
+[data-ds].ds-layer {
+  position: relative;
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  line-height: 1.5;
+}
 
 [data-ds] .ds-card {
   background: var(--ds-surface);
@@ -167,7 +175,7 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-overlay {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--ds-z-modal);
   background: var(--ds-overlay);
   backdrop-filter: blur(4px);
 }
@@ -247,8 +255,13 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 
 /* ── Menus and popovers (Radix) ── */
 [data-ds] .ds-menu {
-  z-index: 70;
+  z-index: var(--ds-z-dropdown);
   min-width: 14rem;
+  /* Never taller than the room Radix found on the chosen side (it flips to the side with more
+     room); the menu scrolls inside, the page never clips it (UI-5). */
+  max-height: var(--radix-popper-available-height, none);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.375rem;
   background: var(--ds-surface-raised);
   border: 1px solid var(--ds-border);
@@ -273,6 +286,152 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-menu-item:hover,
 [data-ds] a.ds-menu-item:focus-visible {
   background: var(--ds-brand-soft);
+}
+/* Home widget cards (UI-5): their edit tools never leave the card. A narrow card hides the S/M/L
+   buttons (the sizes are in the widget's "…" menu as well). */
+[data-ds] .ds-home-card {
+  container-type: inline-size;
+}
+@container (max-width: 18rem) {
+  [data-ds] .ds-home-card .ds-home-sizes {
+    display: none;
+  }
+}
+
+/* Home "Week over week" (UI-5): a compact delta table from 280px. Figures nowrap at their width,
+   the label takes the rest (max-width: 0 lets the cell shrink and ellipsize); narrow cards hide
+   the previous week column (container query on the card, not the window). */
+[data-ds] .ds-wow {
+  container-type: inline-size;
+  min-width: 0;
+}
+[data-ds] .ds-wow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-wow-table th,
+[data-ds] .ds-wow-table td {
+  padding: 0.375rem 0;
+  white-space: nowrap;
+  text-align: end;
+  vertical-align: middle;
+}
+[data-ds] .ds-wow-table tr > * + * {
+  padding-inline-start: 0.75rem;
+}
+[data-ds] .ds-wow-table thead th {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+}
+[data-ds] .ds-wow-table tbody tr {
+  border-top: 1px solid var(--ds-border);
+}
+[data-ds] .ds-wow-table .ds-wow-label {
+  width: 100%;
+  max-width: 0;
+  text-align: start;
+  font-weight: var(--ds-weight-normal);
+}
+@container (max-width: 22rem) {
+  [data-ds] .ds-wow-table .ds-wow-prev {
+    display: none;
+  }
+}
+
+/* Home "Quick actions" (UI-5): full labels with an icon. Wide card: one-line buttons in as many
+   columns as fit; narrow card (container query): an icon grid, label centred under the icon, two
+   lines at most (the only place a label may take two lines). */
+[data-ds] .ds-quick {
+  container-type: inline-size;
+  min-width: 0;
+}
+[data-ds] .ds-quick-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.5rem;
+}
+[data-ds] .ds-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-weight: var(--ds-weight-medium);
+  text-decoration: none;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-quick-item:hover {
+  background: var(--ds-brand-soft);
+}
+[data-ds] .ds-quick-item:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+[data-ds] .ds-quick-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+}
+[data-ds] .ds-quick-label {
+  min-width: 0;
+  white-space: nowrap;
+}
+@container (max-width: 27rem) {
+  [data-ds] .ds-quick-list {
+    grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
+  }
+  [data-ds] .ds-quick-item {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.375rem;
+    min-height: 5.25rem;
+    padding: 0.625rem 0.375rem;
+    text-align: center;
+  }
+  [data-ds] .ds-quick-label {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    font-size: var(--ds-text-xs);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Row "…" menu (RowActionsMenu, UI-5): icon column, destructive items in the danger colour. */
+[data-ds] .ds-row-menu-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-row-menu-icon > svg {
+  width: 1rem;
+  height: 1rem;
+}
+[data-ds] .ds-menu-item-danger,
+[data-ds] .ds-menu-item-danger .ds-row-menu-icon {
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-menu-item[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 [data-ds] .ds-menu-sep {
   height: 1px;
@@ -338,7 +497,7 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-shell-header {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: var(--ds-z-sticky);
   background: var(--ds-surface);
   border-bottom: 1px solid var(--ds-border);
 }
@@ -363,7 +522,7 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   color: var(--ds-brand-fg);
 }
 [data-ds] .ds-tooltip {
-  z-index: 70;
+  z-index: var(--ds-z-tooltip);
   padding: 0.25rem 0.5rem;
   border-radius: var(--ds-radius-sm);
   background: var(--ds-text);
@@ -523,18 +682,31 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   text-overflow: ellipsis;
 }
 [data-ds] .ds-combobox-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: min(28rem, calc(100vw - 1.5rem));
+  max-height: min(24rem, var(--radix-popper-available-height, 24rem));
+  overflow: hidden;
   padding: 0.25rem;
 }
+/* Search box and "+ create" footer always visible; only the list scrolls. */
+[data-ds] .ds-combobox-panel > [cmdk-root] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
 [data-ds] .ds-combobox-search {
+  flex: 0 0 auto;
   width: 100%;
   height: var(--ds-control-h);
   margin-bottom: 0.25rem;
   border-bottom: 1px solid var(--ds-border);
 }
 [data-ds] .ds-combobox-list {
-  max-height: 16rem;
+  flex: 1 1 auto;
+  min-height: 2.5rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -544,6 +716,7 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   padding: 0.25rem 0.5rem;
 }
 [data-ds] .ds-combobox-footer {
+  flex: 0 0 auto;
   margin-top: 0.25rem;
   padding-top: 0.25rem;
   border-top: 1px solid var(--ds-border);
@@ -791,6 +964,8 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 
 /* ══ DataGrid (UI-2, docs/ui-standard.md "Lists") ═════════════════════════════════════════ */
 [data-ds] .ds-grid-root {
+  contain: inline-size;
+  width: 100%;
   --ds-grid-row-h: 40px;
   --ds-grid-bg: var(--ds-surface);
   --ds-grid-head-bg: var(--ds-surface-sunken);
@@ -834,7 +1009,9 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-grid-bg);
-  overflow: hidden;
+  /* clip, not hidden: hidden makes a scroll container and the sticky header would stick to it
+     instead of the page (UI-5). */
+  overflow: clip;
 }
 /* Edge shadows on the side that hides columns. */
 [data-ds] .ds-grid-frame::before,
@@ -866,12 +1043,52 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-grid-frame:dir(rtl)::after {
   background: linear-gradient(to right, rgb(16 24 40 / 0.14), transparent);
 }
+/* UI-5, docs/ui-standard.md "Page scroll": the body scrolls sideways only, never vertically (the
+   page's one scroller owns that). Its own scrollbar is hidden: the one visible horizontal bar is
+   .ds-grid-hscroll at the bottom of the window. Swipe, trackpad and Shift + wheel still scroll it. */
 [data-ds] .ds-grid-scroll {
-  max-height: var(--ds-grid-max-h, calc(100dvh - 12rem));
-  min-height: calc(var(--ds-grid-row-h) * 3);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-x: contain;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
+}
+[data-ds] .ds-grid-scroll::-webkit-scrollbar {
+  display: none;
+}
+/* The header strip sticks to the top of the page scroller, below a sticky list header
+   (--ds-sticky-top, set by ListPageChrome). */
+[data-ds] .ds-grid-head-wrap {
+  position: sticky;
+  top: var(--ds-sticky-top, 0px);
+  z-index: var(--ds-z-grid-head);
+  overflow: hidden;
+  background: var(--ds-grid-head-bg);
+}
+[data-ds] .ds-grid-head-table thead th {
+  position: relative;
+  top: auto;
+}
+[data-ds] .ds-grid-head-table thead th.is-sticky-start,
+[data-ds] .ds-grid-head-table thead th.is-sticky-end {
+  position: sticky;
+}
+/* Totals and the scrollbar stick to the bottom of the window (above the phone tab bar). */
+[data-ds] .ds-grid-foot {
+  position: sticky;
+  bottom: var(--ds-sticky-bottom, 0px);
+  z-index: var(--ds-z-grid-head);
+  background: var(--ds-grid-head-bg);
+}
+[data-ds] .ds-grid-foot-wrap {
+  overflow: hidden;
+}
+[data-ds] .ds-grid-foot-table tfoot td {
+  position: relative;
+  bottom: auto;
+}
+[data-ds] .ds-grid-foot-table tfoot td.is-sticky-start,
+[data-ds] .ds-grid-foot-table tfoot td.is-sticky-end {
+  position: sticky;
 }
 [data-ds] .ds-grid-scroll:focus-visible {
   box-shadow: inset var(--ds-focus-ring);
@@ -1121,17 +1338,11 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 }
 /* Floating scrollbar at the bottom of the window while the grid's own one is below it. */
 [data-ds] .ds-grid-hscroll {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
   height: 14px;
-  margin-top: -0.5rem;
   overflow-x: auto;
   overflow-y: hidden;
   background: var(--ds-surface);
-}
-[data-ds] .ds-grid-hscroll[hidden] {
-  display: none;
+  border-top: 1px solid var(--ds-border);
 }
 [data-ds] .ds-grid-footer {
   min-width: 0;
@@ -1144,6 +1355,15 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 /* ══ LineGrid (UI-3, docs/ui-standard.md "Line grids") ═══════════════════════════════════ */
 [data-ds] .ds-line-grid {
   --ds-control-h: calc(var(--ds-grid-row-h) - 4px);
+}
+/* A line grid (document lines) has no separate scrollbar strip: its own horizontal scrollbar stays
+   visible under the "Cəmi" row (UI-5). The lines flow with the page; nothing scrolls vertically. */
+[data-ds] .ds-line-grid .ds-grid-scroll {
+  scrollbar-width: thin;
+}
+[data-ds] .ds-line-grid .ds-grid-scroll::-webkit-scrollbar {
+  display: block;
+  height: 10px;
 }
 [data-ds] .ds-line-grid .ds-grid th,
 [data-ds] .ds-line-grid .ds-grid td {
@@ -1351,13 +1571,13 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 }
 /* Details drawer: the optional fields of one line. */
 [data-ds] .ds-line-drawer-overlay {
-  z-index: 90;
+  z-index: calc(var(--ds-z-modal-nested) + 3);
 }
 [data-ds] .ds-line-drawer {
   position: fixed;
   inset-block: 0;
   inset-inline-end: 0;
-  z-index: 91;
+  z-index: calc(var(--ds-z-modal-nested) + 4);
   display: flex;
   flex-direction: column;
   width: min(26rem, 100vw);
@@ -1432,12 +1652,12 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 }
 /* Quick-create dialog: above classic modals (z 70) and drawers (z 50). */
 [data-ds] .ds-lookup-overlay {
-  z-index: 100;
+  z-index: calc(var(--ds-z-modal-nested) + 8);
 }
 [data-ds] .ds-lookup-dialog {
   position: fixed;
   inset: 0;
-  z-index: 101;
+  z-index: calc(var(--ds-z-modal-nested) + 9);
   width: calc(100% - 2rem);
   max-width: 32rem;
   height: fit-content;
@@ -1445,4 +1665,33 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   margin: auto;
   overflow-y: auto;
   padding: 1.25rem;
+}
+
+/* KPI cards of a module dashboard (UI-5): two per row on a phone, four from 80rem. A narrow card
+   drops its sparkline and hint and uses a smaller figure, so the list below stays near the top. */
+[data-ds] .ds-kpi-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 80rem) {
+  [data-ds] .ds-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+[data-ds] .ds-kpi {
+  container-type: inline-size;
+  min-width: 0;
+}
+[data-ds] .ds-kpi-value {
+  overflow-wrap: anywhere;
+}
+@container (max-width: 14rem) {
+  [data-ds] .ds-kpi-series,
+  [data-ds] .ds-kpi-hint {
+    display: none;
+  }
+  [data-ds] .ds-kpi-value {
+    font-size: var(--ds-text-xl);
+  }
 }

@@ -162,9 +162,21 @@ html[data-ui-standard] [data-ds] .ds-chip:not(:has(> *)) {
   text-overflow: ellipsis;
 }
 
-/* Legacy badges (src/components/ui/badge.tsx, status-badge.tsx). */
+/* Figures (UI-5): one font family on every screen. Amounts, counts and percentages keep tabular
+   figures (columns of numbers still line up) but no longer switch to a monospace font. */
+html[data-ui-standard] [data-ds] .ds-mono {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Legacy badges (src/components/ui/badge.tsx, status-badge.tsx). Sentence case like every chip
+   and header of the standard (UI-5): uppercase, bold and letter-spaced labels were wider than
+   the column sized for them, so statuses were cut in lists. */
 html[data-ui-standard] .ui-pill {
   justify-content: center;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: var(--ds-weight-semibold);
   max-width: min(var(--ds-chip-max), 100%);
   white-space: nowrap;
   vertical-align: middle;

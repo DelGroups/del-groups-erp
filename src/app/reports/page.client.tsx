@@ -120,7 +120,7 @@ export default function ReportsHubPage() {
         }
       />
 
-      <main className="app-page-content flex-1 space-y-4 overflow-y-auto">
+      <main className="app-page-content flex-1 space-y-4">
         {loading ? (
           <Card className="text-center text-sm text-app-muted">
             <div className="py-7">{t("common.loading")}</div>

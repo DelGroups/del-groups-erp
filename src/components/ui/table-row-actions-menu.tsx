@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/i18n/I18nProvider";
+import { RowActionsMenu, useDesignScope } from "@/design-system/components";
 
 export type TableRowActionVariant = "default" | "destructive";
 
@@ -56,7 +57,7 @@ function useFloatingMenuPosition(
       top: resolvedTop,
       left,
       minWidth: MENU_MIN_WIDTH,
-      zIndex: 10050,
+      zIndex: "var(--ds-z-dropdown)" as unknown as number,
       visibility: "visible",
     });
   }, [align, triggerRef]);
@@ -75,7 +76,26 @@ function useFloatingMenuPosition(
   return style;
 }
 
-export function TableRowActionsMenu({
+/**
+ * A list row's "…" menu. Inside a design scope (every list on DataGrid / ListGrid, UI-5) it is the
+ * one RowActionsMenu of the system (keyboard, typeahead, portalled to the top layer); classic
+ * tables outside a scope keep the menu below.
+ */
+export function TableRowActionsMenu(props: TableRowActionsMenuProps) {
+  const { t } = useI18n();
+  const { portalContainer } = useDesignScope();
+  if (!portalContainer) return <ClassicTableRowActionsMenu {...props} />;
+  return (
+    <RowActionsMenu
+      label={props.menuLabel ?? t("common.actions")}
+      items={props.items
+        .filter((item) => !item.hidden)
+        .map((item) => ({ key: item.key, label: item.label, icon: item.icon, onSelect: item.onClick, disabled: item.disabled, destructive: item.variant === "destructive" }))}
+    />
+  );
+}
+
+function ClassicTableRowActionsMenu({
   items,
   align = "right",
   className,

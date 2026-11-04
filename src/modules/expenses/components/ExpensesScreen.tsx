@@ -7,7 +7,7 @@ import { useToast } from "@/design-system/components";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
 import {
   approveExpenseAction,
   cancelExpenseAction,
@@ -80,6 +80,7 @@ export default function ExpensesScreen() {
           ) : null
         }
         recordTitle={(r) => r.code}
+        rowActions={(r) => expenseRowActions(r, t, can)}
         renderRecord={(r, { close }) => (
           <ExpenseRecordView
             record={r}
@@ -94,6 +95,35 @@ export default function ExpensesScreen() {
       {form && options.data ? <ExpenseFormModal options={options.data} initial={form.initial} saving={saving} onClose={() => setForm(null)} onSubmit={(input) => void save(input)} /> : null}
     </>
   );
+}
+
+/**
+ * The row "…" menu of the expense list (UI-5): the classic row menu, with the same conditions as
+ * ExpenseRecordView's form, which runs the picked action (?do=). Reimbursing needs the full
+ * document, so the form decides that one (it is offered while the expense is approved or posted).
+ */
+function expenseRowActions(r: ExpenseRecord, t: (key: string, params?: Record<string, string | number>) => string, can: ReturnType<typeof useAuth>["can"]): RowActionSpec[] {
+  const canManage = can("can_manage_expenses");
+  const canFinance = can("can_manage_finance");
+  const byEmployee = r.payment_mode === "employee";
+  const open = r.status === "draft" || r.status === "submitted";
+  const icon = (C: typeof Ban) => <C className="h-4 w-4" />;
+  return [
+    { key: "edit", label: t("common.edit"), icon: icon(PencilLine), hidden: !(open && canManage) },
+    { key: "submit", label: t("expenses.doc.sendForApproval"), icon: icon(Send), hidden: !(r.status === "draft" && canManage) },
+    { key: "post", label: t("expenses.doc.post"), icon: icon(Check), hidden: !(r.status === "draft" && !byEmployee && canManage) },
+    { key: "approve", label: byEmployee ? t("expenses.doc.approve") : t("expenses.doc.approveAndPay"), icon: icon(CheckCircle2), hidden: !(r.status === "submitted" && canFinance) },
+    { key: "reject", label: t("expenses.doc.reject"), icon: icon(XCircle), hidden: !(r.status === "submitted" && canFinance) },
+    { key: "reimburse", label: t("expenses.doc.reimburse"), icon: icon(Wallet), hidden: !(byEmployee && canFinance && (r.status === "approved" || r.status === "posted")) },
+    { key: "attachments", label: t("expenses.doc.attachmentsAction", { count: r.attachment_count }), icon: icon(Paperclip) },
+    {
+      key: "cancel",
+      label: t("expenses.doc.cancelExpense"),
+      icon: icon(Ban),
+      destructive: true,
+      hidden: !(r.status !== "cancelled" && !r.is_production && canManage && !((r.status === "approved" || (r.status === "posted" && byEmployee)) && !canFinance)),
+    },
+  ];
 }
 
 type Step = "reject" | "cancel" | "reimburse" | null;

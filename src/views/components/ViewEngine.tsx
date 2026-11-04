@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, Inbox, Lock, SearchX } from "lucide-react";
-import { EmptyState, SkeletonList, useDesignScope, useUiStandard } from "@/design-system/components";
+import { EmptyState, SkeletonList, useDesignScope, useUiStandard, type RowMenuItem } from "@/design-system/components";
+import { rowMenu, type RowActionSpec } from "../rowActions";
 import { ColumnPicker, ColumnPickerPanel } from "@/components/lists/ColumnPicker";
 import { useColumnPrefs } from "@/components/lists/useColumnPrefs";
 import { useListColumnsEnabled } from "@/components/lists/ListColumnsFlag";
@@ -31,6 +32,10 @@ export interface ViewEngineProps<R extends ViewRecord> {
   onMove?: (record: R, value: string) => void;
   /** Create button and other screen actions. */
   actions?: React.ReactNode;
+  /** The "…" menu of each list row (UI-5): the record's FormView actions, see views/rowActions.ts. */
+  rowActions?: (record: R) => readonly RowActionSpec[];
+  /** A module's own row menu component instead (it brings its dialogs). */
+  renderRowActions?: (record: R) => React.ReactNode;
   /**
    * Filters applied from outside (dashboard cards): each new `id` replaces the active filters
    * and shows the list.
@@ -43,7 +48,7 @@ export interface ViewEngineProps<R extends ViewRecord> {
  * graph or calendar), all fed by the same searched and filtered records. The user's default
  * favourite is applied when it loads, unless they already changed the search.
  */
-export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions, preset }: ViewEngineProps<R>) {
+export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions, preset, rowActions, renderRowActions }: ViewEngineProps<R>) {
   const def = data.definition;
   const favorites = useFavorites(def, data.status === "ready");
   const [touched, setTouched] = useState<SearchState | null>(null);
@@ -97,6 +102,9 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
         columnsMenu: pickerProps ? <ColumnPickerPanel variant="ds" {...pickerProps} /> : undefined,
       }
     : undefined;
+  // UI-5: each row's "…" menu — "View", then the record's FormView actions as ?do= links.
+  const viewLabel = fmt.t("common.view");
+  const menuOf = rowActions ? (r: R) => rowMenu(openHref?.(r), rowActions(r), viewLabel) as RowMenuItem[] : undefined;
 
   // All searched and filtered rows (not a page), in the columns the user sees.
   const exportExcel = () =>
@@ -141,7 +149,7 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   else if (state.view === "pivot" && def.pivot) body = <PivotView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "graph" && def.graph) body = <GraphView definition={def} records={sorted} fmt={fmt} />;
   else if (state.view === "calendar" && def.calendar) body = <CalendarView definition={def} records={sorted} openHref={openHref ?? noHref} fmt={fmt} />;
-  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} columns={shown} picker={picker} listColumns={listColumns} grid={grid} />;
+  else body = <ListView definition={def} records={sorted} groupBy={state.groupBy} sort={state.sort} onSort={(sort) => setTouched({ ...state, sort })} openHref={openHref} fmt={fmt} columns={shown} picker={picker} listColumns={listColumns} grid={grid} rowActions={menuOf} renderRowActions={renderRowActions} />;
 
   return (
     <div className="flex flex-col gap-4">

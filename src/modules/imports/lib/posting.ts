@@ -15,6 +15,16 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000;
 export type PostingAction = "confirm" | "receive" | "addCost" | "pay" | "close" | "reopen" | "cancel";
 
 /** Which buttons a shipment in this status shows (permissions are checked separately). */
+/**
+ * How a shipment is taken back (UI-5): a draft with nothing posted is deleted (with its lines and
+ * costs); a prepaid draft and anything confirmed are cancelled with a reason, which reverses their
+ * entries; closed and cancelled shipments neither (a closed one is reopened first).
+ */
+export function removalFor(status: ShipmentStatus, hasPrepayment: boolean): "delete" | "cancel" | null {
+  if (status === "draft") return hasPrepayment ? "cancel" : "delete";
+  return actionsFor(status).includes("cancel") ? "cancel" : null;
+}
+
 export function actionsFor(status: ShipmentStatus): PostingAction[] {
   switch (status) {
     case "draft":
@@ -327,6 +337,8 @@ export const POSTING_ERROR_CODES = [
   "fx_required",
   "prepayment_exceeds",
   "prepay_draft_only",
+  "delete_draft_only",
+  "delete_has_postings",
 ] as const;
 
 /** A new pay split row. */

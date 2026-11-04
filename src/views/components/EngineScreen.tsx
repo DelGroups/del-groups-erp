@@ -10,6 +10,7 @@ import { KpiCards, type Kpi } from "./KpiCards";
 import { RecordPanel } from "./RecordPanel";
 import { useFilterContext, useFormatter, ViewScope } from "./ViewScope";
 import { ViewEngine } from "./ViewEngine";
+import type { RowActionSpec } from "../rowActions";
 
 export const RECORD_PARAM = "record";
 
@@ -22,6 +23,10 @@ export interface EngineScreenProps<R extends ViewRecord> {
   dashboard?: (records: readonly R[], fmt: Formatter) => React.ReactNode;
   /** Create button and other screen actions. */
   actions?: React.ReactNode;
+  /** The "…" menu of each list row (UI-5): the record's FormView actions, see views/rowActions.ts. */
+  rowActions?: (record: R) => readonly RowActionSpec[];
+  /** A module's own row menu component instead (it brings its dialogs), e.g. the ledger's. */
+  renderRowActions?: (record: R) => React.ReactNode;
   /** A record's own page; without it records open in a side panel (`?record=<id>`). */
   openHref?: (record: R) => string;
   /** Side panel content of the open record (usually a FormView with the module's actions). */
@@ -50,7 +55,7 @@ export function EngineScreen<R extends ViewRecord>(props: EngineScreenProps<R>) 
   );
 }
 
-function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashboard, actions, openHref, renderRecord, recordTitle, onMove, header, data: given }: EngineScreenProps<R>) {
+function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashboard, actions, openHref, renderRecord, recordTitle, onMove, header, data: given, rowActions, renderRowActions }: EngineScreenProps<R>) {
   const fmt = useFormatter();
   const ctx = useFilterContext();
   const router = useRouter();
@@ -75,7 +80,7 @@ function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashb
       {header}
       {cards.length ? <KpiCards kpis={cards} label={fmt.t("views.dashboard")} onFilter={(filters) => setPreset((p) => ({ id: (p?.id ?? 0) + 1, filters }))} /> : null}
       {dashboard && data.status === "ready" && data.records.length ? dashboard(data.records, fmt) : null}
-      <ViewEngine data={data} title={title} fmt={fmt} ctx={ctx} preset={preset} openHref={href} onMove={onMove} actions={actions} />
+      <ViewEngine data={data} title={title} fmt={fmt} ctx={ctx} preset={preset} openHref={href} onMove={onMove} actions={actions} rowActions={rowActions} renderRowActions={renderRowActions} />
       {renderRecord ? (
         <RecordPanel open={!!open} onClose={close} title={open ? (recordTitle?.(open) ?? title) : title} closeLabel={fmt.t("common.close")}>
           {open ? renderRecord(open, { close, data }) : null}

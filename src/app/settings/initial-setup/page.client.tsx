@@ -85,7 +85,7 @@ export default function InitialSetupPage() {
       <PermissionGuard permission="can_view_settings">
         <SettingsTabs activeTab="initial-setup" />
 
-        <div className="flex-1 overflow-y-auto bg-app p-6">
+        <div className="bg-app p-6">
           <div className="mx-auto max-w-5xl space-y-6">
             <header>
               <h1 className="text-xl font-bold text-app">{t("initialSetup.title")}</h1>

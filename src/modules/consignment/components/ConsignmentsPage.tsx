@@ -442,7 +442,7 @@ export default function ConsignmentsPage() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         {error && (
           <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}

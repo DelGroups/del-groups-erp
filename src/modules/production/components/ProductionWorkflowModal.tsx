@@ -172,7 +172,7 @@ export default function ProductionWorkflowModal({
   const modalWidth = phase === "In-Progress" ? "max-w-5xl" : "max-w-3xl";
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center app-scrim p-4">
+    <div className="fixed inset-0 z-[var(--ds-z-modal-nested)] flex items-center justify-center app-scrim p-4">
       <div className={`app-modal flex max-h-[90vh] w-full ${modalWidth} flex-col overflow-hidden`}>
         <div className="flex items-center justify-between border-b border-app px-4 py-3">
           <div>

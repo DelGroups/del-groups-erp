@@ -26,16 +26,7 @@ export interface TableColumn<Row> extends FlaggedColumnDef {
   gridSamples?: readonly string[];
 }
 
-/** DataGrid width class of a classic column: explicit, else from its Excel type, numeric flag or key. */
-export function classicGridType(c: Pick<TableColumn<unknown>, "gridType" | "numeric" | "exportType" | "key">): GridColumnType {
-  if (c.gridType) return c.gridType;
-  if (c.exportType === "date") return "date";
-  if (c.exportType === "datetime") return "datetime";
-  if (c.numeric) return c.exportType === "number" ? "number" : "money";
-  if (/status/.test(c.key)) return "status";
-  if (/^(doc_no|number|code|slip_no)$/.test(c.key)) return "code";
-  return "text";
-}
+export { classicGridType } from "./gridType";
 
 export interface ShownColumn<Row> extends TableColumn<Row> {
   /** Translated header. */

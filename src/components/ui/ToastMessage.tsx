@@ -19,7 +19,7 @@ export default function ToastMessage({ message, variant = "error" }: ToastMessag
   return (
     <div
       role="alert"
-      className={`fixed bottom-4 right-4 z-[100] rounded-xl px-4 py-3 text-xs font-semibold text-white shadow-lg ${tone}`}
+      className={`fixed bottom-4 right-4 z-[var(--ds-z-toast)] rounded-xl px-4 py-3 text-xs font-semibold text-white shadow-lg ${tone}`}
     >
       {message}
     </div>

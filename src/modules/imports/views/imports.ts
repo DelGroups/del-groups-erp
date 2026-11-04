@@ -19,6 +19,8 @@ export interface ShipmentRecord extends ViewRecord {
   invoice_date: string | null;
   customs_declaration_date: string | null;
   line_count: number;
+  /** A supplier prepayment was posted on it (UI-5: then it is cancelled, not deleted). */
+  has_prepayment: boolean;
   goods_fc: number | null;
   goods_azn: number | null;
   costs_azn: number | null;
@@ -45,6 +47,7 @@ export function shipmentToRecord(row: Record<string, unknown>): ShipmentRecord {
     invoice_date: str(row.invoice_date),
     customs_declaration_date: str(row.customs_declaration_date),
     line_count: num(row.line_count) ?? 0,
+    has_prepayment: row.has_prepayment === true,
     goods_fc: num(row.goods_fc),
     goods_azn: num(row.goods_azn),
     costs_azn: num(row.costs_azn),

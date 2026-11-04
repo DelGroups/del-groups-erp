@@ -253,7 +253,7 @@ function selectors(css) {
   const out = [];
   for (const m of body.matchAll(/([^{}@;]+)\{/g)) {
     const sel = m[1].trim();
-    if (!sel || /^(from|to|\d+%)/.test(sel) || /^(media|keyframes|supports)\b/.test(sel)) continue;
+    if (!sel || /^(from|to|\d+%)/.test(sel) || /^(media|keyframes|supports|container)\b/.test(sel)) continue;
     out.push(...sel.split(",").map((s) => s.trim()).filter(Boolean));
   }
   return out;

@@ -38,7 +38,7 @@ export function ImportDialog({ open, onOpenChange, title, description, closeLabe
         </Dialog.Overlay>
         <Dialog.Content asChild>
           <motion.div
-            className={`ds-panel fixed left-1/2 top-1/2 z-[61] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain p-6 ${wide ? "max-w-5xl" : "max-w-lg"}`}
+            className={`ds-panel fixed left-1/2 top-1/2 z-[var(--ds-z-modal-content)] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain p-6 ${wide ? "max-w-5xl" : "max-w-lg"}`}
             variants={motionPreset(panelVariants, reduced)}
             initial="initial"
             animate="enter"

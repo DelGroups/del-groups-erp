@@ -9,9 +9,10 @@ import {
   GRID_ROW_HEIGHT,
   SELECT_COLUMN_WIDTH,
   distributeSurplus,
+  columnAlign,
   edgeShadows,
   fitWidth,
-  floatingScrollbar,
+  hasHorizontalOverflow,
   horizontalWheelDelta,
   nextRowIndex,
   resizeWidth,
@@ -162,13 +163,20 @@ export function DataGrid<R>(props: DataGridProps<R>) {
     className,
   } = props;
   const items = useMemo<readonly GridItem<R>[]>(() => givenItems ?? (rows ?? []).map((row) => ({ kind: "row" as const, row })), [givenItems, rows]);
+  // The body scrolls sideways only (UI-5): the page's one scroller owns vertical scrolling. The
+  // header and the totals are their own tables in sticky strips that follow the body sideways,
+  // and the one visible horizontal scrollbar sits at the bottom of the window (bar).
   const scroller = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const headWrap = useRef<HTMLDivElement>(null);
+  const headTable = useRef<HTMLTableElement>(null);
+  const footWrap = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
   const table = useRef<HTMLTableElement>(null);
-  const floating = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(0);
   const [drag, setDrag] = useState<{ key: string; width: number } | null>(null);
   const [shadows, setShadows] = useState({ start: false, end: false });
-  const [showFloating, setShowFloating] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
   const [scrollWidth, setScrollWidth] = useState(0);
   const [focused, setFocused] = useState(-1);
 
@@ -185,7 +193,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
   const firstStart = withSelect ? SELECT_COLUMN_WIDTH : 0;
   const rowHeight = GRID_ROW_HEIGHT[density];
 
-  // Width of the box (for the surplus), the edge shadows and the floating scrollbar.
+  // Width of the box (for the surplus), the edge shadows and whether it scrolls sideways.
   const measure = useCallback(() => {
     const el = scroller.current;
     if (!el) return;
@@ -194,7 +202,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
       return prev.start === next.start && prev.end === next.end ? prev : next;
     });
     setScrollWidth(el.scrollWidth);
-    setShowFloating(floatingScrollbar(el.getBoundingClientRect(), window.innerHeight, el));
+    setOverflowing(hasHorizontalOverflow(el));
   }, []);
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -209,49 +217,41 @@ export function DataGrid<R>(props: DataGridProps<R>) {
   useEffect(() => {
     measure();
   }, [measure, total, items.length]);
-  useEffect(() => {
-    window.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-    };
-  }, [measure]);
 
-  // Shift + wheel scrolls sideways (trackpads scroll sideways on their own).
+  // Header, totals and the bar follow the body sideways (and the bar moves the body).
+  const syncFrom = useCallback((source: HTMLElement) => {
+    const x = source.scrollLeft;
+    for (const el of [scroller.current, headWrap.current, footWrap.current, bar.current]) {
+      if (el && el !== source && el.scrollLeft !== x) el.scrollLeft = x;
+    }
+  }, []);
+  const onScroll = () => {
+    if (scroller.current) syncFrom(scroller.current);
+    measure();
+  };
+  const onBarScroll = () => {
+    if (bar.current) syncFrom(bar.current);
+  };
+
+  // Sideways wheel anywhere on the grid (header and totals too): a trackpad's own horizontal
+  // movement, or Shift + wheel. A plain wheel scrolls the page.
   useEffect(() => {
-    const el = scroller.current;
+    const el = frame.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (!e.shiftKey || e.deltaX !== 0) return;
+      const body = scroller.current;
+      if (!body) return;
       const delta = horizontalWheelDelta(e);
-      if (!delta || el.scrollWidth <= el.clientWidth) return;
+      if (!delta || !hasHorizontalOverflow(body)) return;
+      // The body handles its own trackpad scroll natively; elsewhere (header, totals) we move it.
+      if (!e.shiftKey && body.contains(e.target as Node)) return;
       e.preventDefault();
-      const rtl = getComputedStyle(el).direction === "rtl";
-      el.scrollLeft += rtl ? -delta : delta;
+      const rtl = getComputedStyle(body).direction === "rtl";
+      body.scrollLeft += rtl ? -delta : delta;
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
-
-  // The floating scrollbar and the grid scroll together.
-  const syncing = useRef(false);
-  const onScroll = () => {
-    const el = scroller.current;
-    if (el && floating.current && !syncing.current) {
-      syncing.current = true;
-      floating.current.scrollLeft = el.scrollLeft;
-      syncing.current = false;
-    }
-    measure();
-  };
-  const onFloatingScroll = () => {
-    if (scroller.current && floating.current && !syncing.current) {
-      syncing.current = true;
-      scroller.current.scrollLeft = floating.current.scrollLeft;
-      syncing.current = false;
-    }
-  };
 
   // Full text as a tooltip, only on a cell that is really cut.
   const onPointerOver = (e: React.PointerEvent) => {
@@ -292,7 +292,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
     const el = table.current;
     if (!el) return;
     const cells = [...el.querySelectorAll<HTMLElement>(`td[data-col="${CSS.escape(col.key)}"] .ds-grid-cell`)].map((c) => c.scrollWidth);
-    const head = el.querySelector<HTMLElement>(`th[data-col="${CSS.escape(col.key)}"] .ds-grid-head-text`);
+    const head = headTable.current?.querySelector<HTMLElement>(`th[data-col="${CSS.escape(col.key)}"] .ds-grid-head-text`);
     onWidthChange?.(col.key, fitWidth(col.type ?? "text", cells, head?.scrollWidth ?? 0));
   };
   const keyResize = (col: GridColumn<R>) => (e: React.KeyboardEvent<HTMLSpanElement>) => {
@@ -331,12 +331,13 @@ export function DataGrid<R>(props: DataGridProps<R>) {
   const { portalContainer } = useDesignScope();
   const stickyFirst = (extra = "") => `is-sticky-start is-sticky-last ${extra}`;
   const firstStyle: React.CSSProperties = { insetInlineStart: firstStart };
-  const align = (c: GridColumn<R>) => (c.type === "number" || c.type === "money" ? "is-num" : "");
+  // One rule (grid.ts columnAlign): numbers and money at the end, everything else at the start.
+  const align = (c: GridColumn<R>) => (columnAlign(c.type) === "end" ? "is-num" : "");
 
   const headerRow = (
-    <tr>
+    <tr role="row">
       {withSelect ? (
-        <th scope="col" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }}>
+        <th role="columnheader" scope="col" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }}>
           <SelectBox checked={selection!.allSelected} indeterminate={selection!.someSelected} onChange={selection!.toggleAll} label={labels.selectAll} />
         </th>
       ) : null}
@@ -349,6 +350,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
         );
         return (
           <th
+            role="columnheader"
             key={c.key}
             scope="col"
             data-col={c.key}
@@ -382,7 +384,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
         );
       })}
       {withActions ? (
-        <th scope="col" className="ds-grid-actions is-sticky-end">
+        <th role="columnheader" scope="col" className="ds-grid-actions is-sticky-end">
           <span className="sr-only">{labels.actions}</span>
         </th>
       ) : null}
@@ -394,6 +396,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
     const selected = selection?.isSelected(r) ?? false;
     return (
       <tr
+        role="row"
         key={rowKey(r)}
         ref={(el) => {
           if (el) rowEls.current.set(index, el);
@@ -410,12 +413,12 @@ export function DataGrid<R>(props: DataGridProps<R>) {
         }}
       >
         {withSelect ? (
-          <td className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }}>
+          <td role="cell" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }}>
             <SelectBox checked={selected} onChange={() => selection!.toggle(r)} label={labels.selectRow} />
           </td>
         ) : null}
         {columns.map((c, i) => (
-          <td key={c.key} data-col={c.key} className={[i === 0 ? stickyFirst() : "", align(c)].join(" ")} style={i === 0 ? firstStyle : undefined}>
+          <td role="cell" key={c.key} data-col={c.key} className={[i === 0 ? stickyFirst() : "", align(c)].join(" ")} style={i === 0 ? firstStyle : undefined}>
             <div
               className={["ds-grid-cell", c.className ?? ""].join(" ")}
               data-ui-truncate=""
@@ -433,7 +436,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
           </td>
         ))}
         {withActions ? (
-          <td className="ds-grid-actions is-sticky-end" data-grid-stop="">
+          <td role="cell" className="ds-grid-actions is-sticky-end" data-grid-stop="">
             <div className="ds-grid-actions-inner">{rowActions!(r)}</div>
           </td>
         ) : null}
@@ -443,6 +446,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
 
   const renderGroup = (item: Extract<GridItem<R>, { kind: "group" }>, index: number) => (
     <tr
+        role="row"
       key={`group:${item.key}`}
       className="ds-grid-group"
       ref={(el) => {
@@ -453,10 +457,10 @@ export function DataGrid<R>(props: DataGridProps<R>) {
       aria-expanded={item.expanded}
       onFocus={() => setFocused(index)}
     >
-      {withSelect ? <td className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
+      {withSelect ? <td role="cell" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
       {columns.map((c, i) =>
         i === 0 ? (
-          <th key={c.key} scope="rowgroup" className={stickyFirst()} style={firstStyle}>
+          <th role="rowheader" key={c.key} scope="rowgroup" className={stickyFirst()} style={firstStyle}>
             <button type="button" className="ds-grid-group-toggle" aria-expanded={item.expanded} onClick={item.onToggle} style={{ paddingInlineStart: `${item.depth * 1.25}rem` }}>
               <ChevronRight className="ds-grid-chevron" aria-hidden data-open={item.expanded ? "" : undefined} />
               <span className="ds-grid-cell" data-ui-check="single-line" data-ui-truncate="">
@@ -465,37 +469,49 @@ export function DataGrid<R>(props: DataGridProps<R>) {
             </button>
           </th>
         ) : (
-          <td key={c.key} data-col={c.key} className={align(c)}>
+          <td role="cell" key={c.key} data-col={c.key} className={align(c)}>
             <div className="ds-grid-cell" data-ui-truncate="">
               {item.cells?.[c.key] ?? null}
             </div>
           </td>
         )
       )}
-      {withActions ? <td className="ds-grid-actions is-sticky-end" /> : null}
+      {withActions ? <td role="cell" className="ds-grid-actions is-sticky-end" /> : null}
     </tr>
   );
 
   const colCount = columns.length + (withSelect ? 1 : 0) + (withActions ? 1 : 0);
   const body = loading
     ? Array.from({ length: 8 }, (_, i) => (
-        <tr key={`sk${i}`} aria-hidden>
-          {withSelect ? <td className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
+        <tr role="row" key={`sk${i}`} aria-hidden>
+          {withSelect ? <td role="cell" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
           {columns.map((c, j) => (
-            <td key={c.key} className={j === 0 ? stickyFirst() : ""} style={j === 0 ? firstStyle : undefined}>
+            <td role="cell" key={c.key} className={j === 0 ? stickyFirst() : ""} style={j === 0 ? firstStyle : undefined}>
               <Skeleton className="h-3" style={{ width: `${55 + ((i * 7 + j * 13) % 40)}%` }} />
             </td>
           ))}
-          {withActions ? <td className="ds-grid-actions is-sticky-end" /> : null}
+          {withActions ? <td role="cell" className="ds-grid-actions is-sticky-end" /> : null}
         </tr>
       ))
     : items.length
       ? items.map((item, i) => (item.kind === "group" ? renderGroup(item, i) : renderRow(item, i)))
       : [
-          <tr key="empty" className="ds-grid-empty">
-            <td colSpan={colCount}>{empty}</td>
+          <tr role="row" key="empty" className="ds-grid-empty">
+            <td role="cell" colSpan={colCount}>{empty}</td>
           </tr>,
         ];
+
+  const showTotals = !!totals && items.length > 0 && !loading;
+  // One colgroup for the header, body and totals tables, so their columns line up to the pixel.
+  const colgroup = (
+    <colgroup>
+      {withSelect ? <col style={{ width: SELECT_COLUMN_WIDTH }} /> : null}
+      {columns.map((c) => (
+        <col key={c.key} style={{ width: widths[c.key] }} />
+      ))}
+      {withActions ? <col style={{ width: actionsWidth }} /> : null}
+    </colgroup>
+  );
 
   const hasToolbar = toolbarStart || count || onExport || columnsMenu || onDensityChange;
   return (
@@ -525,7 +541,7 @@ export function DataGrid<R>(props: DataGridProps<R>) {
                   <IconButton label={labels.columns} icon={<Columns3Cog className="h-4 w-4" />} />
                 </Popover.Trigger>
                 <Popover.Portal container={portalContainer ?? undefined}>
-                  <Popover.Content align="end" sideOffset={6} collisionPadding={12} className="z-[70] outline-none">
+                  <Popover.Content align="end" sideOffset={6} collisionPadding={12} className="z-[var(--ds-z-dropdown)] outline-none">
                     <motion.div className="ds-panel w-72 p-3" initial="initial" animate="enter" variants={motionPreset(panelVariants, reduced)}>
                       {columnsMenu}
                     </motion.div>
@@ -537,48 +553,64 @@ export function DataGrid<R>(props: DataGridProps<R>) {
         </div>
       ) : null}
 
-      <div className="ds-grid-frame" data-shadow-start={shadows.start ? "" : undefined} data-shadow-end={shadows.end ? "" : undefined}>
-        <div ref={scroller} className="ds-grid-scroll" onScroll={onScroll} role="region" aria-label={label} tabIndex={-1}>
-          <table
-            ref={table}
-            className="ds-grid"
-            data-col-resize="manual"
-            aria-label={label}
-            aria-busy={loading || undefined}
-            aria-rowcount={loading ? undefined : items.length + 1}
-            style={{ width: total }}
-          >
-            <colgroup>
-              {withSelect ? <col style={{ width: SELECT_COLUMN_WIDTH }} /> : null}
-              {columns.map((c) => (
-                <col key={c.key} style={{ width: widths[c.key] }} />
-              ))}
-              {withActions ? <col style={{ width: actionsWidth }} /> : null}
-            </colgroup>
-            <thead>{headerRow}</thead>
-            <tbody onKeyDown={onBodyKeyDown} onPointerOver={onPointerOver}>
-              {body}
-            </tbody>
-            {totals && items.length && !loading ? (
-              <tfoot>
-                <tr>
-                  {withSelect ? <td className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
-                  {columns.map((c, i) => (
-                    <td key={c.key} data-col={c.key} className={[i === 0 ? stickyFirst() : "", align(c)].join(" ")} style={i === 0 ? firstStyle : undefined}>
-                      <div className="ds-grid-cell" data-ui-truncate="">
-                        {i === 0 && totals[c.key] === undefined ? labels.total : totals[c.key] ?? null}
-                      </div>
-                    </td>
-                  ))}
-                  {withActions ? <td className="ds-grid-actions is-sticky-end" /> : null}
-                </tr>
-              </tfoot>
-            ) : null}
+      {/* One table for assistive tech (role="table" on the frame, rowgroups in it); three native
+          tables for layout, sharing one colgroup, so the header and totals can stick to the page
+          scroller while the body scrolls sideways. */}
+      <div
+        ref={frame}
+        className="ds-grid-frame"
+        role="table"
+        aria-label={label}
+        aria-busy={loading || undefined}
+        aria-rowcount={loading ? undefined : items.length + 1}
+        data-shadow-start={shadows.start ? "" : undefined}
+        data-shadow-end={shadows.end ? "" : undefined}
+      >
+        <div ref={headWrap} className="ds-grid-head-wrap">
+          <table ref={headTable} role="presentation" className="ds-grid ds-grid-head-table" data-col-resize="manual" style={{ width: total }}>
+            {colgroup}
+            <thead role="rowgroup">{headerRow}</thead>
           </table>
         </div>
-      </div>
-      <div ref={floating} className="ds-grid-hscroll" hidden={!showFloating} onScroll={onFloatingScroll} aria-hidden>
-        <div style={{ width: scrollWidth, height: 1 }} />
+        <div ref={scroller} className="ds-grid-scroll" onScroll={onScroll} tabIndex={-1} data-ui-hscroll="">
+          <table ref={table} role="presentation" className="ds-grid" data-col-resize="manual" style={{ width: total }}>
+            {colgroup}
+            <tbody role="rowgroup" onKeyDown={onBodyKeyDown} onPointerOver={onPointerOver}>
+              {body}
+            </tbody>
+          </table>
+        </div>
+        {/* Totals and the one horizontal scrollbar stick to the bottom of the window while the
+            grid is in view; at the end of the grid they rest under the last row. */}
+        {showTotals || overflowing ? (
+          <div className="ds-grid-foot">
+            {showTotals ? (
+              <div ref={footWrap} className="ds-grid-foot-wrap">
+                <table role="presentation" className="ds-grid ds-grid-foot-table" data-col-resize="manual" style={{ width: total }}>
+                  {colgroup}
+                  <tfoot role="rowgroup">
+                    <tr role="row">
+                      {withSelect ? <td role="cell" className="ds-grid-select is-sticky-start" style={{ insetInlineStart: 0 }} /> : null}
+                      {columns.map((c, i) => (
+                        <td role="cell" key={c.key} data-col={c.key} className={[i === 0 ? stickyFirst() : "", align(c)].join(" ")} style={i === 0 ? firstStyle : undefined}>
+                          <div className="ds-grid-cell" data-ui-truncate="">
+                            {i === 0 && totals![c.key] === undefined ? labels.total : totals![c.key] ?? null}
+                          </div>
+                        </td>
+                      ))}
+                      {withActions ? <td role="cell" className="ds-grid-actions is-sticky-end" /> : null}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : null}
+            {overflowing ? (
+              <div ref={bar} className="ds-grid-hscroll" onScroll={onBarScroll} aria-hidden>
+                <div style={{ width: scrollWidth, height: 1 }} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {footer ? <div className="ds-grid-footer">{footer}</div> : null}
       {loading ? <span className="sr-only" role="status">{labels.loading}</span> : null}

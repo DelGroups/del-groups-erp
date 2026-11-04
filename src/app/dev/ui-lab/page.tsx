@@ -13,11 +13,13 @@ export const dynamic = "force-dynamic";
  * texts, in 280/360/768/1280 px, both densities, light and dark. Same gate as /dev/design (admins,
  * NEW_UI on); `npm run ui:guard` opens it under `next dev` with UI_LAB_OPEN=true.
  */
-export default async function UiLabPage() {
+export default async function UiLabPage({ searchParams }: { searchParams: Promise<{ frame?: string }> }) {
   if (!isUiLabOpen()) {
     if (!isNewUiEnabled()) notFound();
     const { user, profile, isActive } = await getServerAuthContext();
     if (!user || !isActive || !isAdminRole(profile?.role)) notFound();
   }
-  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} />;
+  // ?frame=page (UI-5): one page as the app builds it, for the page-scroll checks of ui:guard.
+  const { frame } = await searchParams;
+  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} frame={frame === "page" ? "page" : undefined} />;
 }
