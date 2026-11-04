@@ -151,6 +151,9 @@ union all
 select 'pending', '20261103100000_imports_delete_draft: Delete a draft import (nothing posted)',
        case when to_regprocedure('public.delete_import_draft(uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261104100000_imports_line_warehouses: Warehouse split of import lines',
+       case when to_regclass('public.import_shipment_line_warehouses') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

@@ -48,9 +48,13 @@ export interface LineColumn<L> {
   width?: number;
   /** Hidden until the user shows it (Columns button); always editable in the details drawer. */
   optional?: boolean;
+  /** Tooltip of the header (what the column means). */
+  hint?: string;
   cell: (line: L, ctx: LineCellContext) => React.ReactNode;
   /** Validation message for the line, shown as a red outline and a tooltip. */
   error?: (line: L) => string | null | undefined;
+  /** A softer note for the cell (missing data the line still works without): amber outline + tooltip. */
+  warning?: (line: L) => string | null | undefined;
   /** Footer total under this column. */
   total?: React.ReactNode;
 }
@@ -73,6 +77,15 @@ export interface LineGridLabels {
   total: string;
   cancel: string;
   close: string;
+}
+
+/** An extra item of a line's "…" menu. */
+export interface LineMenuItem {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  onSelect: () => void;
+  disabled?: boolean;
 }
 
 export interface LineGridProps<L> {
@@ -102,6 +115,16 @@ export interface LineGridProps<L> {
   details?: (line: L, index: number) => React.ReactNode;
   /** More actions in the add row (e.g. "Pick several products"). */
   addActions?: React.ReactNode;
+  /**
+   * "Add a line" opens a menu of these choices (cost types) instead of adding at once; the
+   * caller adds the line for the picked key.
+   */
+  addMenu?: readonly { key: string; label: string }[];
+  onAddFrom?: (key: string) => void;
+  /** Extra items of a row's "…" menu, before Duplicate (e.g. "Split across warehouses"). */
+  rowMenuItems?: (line: L, index: number) => readonly LineMenuItem[];
+  /** Optional columns shown whatever the user chose (data a split method needs). */
+  forceShown?: readonly string[];
   density?: GridDensity;
   className?: string;
   /**
@@ -168,6 +191,10 @@ function LineGridInner<L>({
   onReorder,
   details,
   addActions,
+  addMenu,
+  onAddFrom,
+  rowMenuItems,
+  forceShown,
   density = "compact",
   className,
 }: LineGridProps<L>) {
@@ -185,8 +212,16 @@ function LineGridInner<L>({
   // render and the first client render show none, so hydration matches.
   const storageKey = lineGridStorageKey(id);
   const rawShown = useSyncExternalStore(subscribeShown, () => readShown(storageKey), () => null);
-  const shown = useMemo(() => parseShown(rawShown), [rawShown]);
-  const toggleColumn = (key: string) => writeShown(storageKey, JSON.stringify([...toggleShown(shown, key)]));
+  const userShown = useMemo(() => parseShown(rawShown), [rawShown]);
+  const forcedKey = (forceShown ?? []).join("|");
+  const shown = useMemo(() => {
+    if (!forcedKey) return userShown;
+    const next = new Set(userShown);
+    for (const k of forcedKey.split("|")) next.add(k);
+    return next;
+  }, [userShown, forcedKey]);
+  const toggleColumn = (key: string) => writeShown(storageKey, JSON.stringify([...toggleShown(userShown, key)]));
+  const forced = new Set(forceShown ?? []);
 
   const visible = useMemo(() => visibleLineColumns(columns, shown), [columns, shown]);
   const optional = columns.filter((c) => c.optional);
@@ -326,7 +361,7 @@ function LineGridInner<L>({
           className={[i === 0 ? "is-sticky-start is-sticky-last" : "", isNum(c) ? "is-num" : ""].join(" ")}
           style={i === 0 ? { insetInlineStart: reorder ? DRAG_COLUMN_WIDTH : 0 } : undefined}
         >
-          <div className="ds-grid-head">
+          <div className="ds-grid-head" title={c.hint}>
             <span className="ds-grid-head-text">
               <Truncate>{c.header}</Truncate>
             </span>
@@ -346,7 +381,7 @@ function LineGridInner<L>({
                     <p className="px-2 pb-1 text-[length:var(--ds-text-xs)] font-semibold ds-muted">{labels.optionalColumns}</p>
                     {optional.map((c) => (
                       <label key={c.key} className="ds-menu-item">
-                        <input type="checkbox" className="ds-grid-checkbox" checked={shown.has(c.key)} onChange={() => toggleColumn(c.key)} />
+                        <input type="checkbox" className="ds-grid-checkbox" checked={shown.has(c.key)} disabled={forced.has(c.key)} onChange={() => toggleColumn(c.key)} />
                         <Truncate>{c.header}</Truncate>
                       </label>
                     ))}
@@ -377,7 +412,8 @@ function LineGridInner<L>({
             key={c.key}
             data-line-col={i}
             data-invalid={ctx.invalid ? "" : undefined}
-            title={ctx.error}
+            data-warning={!ctx.invalid && c.warning?.(line) ? "" : undefined}
+            title={ctx.error ?? c.warning?.(line) ?? undefined}
             className={[i === 0 ? "is-sticky-start is-sticky-last" : "", isNum(c) ? "is-num" : ""].join(" ")}
             style={i === 0 ? { insetInlineStart: reorder ? DRAG_COLUMN_WIDTH : 0 } : undefined}
           >
@@ -400,6 +436,12 @@ function LineGridInner<L>({
                       {labels.details}
                     </DropdownMenu.Item>
                   ) : null}
+                  {(rowMenuItems?.(line, index) ?? []).map((item) => (
+                    <DropdownMenu.Item key={item.key} className="ds-menu-item" disabled={item.disabled} onSelect={() => item.onSelect()}>
+                      {item.icon}
+                      {item.label}
+                    </DropdownMenu.Item>
+                  ))}
                   {editable && onDuplicate ? (
                     <DropdownMenu.Item className="ds-menu-item" onSelect={() => onDuplicate(index)}>
                       <Copy className="h-4 w-4" aria-hidden />
@@ -456,14 +498,35 @@ function LineGridInner<L>({
       </tr>
     ) : null;
 
-  const addRow = editable && (onAddLine || newLineCell) ? (
+  const addRow = editable && (onAddLine || newLineCell || (addMenu?.length && onAddFrom)) ? (
     <tr className="ds-line-add">
       <td colSpan={colCount}>
         <div className="ds-line-add-inner">
-          <button type="button" className="ds-line-add-btn" onClick={add} disabled={adding}>
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="truncate">{labels.addLine}</span>
-          </button>
+          {addMenu?.length && onAddFrom ? (
+            // A menu of what to add (cost types); the caller adds the line for the choice.
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button type="button" className="ds-line-add-btn" aria-haspopup="menu">
+                  <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="truncate">{labels.addLine}</span>
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal container={portalContainer ?? undefined}>
+                <DropdownMenu.Content align="start" side="top" sideOffset={4} collisionPadding={12} className="ds-menu min-w-56">
+                  {addMenu.map((m) => (
+                    <DropdownMenu.Item key={m.key} className="ds-menu-item" onSelect={() => onAddFrom(m.key)}>
+                      {m.label}
+                    </DropdownMenu.Item>
+                  ))}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          ) : (
+            <button type="button" className="ds-line-add-btn" onClick={add} disabled={adding}>
+              <Plus className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">{labels.addLine}</span>
+            </button>
+          )}
           {addActions}
           <span className="ds-line-add-hint" aria-hidden>
             {lines.length === 0 && !adding ? <span className="truncate">{labels.empty}</span> : null}

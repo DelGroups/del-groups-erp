@@ -10,6 +10,7 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { PermissionKey } from "@/types/database.types";
 import { draftIssues, isUuid, landedCostOf, parseShipmentDraft, type DraftIssue, type ImportProduct, type ShipmentDraft } from "../lib/shipment";
 import { shipmentFromRows, shipmentListRows, type ShipmentListRow } from "../lib/rows";
+import { splitStockQuantities } from "../lib/lineWarehouses";
 
 /**
  * Server side of the Imports module (IMP-1). Every action checks NEW_IMPORTS, the module and the
@@ -140,6 +141,26 @@ export interface ShipmentView {
   createdByName: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  /**
+   * IMP-4: false until migration 20261104100000_imports_line_warehouses.sql is applied (no
+   * import_shipment_line_warehouses table yet); the form then hides "Split across warehouses".
+   */
+  splitsAvailable?: boolean;
+}
+
+const MISSING_TABLE = /42P01|PGRST205|does not exist|Could not find the table/i;
+
+/** The warehouse splits of these lines; { available: false } when the table is not there yet. */
+async function lineSplits(client: Client, lineIds: readonly string[]): Promise<{ rows: Row[]; available: boolean }> {
+  const { data, error } = await (lineIds.length
+    ? client.from("import_shipment_line_warehouses").select("*").in("shipment_line_id", lineIds as string[])
+    : client.from("import_shipment_line_warehouses").select("id").limit(1));
+  if (error) {
+    const e = error as { code?: string; message: string };
+    if (MISSING_TABLE.test(`${e.code ?? ""} ${e.message ?? ""}`)) return { rows: [], available: false };
+    throw new Error(e.message);
+  }
+  return { rows: lineIds.length ? ((data ?? []) as Row[]) : [], available: true };
 }
 
 export async function getShipmentAction(id: string): Promise<ImportsResult<ShipmentView>> {
@@ -156,13 +177,15 @@ export async function getShipmentAction(id: string): Promise<ImportsResult<Shipm
     ]);
     const costIds = costs.map((c) => c.id);
     const allocations = costIds.length ? await rows(client.from("import_cost_allocations").select("*").in("cost_line_id", costIds)) : [];
+    const splits = await lineSplits(client, lines.map((l) => String(l.id)));
     const h = header as Row;
     const names = isUuid(h.created_by) ? await fetchProfileDisplayNames(client as unknown as ProfileNamesClient, [h.created_by]) : new Map<string, string>();
     return {
       success: true,
       data: {
-        draft: shipmentFromRows(h, lines, costs, allocations, financials),
+        draft: shipmentFromRows(h, lines, costs, allocations, financials, splits.rows),
         financials,
+        splitsAvailable: splits.available,
         createdByName: isUuid(h.created_by) ? names.get(h.created_by) ?? null : null,
         createdAt: (h.created_at as string) ?? null,
         updatedAt: (h.updated_at as string) ?? null,
@@ -185,13 +208,18 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
     const draft = parseShipmentDraft(input);
     const client = await admin();
     const config = await loadConfig(client);
-    const issues = draftIssues(draft, config);
-    if (issues.length) return { success: false, error: "imports.errors.invalid", issues };
 
-    const productIds = [...new Set(draft.lines.map((l) => l.productId))];
-    if (productIds.length) {
-      const found = await rows(client.from("products").select("id").in("id", productIds));
-      if (found.length !== productIds.length) return { success: false, error: "imports.errors.invalid", issues: ["line_product"] };
+    const productIds = [...new Set(draft.lines.map((l) => l.productId).filter(isUuid))];
+    const found = productIds.length ? await rows(client.from("products").select("id, inventory_mode, full_sheet_length_m").in("id", productIds)) : [];
+    if (found.length !== productIds.length || productIds.length !== new Set(draft.lines.map((l) => l.productId)).size) {
+      return { success: false, error: "imports.errors.invalid", issues: ["line_product"] };
+    }
+    const sheetLengths = new Map(found.map((p) => [String(p.id), p.inventory_mode === "polywood" && Number(p.full_sheet_length_m) > 0 ? Number(p.full_sheet_length_m) : null]));
+    const issues = draftIssues(draft, config, sheetLengths);
+    if (issues.length) return { success: false, error: "imports.errors.invalid", issues };
+    // A split needs the IMP-4 table; before the migration a split is refused, never dropped silently.
+    if (draft.lines.some((l) => l.warehouses.length) && !(await lineSplits(client, [])).available) {
+      return { success: false, error: "imports.errors.splitsUnavailable" };
     }
 
     const result = landedCostOf(draft, config);
@@ -223,6 +251,11 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
         hs_code: l.hsCode,
         duty_rate_pct: l.dutyRatePct,
         warehouse_id: l.warehouseId,
+        // IMP-4: the planned split ([] = the whole line into warehouse_id, else the default).
+        warehouses: (() => {
+          const stock = splitStockQuantities(l, l.warehouses, sheetLengths.get(l.productId) ?? null);
+          return l.warehouses.map((s, j) => ({ warehouse_id: s.warehouseId, qty_purchase: s.qtyPurchase, qty_stock_unit: stock[j], sort_order: j }));
+        })(),
       })),
       p_costs: draft.costs.map((c, i) => {
         const duty = c.splitMethod === "per_line_duty";
@@ -251,6 +284,7 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
     if (error) {
       if (error.message.includes("imports_not_draft")) return { success: false, error: "imports.errors.notDraft" };
       if (error.message.includes("imports_not_found")) return { success: false, error: "imports.errors.notFound" };
+      if (error.message.includes("imports_warehouse_split")) return { success: false, error: "imports.errors.invalid", issues: ["line_warehouse_split"] };
       throw new Error(error.message);
     }
     const saved = data as { id: string; number: string };

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
-import { TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { Chip, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { EntityLookup } from "@/components/lookups";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -49,6 +49,7 @@ import {
   type PaySplit,
   type ReceiveRow,
 } from "../lib/posting";
+import { differsFromPlan } from "../lib/lineWarehouses";
 import { newCost, suggestedVat, type CostLineDraft, type ImportProduct, type ShipmentDraft } from "../lib/shipment";
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { DialogField, ImportDialog } from "./ImportDialog";
@@ -165,7 +166,7 @@ export function PostingPanel({
     const timer = window.setTimeout(() => open(key), 0);
     return () => window.clearTimeout(timer);
   }, [view.data, canDelete, canCancel]);
-  const received = (view.data?.receipts ?? []).flatMap((r) => r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, qtyStockUnit: l.qtyStockUnit })));
+  const received = (view.data?.receipts ?? []).flatMap((r) => r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, qtyStockUnit: l.qtyStockUnit, warehouseId: l.warehouseId })));
   const lines = receiveLines(draft, products, received);
   const estimates = draft.costs.filter((c) => c.isEstimate);
 
@@ -711,6 +712,11 @@ function ReceiveDialog({
                         {t(`importPosting.receiveIssues.${i.code}`)}
                       </span>
                     ))}
+                    {differsFromPlan(row) ? (
+                      <span className="ms-1 inline-flex align-middle">
+                        <Chip tone="warning">{t("importPosting.differsFromPlan")}</Chip>
+                      </span>
+                    ) : null}
                     {diff && showDifferences ? (
                       <span className="block text-[length:var(--ds-text-xs)] font-normal" style={{ color: "var(--ds-warning, #d97706)" }}>
                         {t("importPosting.difference", { diff: diff.difference > 0 ? `+${diff.difference}` : String(diff.difference) })}

@@ -4,7 +4,9 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { ImportsConfig } from "@/lib/imports/config";
 import type { LandedCostResult } from "@/lib/imports/landedCost";
+import { costColumnTotals } from "../lib/landedChecks";
 import type { ImportProduct, ShipmentDraft } from "../lib/shipment";
+import { effectiveWarehouses } from "../lib/lineWarehouses";
 import { costTypeLabel } from "./LandedCostPanel";
 
 export interface CostSheetData {
@@ -13,6 +15,8 @@ export interface CostSheetData {
   config: ImportsConfig;
   products: ReadonlyMap<string, ImportProduct>;
   supplierName: string;
+  /** IMP-4: warehouse names, for the warehouse of each line (or its split). */
+  warehouseNames?: Readonly<Record<string, string>>;
 }
 
 const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -62,6 +66,7 @@ export default function CostSheet({ data }: { data: CostSheetData }) {
             <th className="border p-1 text-left">#</th>
             <th className="border p-1 text-left">{t("imports.fields.product")}</th>
             <th className="border p-1 text-right">{t("imports.fields.qtyPurchase")}</th>
+            <th className="border p-1 text-left">{t("imports.fields.warehouse")}</th>
             <th className="border p-1 text-right">{t("imports.landed.goods")}</th>
             {capitalized.map((c) => (
               <th key={c.id} className="border p-1 text-right">
@@ -85,6 +90,13 @@ export default function CostSheet({ data }: { data: CostSheetData }) {
                   <span className="font-mono">{p?.code}</span> {p?.name}
                 </td>
                 <td className="border p-1 text-right tabular-nums">{draftLine?.qtyPurchase} {draftLine?.purchaseUnit ?? ""}</td>
+                <td className="border p-1">
+                  {draftLine
+                    ? effectiveWarehouses(draftLine, draft.defaultWarehouseId, p?.sheetLengthM ?? null)
+                        .map((w) => (draftLine.warehouses.length ? `${data.warehouseNames?.[w.warehouseId ?? ""] ?? "—"} ${w.qtyPurchase}` : data.warehouseNames?.[w.warehouseId ?? ""] ?? "—"))
+                        .join(" · ")
+                    : "—"}
+                </td>
                 <td className="border p-1 text-right tabular-nums">{fmt2(line.goodsAzn)}</td>
                 {capitalized.map((c) => (
                   <td key={c.id} className="border p-1 text-right tabular-nums">{fmt2(line.allocations[c.id] ?? 0)}</td>
@@ -100,10 +112,11 @@ export default function CostSheet({ data }: { data: CostSheetData }) {
         </tbody>
         <tfoot>
           <tr className="font-semibold">
-            <td className="border p-1" colSpan={3}>{t("imports.landed.totals")}</td>
+            <td className="border p-1" colSpan={4}>{t("imports.landed.totals")}</td>
             <td className="border p-1 text-right tabular-nums">{fmt2(result.totals.goodsAzn)}</td>
-            {capitalized.map((c) => (
-              <td key={c.id} className="border p-1 text-right tabular-nums">{fmt2(c.amountAzn)}</td>
+            {/* IMP-4: the sum of the cells, so the sheet always adds up. */}
+            {costColumnTotals(result).map((c) => (
+              <td key={c.costId} className="border p-1 text-right tabular-nums">{fmt2(c.allocatedAzn)}</td>
             ))}
             <td className="border p-1 text-right tabular-nums">{fmt2(result.totals.landedAzn)}</td>
             <td className="border p-1" colSpan={2} />
