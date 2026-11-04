@@ -154,7 +154,7 @@ export interface LandedCostResult {
   totals: LandedCostTotals;
   /** Fallbacks the user should know about (allocation still adds up). */
   warnings: LandedCostIssue[];
-  /** Must be fixed before the shipment is saved (a manual split that does not add up). */
+  /** Must be fixed before the shipment is saved: a manual split that does not add up, or a cost with nothing to split by (zero_basis). */
   errors: LandedCostIssue[];
 }
 
@@ -280,7 +280,9 @@ export function calculateLandedCost(input: LandedCostInput): LandedCostResult {
     const basis = basisFor(method, lines, goodsCents, settings.chargeableFactor);
     if (basis.warning) warnings.push({ code: basis.warning, costId: p.cost.id });
     const shares = lines.length ? allocateCents(p.amountCents, basis.weights) : null;
-    if (lines.length && !shares && p.amountCents !== 0) warnings.push({ code: "zero_basis", costId: p.cost.id });
+    // Nothing to split by (every price, weight or quantity is 0): the cost would drop out of the
+    // landed cost, so it blocks saving (IMP-4), it is no longer only a warning.
+    if (lines.length && !shares && p.amountCents !== 0) errors.push({ code: "zero_basis", costId: p.cost.id });
     record(p, basis.method, shares);
   };
 
@@ -306,6 +308,7 @@ export function calculateLandedCost(input: LandedCostInput): LandedCostResult {
   for (const p of prepared.filter((x) => x.cost.splitMethod === "per_line_duty" && !isDuty(x))) {
     warnings.push({ code: "method_not_for_type", costId: p.cost.id });
     const shares = p.capitalized && lines.length ? allocateCents(p.amountCents, goodsCents) : null;
+    if (p.capitalized && lines.length && !shares && p.amountCents !== 0) errors.push({ code: "zero_basis", costId: p.cost.id });
     record(p, "by_value", shares);
   }
 

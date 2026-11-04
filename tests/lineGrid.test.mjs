@@ -116,14 +116,17 @@ test("optional columns stay hidden until the user shows them; the choice is stor
 });
 
 test("the default columns of the migrated grids fit a 1280 px window", () => {
-  // Same widths as ImportLinesGrid and PurchaseLinesGrid (the required columns only).
+  // Same widths as ImportLinesGrid and PurchaseLinesGrid (the required columns only). IMP-4 added
+  // the warehouse and the landed unit cost to the import lines, so the others got narrower.
   const imports = [
-    { key: "product", type: "text", width: 260 },
-    { key: "qtyPurchase", type: "number", width: 112 },
-    { key: "qtyStock", type: "number", width: 104 },
-    { key: "unitPriceFc", type: "money", width: 120 },
-    { key: "lineTotalFc", type: "money", width: 128 },
-    { key: "dutyRatePct", type: "number", width: 88 },
+    { key: "product", type: "text", width: 176 },
+    { key: "qtyPurchase", type: "number", width: 96 },
+    { key: "qtyStock", type: "number", width: 100 },
+    { key: "unitPriceFc", type: "money", width: 104 },
+    { key: "lineTotalFc", type: "money", width: 104 },
+    { key: "dutyRatePct", type: "number", width: 80 },
+    { key: "warehouse", type: "text", width: 116 },
+    { key: "landedUnit", type: "money", width: 92 },
   ];
   const purchase = [
     { key: "product", type: "text", width: 280 },
@@ -181,8 +184,11 @@ test("an import line follows its product: unit and metres for sheet products", (
 
 test("migrated forms switch on UI_STANDARD and keep the old editor when it is off", () => {
   const imports = read("src/modules/imports/components/ImportFormScreen.tsx");
-  assert.match(imports, /uiStandard \? \([\s\S]{0,400}<ImportLinesGrid/);
-  assert.match(imports, /datalist id="imports-products"/, "flag off: today's editor");
+  // IMP-4: the standard layout returns early with the grids; flag off keeps the IMP-1 layout
+  // (its table and cost cards) with the standard pickers, no native controls.
+  assert.match(imports, /if \(uiStandard\) \{[\s\S]*<ImportLinesGrid[\s\S]*<ImportCostsGrid/);
+  assert.match(imports, /Flag off: the IMP-1 layout[\s\S]*<CostRow/, "flag off: today's layout");
+  assert.doesNotMatch(imports, /<datalist\b|<select\b/);
   const purchase = read("src/modules/purchases/components/PurchaseForm.tsx");
   assert.match(purchase, /uiStandard \? \([\s\S]{0,120}<PurchaseLinesGrid/);
   assert.match(purchase, /<ProductCombobox/, "flag off: today's editor");

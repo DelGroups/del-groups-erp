@@ -488,9 +488,23 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-tab:hover {
   color: var(--ds-text);
 }
-[data-ds] .ds-tab[aria-current="page"] {
+[data-ds] .ds-tab[aria-current="page"],
+[data-ds] .ds-tab[aria-selected="true"] {
   color: var(--ds-text);
   border-bottom-color: var(--ds-text);
+}
+/* Tabs of a document page (an import: General, Landed cost …): one line, scrolls sideways. */
+[data-ds] .ds-doc-tabs {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--ds-border);
+  scrollbar-width: none;
+}
+[data-ds] .ds-doc-tabs .ds-tab {
+  background: transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
 }
 
 /* ── Shell header ── */
@@ -1375,6 +1389,11 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-line-grid .ds-grid td[data-invalid] {
   box-shadow: inset 0 0 0 1px var(--ds-danger-strong);
 }
+/* Missing data a line works without (a weight a weight-split cost needs): amber, with a tooltip. */
+[data-ds] .ds-line-grid .ds-grid td[data-warning] {
+  box-shadow: inset 0 0 0 1px var(--ds-warning, var(--ds-danger-strong));
+  background: color-mix(in srgb, var(--ds-warning, transparent) 10%, transparent);
+}
 /* Cells look like text until hovered or focused. */
 [data-ds] .ds-line-input {
   display: block;
@@ -1694,4 +1713,109 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   [data-ds] .ds-kpi-value {
     font-size: var(--ds-text-xl);
   }
+}
+
+/* ── Import form v2 (IMP-4) ── */
+[data-ds] .ds-drawer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--ds-border);
+}
+/* A split line's warehouse cell: "3 warehouses", opens the split. */
+[data-ds] .ds-line-split-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0 0.25rem;
+  border-radius: var(--ds-radius-sm, 0.25rem);
+  background: transparent;
+  color: var(--ds-text);
+  cursor: pointer;
+}
+[data-ds] .ds-line-split-cell:hover,
+[data-ds] .ds-line-split-cell:focus-visible {
+  background: var(--ds-surface-hover, var(--ds-surface-2));
+}
+/* Rows of a split / manual split editor: control | quantity | equivalent | remove. */
+[data-ds] .ds-split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem auto 2rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+[data-ds] .ds-split-row[data-invalid] .ds-input {
+  border-color: var(--ds-danger-strong);
+}
+[data-ds] .ds-split-remaining {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--ds-radius-md, 0.375rem);
+  background: var(--ds-surface-2, transparent);
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-split-remaining[data-state="over"],
+[data-ds] .ds-split-remaining[data-state="short"] {
+  color: var(--ds-danger-strong);
+}
+/* A rate field with its refresh icon inside and a follow chip. */
+[data-ds] .ds-rate-field {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+[data-ds] .ds-rate-field .ds-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+/* Summary strip above the landed-cost grid. */
+[data-ds] .ds-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md, 0.375rem);
+  overflow: hidden;
+}
+[data-ds] .ds-stat-strip > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.6rem 0.85rem;
+  border-inline-end: 1px solid var(--ds-border);
+}
+[data-ds] .ds-stat-strip > div[data-emphasis] {
+  background: var(--ds-brand-soft, var(--ds-info-soft));
+}
+[data-ds] .ds-stat-strip dt {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-stat-strip dd {
+  margin: 0;
+  font-family: var(--ds-font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* Footer total of a cost column that is not fully split. */
+[data-ds] .ds-unallocated {
+  display: inline-block;
+  margin-inline-start: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: var(--ds-radius-sm, 0.25rem);
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong);
+  font-weight: 600;
 }

@@ -60,7 +60,6 @@
     "src/modules/expenses/components/ExpensesScreen.tsx": 1,
     "src/modules/hr/components/EmployeeFormModal.tsx": 2,
     "src/modules/hr/components/LeaveFormModal.tsx": 2,
-    "src/modules/imports/components/ImportFormScreen.tsx": 10,
     "src/modules/imports/components/ImportSettingsScreen.tsx": 2,
     "src/modules/imports/components/PostingPanel.tsx": 8,
     "src/modules/inventory/components/DamagedGoodsForm.tsx": 2,
@@ -110,7 +109,6 @@
     "src/modules/expenses/components/ExpensesScreen.tsx": 1,
     "src/modules/hr/components/EmployeeFormModal.tsx": 2,
     "src/modules/hr/components/LeaveFormModal.tsx": 2,
-    "src/modules/imports/components/ImportFormScreen.tsx": 2,
     "src/modules/imports/components/ImportReportsScreen.tsx": 1,
     "src/modules/imports/components/PostingPanel.tsx": 5,
     "src/modules/inventory/components/DamagedGoodsForm.tsx": 1,
@@ -132,9 +130,7 @@
     "src/views/chatter/Chatter.tsx": 1,
     "src/views/components/FormView.tsx": 1
   },
-  "datalist": {
-    "src/modules/imports/components/ImportFormScreen.tsx": 1
-  },
+  "datalist": {},
   "localeFormat": {
     "src/modules/imports/components/CostSheet.tsx": 2
   }

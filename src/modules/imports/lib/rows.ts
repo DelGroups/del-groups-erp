@@ -14,7 +14,20 @@ const str = (v: unknown) => (typeof v === "string" && v ? v : null);
 const pick = <T extends string>(v: unknown, list: readonly T[], fallback: T): T => (typeof v === "string" && (list as readonly string[]).includes(v) ? (v as T) : fallback);
 
 /** A stored shipment as the form's draft; row keys are the stored ids. */
-export function shipmentFromRows(header: Row, lines: readonly Row[], costs: readonly Row[], allocations: readonly Row[], financials: boolean): ShipmentDraft {
+export function shipmentFromRows(
+  header: Row,
+  lines: readonly Row[],
+  costs: readonly Row[],
+  allocations: readonly Row[],
+  financials: boolean,
+  /** IMP-4: import_shipment_line_warehouses rows (empty before that migration). */
+  splits: readonly Row[] = []
+): ShipmentDraft {
+  const splitsFor = (lineId: string) =>
+    splits
+      .filter((s) => String(s.shipment_line_id) === lineId)
+      .sort((a, b) => num(a.sort_order) - num(b.sort_order))
+      .map((s) => ({ key: String(s.id), warehouseId: str(s.warehouse_id), qtyPurchase: num(s.qty_purchase) }));
   const money = (v: unknown) => (financials ? num(v) : 0);
   const manualFor = (costId: string) => {
     const manual: Record<string, number> = {};
@@ -51,6 +64,7 @@ export function shipmentFromRows(header: Row, lines: readonly Row[], costs: read
         hsCode: str(l.hs_code),
         dutyRatePct: num(l.duty_rate_pct),
         warehouseId: str(l.warehouse_id),
+        warehouses: splitsFor(String(l.id)),
       })),
     costs: [...costs]
       .sort((a, b) => num(a.position) - num(b.position))

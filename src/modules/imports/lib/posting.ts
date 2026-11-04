@@ -5,6 +5,7 @@
  */
 import type { ImportsConfig } from "@/lib/imports/config";
 import { round2, toCents } from "@/lib/imports/landedCost";
+import { effectiveWarehouses, receivePrefill } from "./lineWarehouses";
 import { landedCostOf, newRowKey, type CostLineDraft, type ImportProduct, type ShipmentDraft, type ShipmentStatus } from "./shipment";
 
 const EPS = 0.0005;
@@ -48,6 +49,8 @@ export function actionsFor(status: ShipmentStatus): PostingAction[] {
 export interface ReceivedSoFar {
   shipmentLineId: string;
   qtyStockUnit: number;
+  /** IMP-4: where it went, so each planned warehouse knows what is left. */
+  warehouseId?: string | null;
 }
 
 export interface ReceiveLine {
@@ -61,6 +64,10 @@ export interface ReceiveLine {
   sheetLengthM: number | null;
   purchaseUnit: string | null;
   defaultWarehouseId: string | null;
+  /** IMP-4: the planned warehouses of the line (its split, else its own or the header's), stock unit. */
+  plan?: { warehouseId: string | null; qtyStock: number }[];
+  /** What was received so far, per warehouse (for what is left of the plan). */
+  receivedInto?: { warehouseId: string | null; qtyStockUnit: number }[];
 }
 
 /** Every product line with what is still to receive. */
@@ -77,6 +84,8 @@ export function receiveLines(draft: ShipmentDraft, products: ReadonlyMap<string,
       sheetLengthM: product?.sheetLengthM ?? null,
       purchaseUnit: l.purchaseUnit,
       defaultWarehouseId: l.warehouseId ?? draft.defaultWarehouseId,
+      plan: effectiveWarehouses(l, draft.defaultWarehouseId, product?.sheetLengthM ?? null).map((w) => ({ warehouseId: w.warehouseId, qtyStock: w.qtyStock })),
+      receivedInto: received.filter((r) => r.shipmentLineId === l.key).map((r) => ({ warehouseId: r.warehouseId ?? null, qtyStockUnit: r.qtyStockUnit })),
     };
   });
 }
@@ -90,11 +99,39 @@ export interface ReceiveRow {
   expected: number;
   /** What the keeper counted (stock unit); null until entered. */
   actual: number | null;
+  /** IMP-4: the row's planned warehouse and quantity (null: a row the user added, not in the plan). */
+  plannedWarehouseId?: string | null;
+  plannedQty?: number | null;
 }
 
-/** One row per line with something left, everything expected into its warehouse. */
+/**
+ * The dialog's first rows, from the document's plan (IMP-4): one row per planned warehouse with
+ * what is still to receive into it, so in the normal case the keeper only confirms.
+ */
 export function initialReceiveRows(lines: readonly ReceiveLine[]): ReceiveRow[] {
-  return lines.filter((l) => l.remaining > EPS).map((l) => ({ key: newRowKey("l"), shipmentLineId: l.shipmentLineId, warehouseId: l.defaultWarehouseId, expected: l.remaining, actual: null }));
+  const prefill = receivePrefill(
+    lines.map((l) => ({
+      shipmentLineId: l.shipmentLineId,
+      orderedStock: l.orderedStock,
+      shares: l.plan?.length ? l.plan : [{ warehouseId: l.defaultWarehouseId, qtyStock: l.orderedStock }],
+    })),
+    lines.flatMap((l) =>
+      l.receivedInto
+        ? l.receivedInto.map((r) => ({ shipmentLineId: l.shipmentLineId, ...r }))
+        : l.received > 0
+          ? [{ shipmentLineId: l.shipmentLineId, warehouseId: null, qtyStockUnit: l.received }]
+          : []
+    )
+  );
+  return prefill.map((r) => ({
+    key: newRowKey("l"),
+    shipmentLineId: r.shipmentLineId,
+    warehouseId: r.warehouseId,
+    expected: r.expected,
+    actual: null,
+    plannedWarehouseId: r.plannedWarehouseId,
+    plannedQty: r.plannedQty,
+  }));
 }
 
 /** Splits a row: the new row takes half of what is expected (whole sheets for sheet products). */
@@ -105,7 +142,7 @@ export function splitReceiveRow(rows: readonly ReceiveRow[], key: string, line: 
   let half = row.expected / 2;
   if (unit > 0) half = Math.floor(row.expected / unit / 2) * unit;
   else half = r3(half);
-  const next: ReceiveRow = { key: newRowKey("l"), shipmentLineId: row.shipmentLineId, warehouseId: null, expected: r3(row.expected - half), actual: null };
+  const next: ReceiveRow = { key: newRowKey("l"), shipmentLineId: row.shipmentLineId, warehouseId: null, expected: r3(row.expected - half), actual: null, plannedWarehouseId: null, plannedQty: null };
   return rows.flatMap((r) => (r.key === key ? [{ ...r, expected: half }, next] : [r]));
 }
 

@@ -13,6 +13,7 @@ import {
   type LandedCostResult,
   type SplitMethod,
 } from "@/lib/imports/landedCost";
+import { checkSplit, parseSplits, type LineWarehouseSplit } from "./lineWarehouses";
 
 export const SHIPMENT_STATUSES = ["draft", "confirmed", "cleared", "partially_received", "received", "closed", "cancelled"] as const;
 export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
@@ -45,7 +46,10 @@ export interface ShipmentLineDraft {
   volumeM3: number | null;
   hsCode: string | null;
   dutyRatePct: number;
+  /** The line's own warehouse; null = the shipment's default warehouse. */
   warehouseId: string | null;
+  /** IMP-4: the line split over several warehouses (empty = one warehouse, warehouseId or the default). */
+  warehouses: LineWarehouseSplit[];
 }
 
 export interface CostLineDraft {
@@ -129,6 +133,7 @@ export function newLine(product: ImportProduct, qty = 1): ShipmentLineDraft {
     hsCode: null,
     dutyRatePct: 0,
     warehouseId: null,
+    warehouses: [],
   };
 }
 
@@ -144,7 +149,7 @@ export function setLineQtyPurchase(line: ShipmentLineDraft, qty: number, product
 
 /** A copy of the line with its own key (line grid "Duplicate"). */
 export function duplicateLine(line: ShipmentLineDraft): ShipmentLineDraft {
-  return { ...line, key: newRowKey("l") };
+  return { ...line, key: newRowKey("l"), warehouses: (line.warehouses ?? []).map((s) => ({ ...s, key: newRowKey("l") })) };
 }
 
 /** A new cost line with the defaults of its type (settings page). */
@@ -221,7 +226,14 @@ export type DraftIssue =
   | "cost_method"
   | "cost_paid_account"
   | "manual_mismatch"
+  /** IMP-4: a capitalized cost with nothing to split by (every price, weight or quantity 0). */
+  | "cost_unallocated"
+  /** IMP-4: a line's warehouse split does not add up, or a row has no warehouse. */
+  | "line_warehouse_split"
   | "not_draft";
+
+/** Optional: metres per sheet by product id, so a split of sheet products is checked in whole sheets. */
+export type SheetLengths = ReadonlyMap<string, number | null>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
@@ -229,7 +241,7 @@ export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID
 const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n);
 
 /** The problems that stop a draft from being saved (empty list = fine). */
-export function draftIssues(draft: ShipmentDraft, config: ImportsConfig): DraftIssue[] {
+export function draftIssues(draft: ShipmentDraft, config: ImportsConfig, sheetLengths?: SheetLengths): DraftIssue[] {
   const issues = new Set<DraftIssue>();
   if (draft.status !== "draft") issues.add("not_draft");
   if (!isUuid(draft.supplierId)) issues.add("supplier_required");
@@ -239,6 +251,7 @@ export function draftIssues(draft: ShipmentDraft, config: ImportsConfig): DraftI
     if (!ok(l.qtyPurchase) || l.qtyPurchase <= 0 || !ok(l.qtyStock) || l.qtyStock <= 0) issues.add("line_quantity");
     if (!ok(l.unitPriceFc) || l.unitPriceFc < 0) issues.add("line_price");
     if (!ok(l.dutyRatePct) || l.dutyRatePct < 0 || l.dutyRatePct > 100) issues.add("line_duty");
+    if ((l.warehouses ?? []).length && checkSplit(l, l.warehouses, sheetLengths?.get(l.productId) ?? null).issues.length) issues.add("line_warehouse_split");
   }
   for (const c of draft.costs) {
     if (!ok(c.amount) || c.amount < 0 || !ok(c.vatAmountAzn) || c.vatAmountAzn < 0) issues.add("cost_amount");
@@ -246,7 +259,9 @@ export function draftIssues(draft: ShipmentDraft, config: ImportsConfig): DraftI
     if (!methodsFor(c.costType).includes(c.splitMethod)) issues.add("cost_method");
     if (c.paidNow && !isUuid(c.cashAccountId)) issues.add("cost_paid_account");
   }
-  if (landedCostOf(draft, config).errors.some((e) => e.code === "manual_mismatch")) issues.add("manual_mismatch");
+  const errors = landedCostOf(draft, config).errors;
+  if (errors.some((e) => e.code === "manual_mismatch")) issues.add("manual_mismatch");
+  if (errors.some((e) => e.code === "zero_basis")) issues.add("cost_unallocated");
   return [...issues];
 }
 
@@ -296,6 +311,7 @@ export function parseShipmentDraft(value: unknown): ShipmentDraft {
         hsCode: text(l.hsCode, 20),
         dutyRatePct: numOr(l.dutyRatePct, 0),
         warehouseId: uuidOrNull(l.warehouseId),
+        warehouses: parseSplits(l.warehouses),
       };
     }),
     costs: costs.map((x, i) => {

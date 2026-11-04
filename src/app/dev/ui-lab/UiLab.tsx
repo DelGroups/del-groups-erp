@@ -7,6 +7,7 @@ import StatusBadge from "@/components/ui/status-badge";
 import { ClassicInvoiceTable, GridLab } from "./GridLab";
 import { LineGridLab } from "./LineGridLab";
 import { PageFrameLab } from "./PageFrameLab";
+import { ImportFormLab } from "@/modules/imports/pages";
 import { LookupFieldView } from "@/components/lookups";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
@@ -58,8 +59,15 @@ export const LAB_WIDTHS = [280, 360, 768, 1280] as const;
 const DENSITIES: DsDensity[] = ["comfortable", "compact"];
 const THEMES = ["light", "dark"] as const;
 
-export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" }) {
+export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" | "import" }) {
   const { t } = useI18n();
+  if (frame === "import") {
+    return (
+      <DesignScope theme="light" className={fontClassName}>
+        <ImportFormLab />
+      </DesignScope>
+    );
+  }
   if (frame === "page") {
     return (
       <DesignScope theme="light" className={fontClassName}>

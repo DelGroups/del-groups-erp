@@ -171,6 +171,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_delete_draft.sql | tee "$RUNNER_TEMP/imports_delete_draft.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_delete_draft.txt"
 
+      # Warehouse per import line and one line split over several warehouses (IMP-4).
+      - name: Imports line warehouses checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_line_warehouses.sql | tee "$RUNNER_TEMP/imports_line_warehouses.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_line_warehouses.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

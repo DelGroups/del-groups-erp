@@ -3,6 +3,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { ImportsConfig } from "@/lib/imports/config";
 import type { CostType, LandedCostIssue, LandedCostResult } from "@/lib/imports/landedCost";
 import { useFormatter, figure } from "@/views";
+import { costColumnTotals } from "../lib/landedChecks";
 import type { ImportProduct, ShipmentDraft } from "../lib/shipment";
 
 export function costTypeLabel(type: CostType, config: ImportsConfig, t: (key: string) => string): string {
@@ -37,6 +38,7 @@ export function LandedCostPanel({
   const fmt = useFormatter();
   const money = (n: number) => amount(n, fmt.locale);
   const capitalized = result.costs.filter((c) => c.capitalized);
+  const columnTotals = costColumnTotals(result);
   const costLabel = (id: string) => {
     const index = draft.costs.findIndex((c) => c.key === id);
     const cost = draft.costs[index];
@@ -44,7 +46,9 @@ export function LandedCostPanel({
     return cost.description || `${costTypeLabel(cost.costType, config, t)}${draft.costs.filter((c) => c.costType === cost.costType).length > 1 ? ` ${index + 1}` : ""}`;
   };
   const issueText = (issue: LandedCostIssue) =>
-    t(`imports.issues.${issue.code}`, {
+    issue.code === "zero_basis"
+      ? `${issue.costId ? costLabel(issue.costId) : ""}: ${t("imports.draftIssues.cost_unallocated")}`
+      : t(`imports.issues.${issue.code}`, {
       cost: issue.costId ? costLabel(issue.costId) : "",
       amount: issue.amount !== undefined ? money(issue.amount) : "",
     });
@@ -138,8 +142,12 @@ export function LandedCostPanel({
               <tr style={{ borderTop: "2px solid var(--ds-border)" }} className="font-semibold">
                 <th scope="row" className="px-2 py-1.5 text-start">{t("imports.landed.totals")}</th>
                 <td className="px-2 py-1.5 text-end ds-mono tabular-nums">{money(result.totals.goodsAzn)}</td>
-                {capitalized.map((c) => (
-                  <td key={c.id} className="px-2 py-1.5 text-end ds-mono tabular-nums">{money(c.amountAzn)}</td>
+                {/* IMP-4: the sum of the column's cells; a cost not (fully) split shows what is missing. */}
+                {columnTotals.map((c) => (
+                  <td key={c.costId} className="px-2 py-1.5 text-end ds-mono tabular-nums" title={Math.abs(c.unallocatedAzn) >= 0.005 ? t("imports.landed.unallocatedHint", { amount: money(c.amountAzn), unallocated: money(c.unallocatedAzn) }) : undefined}>
+                    {money(c.allocatedAzn)}
+                    {Math.abs(c.unallocatedAzn) >= 0.005 ? <span className="block text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-danger, #e11d48)" }}>−{money(c.unallocatedAzn)}</span> : null}
+                  </td>
                 ))}
                 <td className="px-2 py-1.5 text-end ds-mono tabular-nums">{money(result.totals.landedAzn)}</td>
                 <td colSpan={marginPct !== null ? 3 : 2} />
