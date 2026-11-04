@@ -49,6 +49,8 @@ export function measurePage() {
     if (el.scrollHeight - el.clientHeight <= 1 || el.clientHeight === 0) continue;
     // Popovers, menus, dialogs and drawers may scroll inside: they are not the page.
     if (el.closest("[data-radix-popper-content-wrapper], [role='dialog'], [role='menu'], [role='listbox'], .ds-menu, [data-ds-portal]")) continue;
+    // A side menu (the classic sidebar's <aside>) scrolls its own links: it is not the page.
+    if (el.closest("aside")) continue;
     if (s.position === "fixed" || el.closest("[style*='position: fixed']")) continue;
     verticalScrollers.push({ where: name(el), isRoot: el.hasAttribute("data-scroll-root") });
   }
