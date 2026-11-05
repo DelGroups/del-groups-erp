@@ -5,6 +5,10 @@ import { Calculator } from "lucide-react";
 import type { EmployeesPageTabProps } from "@/modules/hr";
 import type { PayrollRun } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatMoney } from "@/lib/dates/localeDate";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
 import { useTaxPayrollConfig } from "@/hooks/useTaxPayrollConfig";
@@ -16,7 +20,9 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 /** "Payroll" tab of the employees screen: monthly payroll drafts and paying them. */
 export default function PayrollTab({ accounts, canManageHr, showError, showSuccess }: EmployeesPageTabProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the payroll runs on the grid, "Pay" in the row menu; old table with the flag off.
+  const standard = useUiStandard();
   const { config: taxConfig } = useTaxPayrollConfig();
 
   const now = new Date();
@@ -27,6 +33,7 @@ export default function PayrollTab({ accounts, canManageHr, showError, showSucce
   const [calculatingPayroll, setCalculatingPayroll] = useState(false);
   const [payingPayrollId, setPayingPayrollId] = useState<string | null>(null);
   const [payrollToPay, setPayrollToPay] = useState<PayrollRun | null>(null);
+  const fig = (n: number) => formatMoney(n, locale, { currency: null });
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -156,7 +163,44 @@ export default function PayrollTab({ accounts, canManageHr, showError, showSucce
         </p>
 
         <div className="app-table-wrap">
-          {loading ? (
+          {standard ? (
+            <StandardGrid<PayrollRun>
+              id="payroll.runs"
+              label={t("employees.tabs.payroll")}
+              rows={payrollRuns}
+              rowKey={(row) => row.id}
+              loading={loading}
+              empty={t("employees.payroll.empty")}
+              columns={[
+                { key: "employee", header: t("employees.employee"), className: "font-semibold", cell: (row) => row.employees?.full_name || "—", sortValue: (row) => row.employees?.full_name },
+                { key: "gross", header: t("employees.payroll.gross"), type: "money", cell: (row) => fig(payrollRunToBreakdown(row, taxConfig).grossSalary), sortValue: (row) => payrollRunToBreakdown(row, taxConfig).grossSalary },
+                {
+                  key: "dsmf",
+                  header: t("employees.payroll.dsmf"),
+                  type: "money",
+                  className: "ds-text-danger",
+                  cell: (row) => {
+                    const tax = payrollRunToBreakdown(row, taxConfig);
+                    return (
+                      <span title={t("tax.employerNote", { dsmf: fig(tax.dsmfEmployer), its: fig(tax.itsEmployer), total: fig(tax.dsmfEmployer + tax.itsEmployer) })}>
+                        −{fig(tax.dsmfEmployee)}
+                      </span>
+                    );
+                  },
+                },
+                { key: "its", header: t("employees.payroll.its"), type: "money", className: "ds-text-danger", cell: (row) => `−${fig(payrollRunToBreakdown(row, taxConfig).itsEmployee)}` },
+                { key: "incomeTax", header: t("employees.payroll.incomeTax"), type: "money", className: "ds-text-danger", cell: (row) => `−${fig(payrollRunToBreakdown(row, taxConfig).incomeTax)}` },
+                { key: "other", header: t("employees.payroll.otherDeductions"), type: "money", className: "ds-text-warning", cell: (row) => `−${fig(row.advances_deducted + row.other_deductions)}` },
+                { key: "net", header: t("employees.payroll.netSalary"), type: "money", className: "font-semibold", cell: (row) => formatMoney(row.net_salary, locale, { currency: t("common.currency") }), sortValue: (row) => row.net_salary },
+                { key: "status", header: t("common.status"), type: "status", cell: (row) => <PayrollStatusBadge status={row.status} t={t} />, sortValue: (row) => row.status },
+              ]}
+              rowActions={(row) =>
+                canManageHr && row.status !== "PAID" && row.net_salary > 0 ? (
+                  <TableRowActionsMenu items={[{ key: "pay", label: t("employees.payroll.confirmPay"), onClick: () => setPayrollToPay(row) }]} />
+                ) : null
+              }
+            />
+          ) : loading ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
           ) : payrollRuns.length === 0 ? (
             <div className="p-12 text-center text-xs text-app-muted">{t("employees.payroll.empty")}</div>

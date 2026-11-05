@@ -5,6 +5,9 @@ import { Plus } from "lucide-react";
 import type { EmployeesPageTabProps } from "@/modules/hr";
 import type { EmployeeAdvance } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate, formatMoney } from "@/lib/dates/localeDate";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { fetchEmployeeAdvances } from "../lib/payrollRuns";
 import { payEmployeeAdvanceAction } from "../actions/payroll";
@@ -20,7 +23,9 @@ export default function AdvancesTab({
   showError,
   showSuccess,
 }: EmployeesPageTabProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the advances on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,7 +79,24 @@ export default function AdvancesTab({
             </button>
           </div>
         )}
-        {loading ? (
+        {standard ? (
+          <StandardGrid<EmployeeAdvance>
+            id="payroll.advances"
+            label={t("employees.tabs.advances")}
+            rows={advances}
+            rowKey={(adv) => adv.id}
+            loading={loading}
+            empty={t("employees.advance.empty")}
+            columns={[
+              { key: "employee", header: t("employees.employee"), className: "font-semibold", cell: (adv) => adv.employees?.full_name || "—", sortValue: (adv) => adv.employees?.full_name },
+              { key: "date", header: t("employees.advance.requestDate"), type: "date", cell: (adv) => formatGridDate(adv.request_date), sortValue: (adv) => adv.request_date },
+              { key: "amount", header: t("employees.advance.amount"), type: "money", className: "font-semibold", cell: (adv) => formatMoney(adv.amount, locale, { currency: t("common.currency") }), sortValue: (adv) => adv.amount },
+              { key: "status", header: t("common.status"), type: "status", cell: (adv) => <AdvanceStatusBadge status={adv.status} t={t} />, sortValue: (adv) => adv.status },
+              { key: "account", header: t("common.account"), cell: (adv) => adv.accounts?.name || "—", sortValue: (adv) => adv.accounts?.name },
+              { key: "notes", header: t("common.notes"), className: "ds-muted", cell: (adv) => adv.description || "—" },
+            ]}
+          />
+        ) : loading ? (
           <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
         ) : advances.length === 0 ? (
           <div className="p-12 text-center text-xs text-app-muted">{t("employees.advance.empty")}</div>
