@@ -1857,13 +1857,13 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   display: block;
   height: 0.35rem;
   border-radius: 9999px;
-  background: var(--ds-surface-2);
+  background: var(--ds-border);
 }
 [data-ds] .ds-step[data-state="done"] .ds-step-bar {
   background: var(--ds-brand, var(--ds-text));
 }
 [data-ds] .ds-step[data-state="current"] .ds-step-bar {
-  background: linear-gradient(90deg, var(--ds-brand, var(--ds-text)) 50%, var(--ds-surface-2) 50%);
+  background: color-mix(in srgb, var(--ds-brand, var(--ds-text)) 45%, var(--ds-border));
 }
 [data-ds] .ds-step-head {
   display: flex;

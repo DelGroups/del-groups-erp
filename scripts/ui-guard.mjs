@@ -207,19 +207,22 @@ async function main() {
     }
     // IMP-4: the import form with sample data (lines grid, costs grid, rates) on the same checks.
     // No overlays: the lab's lookups have no database behind them.
+    // IMP-5: the stage bar and the payment dialog (?frame=pay) on the same checks.
+    for (const [frame, ready] of [["import", "[data-ui-frame=import] .ds-line-grid"], ["pay", "[data-ui-frame=payment-dialog]"]]) {
     for (const locale of ["az", "ru"]) {
       for (const [width, height] of PAGE_SIZES) {
         const context = await browser.newContext({ viewport: { width, height } });
         await context.addCookies([{ name: "erp_locale", value: locale, url: base }]);
         const page = await context.newPage();
-        await page.goto(`${base}/dev/ui-lab?frame=import`, { waitUntil: "load", timeout: 120000 });
-        await page.waitForSelector("[data-ui-frame=import] .ds-line-grid", { timeout: 120000 });
+        await page.goto(`${base}/dev/ui-lab?frame=${frame}`, { waitUntil: "load", timeout: 120000 });
+        await page.waitForSelector(ready, { timeout: 120000 });
         await page.evaluate(() => document.fonts?.ready);
         await settle(page);
-        if (screens) await page.screenshot({ path: join(screens, `${locale}-import-${width}.png`) });
-        issues = issues.concat((await pagePass(page, `import-frame ${width}x${height}`, { openOverlays: false })).map((i) => ({ ...i, locale })));
+        if (screens) await page.screenshot({ path: join(screens, `${locale}-${frame}-${width}.png`) });
+        issues = issues.concat((await pagePass(page, `${frame}-frame ${width}x${height}`, { openOverlays: false })).map((i) => ({ ...i, locale })));
         await context.close();
       }
+    }
     }
     // Signed-in routes, only with a test account from the environment (never stored in the repo).
     if (process.env.UI_TEST_EMAIL && process.env.UI_TEST_PASSWORD) {
