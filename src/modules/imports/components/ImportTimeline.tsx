@@ -60,7 +60,7 @@ export function ImportTimeline({ events, config }: { events: readonly ShipmentEv
             <span className="ds-mono text-[length:var(--ds-text-xs)] ds-muted tabular-nums">{formatGridDate(e.eventDate)}</span>
             <span className="ds-timeline-dot" data-tone={TONE[e.kind] ?? "neutral"} aria-hidden />
             <div className="min-w-0">
-              <div className="font-medium">{t(`imports.timeline.kinds.${e.kind}`)}</div>
+              <div className="font-medium">{t(`imports.timelineKinds.${e.kind}`)}</div>
               {extra || e.note ? (
                 <div className="text-[length:var(--ds-text-xs)] ds-muted">
                   {[extra, e.note].filter(Boolean).join(" — ")}

@@ -78,7 +78,7 @@ export function TrackingDialog({
               id={id}
               value={f.transport_mode}
               onChange={(v) => set({ transport_mode: v })}
-              options={TRANSPORT_MODES.map((m) => ({ value: m, label: t(`imports.tracking.modes.${m}`) }))}
+              options={TRANSPORT_MODES.map((m) => ({ value: m, label: t(`imports.transportModes.${m}`) }))}
               labels={comboboxLabels(t)}
               locale={locale}
               width="full"
@@ -161,7 +161,7 @@ export function ClearDialog({
       description={t("imports.stages.clearHint")}
       closeLabel={t("common.close")}
       cancelLabel={t("common.cancel")}
-      submitLabel={t("imports.stages.next.clear")}
+      submitLabel={t("imports.stageNext.clear")}
       busy={busy}
       canSubmit={ready}
       onSubmit={async () => {
@@ -242,7 +242,7 @@ export function MilestoneDialog({
               id={id}
               value={kind}
               onChange={(v) => v && setKind(v as typeof kind)}
-              options={(["departed", "arrived_customs", "note"] as const).map((k) => ({ value: k, label: t(`imports.timeline.kinds.${k}`) }))}
+              options={(["departed", "arrived_customs", "note"] as const).map((k) => ({ value: k, label: t(`imports.timelineKinds.${k}`) }))}
               labels={comboboxLabels(t)}
               locale={locale}
               clearable={false}

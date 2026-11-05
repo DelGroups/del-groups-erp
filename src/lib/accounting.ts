@@ -242,7 +242,9 @@ export async function createPartnerPayment(
   // payment lines refuse it (instead of paying all from one default account); then each line is
   // posted on its own, as before.
   if (input.lines && input.lines.length > 1) {
-    const multi = await client.rpc("create_partner_payment", {
+    // create_partner_payment is not in the generated Database types (as for the single call below).
+    const callRpc = client.rpc.bind(client) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+    const multi = await callRpc("create_partner_payment", {
       p_payload: {
         partner_id: input.partnerId,
         payment_type: input.paymentType,

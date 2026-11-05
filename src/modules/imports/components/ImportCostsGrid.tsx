@@ -310,12 +310,12 @@ export function ImportCostsGrid({
         width: 120,
         cell: (c) => {
           if (!payments) return <LineText muted>—</LineText>;
-          if (payments.posted && !payments.storedIds.has(c.key)) return <Chip tone="neutral">{t("imports.costPay.status.not_recorded")}</Chip>;
+          if (payments.posted && !payments.storedIds.has(c.key)) return <Chip tone="neutral">{t("imports.costPayStatus.not_recorded")}</Chip>;
           const st = payments.stateOf(c);
           const label =
             st.status === "debt"
               ? t("imports.costPay.debt", { amount: formatMoney(st.openAzn, locale, { currency: "AZN" }) })
-              : t(`imports.costPay.status.${st.status}`);
+              : t(`imports.costPayStatus.${st.status}`);
           return <Chip tone={STATUS_TONE[st.status]}>{label}</Chip>;
         },
       },
@@ -346,7 +346,7 @@ export function ImportCostsGrid({
           }
           const blocked = payments.blockedOf(c);
           return (
-            <span className="flex h-full min-w-0 items-center gap-1.5" title={blocked ? t(`imports.costPay.blocked.${blocked}`) : undefined}>
+            <span className="flex h-full min-w-0 items-center gap-1.5" title={blocked ? t(`imports.costPayBlocked.${blocked}`) : undefined}>
               <button type="button" className="ds-btn ds-btn-sm" disabled={!!blocked || !!payments.busyKey} onClick={() => payments.onPay(c)} data-line-focus="">
                 {t("imports.costPay.pay")}
               </button>

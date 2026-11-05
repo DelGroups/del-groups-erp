@@ -144,12 +144,25 @@ function PaymentDialogInner({
   const { portalContainer } = useDesignScope();
   const reduced = useReducedMotion();
   const foreign = currency !== "AZN";
+  const storageKeyFirst = lastAccountStorageKey(user?.id, direction);
+  const firstAmount = foreign ? Math.round(openBalanceFc(openBalance) * (defaultRate ?? 0) * 100) / 100 : Math.max(0, Math.round((fixedAmount ?? openBalance ?? 0) * 100) / 100);
+  /** The first line(s): the open balance from the user's last account, or the starting preset. */
+  function firstLines(list: readonly PaymentAccountOption[]): PaymentLine[] {
+    let last: string | null = null;
+    try {
+      last = window.localStorage.getItem(storageKeyFirst);
+    } catch {
+      last = null;
+    }
+    const chosen = presets?.find((p) => p.key === (initialPreset ?? null));
+    return initialPaymentLines({ amount: firstAmount, accounts: list, lastAccountId: last, preset: chosen ? chosen.build(firstAmount, list) : null });
+  }
   const [accounts, setAccounts] = useState<readonly PaymentAccountOption[]>(givenAccounts ?? []);
   const [paymentDate, setPaymentDate] = useState(() => defaultPaymentDate(minDate ?? null));
   const [rate, setRate] = useState<number | null>(foreign ? defaultRate ?? null : 1);
-  const [amountFc, setAmountFc] = useState<number | null>(foreign ? Math.max(0, Math.round(openBalance * 100) / 100) : null);
+  const [amountFc, setAmountFc] = useState<number | null>(foreign ? Math.max(0, Math.round((openBalance ?? 0) * 100) / 100) : null);
   const [note, setNote] = useState("");
-  const [lines, setLines] = useState<PaymentLine[]>([]);
+  const [lines, setLines] = useState<PaymentLine[]>(() => (givenAccounts ? firstLines(givenAccounts) : []));
   const [methodTouched, setMethodTouched] = useState<Set<string>>(new Set());
   const [preset, setPreset] = useState<string | null>(initialPreset ?? null);
   const [busy, setBusy] = useState(false);
@@ -177,44 +190,50 @@ function PaymentDialogInner({
         isVatAccount: a.is_vat_account,
       }));
       setAccounts(rows);
+      setLines((ls) => (ls.length ? ls : firstLines(rows)));
     })();
     return () => {
       alive = false;
     };
+    // Loaded once per dialog; firstLines reads the props the dialog opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [givenAccounts]);
 
-  // The first line once the accounts are known: the open balance, the last-used account.
-  useEffect(() => {
-    if (lines.length || (!accounts.length && !givenAccounts)) return;
-    let last: string | null = null;
-    try {
-      last = window.localStorage.getItem(storageKey);
-    } catch {
-      last = null;
-    }
-    const chosen = presets?.find((p) => p.key === preset);
-    setLines(initialPaymentLines({ amount: startAmount, accounts, lastAccountId: last, preset: chosen ? chosen.build(startAmount, accounts) : null }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts]);
-
-  // Another currency: a new payment date asks CBAR for its rate.
+  // Another currency: a single line follows amount × rate.
+  const follow = (fc: number | null, r: number | null) => {
+    if (!foreign) return;
+    setLines((ls) => (ls.length === 1 ? [{ ...ls[0], amount: Math.round((fc ?? 0) * (r ?? 0) * 100) / 100 }] : ls));
+  };
+  const changeAmountFc = (v: number | null) => {
+    setAmountFc(v);
+    follow(v, rate);
+  };
+  const changeRate = (v: number | null) => {
+    setRate(v);
+    follow(amountFc, v);
+  };
+  // A new payment date asks CBAR for its rate.
   const fetchRate = async (date: string) => {
     if (!foreign || !onFetchRate) return;
     setRateBusy(true);
     const r = await onFetchRate(date);
     setRateBusy(false);
-    if (r && r > 0) setRate(r);
+    if (r && r > 0) changeRate(r);
   };
+  // Opened without a rate: ask CBAR for today's (the state changes in the answer's callback).
   useEffect(() => {
-    if (foreign && onFetchRate && !defaultRate) void fetchRate(paymentDate);
+    if (!foreign || !onFetchRate || defaultRate) return;
+    let alive = true;
+    void onFetchRate(paymentDate).then((r) => {
+      if (!alive || !r || !(r > 0)) return;
+      setRate(r);
+      setLines((ls) => (ls.length === 1 ? [{ ...ls[0], amount: Math.round((amountFc ?? 0) * r * 100) / 100 }] : ls));
+    });
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // A single line follows the payment amount (another currency: amount × rate).
-  useEffect(() => {
-    if (!foreign) return;
-    setLines((ls) => (ls.length === 1 ? [{ ...ls[0], amount: Math.round((amountFc ?? 0) * (rate ?? 0) * 100) / 100 }] : ls));
-  }, [foreign, amountFc, rate]);
 
   const ctx = { currency, openBalance: open, allowAdvance: allowAdvance || free, amountFc, rate, maxLines };
   const check = checkPayment(lines, ctx);
@@ -236,6 +255,7 @@ function PaymentDialogInner({
     fxLabels: { loss: t("paymentDialog.fxLoss"), gain: t("paymentDialog.fxGain") },
   });
 
+  const badKey = check.badLines.join(",");
   const columns = useMemo<LineColumn<PaymentLine>[]>(
     () => [
       {
@@ -303,7 +323,7 @@ function PaymentDialogInner({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accounts, check.badLines.join(","), check.totals.totalAzn, methodTouched, t, locale]
+    [accounts, badKey, check.totals.totalAzn, methodTouched, t, locale]
   );
 
   const submit = async () => {
@@ -434,13 +454,13 @@ function PaymentDialogInner({
                   <>
                     <Field label={`${t("paymentDialog.amount")}, ${currency}`} required>
                       {({ id }) => (
-                        <NumberInput id={id} value={amountFc} onChange={setAmountFc} label={`${t("paymentDialog.amount")}, ${currency}`} />
+                        <NumberInput id={id} value={amountFc} onChange={changeAmountFc} label={`${t("paymentDialog.amount")}, ${currency}`} />
                       )}
                     </Field>
                     <Field label={t("paymentDialog.rate", { currency })} required hint={bookingRate ? t("paymentDialog.bookingRate", { rate: bookingRate }) : undefined}>
                       {({ id }) => (
                         <span className="ds-rate-field">
-                          <NumberInput id={id} value={rate} onChange={setRate} label={t("paymentDialog.rate", { currency })} />
+                          <NumberInput id={id} value={rate} onChange={changeRate} label={t("paymentDialog.rate", { currency })} />
                           {onFetchRate ? (
                             <IconButton
                               size="sm"
@@ -564,6 +584,11 @@ function PaymentDialogInner({
 }
 
 /** A decimal input that keeps what is typed ("1," or "0."). */
+/** The open balance as a number (null = a free amount). */
+function openBalanceFc(open: number | null): number {
+  return Math.max(0, Math.round((open ?? 0) * 100) / 100);
+}
+
 function NumberInput({ id, value, onChange, label }: { id?: string; value: number | null; onChange: (v: number | null) => void; label: string }) {
   const [text, setText] = useState(value === null ? "" : String(value));
   const [last, setLast] = useState(value);

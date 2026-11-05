@@ -60,7 +60,13 @@ import {
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { costTypeLabel, LandedCostPanel } from "./LandedCostPanel";
 import { LandedCostGrid } from "./LandedCostGrid";
-import { PostingPanel } from "./PostingPanel";
+import { PostingPanel, type ImportTab } from "./PostingPanel";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { addCostAction, getPostingViewAction, payCostAdvanceAction, payPayableAction } from "../actions/posting";
+import { costPaymentState, payBlockedReason } from "../lib/costPayments";
+
+const STAGE_TABS: readonly ImportTab[] = ["general", "landed", "payments", "receipts", "journal", "history"];
+const opKeyNew = () => `ui-pay:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
 import CostSheet, { type CostSheetData } from "./CostSheet";
 import { ImportLinesGrid } from "./ImportLinesGrid";
 import { ImportCostsGrid } from "./ImportCostsGrid";
@@ -186,7 +192,38 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
   const [saving, setSaving] = useState(false);
   const [rateBusy, setRateBusy] = useState<string | null>(null);
   const [showIssues, setShowIssues] = useState(false);
-  const [tab, setTab] = useState<"general" | "landed">("general");
+  const { user } = useAuth();
+  const tabStorageKey = `imports:tab:${user?.id ?? "anon"}`;
+  // The form mounts in the browser only (after its data loaded), so the last tab is read at once.
+  const [tab, setTabState] = useState<ImportTab>(() => {
+    try {
+      const stored = window.localStorage.getItem(tabStorageKey) as ImportTab | null;
+      return stored && (STAGE_TABS as readonly string[]).includes(stored) && (stored === "general" || stored === "landed" || !!view.draft.id) ? stored : "general";
+    } catch {
+      return "general";
+    }
+  });
+  const setTab = (next: ImportTab) => {
+    setTabState(next);
+    try {
+      window.localStorage.setItem(tabStorageKey, next);
+    } catch {
+      // Storage blocked: the tab is remembered for this visit only.
+    }
+  };
+  // IMP-5: the payment, posting and receipt state of the saved shipment (the costs grid's chips).
+  const posting = useQuery({
+    queryKey: ["imports", "posting", view.draft.id ?? "new"],
+    queryFn: async () => {
+      const r = await getPostingViewAction(view.draft.id as string);
+      if (!r.success) throw new Error(r.error);
+      return r.data;
+    },
+    enabled: !!view.draft.id && view.financials,
+  });
+  const [payingCost, setPayingCost] = useState<CostLineDraft | null>(null);
+  const [costBusy, setCostBusy] = useState<string | null>(null);
+  const [costOpKey, setCostOpKey] = useState(() => opKeyNew());
   const [notesOpen, setNotesOpen] = useState(() => !!view.draft.notes);
   // CBAR rates seen this session (currency:date → rate), for the "rate is far from CBAR" warning.
   const [cbarSeen, setCbarSeen] = useState<Record<string, number>>({});
@@ -327,6 +364,100 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
     ) : null;
   const printOverlay = costSheet ? createPortal(<div className="print-area"><CostSheet data={costSheet} /></div>, document.body) : null;
   const postingPanel = view.draft.id && view.financials ? <PostingPanel draft={view.draft} lookups={lookups} config={config} dirty={dirty} /> : null;
+  // IMP-5: a saved shipment gets the stage bar and the six tabs (the posting panel's stage layout).
+  const stageMode = !!view.draft.id && view.financials;
+  const storedIds = new Set(view.draft.costs.map((c) => c.key));
+  const advancesOf = (key: string) => (posting.data?.prepayments ?? []).filter((p) => p.costLineId === key);
+  const lockedIds = new Set(view.draft.costs.filter((c) => advancesOf(c.key).some((p) => p.status !== "cancelled")).map((c) => c.key));
+  const postedShipment = draft.status !== "draft";
+  const payState = (c: CostLineDraft) =>
+    costPaymentState({
+      cost: c,
+      draft: !postedShipment,
+      payable: (() => {
+        const p = posting.data?.payables.find((x) => x.costLineId === c.key && x.status !== "cancelled");
+        return p ? { id: p.id, currencyCode: p.currencyCode, amountFc: p.amountFc, amountAzn: p.amountAzn, paidFc: p.paidFc, paidAzn: p.paidAzn, status: p.status } : null;
+      })(),
+      advances: advancesOf(c.key).map((a) => ({ amountFc: a.amountFc, amountAzn: a.amountAzn, status: a.status })),
+    });
+  const refreshPosting = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["imports", "shipment", view.draft.id] }),
+      client.invalidateQueries({ queryKey: ["imports", "posting", view.draft.id] }),
+      invalidateModel(client, IMPORTS_VIEW_KEY),
+    ]);
+  };
+  const costsEditable = postedShipment
+    ? view.financials && can("can_manage_imports") && draft.status !== "closed" && draft.status !== "cancelled"
+    : editable;
+  const costPayments = view.financials
+    ? {
+        stateOf: payState,
+        blockedOf: (c: CostLineDraft) => payBlockedReason({ mode: payState(c).mode, partnerId: c.partnerId, saved: storedIds.has(c.key), dirty }),
+        onPay: (c: CostLineDraft) => {
+          setCostOpKey(opKeyNew());
+          setPayingCost(c);
+        },
+        posted: postedShipment,
+        storedIds,
+        lockedIds,
+        busyKey: costBusy,
+        onPost: async (c: CostLineDraft) => {
+          if (!view.draft.id) return;
+          setCostBusy(c.key);
+          const r = await addCostAction(view.draft.id, c, null, null, `ui-cost:${c.key}`);
+          setCostBusy(null);
+          if (!r.success) {
+            const known = t(r.error);
+            toast(t("importPosting.failed"), [known !== r.error ? known : null, r.detail].filter(Boolean).join(" "), "error");
+            return;
+          }
+          toast(t("importPosting.costAdded"), undefined, "success");
+          await refreshPosting();
+        },
+      }
+    : undefined;
+  const payingState = payingCost ? payState(payingCost) : null;
+  const payingPayable = payingCost && payingState?.payableId ? posting.data?.payables.find((p) => p.id === payingState.payableId) ?? null : null;
+  const costPayDialog =
+    payingCost && payingState?.mode ? (
+      <PaymentDialog
+        open
+        onClose={() => setPayingCost(null)}
+        direction="out"
+        title={t("imports.costPay.title", { cost: payingCost.description || costTypeLabel(payingCost.costType, config, t) })}
+        counterpartyLabel={t("lookup.audit.paidTo")}
+        counterpartyName={lookups.suppliers.find((x) => x.id === payingCost.partnerId)?.name ?? null}
+        documentLabel={t("imports.sheet.file")}
+        documentNumber={draft.number}
+        currency={payingState.currency}
+        openBalance={payingState.currency === "AZN" ? payingState.openAzn : payingState.openFc}
+        defaultRate={payingState.currency === "AZN" ? 1 : payingCost.rateToAzn}
+        bookingRate={payingPayable && payingState.currency !== "AZN" ? payingPayable.bookingRate : null}
+        minDate={payingPayable?.documentDate ?? draft.invoiceDate}
+        onFetchRate={
+          payingState.currency === "AZN"
+            ? undefined
+            : async (d) => {
+                const r = await cbarRateAction(payingState.currency, d);
+                return r.success ? r.data.rate : null;
+              }
+        }
+        onSubmit={async (p) => {
+          const r =
+            payingState.mode === "payable" && payingState.payableId
+              ? await payPayableAction(payingState.payableId, p.paymentDate, p.note, p.lines, costOpKey, p.amountFc, p.rate)
+              : await payCostAdvanceAction(payingCost.key, p.paymentDate, p.note, p.amountFc ?? p.totalAzn, p.rate ?? 1, p.lines, costOpKey);
+          if (!r.success) {
+            const known = t(r.error);
+            return { success: false, error: [known !== r.error ? known : null, r.detail].filter(Boolean).join(" ") || t("importPosting.failed") };
+          }
+          toast(t("importPosting.paid"), undefined, "success");
+          await refreshPosting();
+          return { success: true };
+        }}
+      />
+    ) : null;
   const chatter = draft.id ? (
     <section className="ds-card ds-card-pad" aria-label={t("imports.sections.attachments")}>
       <h2 className="mb-2 font-semibold">{t("imports.sections.attachments")}</h2>
@@ -344,75 +475,10 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
     const capitalTotal = result.totals.capitalizedAzn;
     const vatTotal = result.totals.recoverableVatAzn;
     const money = (n: number) => formatMoney(n, locale, { currency: "AZN" });
-    return (
-      <LookupScope>
-        <div className="flex flex-col gap-4">
-          <header className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <Link href="/imports" className="ds-btn ds-btn-sm ds-btn-ghost self-start">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                {t("imports.backToList")}
-              </Link>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h1 className="truncate text-[length:var(--ds-text-xl)] font-semibold">{draft.number ?? t("imports.newShipment")}</h1>
-                <Chip tone={draft.status === "draft" ? "neutral" : draft.status === "cancelled" ? "danger" : draft.status === "received" || draft.status === "closed" ? "success" : "info"}>
-                  {t(`imports.status.${draft.status}`)}
-                </Chip>
-                {supplierName ? (
-                  <span className="truncate text-[length:var(--ds-text-sm)] ds-muted">
-                    {supplierName}
-                    {draft.invoiceNo ? ` · ${t("imports.invoiceShort", { no: draft.invoiceNo })}` : ""}
-                  </span>
-                ) : null}
-              </div>
-              {view.createdByName || view.createdAt ? (
-                <p className="text-[length:var(--ds-text-xs)] ds-muted">
-                  {t("imports.createdByLong", { name: view.createdByName ?? "—", date: view.createdAt ? formatDate(view.createdAt) : "—" })}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {editable ? (
-                <button type="button" className="ds-btn ds-btn-primary" onClick={() => void save()} disabled={saving}>
-                  <Save className="h-4 w-4" aria-hidden />
-                  {saving ? t("common.saving") : t("imports.saveDraft")}
-                </button>
-              ) : (
-                <span className="flex items-center gap-1.5 text-[length:var(--ds-text-xs)] ds-muted">
-                  <Lock className="h-3.5 w-3.5" aria-hidden />
-                  {readOnlyNote}
-                </span>
-              )}
-              {view.draft.id && view.financials ? (
-                <button type="button" className="ds-btn" onClick={printCostSheet} disabled={dirty} title={dirty ? t("importPosting.saveFirst") : undefined}>
-                  <Printer className="h-4 w-4" aria-hidden />
-                  {t("importReports.costSheet.print")}
-                </button>
-              ) : null}
-              <RowActionsMenu
-                label={t("imports.moreActions")}
-                linkAs={Link}
-                items={[
-                  { key: "reports", label: t("importReports.title"), icon: <BarChart3 className="h-4 w-4" />, href: "/imports/reports" },
-                  { key: "settings", label: t("imports.settings.title"), icon: <Settings2 className="h-4 w-4" />, href: "/settings/imports" },
-                ]}
-              />
-            </div>
-          </header>
-
-          {issueList}
-
-          <div className="ds-doc-tabs" role="tablist" aria-label={t("imports.tabs.label")}>
-            {(["general", "landed"] as const).map((k) => (
-              <button key={k} type="button" role="tab" id={`imports-tab-${k}`} aria-selected={tab === k} aria-controls={`imports-panel-${k}`} className="ds-tab" onClick={() => setTab(k)}>
-                {t(`imports.tabs.${k}`)}
-                {k === "landed" && result.errors.length ? <AlertTriangle className="h-3.5 w-3.5" aria-label={t("imports.tabs.hasErrors")} style={{ color: "var(--ds-danger-strong)" }} /> : null}
-              </button>
-            ))}
-          </div>
-
-          {tab === "general" ? (
-            <div role="tabpanel" id="imports-panel-general" aria-labelledby="imports-tab-general" className="flex flex-col gap-4">
+    // The general and landed-cost tabs; in the stage layout the panel shows the others.
+    const tabContent = () =>
+    (tab === "general" ? (
+            <div {...(stageMode ? {} : { role: "tabpanel", id: "imports-panel-general", "aria-labelledby": "imports-tab-general" })} className="flex flex-col gap-4">
               <Section title={t("imports.sections.main")} description={editable ? undefined : readOnlyNote}>
                 <FormGrid columns={4}>
                   <Field label={label("supplier")} required span={2}>
@@ -632,9 +698,10 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
                 description={t("imports.costsSummary", { capitalized: money(capitalTotal), vat: money(vatTotal) })}
               >
                 <ImportCostsGrid
+                  payments={costPayments}
                   draft={draft}
                   setDraft={setDraft}
-                  editable={editable}
+                  editable={costsEditable}
                   config={config}
                   lookups={lookups}
                   result={result}
@@ -645,11 +712,10 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
                 />
               </Section>
 
-              {postingPanel}
-              {chatter}
+              {stageMode ? null : chatter}
             </div>
           ) : (
-            <div role="tabpanel" id="imports-panel-landed" aria-labelledby="imports-tab-landed">
+            <div {...(stageMode ? {} : { role: "tabpanel", id: "imports-panel-landed", "aria-labelledby": "imports-tab-landed" })}>
               {view.financials ? (
                 <LandedCostGrid
                   draft={deferred}
@@ -665,7 +731,88 @@ export function ImportShipmentForm({ view, lookups, config }: { view: ShipmentVi
                 <p className="ds-muted">{t("imports.readOnlyNoFinancials")}</p>
               )}
             </div>
+          ));
+    return (
+      <LookupScope>
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Link href="/imports" className="ds-btn ds-btn-sm ds-btn-ghost self-start">
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                {t("imports.backToList")}
+              </Link>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h1 className="truncate text-[length:var(--ds-text-xl)] font-semibold">{draft.number ?? t("imports.newShipment")}</h1>
+                <Chip tone={draft.status === "draft" ? "neutral" : draft.status === "cancelled" ? "danger" : draft.status === "received" || draft.status === "closed" ? "success" : "info"}>
+                  {t(`imports.status.${draft.status}`)}
+                </Chip>
+                {supplierName ? (
+                  <span className="truncate text-[length:var(--ds-text-sm)] ds-muted">
+                    {supplierName}
+                    {draft.invoiceNo ? ` · ${t("imports.invoiceShort", { no: draft.invoiceNo })}` : ""}
+                  </span>
+                ) : null}
+              </div>
+              {view.createdByName || view.createdAt ? (
+                <p className="text-[length:var(--ds-text-xs)] ds-muted">
+                  {t("imports.createdByLong", { name: view.createdByName ?? "—", date: view.createdAt ? formatDate(view.createdAt) : "—" })}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {editable ? (
+                <button type="button" className="ds-btn ds-btn-primary" onClick={() => void save()} disabled={saving}>
+                  <Save className="h-4 w-4" aria-hidden />
+                  {saving ? t("common.saving") : t("imports.saveDraft")}
+                </button>
+              ) : (
+                <span className="flex items-center gap-1.5 text-[length:var(--ds-text-xs)] ds-muted">
+                  <Lock className="h-3.5 w-3.5" aria-hidden />
+                  {readOnlyNote}
+                </span>
+              )}
+              {view.draft.id && view.financials ? (
+                <button type="button" className="ds-btn" onClick={printCostSheet} disabled={dirty} title={dirty ? t("importPosting.saveFirst") : undefined}>
+                  <Printer className="h-4 w-4" aria-hidden />
+                  {t("importReports.costSheet.print")}
+                </button>
+              ) : null}
+              <RowActionsMenu
+                label={t("imports.moreActions")}
+                linkAs={Link}
+                items={[
+                  { key: "reports", label: t("importReports.title"), icon: <BarChart3 className="h-4 w-4" />, href: "/imports/reports" },
+                  { key: "settings", label: t("imports.settings.title"), icon: <Settings2 className="h-4 w-4" />, href: "/settings/imports" },
+                ]}
+              />
+            </div>
+          </header>
+
+          {issueList}
+
+          {stageMode ? null : (
+          <div className="ds-doc-tabs" role="tablist" aria-label={t("imports.tabs.label")}>
+            {(["general", "landed"] as const).map((k) => (
+              <button key={k} type="button" role="tab" id={`imports-tab-${k}`} aria-selected={tab === k} aria-controls={`imports-panel-${k}`} className="ds-tab" onClick={() => setTab(k)}>
+                {t(`imports.tabs.${k}`)}
+                {k === "landed" && result.errors.length ? <AlertTriangle className="h-3.5 w-3.5" aria-label={t("imports.tabs.hasErrors")} style={{ color: "var(--ds-danger-strong)" }} /> : null}
+              </button>
+            ))}
+          </div>
           )}
+
+          {stageMode ? (
+            <PostingPanel
+              draft={view.draft}
+              lookups={lookups}
+              config={config}
+              dirty={dirty}
+              stage={{ tab, tabKeys: STAGE_TABS, onTabChange: setTab, tracking: view.tracking, createdAt: view.createdAt, children: tabContent(), history: chatter }}
+            />
+          ) : (
+            tabContent()
+          )}
+          {costPayDialog}
 
           {printOverlay}
         </div>

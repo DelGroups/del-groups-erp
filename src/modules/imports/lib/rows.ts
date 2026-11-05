@@ -114,6 +114,11 @@ export interface ShipmentListRow extends Row {
   created_by_name: string | null;
   created_at: string | null;
   updated_at: string | null;
+  /** IMP-5: stage facts (null before migration 20261105100000). */
+  eta: string | null;
+  departed_on: string | null;
+  arrived_on: string | null;
+  confirm_date: string | null;
 }
 
 const cents = (v: number) => Math.round(v * 100) / 100;
@@ -168,6 +173,10 @@ export function shipmentListRows(input: {
       created_by_name: createdBy ? input.names.get(createdBy) ?? null : null,
       created_at: str(s.created_at),
       updated_at: str(s.updated_at),
+      eta: str(s.eta),
+      departed_on: str(s.departed_on),
+      arrived_on: str(s.arrived_on),
+      confirm_date: str(s.confirm_date),
     };
   });
 }

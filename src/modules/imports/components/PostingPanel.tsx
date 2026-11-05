@@ -57,7 +57,7 @@ import { newCost, suggestedVat, type CostLineDraft, type ImportProduct, type Shi
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { DialogField, ImportDialog } from "./ImportDialog";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
-import { ImportStageBar } from "./ImportStageBar";
+import { ImportStageBar, type StageBarFact } from "./ImportStageBar";
 import { ImportTimeline } from "./ImportTimeline";
 import { ClearDialog, MilestoneDialog, TrackingDialog } from "./ImportStageDialogs";
 import { daysInTransit, etaOverdue, nextAction, stageViews } from "../lib/stages";
@@ -254,14 +254,14 @@ export function PostingPanel({
     const transit = tr ? daysInTransit({ ...tr, status: draft.status }, today) : null;
     const overdue = tr ? etaOverdue({ eta: tr.eta, status: draft.status, arrivedOn: tr.arrivedOn }, today) : false;
     const carrier = tr?.carrierId ? lookups.suppliers.find((s) => s.id === tr.carrierId)?.name ?? null : null;
-    const factsList = [
-      tr?.transportMode || carrier ? { key: "carrier", label: t("imports.tracking.carrierMode"), value: [carrier, tr?.transportMode ? t(`imports.tracking.modes.${tr.transportMode}`) : null].filter(Boolean).join(" · ") } : null,
+    const factsList: StageBarFact[] = ([
+      tr?.transportMode || carrier ? { key: "carrier", label: t("imports.tracking.carrierMode"), value: [carrier, tr?.transportMode ? t(`imports.transportModes.${tr.transportMode}`) : null].filter(Boolean).join(" · ") } : null,
       tr?.trackingNo ? { key: "no", label: t("imports.tracking.trackingNo"), value: <span className="ds-mono">{tr.trackingNo}</span> } : null,
       tr?.vehicleNo ? { key: "vehicle", label: t("imports.tracking.vehicleNo"), value: <span className="ds-mono">{tr.vehicleNo}</span> } : null,
       tr?.departedOn ? { key: "dep", label: t("imports.tracking.departedOn"), value: formatDate(tr.departedOn) } : null,
       tr?.eta ? { key: "eta", label: t("imports.tracking.eta"), value: <span style={overdue ? { color: "var(--ds-danger-strong)", fontWeight: 600 } : undefined}>{formatDate(tr.eta)}{overdue ? ` · ${t("imports.tracking.overdue")}` : ""}</span> } : null,
       transit !== null ? { key: "transit", label: t("imports.tracking.inTransit"), value: t("imports.tracking.days", { count: transit }) } : null,
-    ].filter((x): x is { key: string; label: string; value: React.ReactNode } => !!x);
+    ] as (StageBarFact | null)[]).filter((x): x is StageBarFact => !!x);
     const closedOrCancelled = draft.status === "closed" || draft.status === "cancelled";
     const menu = [
       draft.status === "draft" && canManage && draft.supplierId ? { key: "prepay", label: t("importPosting.prepay"), icon: <HandCoins className="h-4 w-4" />, onSelect: () => open("prepay"), disabled: busy || dirty } : null,
@@ -279,7 +279,7 @@ export function PostingPanel({
         <ImportStageBar
           stages={views}
           cancelled={draft.status === "cancelled"}
-          nextLabel={next && allowed ? t(`imports.stages.next.${next}`) : null}
+          nextLabel={next && allowed ? t(`imports.stageNext.${next}`) : null}
           onNext={onNext}
           nextDisabled={busy || (next === "confirm" && dirty)}
           nextHint={next === "confirm" && dirty ? t("importPosting.saveFirst") : undefined}
