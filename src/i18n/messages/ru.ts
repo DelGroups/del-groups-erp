@@ -5889,6 +5889,19 @@ export const ruMessages: Messages = {
       amount: "Сумма",
       netTotal: "Итого (приход − расход)",
     },
+    salesReport: {
+      title: "Самые продаваемые товары",
+      hint: "Аналитика выручки, прибыли и маржи",
+      empty: "Продаж по выбранному фильтру нет.",
+      product: "Товар",
+      category: "Категория",
+      quantity: "Количество",
+      revenue: "Выручка",
+      cost: "Себестоимость",
+      profit: "Прибыль",
+      margin: "Маржа %",
+      total: "Итого",
+    },
   },
   uiStandard: {
     date: {

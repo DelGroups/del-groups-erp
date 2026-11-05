@@ -5888,6 +5888,19 @@ export const enMessages: Messages = {
       amount: "Amount",
       netTotal: "Total (income − expense)",
     },
+    salesReport: {
+      title: "Best-selling products",
+      hint: "Revenue, profit and margin analytics",
+      empty: "No sales match the selected filter.",
+      product: "Product",
+      category: "Category",
+      quantity: "Quantity",
+      revenue: "Revenue",
+      cost: "Cost",
+      profit: "Profit",
+      margin: "Margin %",
+      total: "Total",
+    },
   },
   uiStandard: {
     date: {

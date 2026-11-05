@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Ban, Banknote, FileCode2, FileJson, Lock, PencilLine, Printer, SearchX, Truck } from "lucide-react";
-import { EmptyState, SkeletonList, TypeToConfirmDialog, useToast } from "@/design-system/components";
+import { EmptyState, SkeletonList, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { formatFigure } from "@/design-system/logic";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRecordCrumb } from "@/components/shell/useShell";
@@ -47,6 +48,8 @@ function SaleForm({ id }: { id: string }) {
   const client = useQueryClient();
   const { can, profile } = useAuth();
   const { toast } = useToast();
+  // UI_STANDARD (UI-6): the lines tab on the grid ("product · code · extra" on one line); old table with the flag off.
+  const standard = useUiStandard();
   const branding = useCompanyBranding();
   const vatAccountIds = useVatAccountIds();
   const invoicePrint = useInvoicePrintSystem();
@@ -135,7 +138,42 @@ function SaleForm({ id }: { id: string }) {
     ...(can("can_delete_sales") ? [{ key: "void", label: t("common.void"), icon: <Ban className="h-4 w-4" aria-hidden />, onClick: () => setVoiding(true) }] : []),
   ];
 
-  const linesTab = (
+  type SaleItem = NonNullable<typeof sale.items>[number];
+  const items: SaleItem[] = sale.items ?? [];
+  const linesTab = standard ? (
+    <StandardGrid<SaleItem>
+      id="sales.record.lines"
+      label={t("sales.engine.tabs.lines", { count: items.length })}
+      rows={items}
+      rowKey={(item) => item.id || String(items.indexOf(item))}
+      columns={[
+        {
+          key: "product",
+          header: t("dashboard.product"),
+          width: 280,
+          cell: (item) => (
+            <span>
+              <span className="font-medium">{item.product_name}</span>
+              {item.product_code ? <span className="ds-mono ds-subtle"> · {item.product_code}</span> : null}
+              {item.extra_info ? <span className="ds-muted"> · {item.extra_info}</span> : null}
+            </span>
+          ),
+          sortValue: (item) => item.product_name,
+        },
+        { key: "warehouse", header: t("sales.warehouse"), className: "ds-muted", cell: (item) => item.warehouse_name || "—", sortValue: (item) => item.warehouse_name },
+        { key: "quantity", header: t("modals.salesView.quantity"), type: "number", cell: (item) => `${formatFigure(item.quantity, 2, fmt.locale)} ${item.unit}`, sortValue: (item) => item.quantity },
+        { key: "price", header: t("modals.salesView.price"), type: "money", cell: (item) => formatFigure(item.unit_price, 2, fmt.locale), sortValue: (item) => item.unit_price },
+        {
+          key: "discount",
+          header: t("sales.engine.fields.discount"),
+          type: "number",
+          cell: (item) => (item.discount_percent ? (item.discount_type === "fixed" ? formatFigure(item.discount_percent, 2, fmt.locale) : `${item.discount_percent}%`) : "—"),
+        },
+        { key: "total", header: t("modals.salesView.lineTotal"), type: "money", className: "font-semibold", cell: (item) => formatFigure(item.total, 2, fmt.locale), sortValue: (item) => item.total },
+      ]}
+      totals={{ product: t("modals.salesView.total"), total: money(sale.total_amount) }}
+    />
+  ) : (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[40rem] border-collapse text-left">
         <thead>

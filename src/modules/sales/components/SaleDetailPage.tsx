@@ -9,6 +9,8 @@ import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/In
 import { fetchSaleById, getSaleRemaining, type SaleRecord } from "../lib/fetchSales";
 import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -24,6 +26,8 @@ interface SaleDetailPageClientProps {
 export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
   const router = useRouter();
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the sale lines on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { profile } = useAuth();
   const canViewProfitability = canDelegateInvoiceIssuer(profile?.role);
   const invoicePrint = useInvoicePrintSystem();
@@ -121,6 +125,14 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
               </p>
             ) : null}
 
+            {standard ? (
+              <DocumentLinesGrid
+                id="sales.detail.lines"
+                label={t("dashboard.product")}
+                lines={(sale.items ?? []).map((item, idx) => ({ key: item.id || String(idx), name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
+                headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}
+              />
+            ) : (
             <table className="w-full border-collapse text-xs">
               <thead className="border-b bg-app-card-hover font-bold uppercase">
                 <tr>
@@ -141,6 +153,7 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
                 ))}
               </tbody>
             </table>
+            )}
 
             <div className="flex flex-wrap gap-4 border-t border-app pt-4 font-bold">
               <span>{t("modals.salesView.total")}: {sale.total_amount.toFixed(2)} {t("common.currency")}</span>

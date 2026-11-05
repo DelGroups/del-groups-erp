@@ -5887,6 +5887,19 @@ export const azMessages = {
       amount: "Məbləğ",
       netTotal: "Yekun (mədaxil − məxaric)",
     },
+    salesReport: {
+      title: "Ən çox satılan məhsullar",
+      hint: "Gəlir, mənfəət və marja analitikası",
+      empty: "Seçilmiş filtrə uyğun satış tapılmadı.",
+      product: "Məhsul",
+      category: "Kateqoriya",
+      quantity: "Miqdar",
+      revenue: "Gəlir",
+      cost: "Maya",
+      profit: "Mənfəət",
+      margin: "Marja %",
+      total: "Cəmi",
+    },
   },
   uiStandard: {
     date: {
