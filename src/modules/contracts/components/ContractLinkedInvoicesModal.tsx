@@ -9,6 +9,9 @@ import {
   type LinkedDocument,
 } from "../lib/api";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate, formatMoney } from "@/lib/dates/localeDate";
 
 interface Props {
   contract: Contract;
@@ -16,7 +19,9 @@ interface Props {
 }
 
 export default function ContractLinkedInvoicesModal({ contract, onClose }: Props) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
+  // UI_STANDARD (UI-6): the linked invoices on the grid ("View" in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const [documents, setDocuments] = useState<LinkedDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,6 +97,22 @@ export default function ContractLinkedInvoicesModal({ contract, onClose }: Props
 
           {loading ? (
             <p className="text-center text-app-muted">{t("common.loading")}</p>
+          ) : standard ? (
+            <StandardGrid<LinkedDocument>
+              id="contracts.linked-invoices"
+              label={t("official.linkedInvoices")}
+              rows={documents}
+              rowKey={(doc) => `${doc.kind}-${doc.id}`}
+              empty={t("official.noLinkedInvoices")}
+              rowHref={(doc) => (doc.kind === "purchase" ? "/purchases" : `/sales/${doc.id}`)}
+              columns={[
+                { key: "docNo", header: t("sales.docNo"), type: "code", cell: (doc) => <span className="ds-mono">{doc.docNo || "—"}</span>, sortValue: (doc) => doc.docNo },
+                { key: "date", header: t("common.date"), type: "date", cell: (doc) => formatGridDate(doc.docDate), sortValue: (doc) => doc.docDate },
+                { key: "total", header: t("print.total"), type: "money", cell: (doc) => formatMoney(doc.totalAmount, locale, { currency: null }), sortValue: (doc) => doc.totalAmount },
+                { key: "paid", header: t("print.paid"), type: "money", className: "ds-text-success", cell: (doc) => formatMoney(doc.paidAmount, locale, { currency: null }), sortValue: (doc) => doc.paidAmount },
+                { key: "remaining", header: t("official.remainingBalance"), type: "money", className: "ds-text-warning", cell: (doc) => formatMoney(doc.remainingBalance, locale, { currency: null }), sortValue: (doc) => doc.remainingBalance },
+              ]}
+            />
           ) : documents.length === 0 ? (
             <p className="text-center text-app-muted">{t("official.noLinkedInvoices")}</p>
           ) : (

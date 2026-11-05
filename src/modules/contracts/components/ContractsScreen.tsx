@@ -16,6 +16,10 @@ import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction,
 import { fetchContracts, fetchLinkedDocuments, updateContract, type Contract } from "../lib/api";
 import { contractKpis, contractsDefinition, CONTRACTS_VIEW_KEY, type ContractRecord } from "../views/contracts";
 import ContractAttachmentButton from "./ContractAttachmentButton";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate } from "@/lib/dates/localeDate";
+import type { LinkedDocument } from "../lib/api";
 import ContractPrintTemplate, { type ContractPrintData } from "./ContractPrintTemplate";
 
 const fetchAll = async () => (await fetchContracts()) as unknown as Record<string, unknown>[];
@@ -76,6 +80,8 @@ function ContractRecordView({ record, close }: { record: ContractRecord; close: 
     : [];
 
   const docs = linked.data ?? [];
+  // UI_STANDARD (UI-6): the linked invoices on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const total = docs.reduce((s, d) => s + d.totalAmount, 0);
   const paid = docs.reduce((s, d) => s + d.paidAmount, 0);
   const linkedTab = (
@@ -93,6 +99,21 @@ function ContractRecordView({ record, close }: { record: ContractRecord; close: 
               <div className="h-full rounded-full" style={{ width: `${total > 0 ? Math.min(100, (paid / total) * 100) : 0}%`, background: "var(--ds-success)" }} />
             </div>
           </div>
+          {standard ? (
+            <StandardGrid<LinkedDocument>
+              id="contracts.record.linked"
+              label={t("official.linkedInvoices")}
+              rows={docs}
+              rowKey={(d) => `${d.kind}-${d.id}`}
+              rowHref={(d) => (d.kind === "sale" ? `/sales/${d.id}` : `/purchases?record=${d.id}`)}
+              columns={[
+                { key: "docNo", header: t("official.contractNumber"), type: "code", cell: (d) => <span className="ds-mono">{d.docNo}</span>, sortValue: (d) => d.docNo },
+                { key: "date", header: t("common.date"), type: "date", cell: (d) => formatGridDate(d.docDate), sortValue: (d) => d.docDate },
+                { key: "total", header: t("official.totalInvoiced"), type: "money", cell: (d) => formatFigure(d.totalAmount, 2, fmt.locale), sortValue: (d) => d.totalAmount },
+                { key: "remaining", header: t("official.remainingBalance"), type: "money", cell: (d) => formatFigure(d.remainingBalance, 2, fmt.locale), sortValue: (d) => d.remainingBalance },
+              ]}
+            />
+          ) : (
           <table className="w-full border-collapse text-left">
             <thead>
               <tr>
@@ -117,6 +138,7 @@ function ContractRecordView({ record, close }: { record: ContractRecord; close: 
               ))}
             </tbody>
           </table>
+          )}
         </>
       )}
     </div>
