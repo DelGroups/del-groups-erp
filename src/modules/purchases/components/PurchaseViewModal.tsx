@@ -4,6 +4,8 @@ import React from "react";
 import { X } from "lucide-react";
 import type { PurchaseRecord } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
@@ -15,6 +17,8 @@ interface PurchaseViewModalProps {
 
 export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the purchase lines on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const branding = useCompanyBranding();
 
   return (
@@ -48,6 +52,14 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
               <p className="font-semibold">{purchase.status || "-"}</p>
             </div>
           </div>
+          {standard ? (
+            <DocumentLinesGrid
+              id="purchases.view.lines"
+              label={t("dashboard.product")}
+              lines={purchase.items.map((item, idx) => ({ key: item.id || String(idx), name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
+              headers={{ product: t("dashboard.product"), quantity: t("forms.quantity"), price: t("forms.price"), total: t("forms.lineTotal") }}
+            />
+          ) : (
           <table className="w-full overflow-hidden rounded-xl border border-app">
             <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
               <tr>
@@ -70,6 +82,7 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
               ))}
             </tbody>
           </table>
+          )}
           <div className="flex items-center justify-between gap-4">
             <div className="flex justify-end gap-6 text-sm font-bold">
               <span>{t("print.total")}: {purchase.total_amount.toFixed(2)} {t("common.currency")}</span>
