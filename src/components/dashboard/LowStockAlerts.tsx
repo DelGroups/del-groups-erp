@@ -5,13 +5,18 @@ import Link from "next/link";
 import { AlertTriangle, Package } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { LowStockProduct } from "@/types/database.types";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 interface LowStockAlertsProps {
   products: LowStockProduct[];
 }
 
 export default function LowStockAlerts({ products }: LowStockAlertsProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the low-stock list on the grid; old table with the flag off.
+  const standard = useUiStandard();
 
   return (
     <div className="app-card app-card-elevated">
@@ -34,6 +39,20 @@ export default function LowStockAlerts({ products }: LowStockAlertsProps) {
           <p className="text-sm font-semibold text-app">{t("dashboard.stockLevelsNormal")}</p>
           <p className="mt-1 text-xs text-app-muted">{t("dashboard.noBelowMinStock")}</p>
         </div>
+      ) : standard ? (
+        <StandardGrid<LowStockProduct>
+          id="dashboard.low-stock"
+          label={t("dashboard.lowStock")}
+          rows={products}
+          rowKey={(p) => p.id}
+          columns={[
+            { key: "code", header: t("common.code"), type: "code", cell: (p) => <span className="ds-mono font-semibold">{p.code || "—"}</span>, sortValue: (p) => p.code },
+            { key: "name", header: t("dashboard.product"), width: 220, className: "font-medium", cell: (p) => p.name, sortValue: (p) => p.name },
+            { key: "category", header: t("common.category"), className: "ds-muted", cell: (p) => p.category || "—", sortValue: (p) => p.category },
+            { key: "stock", header: t("products.stock"), type: "number", className: "ds-text-danger font-semibold", cell: (p) => `${formatQuantity(p.stock, locale)} ${p.unit ?? ""}`.trim(), sortValue: (p) => p.stock },
+            { key: "min", header: t("dashboard.min"), type: "number", className: "ds-muted", cell: (p) => formatQuantity(p.min_stock, locale), sortValue: (p) => p.min_stock },
+          ]}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">

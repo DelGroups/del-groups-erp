@@ -4,6 +4,9 @@ import React from "react";
 import { AlertTriangle, Archive, Package } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { MaterialUsageRow } from "@/types/database.types";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatFigure, formatQuantity } from "@/lib/dates/localeDate";
 
 interface InventoryInsightsSectionProps {
   topMaterials: MaterialUsageRow[];
@@ -16,7 +19,9 @@ export default function InventoryInsightsSection({
   deficitAlerts,
   deadstock,
 }: InventoryInsightsSectionProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the top materials on the grid; old table with the flag off.
+  const standard = useUiStandard();
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
@@ -30,6 +35,19 @@ export default function InventoryInsightsSection({
         </div>
         {topMaterials.length === 0 ? (
           <p className="py-6 text-center text-xs text-app-muted">{t("reports.executive.noMaterials")}</p>
+        ) : standard ? (
+          <StandardGrid<MaterialUsageRow>
+            id="reports.executive.top-materials"
+            label={t("reports.executive.topMaterialsTitle")}
+            rows={topMaterials}
+            rowKey={(row) => row.productId}
+            columns={[
+              { key: "code", header: t("common.code"), type: "code", cell: (row) => <span className="ds-mono font-semibold">{row.code}</span>, sortValue: (row) => row.code },
+              { key: "name", header: t("reports.executive.productName"), width: 200, cell: (row) => row.name, sortValue: (row) => row.name },
+              { key: "used", header: t("reports.executive.usageQty"), type: "number", cell: (row) => `${formatFigure(row.totalUsed, 2, locale)} ${row.unit}`, sortValue: (row) => row.totalUsed },
+              { key: "stock", header: t("reports.executive.stock"), type: "number", cell: (row) => formatQuantity(row.stock, locale), sortValue: (row) => row.stock },
+            ]}
+          />
         ) : (
           <table className="w-full text-left text-xs">
             <thead className="font-bold uppercase text-app-muted">

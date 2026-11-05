@@ -16,6 +16,9 @@ import { Factory } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { ProjectProfitabilityRow } from "@/types/database.types";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatFigure } from "@/lib/dates/localeDate";
 
 interface ProjectProfitabilitySectionProps {
   rows: ProjectProfitabilityRow[];
@@ -32,8 +35,11 @@ function money(value: number, currency: string): string {
 }
 
 export default function ProjectProfitabilitySection({ rows }: ProjectProfitabilitySectionProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { theme } = useTheme();
+  // UI_STANDARD (UI-6): the projects on the grid ("order · status" on one line); old table with the flag off.
+  const standard = useUiStandard();
+  const fig = (n: number, d = 2) => formatFigure(n, d, locale);
   const currency = t("common.currency");
   const [colors, setColors] = useState({
     grid: "#334155",
@@ -114,6 +120,37 @@ export default function ProjectProfitabilitySection({ rows }: ProjectProfitabili
             </ResponsiveContainer>
           </div>
 
+          {standard ? (
+            <StandardGrid<ProjectProfitabilityRow>
+              id="reports.executive.projects"
+              label={t("reports.executive.orderNo")}
+              rows={rows}
+              rowKey={(row) => row.orderId}
+              rowHref={(row) => `/production/${row.orderId}`}
+              columns={[
+                {
+                  key: "order",
+                  header: t("reports.executive.orderNo"),
+                  width: 180,
+                  cell: (row) => (
+                    <span>
+                      <span className="ds-mono font-semibold">{row.orderNo}</span>
+                      <span className="ds-muted"> · {row.status}</span>
+                    </span>
+                  ),
+                  sortValue: (row) => row.orderNo,
+                },
+                { key: "customer", header: t("reports.executive.customer"), className: "font-semibold", cell: (row) => row.customerName, sortValue: (row) => row.customerName },
+                { key: "revenue", header: t("reports.executive.netRevenue"), type: "money", cell: (row) => fig(row.netRevenue), sortValue: (row) => row.netRevenue },
+                { key: "raw", header: t("reports.executive.rawMaterial"), type: "money", className: "ds-text-danger", cell: (row) => `−${fig(row.rawMaterialCost)}`, sortValue: (row) => row.rawMaterialCost },
+                { key: "labor", header: t("reports.executive.labor"), type: "money", className: "ds-text-danger", cell: (row) => `−${fig(row.laborCost)}`, sortValue: (row) => row.laborCost },
+                { key: "general", header: t("reports.executive.generalExpenses"), type: "money", className: "ds-text-danger", cell: (row) => `−${fig(row.generalExpenses)}`, sortValue: (row) => row.generalExpenses },
+                { key: "estimated", header: t("reports.executive.estimatedProfit"), type: "money", cell: (row) => fig(row.estimatedProfit), sortValue: (row) => row.estimatedProfit },
+                { key: "net", header: t("reports.executive.netProfit"), type: "money", cell: (row) => <span className={row.netProfit < 0 ? "ds-text-danger font-semibold" : "ds-text-success font-semibold"}>{fig(row.netProfit)}</span>, sortValue: (row) => row.netProfit },
+                { key: "margin", header: t("reports.executive.actualMargin"), type: "number", cell: (row) => <span className={row.actualMarginPercent < 0 ? "ds-text-danger font-semibold" : "ds-text-success font-semibold"}>{`${fig(row.actualMarginPercent, 1)}%`}</span>, sortValue: (row) => row.actualMarginPercent },
+              ]}
+            />
+          ) : (
           <div className="app-table-wrap">
             <table className="app-table text-xs">
               <thead className="border-b border-app bg-app-card-hover text-[10px] uppercase text-app-muted">
@@ -172,6 +209,7 @@ export default function ProjectProfitabilitySection({ rows }: ProjectProfitabili
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
     </div>
