@@ -10,9 +10,13 @@ import { normalizeCommissionRule, parseNullableMaxSales } from "@/types/database
 import { useI18n } from "@/i18n/I18nProvider";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
+import { useUiStandard } from "@/design-system/components";
+import { CommissionRulesGrid } from "./CommissionRulesGrid";
 
 export default function LegacyCommissionRulesPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the rules on the grid; the old table with the flag off.
+  const standard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [rules, setRules] = useState<CommissionRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +194,9 @@ export default function LegacyCommissionRulesPage() {
               </h3>
             </div>
 
-            {loading ? (
+            {standard ? (
+              <CommissionRulesGrid id="commissions.rules" rules={rules} loading={loading} onDelete={(ruleId) => void handleDelete(ruleId)} />
+            ) : loading ? (
               <div className="p-8 text-center text-app-muted text-xs">{t("common.loading")}</div>
             ) : rules.length === 0 ? (
               <div className="p-12 text-center text-app-muted text-sm">

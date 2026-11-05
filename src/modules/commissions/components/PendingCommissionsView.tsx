@@ -4,6 +4,9 @@ import React, { useMemo } from "react";
 import type { Employee, PendingCommissionSummary, SalesCommission } from "@/types/database.types";
 import { getDepartmentLabel } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatFigure, formatMoney } from "@/lib/dates/localeDate";
 
 interface PendingCommissionsViewProps {
   employees: Employee[];
@@ -17,6 +20,9 @@ export default function PendingCommissionsView({
   loading,
 }: PendingCommissionsViewProps) {
   const { t } = useI18n();
+  const { locale } = useI18n();
+  // UI_STANDARD (UI-6): each seller's pending commissions on the grid; the old table with the flag off.
+  const standard = useUiStandard();
   const summaries = useMemo(() => {
     const map = new Map<string, PendingCommissionSummary>();
 
@@ -97,6 +103,32 @@ export default function PendingCommissionsView({
             </div>
           </div>
 
+          {standard ? (
+            <StandardGrid<SalesCommission>
+              id="commissions.pending"
+              label={t("commissions.pendingTotal")}
+              rows={summary.commissions}
+              rowKey={(c) => c.id}
+              columns={[
+                { key: "invoice", header: t("commissions.invoiceCol"), type: "code", cell: (c) => <span className="ds-mono font-semibold">{c.sale_doc_no || "—"}</span>, sortValue: (c) => c.sale_doc_no },
+                {
+                  key: "product",
+                  header: t("commissions.productCategoryCol"),
+                  cell: (c) => (
+                    <span>
+                      {c.product_name || "—"}
+                      {c.product_category ? <span className="ds-muted"> · {c.product_category}</span> : null}
+                    </span>
+                  ),
+                  sortValue: (c) => c.product_name,
+                },
+                { key: "sale", header: t("commissions.saleAmountCol"), type: "money", cell: (c) => formatMoney(c.sale_amount, locale), sortValue: (c) => c.sale_amount },
+                { key: "rate", header: t("commissions.rateCol"), type: "number", cell: (c) => `%${formatFigure(c.commission_rate, 1, locale)}`, sortValue: (c) => c.commission_rate },
+                { key: "commission", header: t("commissions.commissionCol"), type: "money", className: "ds-text-success font-semibold", cell: (c) => formatMoney(c.commission_amount, locale), sortValue: (c) => c.commission_amount },
+              ]}
+              totals={{ invoice: t("commissions.totalLabel"), commission: formatMoney(summary.pending_total, locale) }}
+            />
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
@@ -142,6 +174,7 @@ export default function PendingCommissionsView({
               </tfoot>
             </table>
           </div>
+          )}
         </div>
       ))}
     </div>
