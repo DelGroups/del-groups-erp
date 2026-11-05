@@ -36,6 +36,9 @@ import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText, LineTextCell } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatFigure, formatQuantity } from "@/lib/dates/localeDate";
 
 interface InitialBalanceFormProps {
   products: Product[];
@@ -52,7 +55,7 @@ export default function InitialBalanceForm({
   defaultEntryType = "opening_balance",
   onSuccess,
 }: InitialBalanceFormProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // UI_STANDARD (UI-2 lookups): the warehouse through EntityLookup; one created here joins the list.
   const uiStandard = useUiStandard();
   const [createdWarehouses, setCreatedWarehouses] = useState<Warehouse[]>([]);
@@ -425,6 +428,85 @@ export default function InitialBalanceForm({
           </div>
         ) : null}
 
+        {uiStandard ? (
+          <LineGrid<InitialBalanceLineItem>
+            id="initial-balance-lines"
+            label={t("initialBalance.addLine")}
+            lines={items}
+            lineKey={(row) => row.id}
+            lineLabel={(row, index) => row.product_name || `#${index + 1}`}
+            labels={lineGridLabels(t)}
+            editable={!isLocked}
+            onAddLine={() => setItems((prev) => [...prev, createEmptyInitialBalanceLine()])}
+            onRemove={(index) => setItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)))}
+            forceShown={items.some((row) => row.is_metric) ? ["pieces"] : []}
+            columns={[
+              {
+                key: "product",
+                header: t("forms.productName"),
+                width: 260,
+                cell: (row) => (
+                  <ProductCombobox products={products} selectedId={row.product_id} selectedName={row.product_name} disabled={isLocked} onSelect={(product) => handleProductSelect(row.id, product)} />
+                ),
+              },
+              { key: "barcode", header: t("products.bulkImport.colBarcode"), type: "code", optional: true, cell: (row) => <LineText muted>{productsById.get(row.product_id)?.barcode || "—"}</LineText> },
+              { key: "unit", header: t("forms.unitMeasure"), type: "code", width: 88, cell: (row) => <LineText muted>{row.unit || "—"}</LineText> },
+              {
+                key: "available",
+                header: t("initialBalance.availableStock"),
+                type: "number",
+                cell: (row) => <LineText muted suffix={row.product_id ? row.unit || null : null}>{row.product_id ? formatQuantity(warehouseStock[row.product_id] ?? 0, locale) : "—"}</LineText>,
+              },
+              {
+                key: "quantity",
+                header: t("initialBalance.qtyOrBreakdown"),
+                type: "number",
+                width: 128,
+                cell: (row, ctx) =>
+                  row.is_metric ? (
+                    <LineNumberCell ctx={ctx} value={row.metric_total_meters || null} placeholder={t("initialBalance.totalMeters")} onChange={(meters) => updateItem(row.id, { metric_total_meters: meters ?? 0, quantity: meters ?? 0 })} />
+                  ) : (
+                    <LineNumberCell ctx={ctx} value={row.quantity || null} placeholder="0" onChange={(value) => updateItem(row.id, { quantity: value ?? 0 })} />
+                  ),
+              },
+              {
+                key: "pieces",
+                header: t("initialBalance.pieceBreakdownPlaceholder"),
+                width: 200,
+                optional: true,
+                cell: (row, ctx) =>
+                  row.is_metric ? (
+                    <LineTextCell
+                      ctx={ctx}
+                      mono
+                      value={row.piece_lengths_input}
+                      placeholder={t("initialBalance.pieceBreakdownPlaceholder")}
+                      onChange={(value) => {
+                        const synced = syncMetricLineFromPieces({ ...row, piece_lengths_input: value ?? "" });
+                        updateItem(row.id, { piece_lengths_input: synced.piece_lengths_input, metric_total_meters: synced.metric_total_meters, quantity: synced.quantity, line_total: synced.line_total });
+                      }}
+                    />
+                  ) : (
+                    <LineText muted>—</LineText>
+                  ),
+              },
+              {
+                key: "unitCost",
+                header: t("initialBalance.unitCost"),
+                type: "money",
+                width: 120,
+                hint: t("forms.pricePerMeterShort"),
+                cell: (row, ctx) => <LineNumberCell ctx={ctx} value={row.unit_cost || null} placeholder="0.00" onChange={(value) => updateItem(row.id, { unit_cost: value ?? 0 })} />,
+              },
+              { key: "lineTotal", header: t("initialBalance.lineTotal"), type: "money", cell: (row) => <LineText className="font-semibold">{formatFigure(row.line_total, 2, locale)}</LineText> },
+            ]}
+            details={(row) =>
+              row.is_metric && row.unit_cost > 0 ? (
+                <MetricLinePriceHint unitPrice={row.unit_cost} barLengthM={resolveStandardBarLengthM(productsById.get(row.product_id) ?? null)} mode="linear_m" />
+              ) : null
+            }
+          />
+        ) : (
         <div className="overflow-x-auto rounded-xl border border-app">
           <table className="min-w-full text-xs">
             <thead className="bg-app-card-hover text-app-muted">
@@ -564,8 +646,9 @@ export default function InitialBalanceForm({
             </tbody>
           </table>
         </div>
+        )}
 
-        {!isLocked ? (
+        {!isLocked && !uiStandard ? (
           <button
             type="button"
             onClick={() => setItems((prev) => [...prev, createEmptyInitialBalanceLine()])}

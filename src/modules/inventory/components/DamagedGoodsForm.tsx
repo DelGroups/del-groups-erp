@@ -20,6 +20,9 @@ import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import Button from "@/components/ui/button";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineSelectCell, LineText, LineTextCell } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatQuantity } from "@/lib/dates/localeDate";
 import { useToast } from "@/hooks/useToast";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 
@@ -40,7 +43,7 @@ export default function DamagedGoodsForm({
 }: DamagedGoodsFormProps) {
   const isEdit = mode === "edit" && !!initialWriteoff;
   const { displayName, isAdmin, loading: authLoading } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // UI_STANDARD (UI-2 lookups): the warehouse through EntityLookup (role scope + any created here).
   const uiStandard = useUiStandard();
   const [createdWarehouses, setCreatedWarehouses] = useState<Warehouse[]>([]);
@@ -267,6 +270,42 @@ export default function DamagedGoodsForm({
       </div>
 
       <div className="app-table-wrap">
+        {uiStandard ? (
+          <LineGrid<DamagedGoodsItem>
+            id="damaged-goods-lines"
+            label={t("forms.damagedProducts")}
+            lines={items}
+            lineKey={(row) => row.id}
+            lineLabel={(row, index) => row.product_name || `#${index + 1}`}
+            labels={lineGridLabels(t)}
+            onAddLine={addRow}
+            onRemove={(index) => removeRow(items[index].id)}
+            columns={[
+              {
+                key: "product",
+                header: t("dashboard.product"),
+                width: 280,
+                cell: (row, ctx) => (
+                  <LineSelectCell
+                    ctx={ctx}
+                    value={row.product_id || null}
+                    onChange={(value) => handleProductSelect(row.id, value)}
+                    options={products.map((p) => ({ value: p.id, label: t("forms.stockOption", { name: p.name, code: p.code, stock: String(p.stock) }) }))}
+                  />
+                ),
+              },
+              { key: "quantity", header: t("forms.quantity"), type: "number", width: 112, cell: (row, ctx) => <LineNumberCell ctx={ctx} value={row.quantity} onChange={(value) => updateItem(row.id, { quantity: value ?? 0 })} /> },
+              { key: "stock", header: t("forms.stockCol"), type: "number", cell: (row) => <LineText muted suffix={row.unit}>{formatQuantity(row.available_stock, locale)}</LineText> },
+              {
+                key: "reason",
+                header: t("forms.issueReason"),
+                width: 220,
+                cell: (row, ctx) => <LineTextCell ctx={ctx} value={row.issue_description} placeholder={t("forms.issueReasonPlaceholder")} onChange={(value) => updateItem(row.id, { issue_description: value ?? "" })} />,
+              },
+            ]}
+          />
+        ) : (
+        <>
         <div className="app-table-section-bar text-xs font-bold">
           <span>{t("forms.damagedProducts")}</span>
           <button
@@ -353,6 +392,8 @@ export default function DamagedGoodsForm({
             </tbody>
           </table>
         </div>
+        </>
+        )}
       </div>
 
       <label className="app-card block p-4 text-xs font-semibold text-app shadow-sm">

@@ -6,6 +6,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import Button from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/cn";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import type { Product } from "@/types/database.types";
 
 interface CategoryBulkSelectModalProps {
@@ -35,6 +37,8 @@ export default function CategoryBulkSelectModal({
   onConfirm,
 }: CategoryBulkSelectModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the product list on the grid (selection column); old table with the flag off.
+  const standard = useUiStandard();
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -162,6 +166,29 @@ export default function CategoryBulkSelectModal({
           ))}
         </div>
 
+        {standard ? (
+          <StandardGrid<Product>
+            id="inventory.category-bulk-select"
+            label={t("forms.productName")}
+            rows={filteredProducts}
+            rowKey={(product) => product.id}
+            showCount
+            empty={t("products.empty")}
+            onOpen={(product) => (existingProductIds.has(product.id) ? undefined : toggleProduct(product.id))}
+            selection={{
+              isSelected: (product) => selectedIds.has(product.id) || existingProductIds.has(product.id),
+              toggle: (product) => (existingProductIds.has(product.id) ? undefined : toggleProduct(product.id)),
+              allSelected: allFilteredSelected,
+              someSelected: filteredProducts.some((product) => selectedIds.has(product.id)),
+              toggleAll: toggleSelectAllFiltered,
+            }}
+            columns={[
+              { key: "name", header: t("forms.productName"), width: 240, className: "font-medium", cell: (product) => <span className={existingProductIds.has(product.id) ? "ds-muted" : undefined}>{product.name}</span>, sortValue: (product) => product.name },
+              { key: "category", header: t("products.category"), className: "ds-muted", cell: (product) => product.category || "—", sortValue: (product) => product.category },
+              { key: "unit", header: t("forms.unitMeasure"), type: "code", width: 96, className: "ds-muted", cell: (product) => product.unit || "—" },
+            ]}
+          />
+        ) : (
         <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-app">
           <table className="min-w-full text-xs">
             <thead className="sticky top-0 bg-app-card-hover text-app-muted">
@@ -218,6 +245,7 @@ export default function CategoryBulkSelectModal({
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </Modal>
   );

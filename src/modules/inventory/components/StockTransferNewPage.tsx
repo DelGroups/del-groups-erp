@@ -24,6 +24,10 @@ import type { Warehouse } from "@/types/database.types";
 import { generateStockTransferDocumentNumber } from "@/types/database.types";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { codeName } from "@/components/lists/standardGridLogic";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 function createLineId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -44,7 +48,7 @@ function createEmptyLine(): StockTransferLineInput {
 }
 
 export default function StockTransferNewPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // UI_STANDARD (UI-2 lookups): both warehouses through EntityLookup.
   const uiStandard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -303,6 +307,7 @@ export default function StockTransferNewPage() {
                 <Barcode className="h-4 w-4" />
                 {t("stockTransfer.addByBarcode")}
               </Button>
+              {uiStandard ? null : (
               <Button
                 type="button"
                 variant="secondary"
@@ -311,8 +316,35 @@ export default function StockTransferNewPage() {
                 <Plus className="h-4 w-4" />
                 {t("stockTransfer.addRow")}
               </Button>
+              )}
             </div>
 
+            {uiStandard ? (
+              <LineGrid<StockTransferLineInput>
+                id="stock-transfer-lines"
+                label={t("stockTransfer.colProduct")}
+                lines={lines}
+                lineKey={(line) => line.id}
+                lineLabel={(line, index) => line.product_name || `#${index + 1}`}
+                labels={{ ...lineGridLabels(t), empty: t("stockTransfer.emptyLines") }}
+                onAddLine={() => setLines((prev) => [...prev, createEmptyLine()])}
+                onRemove={(index) => removeLine(lines[index].id)}
+                columns={[
+                  { key: "product", header: t("stockTransfer.colProduct"), width: 260, cell: (line) => <LineText>{codeName(line.product_code, line.product_name)}</LineText> },
+                  { key: "barcode", header: t("stockTransfer.colBarcode"), type: "code", cell: (line) => <LineText muted>{line.barcode || "—"}</LineText> },
+                  { key: "unit", header: t("stockTransfer.colUnit"), type: "code", width: 88, cell: (line) => <LineText muted>{line.unit}</LineText> },
+                  { key: "available", header: t("stockTransfer.colAvailable"), type: "number", cell: (line) => <LineText>{formatQuantity(line.available_stock, locale)}</LineText> },
+                  {
+                    key: "quantity",
+                    header: t("stockTransfer.colTransferQty"),
+                    type: "number",
+                    width: 128,
+                    error: (line) => (line.quantity > line.available_stock ? t("stockTransfer.qtyExceedsStock", { name: line.product_name }) : null),
+                    cell: (line, ctx) => <LineNumberCell ctx={ctx} value={line.quantity} max={line.available_stock} onChange={(value) => updateLine(line.id, { quantity: value ?? 0 })} />,
+                  },
+                ]}
+              />
+            ) : (
             <div className="overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)]">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-[color:var(--erp-bg-table-header)]">
@@ -377,6 +409,7 @@ export default function StockTransferNewPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </Panel>
 
           <div className="flex justify-end">

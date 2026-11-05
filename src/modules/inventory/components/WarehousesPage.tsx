@@ -10,6 +10,8 @@ import PageHeader from "@/components/ui/page-header";
 import StatusBadge from "@/components/ui/status-badge";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td } from "@/components/ui/table";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import type { Warehouse, Product } from "@/types/database.types";
@@ -17,6 +19,8 @@ import { RefreshCw, Plus, Pencil, Warehouse as WarehouseIcon, X } from "lucide-r
 
 export default function WarehousesPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the warehouses on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError } = useToast();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -144,7 +148,30 @@ export default function WarehousesPage() {
                 {loading ? null : <RefreshCw className="h-4 w-4" />}
               </Button>
             </div>
-            {loading ? (
+            {standard ? (
+              <StandardGrid<Warehouse>
+                id="inventory.warehouses"
+                label={t("warehouses.listTitle")}
+                rows={warehouses}
+                rowKey={(w) => w.id}
+                loading={loading}
+                empty={t("warehouses.empty")}
+                columns={[
+                  { key: "code", header: t("common.code"), type: "code", cell: (w) => <span className="ds-mono font-semibold">{w.code}</span>, sortValue: (w) => w.code },
+                  { key: "name", header: t("warehouses.warehouseName"), className: "font-semibold", cell: (w) => w.name, sortValue: (w) => w.name },
+                  { key: "location", header: t("common.location"), className: "ds-muted", cell: (w) => w.location || "—", sortValue: (w) => w.location },
+                  {
+                    key: "status",
+                    header: t("common.status"),
+                    type: "status",
+                    samples: [t("warehouses.mainWarehouse"), t("warehouses.secondaryWarehouse")],
+                    cell: (w) => (w.is_default ? <Chip tone="success">{t("warehouses.mainWarehouse")}</Chip> : <Chip>{t("warehouses.secondaryWarehouse")}</Chip>),
+                    sortValue: (w) => (w.is_default ? 0 : 1),
+                  },
+                ]}
+                rowActions={(w) => <TableRowActionsMenu items={[{ key: "edit", label: t("common.edit"), icon: <Pencil className="h-4 w-4" />, onClick: () => openEditModal(w) }]} />}
+              />
+            ) : loading ? (
               <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
             ) : warehouses.length === 0 ? (
               <div className="p-8 text-center text-sm text-app-muted">{t("warehouses.empty")}</div>

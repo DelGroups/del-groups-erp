@@ -11,6 +11,9 @@ import Select from "@/components/ui/select";
 import KpiCard from "@/components/dashboard/KpiCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResizableTh, Td, TablePagination } from "@/components/ui/table";
+import { RowActionsMenu, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatMoney } from "@/lib/dates/localeDate";
 import DocumentListSearchBar from "@/components/documents/DocumentListSearchBar";
 import { useTableResize, type TableColumnSpecs } from "@/hooks/useTableResize";
 import { useWarehouseStockDashboard } from "../hooks/useWarehouseStockDashboard";
@@ -66,7 +69,9 @@ function formatQty(value: number, unit: string | null): string {
 }
 
 export default function WarehouseStockPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the stock on the grid (transfer / kardex in the row menu, same pagination); old table with the flag off.
+  const standard = useUiStandard();
   const { data, isLoading, isFetching, error, refetch } = useWarehouseStockDashboard();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -247,7 +252,37 @@ export default function WarehouseStockPage() {
               </label>
             </div>
 
-            {isLoading ? (
+            {standard ? (
+              <StandardGrid<WarehouseStockRow>
+                id="inventory.warehouse-stock"
+                label={t("inventory.columns.qtyOnHand")}
+                rows={paginatedRows}
+                rowKey={(row) => row.id}
+                loading={isLoading}
+                empty={t("inventory.emptyStock")}
+                columns={[
+                  { key: "code", header: t("inventory.columns.barcodeOrCode"), type: "code", className: "ds-mono ds-muted", cell: (row) => row.barcode || row.sku, sortValue: (row) => row.barcode || row.sku },
+                  { key: "name", header: t("inventory.columns.name"), width: 240, className: "font-medium", cell: (row) => row.name, sortValue: (row) => row.name },
+                  { key: "warehouse", header: t("inventory.columns.warehouse"), cell: (row) => row.warehouseName, sortValue: (row) => row.warehouseName },
+                  { key: "category", header: t("inventory.columns.category"), cell: (row) => row.category || "—", sortValue: (row) => row.category },
+                  { key: "quantity", header: t("inventory.columns.qtyOnHand"), type: "number", className: "font-semibold", cell: (row) => formatQty(row.totalPhysical, null), sortValue: (row) => row.totalPhysical },
+                  { key: "unit", header: t("inventory.columns.unit"), type: "code", width: 96, cell: (row) => row.unit || "—" },
+                  { key: "value", header: t("inventory.columns.totalValue"), type: "money", cell: (row) => formatMoney(row.valuation, locale), sortValue: (row) => row.valuation },
+                  { key: "status", header: t("inventory.columns.statusAlert"), type: "status", cell: (row) => <StockStatusBadge status={row.status} label={statusLabel(row.status)} />, sortValue: (row) => row.status },
+                ]}
+                rowActions={(row) => (
+                  <RowActionsMenu
+                    label={t("inventory.columns.actions")}
+                    linkAs={Link}
+                    items={[
+                      { key: "transfer", label: t("inventory.actions.transfer"), icon: <ArrowRightLeft className="h-4 w-4" />, href: `/inventory/transfers/new?from=${row.warehouseId}&productId=${row.productId}` },
+                      { key: "kardex", label: t("inventory.actions.kardex"), icon: <History className="h-4 w-4" />, href: `/dashboard/reports/inventory-turnover?productId=${row.productId}` },
+                    ]}
+                  />
+                )}
+                footer={<TablePagination page={page} limit={pageSize} total={filteredRows.length} onPageChange={setPage} onLimitChange={setPageSize} />}
+              />
+            ) : isLoading ? (
               <div className="space-y-2 py-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
