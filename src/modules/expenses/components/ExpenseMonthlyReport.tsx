@@ -3,6 +3,9 @@
 import React, { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { formatMoney } from "@/lib/dates/localeDate";
 import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
 import {
   buildMonthlyReport,
@@ -27,7 +30,9 @@ function money(value: number | undefined): string {
 }
 
 export default function ExpenseMonthlyReport({ rows, loading, rangeLabel }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the month-by-month report on the grid (sticky first column and totals); old table with the flag off.
+  const standard = useUiStandard();
   const [group, setGroup] = useState<ExpenseReportGroup>("category");
   const noLabel = group === "category" ? t("expenses.doc.reportNoCategory") : t("expenses.doc.reportNoDepartment");
   const report = useMemo(() => buildMonthlyReport(rows, group, noLabel), [rows, group, noLabel]);
@@ -79,6 +84,30 @@ export default function ExpenseMonthlyReport({ rows, loading, rangeLabel }: Prop
         <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
       ) : report.lines.length === 0 ? (
         <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
+      ) : standard ? (
+        <StandardGrid<(typeof report.lines)[number]>
+          id={`expenses.monthly.${group}`}
+          label={t("expenses.doc.reportHint")}
+          rows={report.lines}
+          rowKey={(line) => line.label}
+          columns={[
+            { key: "label", header: group === "category" ? t("common.category") : t("expenses.doc.department"), width: 220, cell: (line) => line.label, sortValue: (line) => line.label },
+            ...report.months.map<StandardColumn<(typeof report.lines)[number]>>((m) => ({
+              key: `m:${m}`,
+              header: monthLabel(m),
+              type: "money",
+              className: "ds-muted",
+              cell: (line) => money(line.byMonth[m]),
+              sortValue: (line) => line.byMonth[m] ?? 0,
+            })),
+            { key: "total", header: t("expenses.doc.total"), type: "money", className: "font-semibold", cell: (line) => formatMoney(line.total, locale, { currency: null }), sortValue: (line) => line.total },
+          ]}
+          totals={{
+            label: t("expenses.doc.total"),
+            ...Object.fromEntries(report.months.map((m) => [`m:${m}`, money(report.monthTotals[m])])),
+            total: <span className="ds-text-danger">{formatMoney(report.total, locale)}</span>,
+          }}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-max text-sm">
