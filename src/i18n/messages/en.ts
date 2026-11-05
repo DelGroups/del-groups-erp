@@ -5873,6 +5873,22 @@ export const enMessages: Messages = {
       print: "Print cost sheet",
     },
   },
+  tablesStd: {
+    finReport: {
+      byCategory: "Totals by category",
+      type: "Type",
+      category: "Category",
+      total: "Total",
+      ledger: "Finance journal",
+      ledgerHint: "All income and expense transactions",
+      empty: "No transactions in the selected period.",
+      date: "Date",
+      account: "Account",
+      notes: "Note",
+      amount: "Amount",
+      netTotal: "Total (income − expense)",
+    },
+  },
   uiStandard: {
     date: {
       placeholder: "dd.mm.yyyy",

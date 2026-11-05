@@ -5872,6 +5872,22 @@ export const azMessages = {
       print: "Maya dəyəri vərəqini çap et",
     },
   },
+  tablesStd: {
+    finReport: {
+      byCategory: "Kateqoriya üzrə yekun",
+      type: "Növ",
+      category: "Kateqoriya",
+      total: "Cəmi",
+      ledger: "Maliyyə jurnalı",
+      ledgerHint: "Bütün mədaxil və məxaric əməliyyatları",
+      empty: "Seçilmiş dövr üzrə əməliyyat tapılmadı.",
+      date: "Tarix",
+      account: "Hesab",
+      notes: "Qeyd",
+      amount: "Məbləğ",
+      netTotal: "Yekun (mədaxil − məxaric)",
+    },
+  },
   uiStandard: {
     date: {
       placeholder: "gg.aa.iiii",

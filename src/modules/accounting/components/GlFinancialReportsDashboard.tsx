@@ -6,6 +6,12 @@ import type {
   GlProfitAndLossSummary,
 } from "../lib/glFinancialReports";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
+import { formatGridDate, formatMoney as gridMoney } from "@/lib/dates/localeDate";
+
+type LedgerRow = GlFinancialReportsData["generalLedger"]["rows"][number];
 
 type GlFinancialReportsDashboardProps = {
   data: GlFinancialReportsData;
@@ -60,7 +66,9 @@ export default function GlFinancialReportsDashboard({
   data,
   loading,
 }: GlFinancialReportsDashboardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the general ledger on the grid ("code · account" on one line).
+  const standard = useUiStandard();
   const pl: GlProfitAndLossSummary = data.profitAndLoss;
   const bs: GlBalanceSheetSummary = data.balanceSheet;
   const ledger = data.generalLedger;
@@ -148,6 +156,24 @@ export default function GlFinancialReportsDashboard({
 
       <section>
         <h3 className="mb-3 text-sm font-bold text-app">{t("glReports.generalLedgerTitle")}</h3>
+        {standard ? (
+          <StandardGrid<LedgerRow>
+            id="reports.gl.ledger"
+            label={t("glReports.generalLedgerTitle")}
+            rows={ledger.rows}
+            rowKey={(r) => r.lineId}
+            loading={loading}
+            empty={t("glReports.ledgerEmpty")}
+            columns={[
+              { key: "date", header: t("common.date"), type: "date", cell: (r) => formatGridDate(r.entryDate), sortValue: (r) => r.entryDate },
+              { key: "documentType", header: t("glReports.documentType"), cell: (r) => r.documentType, sortValue: (r) => r.documentType },
+              { key: "account", header: t("glReports.account"), cell: (r) => codeName(r.accountCode, r.accountName), sortValue: (r) => r.accountCode },
+              { key: "description", header: t("glReports.description"), className: "ds-muted", cell: (r) => r.description || "—" },
+              { key: "debit", header: t("glReports.debit"), type: "money", cell: (r) => (r.debit > 0 ? gridMoney(r.debit, locale) : "—"), sortValue: (r) => r.debit },
+              { key: "credit", header: t("glReports.credit"), type: "money", cell: (r) => (r.credit > 0 ? gridMoney(r.credit, locale) : "—"), sortValue: (r) => r.credit },
+            ]}
+          />
+        ) : (
         <div className="app-card overflow-hidden">
           <table className="w-full text-left text-xs">
             <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
@@ -191,6 +217,7 @@ export default function GlFinancialReportsDashboard({
             </tbody>
           </table>
         </div>
+        )}
         {!loading && ledger.total > ledger.limit ? (
           <p className="mt-2 text-xs text-app-muted">
             {t("glReports.ledgerPagination", {

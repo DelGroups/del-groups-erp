@@ -5874,6 +5874,22 @@ export const ruMessages: Messages = {
       print: "Печать листа себестоимости",
     },
   },
+  tablesStd: {
+    finReport: {
+      byCategory: "Итоги по категориям",
+      type: "Тип",
+      category: "Категория",
+      total: "Итого",
+      ledger: "Финансовый журнал",
+      ledgerHint: "Все операции прихода и расхода",
+      empty: "За выбранный период операций нет.",
+      date: "Дата",
+      account: "Счёт",
+      notes: "Примечание",
+      amount: "Сумма",
+      netTotal: "Итого (приход − расход)",
+    },
+  },
   uiStandard: {
     date: {
       placeholder: "дд.мм.гггг",
