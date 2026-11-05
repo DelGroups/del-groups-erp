@@ -15,11 +15,34 @@
 //   npm run ui:guard -- --url http://localhost:3000 [--screens design/screenshots/ui-lab]
 // Playwright is not a dependency: `require("playwright")` must resolve (a global install), or
 // UI_GUARD_PLAYWRIGHT points at a playwright package folder. No browser is installed here.
+//
+// UI-6: before the browser it counts raw <table> elements and imports of the old
+// src/components/ui/table.tsx per file (outside src/design-system, src/components/print, the line
+// grid and print sheets) and fails when a file has more than scripts/ui-guard-allowlist.json allows
+// (rawTable). The allowlist may only shrink: `node scripts/ui-guard-allowlist.mjs --write`.
 import { createRequire } from "node:module";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { compareAllowlist, sourceEntries } from "./ui-guard-allowlist.mjs";
 import { findIssues } from "./ui-guard-checks.mjs";
+import { scanSources } from "./ui-guard-rules.mjs";
 import { findPageIssues, measurePage } from "./ui-page-checks.mjs";
+
+/**
+ * Raw-table check (UI-6): files over their rawTable allowance, as ui-guard issues. `entries` are
+ * [path, text] pairs (default: src/), `allowlist` the parsed scripts/ui-guard-allowlist.json.
+ */
+export function rawTableIssues(allowlist, entries = sourceEntries()) {
+  const found = scanSources(entries);
+  const { over } = compareAllowlist({ rawTable: allowlist.rawTable ?? {} }, { rawTable: found.rawTable });
+  return over.map((o) => ({
+    locale: "src",
+    rule: "raw-table",
+    where: o.file,
+    detail: `${o.found} raw table(s) / @/components/ui/table import(s), allowed ${o.allowed}: use StandardGrid (DataGrid) or LineGrid`,
+  }));
+}
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -166,9 +189,10 @@ async function signIn(page, base) {
 async function main() {
   const base = arg("url", "http://localhost:3000");
   const screens = arg("screens", null);
+  const allowlist = JSON.parse(readFileSync(fileURLToPath(new URL("./ui-guard-allowlist.json", import.meta.url)), "utf8"));
+  let issues = rawTableIssues(allowlist);
   const { chromium } = loadPlaywright();
   const browser = await chromium.launch();
-  let issues = [];
   try {
     for (const locale of ["az", "ru"]) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -255,7 +279,10 @@ async function main() {
   process.exitCode = issues.length ? 1 : 0;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Run only as a script, so tests can import rawTableIssues.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

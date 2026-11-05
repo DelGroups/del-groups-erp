@@ -32,6 +32,10 @@ import {
   type AuditModule,
 } from "@/lib/audit/types";
 import type { Json } from "@/types/database.types";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDateTime } from "@/lib/dates/localeDate";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 
 const PAGE_SIZE = 50;
 
@@ -74,6 +78,8 @@ function ToggleRow({
 
 export default function AuditSettingsPage() {
   const { t, formatDateTime } = useI18n();
+  // UI_STANDARD (UI-6): the audit log on the grid ("user · IP", "module · table" on one line; diff in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
@@ -344,6 +350,47 @@ export default function AuditSettingsPage() {
             ) : null}
 
             <section className="app-card app-card-elevated overflow-hidden">
+              {standard ? (
+                <StandardGrid<AuditLogRow>
+                  id="settings-audit"
+                  label={t("audit.colAction")}
+                  rows={rows}
+                  rowKey={(row) => row.id}
+                  loading={loading && rows.length === 0}
+                  empty={t("audit.empty")}
+                  onOpen={(row) => setDiffRow(row)}
+                  columns={[
+                    { key: "time", header: t("audit.colTime"), type: "datetime", cell: (row) => formatGridDateTime(row.created_at), sortValue: (row) => row.created_at },
+                    {
+                      key: "user",
+                      header: t("audit.colUser"),
+                      width: 220,
+                      cell: (row) => (
+                        <span>
+                          <span className="font-medium">{userLabel(row)}</span>
+                          {row.ip_address ? <span className="ds-mono ds-muted"> · {row.ip_address}</span> : null}
+                        </span>
+                      ),
+                      sortValue: (row) => userLabel(row),
+                    },
+                    { key: "action", header: t("audit.colAction"), type: "status", cell: (row) => <Chip>{t(`audit.actions.${row.action}`)}</Chip>, sortValue: (row) => row.action },
+                    {
+                      key: "module",
+                      header: t("audit.colModule"),
+                      width: 200,
+                      cell: (row) => (
+                        <span>
+                          {t(`audit.modules.${row.module}`)}
+                          {row.table_name ? <span className="ds-mono ds-muted"> · {row.table_name}</span> : null}
+                        </span>
+                      ),
+                      sortValue: (row) => row.module,
+                    },
+                    { key: "record", header: t("audit.colRecord"), type: "code", cell: (row) => <span className="ds-mono">{row.record_id ? row.record_id.slice(0, 8) : "—"}</span> },
+                  ]}
+                  rowActions={(row) => <TableRowActionsMenu items={[{ key: "diff", label: t("audit.viewDiff"), onClick: () => setDiffRow(row) }]} />}
+                />
+              ) : (
               <div className="app-table-wrap">
                 <table className="app-table text-xs">
                   <thead>
@@ -414,6 +461,7 @@ export default function AuditSettingsPage() {
                   </tbody>
                 </table>
               </div>
+              )}
               <div className="flex items-center justify-between border-t border-app px-4 py-3 text-[11px] text-app-muted">
                 <span>{t("audit.showing", { count: rows.length, total })}</span>
                 <div className="flex gap-2">

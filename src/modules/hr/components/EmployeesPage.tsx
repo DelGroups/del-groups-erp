@@ -46,6 +46,8 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate } from "@/lib/dates/localeDate";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import { ListGrid } from "@/components/lists/ListGrid";
 import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
@@ -400,7 +402,37 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
                   </button>
                 </div>
               )}
-              {loading ? (
+              {gridColumns.grid ? (
+                // UI_STANDARD (UI-6): the leaves on the grid, approve / reject in the row menu.
+                <StandardGrid<EmployeeLeave>
+                  id="hr-leaves"
+                  label={t("employees.leaves.newTitle")}
+                  rows={leaves}
+                  rowKey={(leave) => leave.id}
+                  loading={loading}
+                  empty={t("employees.leaves.empty")}
+                  columns={[
+                    { key: "employee", header: t("employees.employee"), className: "font-semibold", cell: (leave) => leave.employees?.full_name || "—", sortValue: (leave) => leave.employees?.full_name },
+                    { key: "type", header: t("employees.leaves.type"), cell: (leave) => leaveTypeLabel(leave.leave_type, t), sortValue: (leave) => leave.leave_type },
+                    { key: "period", header: t("employees.leaves.period"), width: 200, cell: (leave) => `${formatGridDate(leave.start_date)} → ${formatGridDate(leave.end_date)}`, sortValue: (leave) => leave.start_date },
+                    { key: "days", header: t("employees.leaves.days"), type: "number", cell: (leave) => leave.days_count, sortValue: (leave) => leave.days_count },
+                    { key: "status", header: t("common.status"), type: "status", cell: (leave) => <LeaveStatusBadge status={leave.status} t={t} />, sortValue: (leave) => leave.status },
+                  ]}
+                  rowActions={
+                    canManageHr
+                      ? (leave) =>
+                          leave.status === "PENDING" ? (
+                            <TableRowActionsMenu
+                              items={[
+                                { key: "approve", label: t("employees.leaves.approve"), onClick: () => void handleLeaveStatus(leave.id, "APPROVED") },
+                                { key: "reject", label: t("employees.leaves.reject"), onClick: () => void handleLeaveStatus(leave.id, "REJECTED"), variant: "destructive" },
+                              ]}
+                            />
+                          ) : null
+                      : undefined
+                  }
+                />
+              ) : loading ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("common.loading")}</div>
               ) : leaves.length === 0 ? (
                 <div className="p-12 text-center text-xs text-app-muted">{t("employees.leaves.empty")}</div>

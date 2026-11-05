@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, CheckCircle2, ExternalLink, History, PencilLine, Plus, Printer, Trash2, Undo2, XCircle } from "lucide-react";
-import { TypeToConfirmDialog, useToast } from "@/design-system/components";
+import { TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
 import { formatFigure } from "@/design-system/logic";
 import { useAuth } from "@/components/auth/AuthProvider";
 import WarehouseSlipPrintTemplate, { warehouseSlipToPrintData } from "@/components/warehouse/WarehouseSlipPrintTemplate";
@@ -82,6 +84,17 @@ const WRITEOFFS = writeoffsDefinition({
 
 function Lines({ items, extra }: { items: readonly { product_name: string; product_code?: string; quantity: number; unit: string }[]; extra?: (i: number) => React.ReactNode }) {
   const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the record's lines on the grid ("code · name"); old table with the flag off.
+  const standard = useUiStandard();
+  type Item = (typeof items)[number];
+  if (standard) {
+    const columns: StandardColumn<Item>[] = [
+      { key: "product", header: t("dashboard.product"), width: 260, cell: (item) => codeName(item.product_code, item.product_name), sortValue: (item) => item.product_name },
+      { key: "qty", header: t("modals.salesView.quantity"), type: "number", cell: (item) => `${formatFigure(item.quantity, 2, locale)} ${item.unit}`, sortValue: (item) => item.quantity },
+      ...(extra ? [{ key: "notes", header: t("inventoryCount.notes"), className: "ds-muted", cell: (item: Item) => extra(items.indexOf(item)) } satisfies StandardColumn<Item>] : []),
+    ];
+    return <StandardGrid<Item> id={extra ? "inventory-record-lines-notes" : "inventory-record-lines"} label={t("dashboard.product")} columns={columns} rows={items} rowKey={(item) => String(items.indexOf(item))} />;
+  }
   return (
     <table className="w-full border-collapse text-left">
       <thead>

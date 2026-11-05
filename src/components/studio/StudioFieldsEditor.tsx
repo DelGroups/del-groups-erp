@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { Archive, ArchiveRestore, Pencil, Plus, Save, X } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import {
@@ -65,6 +68,8 @@ function optionsFromText(text: string, previous: StudioField | null) {
 
 export default function StudioFieldsEditor() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the custom fields on the grid (edit / archive in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [model, setModel] = useState<StudioModelKey>("sales");
   const [fields, setFields] = useState<StudioField[]>([]);
@@ -293,6 +298,44 @@ export default function StudioFieldsEditor() {
         <p className="text-xs text-app-muted">{t("common.loading")}</p>
       ) : fields.length === 0 ? (
         <p className="text-xs text-app-muted">{t("studio.empty")}</p>
+      ) : standard ? (
+        <StandardGrid<StudioField>
+          id="studio-fields"
+          label={t("studio.label")}
+          rows={fields}
+          rowKey={(field) => field.id}
+          columns={[
+            {
+              key: "label",
+              header: t("studio.label"),
+              width: 220,
+              cell: (field) => (
+                <span className={field.active ? "flex min-w-0 items-center gap-1.5 font-medium" : "flex min-w-0 items-center gap-1.5 font-medium ds-muted"}>
+                  <span className="truncate">{field.label}</span>
+                  {!field.active ? <Chip>{t("studio.archived")}</Chip> : null}
+                </span>
+              ),
+              sortValue: (field) => field.label,
+            },
+            { key: "name", header: t("studio.technicalName"), type: "code", className: "ds-mono ds-muted", cell: (field) => field.name, sortValue: (field) => field.name },
+            { key: "type", header: t("studio.fieldType"), className: "ds-muted", cell: (field) => t(`studio.types.${field.field_type}`), sortValue: (field) => field.field_type },
+            { key: "required", header: t("studio.required"), type: "status", cell: (field) => (field.required ? t("studio.yes") : t("studio.no")) },
+            { key: "list", header: t("studio.showInList"), type: "status", cell: (field) => (field.show_in_list ? t("studio.yes") : t("studio.no")) },
+          ]}
+          rowActions={(field) => (
+            <TableRowActionsMenu
+              items={[
+                { key: "edit", label: t("studio.edit"), icon: <Pencil className="h-4 w-4" />, onClick: () => startEdit(field) },
+                {
+                  key: "archive",
+                  label: field.active ? t("studio.archive") : t("studio.restore"),
+                  icon: field.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />,
+                  onClick: () => void toggleActive(field),
+                },
+              ]}
+            />
+          )}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">

@@ -13,7 +13,14 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useUiStandard } from "@/design-system/components";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatGridDate, formatMoney as gridMoney, formatQuantity } from "@/lib/dates/localeDate";
+
+type OutsourcingRow = ProductionOrder["outsourcing"][number];
+type MaterialRow = ProductionOrder["materials"][number];
+type ExpenseRow = ProductionOrder["expenses"][number];
 import { EntityLookup } from "@/components/lookups";
 import { POLYWOOD_INVENTORY_MODE } from "@/lib/polywood/constants";
 import { mergeContractDetailFormState } from "../lib/contractInsert";
@@ -66,7 +73,9 @@ export default function ProductionOrderDetailPage() {
   const uiStandard = useUiStandard();
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): outsourcing, materials and expenses on the grid; old tables with the flag off.
+  const fig = (n: number) => gridMoney(n, locale, { currency: null });
   const { can } = useAuth();
   const canManage = can("can_manage_production");
   const canIssue =
@@ -1008,6 +1017,42 @@ export default function ProductionOrderDetailPage() {
               <section className="rounded-xl border border-app bg-app-surface p-4">
                 <h3 className="mb-1 font-semibold">{t("production.outsourcing")}</h3>
                 <p className="mb-3 text-xs text-app-muted">{t("production.outsourcingHint")}</p>
+                {uiStandard ? (
+                  <div className="mb-3">
+                    <StandardGrid<OutsourcingRow>
+                      id="production-order-outsourcing"
+                      label={t("production.outsourcing")}
+                      rows={order.outsourcing}
+                      rowKey={(row) => row.id}
+                      columns={[
+                        { key: "description", header: t("common.description"), width: 220, cell: (row) => row.material_description, sortValue: (row) => row.material_description },
+                        { key: "supplier", header: t("purchases.supplier"), cell: (row) => row.supplier_name || "—", sortValue: (row) => row.supplier_name },
+                        { key: "sqm", header: t("production.sqm"), type: "number", cell: (row) => formatQuantity(row.sqm_quantity, locale), sortValue: (row) => row.sqm_quantity },
+                        { key: "price", header: t("production.pricePerSqm"), type: "money", cell: (row) => fig(row.price_per_sqm), sortValue: (row) => row.price_per_sqm },
+                        { key: "total", header: t("common.total"), type: "money", className: "font-semibold", cell: (row) => fig(row.total_cost), sortValue: (row) => row.total_cost },
+                      ]}
+                      rowActions={
+                        canManage
+                          ? (row) => (
+                              <TableRowActionsMenu
+                                items={[
+                                  {
+                                    key: "delete",
+                                    label: t("common.delete"),
+                                    variant: "destructive",
+                                    onClick: () =>
+                                      run(() => removeProductionOutsourcingAction(id, row.id), {
+                                        localPatch: (prev) => ({ ...prev, outsourcing: prev.outsourcing.filter((item) => item.id !== row.id) }),
+                                      }),
+                                  },
+                                ]}
+                              />
+                            )
+                          : undefined
+                      }
+                    />
+                  </div>
+                ) : (
                 <table className="mb-3 min-w-full text-sm">
                   <thead className="text-left text-xs uppercase text-app-muted">
                     <tr>
@@ -1049,6 +1094,7 @@ export default function ProductionOrderDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                )}
                 {canManage && (
                   <div className="grid gap-2 md:grid-cols-[1.3fr_1fr_0.6fr_0.6fr_auto]">
                     <input
@@ -1196,6 +1242,62 @@ export default function ProductionOrderDetailPage() {
                       </button>
                     )}
                   </div>
+                  {uiStandard ? (
+                    <StandardGrid<MaterialRow>
+                      id="production-order-materials"
+                      label={t("forms.selectProduct")}
+                      rows={group.rows}
+                      rowKey={(row) => row.id}
+                      columns={[
+                        {
+                          key: "product",
+                          header: t("forms.selectProduct"),
+                          width: 260,
+                          cell: (row) => [row.product_name, row.polywood_sale_mode, row.notes].filter(Boolean).join(" · "),
+                          sortValue: (row) => row.product_name,
+                        },
+                        {
+                          key: "stock",
+                          header: t("production.availableStock"),
+                          type: "status",
+                          cell: (row) => {
+                            const product = row.product_id ? productsById.get(row.product_id) : null;
+                            const stock = Number(product?.stock || 0);
+                            return <Chip tone={stock >= row.quantity ? "success" : "danger"}>{`${formatQuantity(stock, locale)} ${product?.unit || row.unit}`}</Chip>;
+                          },
+                        },
+                        { key: "warehouse", header: t("production.warehouse"), cell: (row) => row.warehouse_name || "—", sortValue: (row) => row.warehouse_name },
+                        { key: "qty", header: t("forms.quantity"), type: "number", cell: (row) => `${formatQuantity(row.quantity, locale)} ${row.unit}`, sortValue: (row) => row.quantity },
+                        { key: "unitCost", header: t("production.unitCost"), type: "money", cell: (row) => fig(row.unit_cost), sortValue: (row) => row.unit_cost },
+                        { key: "lineCost", header: t("forms.lineTotal"), type: "money", className: "font-semibold", cell: (row) => fig(row.line_cost), sortValue: (row) => row.line_cost },
+                        {
+                          key: "status",
+                          header: t("common.status"),
+                          type: "status",
+                          cell: (row) => <Chip tone={row.issued ? "success" : "warning"}>{row.issued ? t("production.issued") : t("production.planned")}</Chip>,
+                          sortValue: (row) => (row.issued ? 1 : 0),
+                        },
+                      ]}
+                      rowActions={(row) =>
+                        canIssue && !row.issued && !isDelivered ? (
+                          <TableRowActionsMenu
+                            items={[
+                              { key: "issue", label: t("production.issueNow"), onClick: () => run(() => issueProductionMaterialAction(id, row.id), { merge: true }) },
+                              {
+                                key: "delete",
+                                label: t("common.delete"),
+                                variant: "destructive",
+                                onClick: () =>
+                                  run(() => removeProductionMaterialAction(id, row.id), {
+                                    localPatch: (prev) => ({ ...prev, materials: prev.materials.filter((item) => item.id !== row.id) }),
+                                  }),
+                              },
+                            ]}
+                          />
+                        ) : null
+                      }
+                    />
+                  ) : (
                   <table className="min-w-full text-sm">
                     <thead className="text-left text-xs uppercase text-app-muted">
                       <tr>
@@ -1275,6 +1377,7 @@ export default function ProductionOrderDetailPage() {
                       ))}
                     </tbody>
                   </table>
+                  )}
                 </div>
               );
             })}
@@ -1372,6 +1475,52 @@ export default function ProductionOrderDetailPage() {
           <section className="rounded-xl border border-app bg-app-surface p-4">
             <h3 className="mb-1 font-semibold">{t("production.tabs.expenses")}</h3>
             <p className="mb-4 text-xs text-app-muted">{t("production.projectExpensesHint")}</p>
+            {uiStandard ? (
+              <div className="mb-3">
+                <StandardGrid<ExpenseRow>
+                  id="production-order-expenses"
+                  label={t("production.tabs.expenses")}
+                  rows={order.expenses}
+                  rowKey={(row) => row.id}
+                  empty={t("common.noData")}
+                  columns={[
+                    { key: "date", header: t("common.date"), type: "date", cell: (row) => formatGridDate(row.expense_date), sortValue: (row) => row.expense_date },
+                    { key: "category", header: t("common.category"), cell: (row) => t(`production.expenseCategory.${row.category}`), sortValue: (row) => row.category },
+                    {
+                      key: "description",
+                      header: t("production.expenseDescription"),
+                      width: 260,
+                      cell: (row) => (
+                        <span>
+                          {row.description}
+                          <span className={row.finance_expense_id ? "ds-text-success" : "ds-muted"}> · {row.finance_expense_id ? t("production.postedToFinance") : t("production.projectOnlyCost")}</span>
+                        </span>
+                      ),
+                      sortValue: (row) => row.description,
+                    },
+                    { key: "account", header: t("production.payFromAccount"), cell: (row) => row.account_name || "—", sortValue: (row) => row.account_name },
+                    { key: "amount", header: t("common.total"), type: "money", className: "font-semibold", cell: (row) => fig(row.amount), sortValue: (row) => row.amount },
+                  ]}
+                  rowActions={(row) =>
+                    canManage && !row.finance_expense_id ? (
+                      <TableRowActionsMenu
+                        items={[
+                          {
+                            key: "delete",
+                            label: t("common.delete"),
+                            variant: "destructive",
+                            onClick: () =>
+                              run(() => removeProductionExpenseAction(id, row.id), {
+                                localPatch: (prev) => ({ ...prev, expenses: prev.expenses.filter((item) => item.id !== row.id) }),
+                              }),
+                          },
+                        ]}
+                      />
+                    ) : null
+                  }
+                />
+              </div>
+            ) : (
             <table className="mb-3 min-w-full text-sm">
               <thead className="text-left text-xs uppercase text-app-muted">
                 <tr>
@@ -1427,6 +1576,7 @@ export default function ProductionOrderDetailPage() {
                 ))}
               </tbody>
             </table>
+            )}
             {canManage && !isDelivered && (
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6 items-end">
                 <select

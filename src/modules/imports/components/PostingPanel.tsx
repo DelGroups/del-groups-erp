@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
-import { Chip, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { Chip, RowActionsMenu, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
 import { EntityLookup } from "@/components/lookups";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDocumentPrint } from "@/hooks/useDocumentPrint";
@@ -737,7 +739,41 @@ export function PostingPanel({
 
 function PayablesTab({ view, money, config, canPay, onPay, formatDate }: { view: PostingView; money: (n: number) => string; config: ImportsConfig; canPay: boolean; onPay: (p: PayableView) => void; formatDate: (d: string) => string }) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the payables on the grid, Pay in the row menu; old table with the flag off.
+  const standard = useUiStandard();
   if (!view.payables.length) return <p className="ds-muted">{t("importPosting.noPayables")}</p>;
+  if (standard) {
+    const col = (k: string) => t(`importPosting.payableCols.${k}`);
+    return (
+      <div className="flex flex-col gap-2">
+        <StandardGrid<PayableView>
+          id="imports-payables"
+          label={t("importPosting.payableCols.partner")}
+          rows={view.payables}
+          rowKey={(p) => p.id}
+          columns={[
+            { key: "partner", header: col("partner"), className: "font-medium", cell: (p) => p.partnerName || "—", sortValue: (p) => p.partnerName },
+            { key: "for", header: col("for"), cell: (p) => (p.source === "goods" ? t("importPosting.forGoods") : p.costType ? costTypeLabel(p.costType as CostType, config, t) : "—") },
+            { key: "date", header: col("date"), type: "date", cell: (p) => formatDate(p.documentDate), sortValue: (p) => p.documentDate },
+            { key: "original", header: col("original"), type: "money", width: 168, cell: (p) => (p.currencyCode !== "AZN" ? `${p.amountFc} ${p.currencyCode} × ${p.bookingRate}` : "—") },
+            { key: "amount", header: col("amount"), type: "money", cell: (p) => money(p.amountAzn), sortValue: (p) => p.amountAzn },
+            { key: "paid", header: col("paid"), type: "money", cell: (p) => money(p.paidAzn), sortValue: (p) => p.paidAzn },
+            { key: "open", header: col("open"), type: "money", className: "font-semibold", cell: (p) => money(p.openAzn), sortValue: (p) => p.openAzn },
+            { key: "status", header: col("status"), type: "status", cell: (p) => <Chip>{t(`importPosting.payableStatus.${p.status}`)}</Chip>, sortValue: (p) => p.status },
+          ]}
+          rowActions={(p) =>
+            canPay && p.status === "open" ? (
+              <RowActionsMenu
+                label={t("common.actions")}
+                items={[{ key: "pay", label: t("importPosting.payPartner", { name: p.partnerName }), icon: <Wallet className="h-4 w-4" />, onSelect: () => onPay(p) }]}
+              />
+            ) : null
+          }
+        />
+        {view.payments.length ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("importPosting.paymentsCount", { count: view.payments.length })}</p> : null}
+      </div>
+    );
+  }
   return (
     <div className="overflow-x-auto overscroll-x-contain">
       <table className="w-full min-w-[44rem] border-collapse text-[length:var(--ds-text-sm)]">
@@ -830,6 +866,8 @@ function ReceiptsTab({
 
 function JournalTab({ view, money, formatDate }: { view: PostingView; money: (n: number) => string; formatDate: (d: string) => string }) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): each entry's lines on the grid ("code · account" on one line); old tables with the flag off.
+  const standard = useUiStandard();
   if (!view.journal.length) return <p className="ds-muted">{t("importPosting.noJournal")}</p>;
   return (
     <ul className="flex flex-col gap-3">
@@ -841,6 +879,20 @@ function JournalTab({ view, money, formatDate }: { view: PostingView; money: (n:
             {e.reversedBy ? <span className="ms-2 ds-chip ds-chip-flat">{t("importPosting.reversed")}</span> : null}
           </p>
           {e.description ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{e.description}</p> : null}
+          {standard ? (
+            <StandardGrid<(typeof e.lines)[number]>
+              id="imports-journal-lines"
+              label={`${e.entryNo} · ${t(`importPosting.entryTypes.${e.documentType}`)}`}
+              rows={e.lines}
+              rowKey={(l) => String(e.lines.indexOf(l))}
+              columns={[
+                { key: "account", header: t("importPosting.journalCols.account"), width: 220, cell: (l) => codeName(l.code, l.name) },
+                { key: "memo", header: t("importPosting.journalCols.memo"), cell: (l) => `${l.memo ?? ""}${l.partnerName ? ` · ${l.partnerName}` : ""}` || "—" },
+                { key: "debit", header: t("importPosting.journalCols.debit"), type: "money", cell: (l) => (l.debit ? money(l.debit) : "") },
+                { key: "credit", header: t("importPosting.journalCols.credit"), type: "money", cell: (l) => (l.credit ? money(l.credit) : "") },
+              ]}
+            />
+          ) : (
           <div className="overflow-x-auto overscroll-x-contain">
             <table className="w-full min-w-[36rem] border-collapse text-[length:var(--ds-text-xs)]">
               <thead>
@@ -863,6 +915,7 @@ function JournalTab({ view, money, formatDate }: { view: PostingView; money: (n:
               </tbody>
             </table>
           </div>
+          )}
         </li>
       ))}
     </ul>

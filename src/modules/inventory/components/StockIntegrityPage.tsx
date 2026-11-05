@@ -15,6 +15,9 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import { useToast } from "@/hooks/useToast";
 import { useI18n } from "@/i18n/I18nProvider";
+import { RowActionsMenu, useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
 import { fetchStockIntegrityAction, fixStockIntegrityAction } from "../actions/stockIntegrity";
 import {
   groupDuplicateNames,
@@ -38,6 +41,8 @@ function fmt(value: number | null): string {
  */
 export default function StockIntegrityPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): each issue group on the grid (fix / open product in the row menu); old tables with the flag off.
+  const standard = useUiStandard();
   const { isAdmin } = useAuth();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [rows, setRows] = useState<StockIssue[]>([]);
@@ -151,7 +156,40 @@ export default function StockIntegrityPage() {
                   ) : null}
                 </div>
 
-                {group.kind === "duplicate_name" ? (
+                {standard ? (
+                  <StandardGrid<StockIssue>
+                    id={`settings-stock-integrity-${group.kind === "duplicate_name" ? "duplicates" : "issues"}`}
+                    label={t(`stockIntegrity.kinds.${group.kind}`)}
+                    rows={group.kind === "duplicate_name" ? groupDuplicateNames(group.rows).flatMap((names) => names.rows) : group.rows}
+                    rowKey={(row) => `${row.issue}-${row.product_id}`}
+                    columns={[
+                      { key: "product", header: t("stockIntegrity.colProduct"), width: 260, className: "font-medium", cell: (row) => codeName(row.product_code, row.product_name), sortValue: (row) => row.product_name },
+                      ...(group.kind === "duplicate_name"
+                        ? [{ key: "stock", header: t("stockIntegrity.colStock"), type: "number", cell: (row) => fmt(row.stock_before), sortValue: (row) => row.stock_before } satisfies StandardColumn<StockIssue>]
+                        : [
+                            { key: "details", header: t("stockIntegrity.colDetails"), className: "ds-muted", cell: (row) => row.details } satisfies StandardColumn<StockIssue>,
+                            ...(group.autoFix && group.kind !== "subcategory_lost" && group.kind !== "null_warehouse_row"
+                              ? [
+                                  { key: "before", header: t("stockIntegrity.colBefore"), type: "number", cell: (row) => fmt(row.stock_before), sortValue: (row) => row.stock_before } satisfies StandardColumn<StockIssue>,
+                                  { key: "after", header: t("stockIntegrity.colAfter"), type: "number", className: "font-semibold", cell: (row) => fmt(row.stock_after), sortValue: (row) => row.stock_after } satisfies StandardColumn<StockIssue>,
+                                ]
+                              : []),
+                          ]),
+                    ]}
+                    rowActions={(row) => (
+                      <RowActionsMenu
+                        label={t("common.actions")}
+                        linkAs={Link}
+                        items={[
+                          ...(group.kind !== "duplicate_name" && group.autoFix && row.fixable
+                            ? [{ key: "fix", label: t("stockIntegrity.fix"), icon: <Wrench className="h-4 w-4" />, disabled: fixing, onSelect: () => void runFix({ kind: row.issue, productIds: [row.product_id], count: 1 }) }]
+                            : []),
+                          { key: "open", label: t("stockIntegrity.openProduct"), href: `/products?highlight=${row.product_id}` },
+                        ]}
+                      />
+                    )}
+                  />
+                ) : group.kind === "duplicate_name" ? (
                   <TableWrap>
                     <Table>
                       <THead>

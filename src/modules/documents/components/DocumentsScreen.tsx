@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, FolderOpen, Inbox, LayoutGrid, List, Tag, Trash2, FolderInput } from "lucide-react";
-import { EmptyState, FileDropzone, useToast } from "@/design-system/components";
+import { EmptyState, FileDropzone, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useLimitStatus } from "@/components/limits/useLimitStatus";
 import { limitState } from "@/lib/limits/limits";
@@ -179,6 +180,8 @@ function FolderView({ folder, folders, docs, loading, fmt }: { folder: DocumentF
   const { t } = fmt;
   const { user } = useAuth();
   const { toast } = useToast();
+  // UI_STANDARD (UI-6): the list mode on the grid (selection column, name opens the file); old table with the flag off.
+  const standard = useUiStandard();
   const writable = useFolderWritable(folder.id).data === true;
   const actions = useDocumentActions(user?.id ?? null);
   const { status } = useLimitStatus(true);
@@ -311,6 +314,43 @@ function FolderView({ folder, folders, docs, loading, fmt }: { folder: DocumentF
             />
           ))}
         </ul>
+      ) : standard ? (
+        <StandardGrid<DocumentRow>
+          id="library-documents"
+          label={folderLabel(folder, t)}
+          rows={shown}
+          rowKey={(d) => d.id}
+          onOpen={(d) => setOpen(d)}
+          showCount
+          selection={
+            writable
+              ? {
+                  isSelected: (d) => picked.has(d.id),
+                  toggle: (d) => toggle(d.id),
+                  allSelected: shown.length > 0 && shown.every((d) => picked.has(d.id)),
+                  someSelected: shown.some((d) => picked.has(d.id)),
+                  toggleAll: () => setPicked(shown.every((d) => picked.has(d.id)) ? new Set() : new Set(shown.map((d) => d.id))),
+                }
+              : undefined
+          }
+          columns={[
+            {
+              key: "name",
+              header: t("library.fields.name"),
+              width: 280,
+              className: "font-medium",
+              cell: (d) => (
+                <button type="button" className="max-w-full truncate text-start hover:underline" onClick={() => setOpen(d)}>
+                  {d.name}
+                </button>
+              ),
+              sortValue: (d) => d.name,
+            },
+            { key: "tags", header: t("library.fields.tags"), className: "ds-muted", cell: (d) => d.tags.join(", ") || "—" },
+            { key: "size", header: t("library.fields.size"), type: "number", cell: (d) => fileSize(d.size_bytes), sortValue: (d) => d.size_bytes },
+            { key: "added", header: t("library.fields.added"), type: "date", cell: (d) => formatGridDate(d.created_at), sortValue: (d) => d.created_at },
+          ]}
+        />
       ) : (
         <div className="ds-card overflow-x-auto">
           <table className="w-full text-left">

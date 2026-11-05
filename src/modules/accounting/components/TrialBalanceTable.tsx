@@ -3,14 +3,51 @@
 import type { TrialBalanceReport } from "@/lib/reports/trialBalance";
 import { formatReportMoney } from "@/lib/reports/formatMoney";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 type TrialBalanceTableProps = {
   data: TrialBalanceReport;
   loading?: boolean;
 };
 
+type Row = TrialBalanceReport["rows"][number];
+type AmountKey = "initialDebit" | "initialCredit" | "periodDebit" | "periodCredit" | "closingDebit" | "closingCredit";
+const AMOUNTS: readonly [AmountKey, string][] = [
+  ["initialDebit", "osv.colInitialDebit"],
+  ["initialCredit", "osv.colInitialCredit"],
+  ["periodDebit", "osv.colPeriodDebit"],
+  ["periodCredit", "osv.colPeriodCredit"],
+  ["closingDebit", "osv.colClosingDebit"],
+  ["closingCredit", "osv.colClosingCredit"],
+];
+
 export default function TrialBalanceTable({ data, loading }: TrialBalanceTableProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the trial balance on the grid with its totals row; old table with the flag off.
+  const standard = useUiStandard();
+
+  if (standard) {
+    const money = (v: number) => (v === 0 ? "—" : formatMoney(v, locale));
+    const columns: StandardColumn<Row>[] = [
+      { key: "code", header: t("osv.colCode"), type: "code", cell: (r) => <span className="ds-mono">{r.code}</span>, sortValue: (r) => r.code },
+      { key: "name", header: t("osv.colAccount"), cell: (r) => r.name, sortValue: (r) => r.name },
+      ...AMOUNTS.map<StandardColumn<Row>>(([key, label]) => ({ key, header: t(label), type: "money", cell: (r) => money(r[key]), sortValue: (r) => r[key] })),
+    ];
+    return (
+      <StandardGrid<Row>
+        id="accounting-trial-balance"
+        label={t("osv.pageTitle")}
+        columns={columns}
+        rows={data.rows}
+        rowKey={(r) => r.accountId || r.code}
+        loading={loading}
+        empty={t("osv.empty")}
+        totals={Object.fromEntries([["code", t("osv.total")], ...AMOUNTS.map(([key]) => [key, money(data.totals[key])])])}
+      />
+    );
+  }
 
   return (
     <div className="app-card overflow-hidden print:border print:border-slate-300">

@@ -25,6 +25,15 @@ import { generateConsignmentDocNo } from "../lib/types";
 import type { ConsignmentInventoryRow } from "../lib/types";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatMoney, formatQuantity } from "@/lib/dates/localeDate";
+
+/** A typed amount ("" while empty) as the number a LineNumberCell shows. */
+const numberOrNull = (text: string): number | null => (text === "" || !Number.isFinite(Number(text)) ? null : Number(text));
+/** Sold and returned together exceed what the customer still holds. */
+const oversoldRow = (row: { quantity_sold: string; quantity_returned: string; remaining_qty: number }) =>
+  (Number(row.quantity_sold) || 0) + (Number(row.quantity_returned) || 0) > row.remaining_qty;
 
 function currentPeriod() {
   return new Date().toISOString().slice(0, 7);
@@ -40,8 +49,8 @@ interface SettlementRow {
 }
 
 export default function ConsignmentSettlementNewPage() {
-  const { t } = useI18n();
-  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-2 lookups, UI-6 lines on LineGrid): partner, sales rep and warehouse through EntityLookup.
   const uiStandard = useUiStandard();
   const [pickedRepName, setPickedRepName] = useState<string | null>(null);
   const router = useRouter();
@@ -279,6 +288,53 @@ export default function ConsignmentSettlementNewPage() {
                 <p className="text-sm text-app-muted">{t("common.loading")}</p>
               ) : rows.length === 0 ? (
                 <p className="text-sm text-app-muted">{t("consignments.noAging")}</p>
+              ) : uiStandard ? (
+                <LineGrid<SettlementRow>
+                  id="consignment-settlement-lines"
+                  label={t("consignments.settlementLinesPanel")}
+                  lines={rows}
+                  lineKey={(row) => row.product_id}
+                  lineLabel={(row) => row.product_name}
+                  labels={lineGridLabels(t)}
+                  columns={[
+                    { key: "product", header: t("print.product"), width: 240, cell: (row) => <LineText>{row.product_name}</LineText> },
+                    { key: "remaining", header: t("consignments.colRemaining"), type: "number", cell: (row) => <LineText>{formatQuantity(row.remaining_qty, locale)}</LineText> },
+                    {
+                      key: "sold",
+                      header: t("consignments.colSold"),
+                      type: "number",
+                      width: 112,
+                      error: (row) => (oversoldRow(row) ? t("consignments.qtyExceedsRemaining") : null),
+                      cell: (row, ctx) => (
+                        <LineNumberCell ctx={ctx} value={numberOrNull(row.quantity_sold)} max={row.remaining_qty} onChange={(value) => updateRow(row.product_id, { quantity_sold: value === null ? "" : String(value) })} />
+                      ),
+                    },
+                    {
+                      key: "returned",
+                      header: t("consignments.colReturned"),
+                      type: "number",
+                      width: 112,
+                      error: (row) => (oversoldRow(row) ? t("consignments.qtyExceedsRemaining") : null),
+                      cell: (row, ctx) => (
+                        <LineNumberCell ctx={ctx} value={numberOrNull(row.quantity_returned)} max={row.remaining_qty} onChange={(value) => updateRow(row.product_id, { quantity_returned: value === null ? "" : String(value) })} />
+                      ),
+                    },
+                    {
+                      key: "price",
+                      header: t("consignments.colUnitPrice"),
+                      type: "money",
+                      width: 120,
+                      cell: (row, ctx) => <LineNumberCell ctx={ctx} value={numberOrNull(row.unit_price)} onChange={(value) => updateRow(row.product_id, { unit_price: value === null ? "" : String(value) })} />,
+                    },
+                    {
+                      key: "total",
+                      header: t("consignments.colLineTotal"),
+                      type: "money",
+                      cell: (row) => <LineText className="font-semibold">{formatMoney((Number(row.quantity_sold) || 0) * (Number(row.unit_price) || 0), locale, { currency: null })}</LineText>,
+                      total: <LineText>{formatMoney(totals.totalAmount, locale)}</LineText>,
+                    },
+                  ]}
+                />
               ) : (
                 <div className="overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)]">
                   <table className="min-w-full text-left text-sm">

@@ -4,13 +4,18 @@ import React from "react";
 import type { RecentActivityRow } from "@/types/database.types";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate, formatMoney } from "@/lib/dates/localeDate";
 
 interface RecentTransactionsTableProps {
   rows: RecentActivityRow[];
 }
 
 export default function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the recent activity on the grid; old table with the flag off.
+  const standard = useUiStandard();
 
   return (
     <div className="app-card app-card-elevated">
@@ -21,6 +26,36 @@ export default function RecentTransactionsTable({ rows }: RecentTransactionsTabl
 
       {rows.length === 0 ? (
         <div className="px-5 py-10 text-center text-xs text-app-muted">{t("dashboard.noTransactions")}</div>
+      ) : standard ? (
+        <StandardGrid<RecentActivityRow>
+          id="dashboard-recent-activity"
+          label={t("dashboard.recentActivity")}
+          rows={rows}
+          rowKey={(row) => row.id}
+          columns={[
+            { key: "date", header: t("common.date"), type: "date", cell: (row) => formatGridDate(row.date), sortValue: (row) => row.date },
+            {
+              key: "type",
+              header: t("common.type"),
+              type: "status",
+              cell: (row) => (
+                <Chip tone={row.direction === "in" ? "success" : "danger"} icon={row.direction === "in" ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}>
+                  {row.type}
+                </Chip>
+              ),
+              sortValue: (row) => row.type,
+            },
+            { key: "reference", header: t("dashboard.docOrCategory"), className: "ds-mono ds-muted", cell: (row) => row.reference, sortValue: (row) => row.reference },
+            { key: "party", header: t("dashboard.party"), cell: (row) => row.party, sortValue: (row) => row.party },
+            {
+              key: "amount",
+              header: t("common.amount"),
+              type: "money",
+              cell: (row) => <span className={row.direction === "in" ? "ds-text-success font-semibold" : "ds-text-danger font-semibold"}>{(row.direction === "in" ? "+" : "-") + formatMoney(row.amount, locale, { currency: t("common.currency") })}</span>,
+              sortValue: (row) => (row.direction === "in" ? row.amount : -row.amount),
+            },
+          ]}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">

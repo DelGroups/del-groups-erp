@@ -11,6 +11,9 @@ import {
 import type { PartnerDashboardData } from "@/lib/partners/types";
 import { isCreditLimitExceeded } from "@/lib/partners/types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate } from "@/lib/dates/localeDate";
 import PaymentFormModal from "@/components/payments/PaymentFormModal";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AlertTriangle, ArrowLeft, Building2, CreditCard, FileCheck2, Landmark, Phone, RefreshCw, Wallet } from "lucide-react";
@@ -37,6 +40,8 @@ export default function PartnerDetailPageClient() {
   const params = useParams<{ id: string }>();
   const partnerId = params?.id || "";
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): sales, purchases and the ledger on the grid; old tables with the flag off.
+  const standard = useUiStandard();
   const { can } = useAuth();
   const canManageFinance = can("can_manage_finance");
   const [data, setData] = useState<PartnerDashboardData | null>(null);
@@ -208,6 +213,51 @@ export default function PartnerDetailPageClient() {
 
         {!data ? (
           <div className="app-card p-8 text-center text-sm text-app-muted">{t("partners.notFound")}</div>
+        ) : standard && tab === "sales" ? (
+          <StandardGrid<PartnerDashboardData["sales"][number]>
+            id="partners-detail-sales"
+            label={t("partners.tabs.sales")}
+            rows={data.sales}
+            rowKey={(sale) => sale.id}
+            rowHref={(sale) => `/sales/${sale.id}`}
+            empty={t("partners.noSales")}
+            columns={[
+              { key: "docNo", header: t("partners.documentNo"), type: "code", cell: (sale) => <span className="ds-mono">{sale.doc_no || "—"}</span>, sortValue: (sale) => sale.doc_no },
+              { key: "date", header: t("common.date"), type: "date", cell: (sale) => formatGridDate(sale.doc_date), sortValue: (sale) => sale.doc_date },
+              { key: "total", header: t("partners.total"), type: "money", cell: (sale) => formatMoney(sale.total_amount), sortValue: (sale) => sale.total_amount },
+              { key: "remaining", header: t("partners.remaining"), type: "money", className: "font-semibold", cell: (sale) => formatMoney(sale.remaining_balance), sortValue: (sale) => sale.remaining_balance },
+            ]}
+          />
+        ) : standard && tab === "purchases" ? (
+          <StandardGrid<PartnerDashboardData["purchases"][number]>
+            id="partners-detail-purchases"
+            label={t("partners.tabs.purchases")}
+            rows={data.purchases}
+            rowKey={(purchase) => purchase.id}
+            empty={t("partners.noPurchases")}
+            columns={[
+              { key: "docNo", header: t("partners.documentNo"), type: "code", cell: (purchase) => <span className="ds-mono">{purchase.invoice_number || "—"}</span>, sortValue: (purchase) => purchase.invoice_number },
+              { key: "date", header: t("common.date"), type: "date", cell: (purchase) => formatGridDate(purchase.doc_date), sortValue: (purchase) => purchase.doc_date },
+              { key: "total", header: t("partners.total"), type: "money", cell: (purchase) => formatMoney(purchase.total_amount), sortValue: (purchase) => purchase.total_amount },
+              { key: "debt", header: t("partners.debt"), type: "money", className: "font-semibold", cell: (purchase) => formatMoney(purchase.debt_amount), sortValue: (purchase) => purchase.debt_amount },
+            ]}
+          />
+        ) : standard ? (
+          <StandardGrid<PartnerDashboardData["ledger"][number]>
+            id="partners-detail-ledger"
+            label={t("partners.tabs.ledger")}
+            rows={data.ledger}
+            rowKey={(entry) => `${entry.type}-${entry.id}`}
+            empty={t("partners.noLedger")}
+            columns={[
+              { key: "date", header: t("common.date"), type: "date", cell: (entry) => formatGridDate(entry.date), sortValue: (entry) => entry.date },
+              { key: "type", header: t("partners.type"), cell: (entry) => (entry.type === "sale" ? t("partners.saleType") : t("partners.purchaseType")), sortValue: (entry) => entry.type },
+              { key: "docNo", header: t("partners.documentNo"), type: "code", cell: (entry) => <span className="ds-mono">{entry.documentNo}</span>, sortValue: (entry) => entry.documentNo },
+              { key: "debit", header: t("partners.debit"), type: "money", cell: (entry) => (entry.debit > 0 ? formatMoney(entry.debit) : "—"), sortValue: (entry) => entry.debit },
+              { key: "credit", header: t("partners.credit"), type: "money", cell: (entry) => (entry.credit > 0 ? formatMoney(entry.credit) : "—"), sortValue: (entry) => entry.credit },
+              { key: "balance", header: t("partners.runningBalance"), type: "money", className: "font-semibold", cell: (entry) => formatMoney(entry.runningBalance) },
+            ]}
+          />
         ) : tab === "sales" ? (
           <div className="app-card overflow-hidden">
             <table className="w-full text-left text-sm">

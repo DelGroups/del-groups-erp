@@ -8,6 +8,9 @@ import SettingsTabs from "@/components/settings/SettingsTabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getModuleOverviewAction, type ModuleOverview } from "@/lib/actions/tenantModules";
+import { Chip } from "@/design-system/components";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import type { ModuleState } from "@/modules/enabled";
 
 const STATE_LABEL: Record<ModuleState, string> = {
@@ -24,6 +27,8 @@ const STATE_CLASS: Record<ModuleState, string> = {
 
 export default function ModulesSettingsPage() {
   const { t, formatDate } = useI18n();
+  // UI_STANDARD (UI-6): the modules on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { isAdmin, ready } = useAuth();
   const [overview, setOverview] = useState<ModuleOverview | null>(null);
   const [error, setError] = useState("");
@@ -69,6 +74,43 @@ export default function ModulesSettingsPage() {
                 <p className="text-xs text-app-muted">
                   {overview.tableExists ? t("settings.modules.readOnlyNote") : t("settings.modules.migrationPending")}
                 </p>
+                {standard ? (
+                  <StandardGrid<ModuleOverview["modules"][number]>
+                    id="settings-modules"
+                    label={t("settings.modules.colModule")}
+                    rows={overview.modules}
+                    rowKey={(m) => m.id}
+                    columns={[
+                      {
+                        key: "module",
+                        header: t("settings.modules.colModule"),
+                        width: 240,
+                        cell: (m) => (
+                          <span>
+                            <span className="font-semibold">{moduleName(m.id)}</span>
+                            <span className="ds-mono ds-muted"> · {m.id}</span>
+                          </span>
+                        ),
+                        sortValue: (m) => moduleName(m.id),
+                      },
+                      {
+                        key: "state",
+                        header: t("settings.modules.colState"),
+                        width: 260,
+                        cell: (m) => (
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <Chip tone={m.state === "enabled" ? "success" : m.state === "required" ? "warning" : "neutral"}>{t(STATE_LABEL[m.state])}</Chip>
+                            {m.state === "required" ? <span className="ds-muted">{t("settings.modules.requiredBy", { modules: m.requiredBy.map(moduleName).join(", ") })}</span> : null}
+                          </span>
+                        ),
+                        sortValue: (m) => m.state,
+                      },
+                      { key: "depends", header: t("settings.modules.colDepends"), className: "ds-muted", cell: (m) => (m.depends.length ? m.depends.map(moduleName).join(", ") : t("settings.modules.none")) },
+                      { key: "version", header: t("settings.modules.colVersion"), type: "code", cell: (m) => <span className="ds-mono">{m.version}</span> },
+                      { key: "installed", header: t("settings.modules.colInstalledAt"), type: "date", className: "ds-muted", cell: (m) => (m.installedAt ? formatDate(m.installedAt) : "—"), sortValue: (m) => m.installedAt },
+                    ]}
+                  />
+                ) : (
                 <div className="app-card app-card-elevated overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="border-b border-app text-xs uppercase text-app-muted">
@@ -111,6 +153,7 @@ export default function ModulesSettingsPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </>
             )}
           </div>

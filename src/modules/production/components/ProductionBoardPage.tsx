@@ -29,6 +29,10 @@ import {
 import { withPrintableProductionContract } from "../lib/contracts";
 import { productionModelLabel } from "../lib/models";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatFigure, formatMoney } from "@/lib/dates/localeDate";
 import {
   PRODUCTION_STATUSES,
   calcProductionCosting,
@@ -41,7 +45,9 @@ import {
 const STATUSES: ProductionStatus[] = [...PRODUCTION_STATUSES];
 
 export default function ProductionBoardPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the list view on the grid (edit / print / delete in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const { can } = useAuth();
   const { canViewProductionFinancials } = usePermissions();
   const showFinancials = canViewProductionFinancials();
@@ -313,6 +319,64 @@ export default function ProductionBoardPage() {
               );
             })}
           </div>
+        ) : standard ? (
+          <StandardGrid<ProductionOrder>
+            id="production-orders"
+            label={t("production.projectName")}
+            rows={orders}
+            rowKey={(order) => order.id}
+            rowHref={(order) => `/production/${order.id}`}
+            showCount
+            columns={[
+              { key: "docNo", header: t("common.docNo"), type: "code", cell: (order) => <span className="ds-mono">{order.order_no}</span>, sortValue: (order) => order.order_no },
+              { key: "project", header: t("production.projectName"), width: 220, cell: (order) => order.project_name, sortValue: (order) => order.project_name },
+              { key: "type", header: t("common.type"), cell: (order) => typeLabel(order), sortValue: (order) => typeLabel(order) },
+              {
+                key: "status",
+                header: t("common.status"),
+                type: "status",
+                width: showFinancials ? 220 : 140,
+                cell: (order) => (
+                  <span className="flex min-w-0 items-center gap-1">
+                    <ProductionStatusChip status={order.status} />
+                    {showFinancials ? <ProductionHealthChip health={(costings.get(order.id) || calcProductionCosting(order)).health} /> : null}
+                  </span>
+                ),
+                sortValue: (order) => order.status,
+              },
+              { key: "customer", header: t("sales.customer"), cell: (order) => order.customer_name || "—", sortValue: (order) => order.customer_name },
+              ...(showFinancials
+                ? ([
+                    { key: "revenue", header: t("production.revenue"), type: "money", cell: (order) => formatMoney((costings.get(order.id) || calcProductionCosting(order)).revenue, locale, { currency: null }), sortValue: (order) => (costings.get(order.id) || calcProductionCosting(order)).revenue },
+                    { key: "cost", header: t("production.totalCost"), type: "money", cell: (order) => formatMoney((costings.get(order.id) || calcProductionCosting(order)).totalCost, locale, { currency: null }), sortValue: (order) => (costings.get(order.id) || calcProductionCosting(order)).totalCost },
+                    {
+                      key: "profit",
+                      header: t("production.profit"),
+                      type: "money",
+                      cell: (order) => {
+                        const profit = (costings.get(order.id) || calcProductionCosting(order)).profit;
+                        return <span className={profit < 0 ? "ds-text-danger" : undefined}>{formatMoney(profit, locale, { currency: null })}</span>;
+                      },
+                      sortValue: (order) => (costings.get(order.id) || calcProductionCosting(order)).profit,
+                    },
+                    { key: "margin", header: t("production.margin"), type: "number", cell: (order) => `${formatFigure((costings.get(order.id) || calcProductionCosting(order)).marginPercent, 1, locale)}%`, sortValue: (order) => (costings.get(order.id) || calcProductionCosting(order)).marginPercent },
+                  ] satisfies StandardColumn<ProductionOrder>[])
+                : []),
+            ]}
+            rowActions={
+              canManage
+                ? (order) => (
+                    <TableRowActionsMenu
+                      items={[
+                        { key: "edit", label: t("common.edit"), onClick: () => void handleEdit(order) },
+                        { key: "print", label: t("common.print"), onClick: () => void handlePrint(order) },
+                        { key: "delete", label: t("common.delete"), onClick: () => setDeleteTarget(order), variant: "destructive" },
+                      ]}
+                    />
+                  )
+                : undefined
+            }
+          />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="min-w-full text-sm">

@@ -16,9 +16,15 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { useToast } from "@/hooks/useToast";
 import { Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 export default function CashBankPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the accounts list on the grid; the old table stays with the flag off.
+  const standard = useUiStandard();
   const [accounts, setAccounts] = useState<AccountLedgerBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -190,7 +196,36 @@ export default function CashBankPage() {
             </button>
           </div>
 
-          {loading ? (
+          {standard ? (
+            <StandardGrid<AccountLedgerBalance>
+              id="cash-bank-accounts"
+              label={t("cashBank.listTitle")}
+              rows={accounts}
+              rowKey={(a) => a.account_id}
+              loading={loading}
+              empty={t("cashBank.emptyAccounts")}
+              columns={[
+                { key: "code", header: t("common.code"), type: "code", cell: (a) => <span className="ds-mono">{a.code}</span>, sortValue: (a) => a.code },
+                { key: "name", header: t("cashBank.accountName"), cell: (a) => a.name, className: "font-semibold", sortValue: (a) => a.name },
+                { key: "type", header: t("common.type"), type: "status", samples: ["Kassa", "Bank"], cell: (a) => <Chip tone={a.type === "Kassa" ? "success" : "info"}>{a.type}</Chip>, sortValue: (a) => a.type },
+                { key: "balance", header: t("cashBank.currentBalance"), type: "money", className: "font-semibold", cell: (a) => formatMoney(a.ledger_balance, locale), sortValue: (a) => a.ledger_balance },
+                { key: "income", header: t("cashBank.ledgerIncome"), type: "money", className: "ds-text-success", cell: (a) => `+${formatMoney(a.income_total, locale, { currency: null })}`, sortValue: (a) => a.income_total },
+                { key: "expense", header: t("cashBank.ledgerExpense"), type: "money", className: "ds-text-danger", cell: (a) => `-${formatMoney(a.expense_total, locale, { currency: null })}`, sortValue: (a) => a.expense_total },
+              ]}
+              rowActions={
+                canManageFinance
+                  ? (a) => (
+                      <TableRowActionsMenu
+                        items={[
+                          { key: "edit", label: t("common.edit"), icon: <Pencil className="h-4 w-4" />, onClick: () => openEditAccount(a) },
+                          { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, onClick: () => setDeleteTarget(a), variant: "destructive" },
+                        ]}
+                      />
+                    )
+                  : undefined
+              }
+            />
+          ) : loading ? (
             <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
           ) : accounts.length === 0 ? (
             <div className="p-8 text-center text-sm text-app-muted">{t("cashBank.emptyAccounts")}</div>

@@ -5,13 +5,19 @@ import Link from "next/link";
 import { listProductionPurchaseRequisitionsAction } from "../actions/purchaseRequisitions";
 import type { PurchaseRequisitionRow } from "../actions/purchaseRequisitions";
 import { useI18n } from "@/i18n/I18nProvider";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 interface Props {
   onOpenPurchase?: (purchaseId: string) => void;
 }
 
 export default function PurchaseRequisitionsPanel({ onOpenPurchase }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the requisitions on the grid ("open draft invoice" in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const [rows, setRows] = useState<PurchaseRequisitionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +38,48 @@ export default function PurchaseRequisitionsPanel({ onOpenPurchase }: Props) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  if (standard && !error) {
+    return (
+      <StandardGrid<PurchaseRequisitionRow>
+        id="purchases-requisitions"
+        label={t("purchases.requisitionNo")}
+        rows={rows}
+        rowKey={(row) => row.id}
+        loading={loading}
+        empty={t("purchases.requisitionsEmpty")}
+        columns={[
+          { key: "no", header: t("purchases.requisitionNo"), type: "code", cell: (row) => <span className="ds-mono font-semibold">{row.request_no}</span>, sortValue: (row) => row.request_no },
+          {
+            key: "order",
+            header: t("production.workflow.orderNo"),
+            cell: (row) =>
+              row.production_order_id ? (
+                <Link href={`/production/${row.production_order_id}`} className="hover:underline">
+                  {row.production_order_no || row.production_order_id.slice(0, 8)}
+                </Link>
+              ) : (
+                <span className="ds-text-danger font-semibold">{t("purchases.autoTriggeredSource")}</span>
+              ),
+            sortValue: (row) => row.production_order_no,
+          },
+          { key: "product", header: t("forms.selectProduct"), width: 220, className: "font-semibold", cell: (row) => row.product_name, sortValue: (row) => row.product_name },
+          { key: "warehouse", header: t("production.warehouse"), cell: (row) => row.warehouse_name || "—", sortValue: (row) => row.warehouse_name },
+          { key: "qty", header: t("forms.quantity"), type: "number", cell: (row) => `${formatQuantity(row.quantity, locale)} ${row.unit}`, sortValue: (row) => row.quantity },
+          {
+            key: "status",
+            header: t("common.status"),
+            type: "status",
+            cell: (row) => (row.status === "auto_triggered" ? <Chip tone="danger">{t("purchases.statusAutoTriggered")}</Chip> : <Chip>{row.status}</Chip>),
+            sortValue: (row) => row.status,
+          },
+        ]}
+        rowActions={(row) =>
+          row.purchase_id ? <TableRowActionsMenu items={[{ key: "open", label: t("purchases.openDraftInvoice"), onClick: () => onOpenPurchase?.(row.purchase_id!) }]} /> : null
+        }
+      />
+    );
+  }
 
   if (loading) {
     return <div className="p-12 text-center text-xs text-app-muted">{t("purchases.requisitionsLoading")}</div>;

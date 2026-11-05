@@ -3,6 +3,13 @@
 import React from "react";
 import type { FinancialReportData } from "@/types/database.types";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Chip, Section, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { useI18n } from "@/i18n/I18nProvider";
+import { formatGridDate, formatMoney } from "@/lib/dates/localeDate";
+
+type CategoryRow = FinancialReportData["summary"]["byCategory"][number];
+type LedgerRow = FinancialReportData["ledger"][number];
 
 interface FinancialReportViewProps {
   data: FinancialReportData;
@@ -11,6 +18,12 @@ interface FinancialReportViewProps {
 
 export default function FinancialReportView({ data, loading }: FinancialReportViewProps) {
   const { ledger, summary } = data;
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): both tables on the grid (texts through i18n); the old tables with the flag off.
+  const standard = useUiStandard();
+  const k = (key: string) => t(`tablesStd.finReport.${key}`);
+  const money = (v: number) => formatMoney(v, locale);
+  const tone = (incoming: boolean) => (incoming ? "ds-text-success font-semibold" : "ds-text-danger font-semibold");
 
   return (
     <div className="space-y-4">
@@ -35,7 +48,62 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
         </div>
       </div>
 
-      {summary.byCategory.length > 0 && (
+      {standard ? (
+        <>
+          {summary.byCategory.length > 0 ? (
+            <Section title={k("byCategory")}>
+              <StandardGrid<CategoryRow>
+                id="reports-financial-by-category"
+                label={k("byCategory")}
+                rows={summary.byCategory}
+                rowKey={(r) => `${r.type}-${r.category}`}
+                columns={[
+                  {
+                    key: "type",
+                    header: k("type"),
+                    type: "status",
+                    cell: (r) => (
+                      <Chip tone={r.type === "Mədaxil" ? "success" : "danger"} icon={r.type === "Mədaxil" ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}>
+                        {r.type}
+                      </Chip>
+                    ),
+                    sortValue: (r) => r.type,
+                  },
+                  { key: "category", header: k("category"), className: "font-semibold", cell: (r) => r.category, sortValue: (r) => r.category },
+                  { key: "total", header: k("total"), type: "money", cell: (r) => <span className={tone(r.type === "Mədaxil")}>{money(r.total)}</span>, sortValue: (r) => r.total },
+                ]}
+              />
+            </Section>
+          ) : null}
+          <Section title={k("ledger")} description={k("ledgerHint")}>
+            <StandardGrid<LedgerRow>
+              id="reports-financial-ledger"
+              label={k("ledger")}
+              rows={ledger}
+              rowKey={(r) => r.id}
+              loading={loading}
+              empty={k("empty")}
+              columns={[
+                { key: "date", header: k("date"), type: "date", cell: (r) => formatGridDate(r.date), sortValue: (r) => r.date },
+                { key: "type", header: k("type"), type: "status", cell: (r) => <Chip tone={r.direction === "in" ? "success" : "danger"}>{r.type}</Chip>, sortValue: (r) => r.type },
+                { key: "category", header: k("category"), className: "font-semibold", cell: (r) => r.category, sortValue: (r) => r.category },
+                { key: "account", header: k("account"), cell: (r) => r.account_name, sortValue: (r) => r.account_name },
+                { key: "notes", header: k("notes"), className: "ds-muted", cell: (r) => r.notes || "—" },
+                {
+                  key: "amount",
+                  header: k("amount"),
+                  type: "money",
+                  cell: (r) => <span className={tone(r.direction === "in")}>{(r.direction === "in" ? "+" : "-") + money(r.amount)}</span>,
+                  sortValue: (r) => (r.direction === "in" ? r.amount : -r.amount),
+                },
+              ]}
+              totals={{ date: k("netTotal"), amount: <span className={tone(summary.netFlow >= 0)}>{money(summary.netFlow)}</span> }}
+            />
+          </Section>
+        </>
+      ) : null}
+
+      {!standard && summary.byCategory.length > 0 && (
         <div className="app-table-wrap">
           <div className="border-b border-app px-5 py-4">
             <h3 className="text-sm font-bold text-app">Kateqoriya üzrə yekun</h3>
@@ -87,7 +155,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
         </div>
       )}
 
-      <div className="app-table-wrap">
+      {standard ? null : <div className="app-table-wrap">
         <div className="border-b border-app px-5 py-4">
           <h3 className="text-sm font-bold text-app">Maliyyə jurnalı</h3>
           <p className="text-[11px] text-app-muted">Bütün mədaxil və məxaric əməliyyatları</p>
@@ -159,7 +227,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
             </table>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

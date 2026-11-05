@@ -14,6 +14,9 @@ import {
 import type { CommissionRule } from "@/types/database.types";
 import { normalizeCommissionRule } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatMoney } from "@/lib/dates/localeDate";
 
 interface SellerCommissionSummary {
   seller_name: string;
@@ -29,7 +32,9 @@ interface SellerCommissionSummary {
 }
 
 export default function MonthlyCommissionReportPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): each seller's breakdown on the grid; the old table with the flag off.
+  const standard = useUiStandard();
   const [selectedMonth, setSelectedMonth] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
@@ -209,6 +214,20 @@ export default function MonthlyCommissionReportPage() {
                     <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted mb-3">
                       {t("commissions.categoryBreakdown")}
                     </h4>
+                    {standard ? (
+                      <StandardGrid<SellerCommissionSummary["details"][number]>
+                        id="commissions-monthly-breakdown"
+                        label={`${t("commissions.categoryBreakdown")} · ${summary.seller_name}`}
+                        rows={summary.details}
+                        rowKey={(d) => d.category}
+                        columns={[
+                          { key: "category", header: t("commissions.categoryName"), className: "font-semibold", cell: (d) => d.category, sortValue: (d) => d.category },
+                          { key: "sales", header: t("commissions.salesAmount"), type: "money", cell: (d) => formatMoney(d.sales_amount, locale), sortValue: (d) => d.sales_amount },
+                          { key: "rate", header: t("commissions.appliedRate"), type: "number", cell: (d) => `%${d.applied_rate}`, sortValue: (d) => d.applied_rate },
+                          { key: "earned", header: t("commissions.earnedCommission"), type: "money", className: "font-semibold", cell: (d) => formatMoney(d.commission_earned, locale), sortValue: (d) => d.commission_earned },
+                        ]}
+                      />
+                    ) : (
                     <table className="w-full text-left text-xs">
                       <thead className="bg-app-card-hover text-app uppercase font-bold border-b border-app">
                         <tr>
@@ -235,6 +254,7 @@ export default function MonthlyCommissionReportPage() {
                         ))}
                       </tbody>
                     </table>
+                    )}
                   </div>
                 </div>
               ))}

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Banknote, FileCode2, FileJson, PencilLine, Plus, Printer, Truck } from "lucide-react";
-import { SkeletonList, TypeToConfirmDialog, useToast } from "@/design-system/components";
+import { SkeletonList, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
+import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
 import { formatFigure } from "@/design-system/logic";
 import { useAuth } from "@/components/auth/AuthProvider";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
@@ -126,6 +127,8 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
     await invalidateModel(client, PURCHASES_VIEW_KEY);
   };
   const warehouseSend = useWarehouseDocumentSend(sendPurchaseToWarehouseAction, reload);
+  // UI_STANDARD (UI-6): the purchase lines on the grid; old table with the flag off.
+  const standard = useUiStandard();
 
   if (data.status !== "ready" || !data.record || !purchase) {
     return <SkeletonList loading={data.status === "loading"} rows={6} label={t("common.loading")}>{<p className="ds-muted">{t("common.notFound")}</p>}</SkeletonList>;
@@ -182,7 +185,15 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
     ...(can("can_delete_purchases") ? [{ key: "void", label: t("common.void"), icon: <Ban className="h-4 w-4" aria-hidden />, onClick: () => setVoiding(true) }] : []),
   ];
 
-  const lines = (
+  const lines = standard ? (
+    <DocumentLinesGrid
+      id="purchases-record-lines"
+      label={t("sales.engine.tabs.lines", { count: purchase.items.length })}
+      lines={purchase.items.map((item, i) => ({ key: item.id || String(i), code: item.product_code, name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
+      headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}
+      total={formatFigure(purchase.items.reduce((sum, item) => sum + item.total, 0), 2, fmt.locale)}
+    />
+  ) : (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] border-collapse text-left">
         <thead>

@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
-import { EmptyState, SkeletonList, useToast } from "@/design-system/components";
+import { EmptyState, RowActionsMenu, SkeletonList, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useFormatter, ViewScope } from "@/views";
 import {
@@ -306,6 +307,8 @@ function LostReasonsCard({ reasons, busy, run }: { reasons: readonly { id: strin
 function TargetsCard({ teams, people, targets, busy, run }: { teams: readonly CrmTeam[]; people: readonly { id: string; full_name: string }[]; targets: readonly { id: string; team_id: string; user_id: string | null; month: string; amount: number }[]; busy: boolean; run: Run }) {
   const { t } = useI18n();
   const fmt = useFormatter();
+  // UI_STANDARD (UI-6): the targets on the grid, delete in the row menu; old table with the flag off.
+  const standard = useUiStandard();
   const now = new Date();
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
@@ -352,7 +355,27 @@ function TargetsCard({ teams, people, targets, busy, run }: { teams: readonly Cr
           {t("crm.pipeline.config.setTarget")}
         </button>
       </form>
-      {targets.length ? (
+      {standard ? (
+        <StandardGrid<(typeof targets)[number]>
+          id="crm-config-targets"
+          label={t("crm.pipeline.config.targets")}
+          rows={targets}
+          rowKey={(x) => x.id}
+          empty={t("crm.pipeline.reports.noTargets")}
+          columns={[
+            { key: "month", header: t("crm.pipeline.reports.month"), type: "code", cell: (x) => <span className="ds-mono">{x.month.slice(0, 7)}</span>, sortValue: (x) => x.month },
+            { key: "team", header: t("crm.pipeline.fields.team"), cell: (x) => teamLabel(teams.find((tm) => tm.id === x.team_id), t), sortValue: (x) => teamLabel(teams.find((tm) => tm.id === x.team_id), t) },
+            { key: "user", header: t("crm.pipeline.fields.salesperson"), cell: (x) => (x.user_id ? names.get(x.user_id) ?? "—" : t("crm.pipeline.config.wholeTeam")), sortValue: (x) => (x.user_id ? names.get(x.user_id) ?? "" : "") },
+            { key: "amount", header: t("crm.pipeline.config.amount"), type: "money", cell: (x) => money(x.amount), sortValue: (x) => x.amount },
+          ]}
+          rowActions={(x) => (
+            <RowActionsMenu
+              label={t("crm.pipeline.config.actions")}
+              items={[{ key: "delete", label: t("crm.pipeline.config.deleteTarget"), icon: <Trash2 className="h-4 w-4" />, destructive: true, disabled: busy, onSelect: () => void run(() => deleteTargetAction(x.id), t("crm.pipeline.config.targetDeleted")) }]}
+            />
+          )}
+        />
+      ) : targets.length ? (
         <table className="w-full border-collapse text-left text-[length:var(--ds-text-sm)]">
           <thead>
             <tr>

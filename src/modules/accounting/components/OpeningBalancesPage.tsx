@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/useToast";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { cn } from "@/lib/cn";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatMoney } from "@/lib/dates/localeDate";
 import {
   createInitialAccountAction,
   fetchSetupAccountsAction,
@@ -38,7 +41,10 @@ function PartnerBalanceTable<T extends { id: string; code: string; name: string;
   loading: boolean;
   onSave: (id: string, value: number) => Promise<void>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the partner balances on the grid (amount input in the row, Save in the
+  // pinned actions column); the old table with the flag off.
+  const standard = useUiStandard();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -49,6 +55,58 @@ function PartnerBalanceTable<T extends { id: string; code: string; name: string;
     });
     setDrafts(next);
   }, [rows]);
+
+  if (standard) {
+    const saveRow = async (row: T, draft: string) => {
+      setSavingId(row.id);
+      await onSave(row.id, Number(draft) || 0);
+      setSavingId(null);
+    };
+    return (
+      <StandardGrid<T>
+        id="finance-opening-balances-partners"
+        label={t("finance.openingBalances.openingBalanceCol")}
+        rows={rows}
+        rowKey={(r) => r.id}
+        loading={loading}
+        empty={t("products.empty")}
+        actionsWidth={112}
+        columns={[
+          { key: "code", header: t("initialSetup.importHeaders.sku"), type: "code", cell: (r) => <span className="ds-mono">{r.code || "—"}</span>, sortValue: (r) => r.code },
+          { key: "name", header: t("forms.productName"), className: "font-medium", cell: (r) => r.name, sortValue: (r) => r.name },
+          { key: "balance", header: t("finance.openingBalances.currentBalance"), type: "money", className: "ds-muted", cell: (r) => formatMoney(r.balance, locale), sortValue: (r) => r.balance },
+          {
+            key: "opening",
+            header: t("finance.openingBalances.openingBalanceCol"),
+            type: "money",
+            width: 152,
+            cell: (r) => (
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                aria-label={`${t("finance.openingBalances.openingBalanceCol")}: ${r.name}`}
+                value={drafts[r.id] ?? String(r.opening_balance)}
+                onChange={(event) => setDrafts((prev) => ({ ...prev, [r.id]: event.target.value }))}
+                className="ds-input ds-w-sm h-[var(--ds-control-h-sm)] text-end tabular-nums"
+              />
+            ),
+            sortValue: (r) => r.opening_balance,
+          },
+        ]}
+        rowActions={(r) => {
+          const draft = drafts[r.id] ?? String(r.opening_balance);
+          const dirty = Number(draft) !== r.opening_balance;
+          return (
+            <button type="button" className="ds-btn ds-btn-ghost ds-btn-sm" disabled={!dirty || savingId === r.id} onClick={() => void saveRow(r, draft)}>
+              <Save className="h-3.5 w-3.5" aria-hidden />
+              {savingId === r.id ? t("common.saving") : t("common.save")}
+            </button>
+          );
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return <p className="p-4 text-xs text-app-muted">{t("common.loading")}</p>;

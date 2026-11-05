@@ -2,6 +2,13 @@
 
 import React from "react";
 import type { SalesReportData } from "@/types/database.types";
+import { Section, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
+import { useI18n } from "@/i18n/I18nProvider";
+import { formatFigure } from "@/lib/dates/localeDate";
+
+type TopProduct = SalesReportData["topProducts"][number];
 
 interface SalesReportViewProps {
   data: SalesReportData;
@@ -10,6 +17,11 @@ interface SalesReportViewProps {
 
 export default function SalesReportView({ data, loading }: SalesReportViewProps) {
   const { topProducts, summary } = data;
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the top products on the grid (texts through i18n, totals row); old table with the flag off.
+  const standard = useUiStandard();
+  const k = (key: string) => t(`tablesStd.salesReport.${key}`);
+  const fig = (n: number, d = 2) => formatFigure(n, d, locale);
 
   return (
     <div className="space-y-4">
@@ -36,6 +48,36 @@ export default function SalesReportView({ data, loading }: SalesReportViewProps)
         ))}
       </div>
 
+      {standard ? (
+        <Section title={k("title")} description={k("hint")}>
+          <StandardGrid<TopProduct>
+            id="reports-sales-top-products"
+            label={k("title")}
+            rows={topProducts}
+            rowKey={(row) => `${row.product_id}-${topProducts.indexOf(row)}`}
+            loading={loading}
+            empty={k("empty")}
+            columns={[
+              { key: "no", header: "№", type: "number", width: 56, className: "ds-muted", cell: (row) => topProducts.indexOf(row) + 1 },
+              { key: "product", header: k("product"), width: 260, className: "font-semibold", cell: (row) => codeName(row.product_code, row.product_name), sortValue: (row) => row.product_name },
+              { key: "category", header: k("category"), cell: (row) => row.category, sortValue: (row) => row.category },
+              { key: "quantity", header: k("quantity"), type: "number", cell: (row) => fig(row.quantity), sortValue: (row) => row.quantity },
+              { key: "revenue", header: k("revenue"), type: "money", className: "font-semibold", cell: (row) => fig(row.revenue), sortValue: (row) => row.revenue },
+              { key: "cost", header: k("cost"), type: "money", className: "ds-muted", cell: (row) => fig(row.cost), sortValue: (row) => row.cost },
+              { key: "profit", header: k("profit"), type: "money", cell: (row) => <span className={row.profit >= 0 ? "ds-text-success font-semibold" : "ds-text-danger font-semibold"}>{fig(row.profit)}</span>, sortValue: (row) => row.profit },
+              { key: "margin", header: k("margin"), type: "number", cell: (row) => `${fig(row.marginPercent, 1)}%`, sortValue: (row) => row.marginPercent },
+            ]}
+            totals={{
+              no: k("total"),
+              quantity: fig(summary.totalVolume),
+              revenue: fig(summary.totalRevenue),
+              cost: fig(summary.totalCost),
+              profit: <span className="ds-text-success">{fig(summary.totalProfit)}</span>,
+              margin: `${fig(summary.averageMargin, 1)}%`,
+            }}
+          />
+        </Section>
+      ) : (
       <div className="app-table-wrap">
         <div className="border-b border-app px-5 py-4">
           <h3 className="text-sm font-bold text-app">Ən çox satılan məhsullar</h3>
@@ -108,6 +150,7 @@ export default function SalesReportView({ data, loading }: SalesReportViewProps)
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

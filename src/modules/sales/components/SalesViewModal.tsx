@@ -4,6 +4,8 @@ import React from "react";
 import { Banknote, Printer, X } from "lucide-react";
 import type { SaleRecord } from "../lib/fetchSales";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
@@ -17,6 +19,8 @@ interface SalesViewModalProps {
 
 export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: SalesViewModalProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the sale lines on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const branding = useCompanyBranding();
 
   return (
@@ -61,6 +65,15 @@ export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: Sa
               })}
             </p>
           ) : null}
+          {standard ? (
+            <DocumentLinesGrid
+              id="sales-view-lines"
+              empty={t("modals.salesView.noLineItems")}
+              label={t("dashboard.product")}
+              lines={(sale.items ?? []).map((item, idx) => ({ key: item.id || String(idx), name: item.product_name ?? "—", quantity: item.quantity ?? 0, unit: item.unit ?? null, price: item.unit_price ?? 0, total: item.total ?? 0 }))}
+              headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}
+            />
+          ) : (
           <table className="w-full overflow-hidden rounded-xl border border-app">
             <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
               <tr>
@@ -93,6 +106,7 @@ export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: Sa
               )}
             </tbody>
           </table>
+          )}
           <div className="flex items-center justify-between gap-4 border-t border-app pt-4">
             <div className="flex flex-wrap gap-4 text-sm font-bold">
               <span>{t("modals.salesView.total")}: {sale.total_amount.toFixed(2)} {t("common.currency")}</span>

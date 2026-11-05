@@ -12,6 +12,15 @@ import {
 import type { FinancialCategoryTreeNode } from "@/lib/finance/financialCategories";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { FolderTree, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+
+type FlatCategory = { node: FinancialCategoryTreeNode; depth: number };
+/** The category tree as rows in tree order, each with its depth (UI-6 grid). */
+function flattenTree(nodes: readonly FinancialCategoryTreeNode[], depth = 0): FlatCategory[] {
+  return nodes.flatMap((node) => [{ node, depth }, ...flattenTree(node.children, depth + 1)]);
+}
 
 interface Props {
   canManage: boolean;
@@ -29,6 +38,8 @@ export default function ExpenseCategoriesManager({
   onSuccess,
 }: Props) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the category tree on the grid (indented names, actions in the row menu); old table with the flag off.
+  const standard = useUiStandard();
   const [tree, setTree] = useState<FinancialCategoryTreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -237,6 +248,41 @@ export default function ExpenseCategoriesManager({
           <div className="p-8 text-center text-sm text-app-muted">{t("common.loading")}</div>
         ) : tree.length === 0 ? (
           <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyCategories")}</div>
+        ) : standard ? (
+          <StandardGrid<FlatCategory>
+            id="expenses-categories"
+            label={t("expenses.categoriesTabTitle")}
+            rows={flattenTree(tree)}
+            rowKey={(r) => r.node.id}
+            columns={[
+              {
+                key: "name",
+                header: t("expenses.categoryName"),
+                width: 280,
+                cell: ({ node, depth }) => (
+                  <span className="flex min-w-0 items-center gap-2" style={{ paddingInlineStart: `${depth * 1.25}rem` }}>
+                    {node.children.length ? <FolderTree className="h-4 w-4 shrink-0" style={{ color: "var(--ds-warning)" }} aria-hidden /> : null}
+                    <span className={node.children.length ? "truncate font-semibold" : "truncate"}>{node.name}</span>
+                    {!node.is_active ? <Chip>{t("expenses.inactiveCategory")}</Chip> : null}
+                  </span>
+                ),
+              },
+              { key: "level", header: t("expenses.categoryLevel"), className: "ds-muted", cell: ({ node }) => (node.children.length ? t("expenses.parentCategory") : t("expenses.subcategory")) },
+            ]}
+            rowActions={
+              canManage
+                ? ({ node }) => (
+                    <TableRowActionsMenu
+                      items={[
+                        { key: "child", label: t("expenses.addSubcategory"), icon: <Plus className="h-4 w-4" />, hidden: !!node.parent_id, onClick: () => openCreateChild(node) },
+                        { key: "edit", label: t("common.edit"), icon: <Pencil className="h-4 w-4" />, onClick: () => openEdit(node) },
+                        { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, variant: "destructive", onClick: () => setDeleteTarget(node) },
+                      ]}
+                    />
+                  )
+                : undefined
+            }
+          />
         ) : (
           <table className="app-table">
             <thead className="border-b border-app bg-app-card-hover text-xs uppercase text-app-muted">

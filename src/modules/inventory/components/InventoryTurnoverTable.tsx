@@ -3,6 +3,22 @@
 import type { InventoryTurnoverReport } from "@/lib/reports/inventoryTurnover";
 import { formatReportMoney, formatReportQty } from "@/lib/reports/formatMoney";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { formatMoney, formatQuantity } from "@/lib/dates/localeDate";
+
+type Row = InventoryTurnoverReport["rows"][number];
+type Figure = "initialQty" | "initialValue" | "inboundQty" | "inboundValue" | "outboundQty" | "outboundValue" | "closingQty" | "closingValue";
+const FIGURES: readonly [Figure, string][] = [
+  ["initialQty", "colInitialQty"],
+  ["initialValue", "colInitialValue"],
+  ["inboundQty", "colInboundQty"],
+  ["inboundValue", "colInboundValue"],
+  ["outboundQty", "colOutboundQty"],
+  ["outboundValue", "colOutboundValue"],
+  ["closingQty", "colClosingQty"],
+  ["closingValue", "colClosingValue"],
+];
 
 type InventoryTurnoverTableProps = {
   data: InventoryTurnoverReport;
@@ -10,7 +26,32 @@ type InventoryTurnoverTableProps = {
 };
 
 export default function InventoryTurnoverTable({ data, loading }: InventoryTurnoverTableProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the turnover report on the grid with its totals row; old table with the flag off.
+  const standard = useUiStandard();
+
+  if (standard) {
+    // Zero shows "—" like the old report.
+    const show = (key: Figure, v: number) => (v === 0 ? "—" : key.endsWith("Qty") ? formatQuantity(v, locale) : formatMoney(v, locale));
+    const columns: StandardColumn<Row>[] = [
+      { key: "code", header: t("inventoryTurnover.colCode"), type: "code", cell: (r) => <span className="ds-mono">{r.productCode}</span>, sortValue: (r) => r.productCode },
+      { key: "product", header: t("inventoryTurnover.colProduct"), width: 220, cell: (r) => r.productName, sortValue: (r) => r.productName },
+      { key: "unit", header: t("inventoryTurnover.colUnit"), type: "code", width: 88, cell: (r) => r.unit },
+      ...FIGURES.map<StandardColumn<Row>>(([key, label]) => ({ key, header: t(`inventoryTurnover.${label}`), type: key.endsWith("Qty") ? "number" : "money", cell: (r) => show(key, r[key]), sortValue: (r) => r[key] })),
+    ];
+    return (
+      <StandardGrid<Row>
+        id="reports-inventory-turnover"
+        label={t("inventoryTurnover.pageTitle")}
+        columns={columns}
+        rows={data.rows}
+        rowKey={(r) => r.productId}
+        loading={loading}
+        empty={t("inventoryTurnover.empty")}
+        totals={Object.fromEntries([["code", t("inventoryTurnover.total")], ...FIGURES.map(([key]) => [key, show(key, data.totals[key])])])}
+      />
+    );
+  }
 
   return (
     <div className="app-card overflow-x-auto">

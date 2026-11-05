@@ -8,6 +8,8 @@ import SettingsTabs from "@/components/settings/SettingsTabs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { useActivityTypeActions, useActivityTypes } from "@/views/chatter/data";
 import { ACTIVITY_ICONS, activityTypeLabel, checkActivityType, isBuiltInType, type ActivityIcon } from "@/views/chatter/logic";
 
@@ -18,6 +20,8 @@ import { ACTIVITY_ICONS, activityTypeLabel, checkActivityType, isBuiltInType, ty
  */
 export default function ActivityTypesSettingsPage() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the activity types on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { isAdmin, ready } = useAuth();
   const { active } = useNewUi();
   const types = useActivityTypes();
@@ -62,6 +66,44 @@ export default function ActivityTypesSettingsPage() {
               <div className="app-card p-6 text-sm text-app-muted">{t("views.chatter.typesAdmin.unavailable")}</div>
             ) : (
               <>
+                {standard ? (
+                  <StandardGrid<(typeof rows)[number]>
+                    id="settings-activity-types"
+                    label={t("views.chatter.typesAdmin.name")}
+                    rows={rows}
+                    rowKey={(r) => r.code}
+                    columns={[
+                      {
+                        key: "name",
+                        header: t("views.chatter.typesAdmin.name"),
+                        width: 260,
+                        cell: (r) => (
+                          <span>
+                            <span className="font-semibold">{activityTypeLabel(r.code, rows, t)}</span>
+                            <span className="ds-mono ds-muted"> · {r.code}{isBuiltInType(r.code) ? ` · ${t("views.chatter.typesAdmin.builtIn")}` : ""}</span>
+                          </span>
+                        ),
+                        sortValue: (r) => activityTypeLabel(r.code, rows, t),
+                      },
+                      { key: "icon", header: t("views.chatter.typesAdmin.icon"), cell: (r) => t(`views.chatter.typesAdmin.icons.${r.icon}`) },
+                      { key: "days", header: t("views.chatter.typesAdmin.defaultDays"), type: "number", cell: (r) => r.default_days, sortValue: (r) => r.default_days },
+                      {
+                        key: "active",
+                        header: t("views.chatter.typesAdmin.active"),
+                        type: "status",
+                        width: 96,
+                        cell: (r) => (
+                          <input
+                            type="checkbox"
+                            checked={r.active}
+                            aria-label={t("views.chatter.typesAdmin.toggle", { name: activityTypeLabel(r.code, rows, t) })}
+                            onChange={(e) => actions.update.mutate({ code: r.code, patch: { active: e.target.checked } }, { onError: (err) => setError(err instanceof Error ? err.message : t("common.error")) })}
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                ) : (
                 <div className="app-card app-card-elevated overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="border-b border-app text-xs uppercase text-app-muted">
@@ -97,6 +139,7 @@ export default function ActivityTypesSettingsPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
 
                 <form onSubmit={add} className="app-card space-y-3 p-4">
                   <h2 className="text-sm font-semibold text-app">{t("views.chatter.typesAdmin.add")}</h2>

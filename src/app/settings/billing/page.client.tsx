@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { formatBytesShort, type LimitKind, type TenantLimitStatus } from "@/lib/limits/limits";
 import { daysUntil, invoiceOwed, usageMeters, type BillingOverview, type InvoiceStatus } from "@/lib/billing/overview";
+import { RowActionsMenu } from "@/design-system/components";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 
 const METER_ICON: Record<LimitKind, LucideIcon> = { users: Users, storage: HardDrive, ai: Bot };
 const STATUS_BADGE: Record<InvoiceStatus, BadgeVariant> = { issued: "info", paid: "success", overdue: "danger", void: "neutral" };
@@ -30,6 +33,8 @@ function meterFigure(kind: LimitKind, value: number): string {
 
 export default function BillingSettingsPage() {
   const { t, formatDate } = useI18n();
+  // UI_STANDARD (UI-6): the invoices on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { isAdmin, ready } = useAuth();
   const [data, setData] = useState<{ overview: BillingOverview; limits: TenantLimitStatus } | null>(null);
   const [error, setError] = useState(false);
@@ -200,7 +205,29 @@ export default function BillingSettingsPage() {
 
                 <section className="app-card app-card-elevated overflow-x-auto">
                   <h2 className="px-6 pt-5 text-base font-semibold text-app">{t("tenantBilling.invoices")}</h2>
-                  {overview.invoices.length === 0 ? (
+                  {standard ? (
+                    <div className="px-6 pb-5 pt-3">
+                      <StandardGrid<BillingOverview["invoices"][number]>
+                        id="settings-billing-invoices"
+                        label={t("tenantBilling.invoices")}
+                        rows={overview.invoices}
+                        rowKey={(i) => i.id}
+                        empty={t("tenantBilling.noInvoices")}
+                        columns={[
+                          { key: "number", header: t("tenantBilling.colNumber"), type: "code", cell: (i) => <span className="ds-mono">{i.number}</span>, sortValue: (i) => i.number },
+                          { key: "period", header: t("tenantBilling.colPeriod"), width: 200, className: "ds-muted", cell: (i) => (i.periodStart && i.periodEnd ? `${formatDate(i.periodStart)} – ${formatDate(i.periodEnd)}` : "—"), sortValue: (i) => i.periodStart },
+                          { key: "due", header: t("tenantBilling.colDue"), type: "date", className: "ds-muted", cell: (i) => formatDate(i.dueDate), sortValue: (i) => i.dueDate },
+                          { key: "total", header: t("tenantBilling.colTotal"), type: "money", cell: (i) => money(i.total, i.currency), sortValue: (i) => i.total },
+                          { key: "status", header: t("tenantBilling.colStatus"), type: "status", cell: (i) => <Badge variant={STATUS_BADGE[i.status]}>{t(`tenantBilling.status_${i.status}`)}</Badge>, sortValue: (i) => i.status },
+                        ]}
+                        rowActions={(i) =>
+                          i.hasPdf ? (
+                            <RowActionsMenu label={t("tenantBilling.download")} items={[{ key: "pdf", label: t("tenantBilling.download"), icon: <Download className="h-4 w-4" />, href: `/api/billing/invoices/${i.id}/pdf` }]} />
+                          ) : null
+                        }
+                      />
+                    </div>
+                  ) : overview.invoices.length === 0 ? (
                     <p className="px-6 py-5 text-sm text-app-muted">{t("tenantBilling.noInvoices")}</p>
                   ) : (
                     <table className="mt-3 w-full text-left text-sm">

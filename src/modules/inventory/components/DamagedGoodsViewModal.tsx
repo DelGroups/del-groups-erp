@@ -5,6 +5,10 @@ import { X } from "lucide-react";
 import type { WriteoffRecord } from "../lib/writeoff";
 import type { Warehouse } from "@/types/database.types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 interface DamagedGoodsViewModalProps {
   writeoff: WriteoffRecord;
@@ -17,7 +21,9 @@ export default function DamagedGoodsViewModal({
   warehouses,
   onClose,
 }: DamagedGoodsViewModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the written-off lines on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const warehouseName =
     warehouses.find((w) => w.id === writeoff.warehouse_id)?.name || "-";
   const totalQty = writeoff.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -59,6 +65,20 @@ export default function DamagedGoodsViewModal({
             </div>
           </div>
 
+          {standard ? (
+            <StandardGrid<WriteoffRecord["items"][number]>
+              id="inventory-writeoff-lines"
+              label={t("dashboard.product")}
+              rows={writeoff.items}
+              rowKey={(item) => item.id || String(writeoff.items.indexOf(item))}
+              columns={[
+                { key: "no", header: t("print.rowNo"), type: "number", width: 56, className: "ds-muted", cell: (item) => writeoff.items.indexOf(item) + 1 },
+                { key: "product", header: t("dashboard.product"), width: 240, className: "font-medium", cell: (item) => codeName(item.product_code, item.product_name), sortValue: (item) => item.product_name },
+                { key: "qty", header: t("forms.quantity"), type: "number", cell: (item) => `${formatQuantity(item.quantity, locale)} ${item.unit}`, sortValue: (item) => item.quantity },
+                { key: "problem", header: t("modals.damagedGoodsView.problem"), className: "ds-muted", cell: (item) => item.issue_description || "—" },
+              ]}
+            />
+          ) : (
           <div className="overflow-hidden rounded-xl border border-app">
             <table className="w-full text-left">
               <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
@@ -88,6 +108,7 @@ export default function DamagedGoodsViewModal({
               </tbody>
             </table>
           </div>
+          )}
 
           {writeoff.notes && (
             <div className="rounded-xl border border-app p-3">
