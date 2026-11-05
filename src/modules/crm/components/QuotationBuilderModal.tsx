@@ -11,6 +11,10 @@ import {
 } from "@/types/database.types";
 import { numberToFieldValue, parseFieldNumber } from "@/lib/forms/numericField";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineSelectCell, LineText, LineTextCell } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatFigure } from "@/lib/dates/localeDate";
 
 type CatalogProduct = {
   id: string;
@@ -68,7 +72,9 @@ export default function QuotationBuilderModal({
   onClose,
   onSubmit,
 }: QuotationBuilderModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the quotation lines on LineGrid (a custom item's name in its own column); old table with the flag off.
+  const uiStandard = useUiStandard();
   const [items, setItems] = useState<QuotationItem[]>([emptyItem()]);
   const [discount, setDiscount] = useState("");
   const [taxRate, setTaxRate] = useState("");
@@ -144,6 +150,54 @@ export default function QuotationBuilderModal({
         </div>
 
         <div className="space-y-4 p-5">
+          {uiStandard ? (
+            <LineGrid<QuotationItem>
+              id="crm-quotation-lines"
+              label={t("crm.quote.title")}
+              lines={items}
+              lineKey={(item) => String(items.indexOf(item))}
+              lineLabel={(item, index) => item.product_name || `#${index + 1}`}
+              labels={lineGridLabels(t)}
+              onAddLine={() => setItems((prev) => [...prev, emptyItem()])}
+              onRemove={(index) => setItems((prev) => prev.filter((_, i) => i !== index))}
+              columns={[
+                {
+                  key: "product",
+                  header: t("crm.quote.product"),
+                  width: 240,
+                  cell: (item, ctx) => (
+                    <LineSelectCell
+                      ctx={ctx}
+                      value={item.product_id || ""}
+                      onChange={(value) => applyProduct(ctx.index, value)}
+                      options={[{ value: "", label: t("crm.quote.customItem") }, ...products.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))]}
+                    />
+                  ),
+                },
+                {
+                  key: "name",
+                  header: t("crm.quote.itemName"),
+                  width: 200,
+                  cell: (item, ctx) =>
+                    item.product_id ? (
+                      <LineText muted>{item.product_name}</LineText>
+                    ) : (
+                      <LineTextCell ctx={ctx} value={item.product_name} placeholder={t("crm.quote.itemName")} onChange={(value) => updateItem(ctx.index, { product_name: value ?? "" })} />
+                    ),
+                },
+                { key: "qty", header: t("crm.quote.qty"), type: "number", width: 96, cell: (item, ctx) => <LineNumberCell ctx={ctx} value={item.quantity} min={0.01} onChange={(value) => updateItem(ctx.index, { quantity: value ?? 1 })} /> },
+                { key: "cost", header: t("crm.quote.cost"), type: "money", width: 112, cell: (item, ctx) => <LineNumberCell ctx={ctx} value={item.cost_price || null} placeholder="0.00" onChange={(value) => updateItem(ctx.index, { cost_price: value ?? 0 })} /> },
+                { key: "margin", header: t("crm.quote.margin"), type: "number", width: 96, cell: (item, ctx) => <LineNumberCell ctx={ctx} value={item.margin_percent} min={-100} placeholder="0" onChange={(value) => updateItem(ctx.index, { margin_percent: value ?? 0 })} /> },
+                { key: "unitPrice", header: t("crm.quote.unitPrice"), type: "money", cell: (item) => <LineText>{formatFigure(item.unit_price, 2, locale)}</LineText> },
+                {
+                  key: "lineTotal",
+                  header: t("crm.quote.lineTotal"),
+                  type: "money",
+                  cell: (item) => <LineText className="font-semibold">{formatFigure(item.line_total, 2, locale)}</LineText>,
+                },
+              ]}
+            />
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="w-full text-left text-xs">
               <thead className="bg-app-card-hover font-bold uppercase text-app-muted">
@@ -235,7 +289,9 @@ export default function QuotationBuilderModal({
               </tbody>
             </table>
           </div>
+          )}
 
+          {uiStandard ? null : (
           <button
             type="button"
             onClick={() => setItems((prev) => [...prev, emptyItem()])}
@@ -244,6 +300,7 @@ export default function QuotationBuilderModal({
             <Plus className="h-4 w-4" />
             {t("crm.quote.addLine")}
           </button>
+          )}
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <label className="text-xs font-semibold">

@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { EmptyState, FunnelSteps, GoalProgress, SkeletonList } from "@/design-system/components";
+import { EmptyState, FunnelSteps, GoalProgress, SkeletonList, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useFormatter, ViewScope } from "@/views";
 import { addMonths, forecastByMonth, funnel, lostReasonLabel, lostReasons, stageKind, stagesForTeam, targetProgress, teamLabel, weightedValue, winRateByUser, type PipelineDeal } from "../../lib/pipeline";
@@ -41,6 +42,8 @@ function dealFromRow(r: Record<string, unknown>): PipelineDeal {
 
 function Reports() {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the forecast and the win rates on the grid; old tables with the flag off.
+  const standard = useUiStandard();
   const fmt = useFormatter();
   const pipeline = usePipeline();
   const rows = useQuery({ queryKey: ["crm", "report-deals"], queryFn: fetchReportDeals });
@@ -135,6 +138,32 @@ function Reports() {
             <h3 id="crm-forecast" className="font-semibold">{t("crm.pipeline.reports.forecast")}</h3>
             <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("crm.pipeline.reports.forecastHint")}</p>
           </div>
+          {standard ? (
+            <StandardGrid<(typeof forecast)[number]>
+              id="crm.reports.forecast"
+              label={t("crm.pipeline.reports.forecast")}
+              rows={forecast}
+              rowKey={(f) => f.month}
+              columns={[
+                { key: "month", header: t("crm.pipeline.reports.month"), className: "font-medium", cell: (f) => monthLabel(f.month), sortValue: (f) => f.month },
+                {
+                  key: "expected",
+                  header: t("crm.pipeline.reports.expected"),
+                  width: 260,
+                  cell: (f) => (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-2 shrink-0 rounded-full" style={{ width: `${Math.max(2, (f.expected / maxForecast) * 100)}%`, maxWidth: "6rem", background: "var(--ds-accent)" }} aria-hidden />
+                      <span className="ds-mono">{money(f.expected)}</span>
+                      <span className="ds-subtle text-[length:var(--ds-text-xs)]">{t("crm.pipeline.reports.deals", { count: f.count })}</span>
+                    </span>
+                  ),
+                  sortValue: (f) => f.expected,
+                },
+                { key: "weighted", header: t("crm.pipeline.reports.weighted"), type: "money", cell: (f) => money(f.weighted), sortValue: (f) => f.weighted },
+                { key: "won", header: t("crm.pipeline.reports.won"), type: "money", cell: (f) => (f.month <= month ? money(f.won) : "—"), sortValue: (f) => (f.month <= month ? f.won : null) },
+              ]}
+            />
+          ) : (
           <table className="w-full border-collapse text-left text-[length:var(--ds-text-sm)]">
             <thead>
               <tr>
@@ -161,12 +190,29 @@ function Reports() {
               ))}
             </tbody>
           </table>
+          )}
           <p className="text-[length:var(--ds-text-xs)] ds-subtle">{t("crm.pipeline.reports.forecastRange", { from: monthLabel(month), to: monthLabel(addMonths(month, 5)) })}</p>
         </section>
 
         <section className="ds-card ds-card-pad flex flex-col gap-3" aria-labelledby="crm-winrate">
           <h3 id="crm-winrate" className="font-semibold">{t("crm.pipeline.reports.winRateByUser")}</h3>
-          {rates.length === 0 ? (
+          {standard ? (
+            <StandardGrid<(typeof rates)[number]>
+              id="crm.reports.win-rate"
+              label={t("crm.pipeline.reports.winRateByUser")}
+              rows={rates}
+              rowKey={(r) => r.userId ?? "none"}
+              empty={t("crm.pipeline.reports.noData")}
+              columns={[
+                { key: "user", header: t("crm.pipeline.fields.salesperson"), className: "font-medium", cell: (r) => (r.userId ? people.get(r.userId) ?? "—" : t("crm.pipeline.reports.unassigned")), sortValue: (r) => (r.userId ? people.get(r.userId) ?? "" : "") },
+                { key: "won", header: t("crm.pipeline.reports.won"), type: "number", cell: (r) => r.won, sortValue: (r) => r.won },
+                { key: "lost", header: t("crm.pipeline.reports.lost"), type: "number", cell: (r) => r.lost, sortValue: (r) => r.lost },
+                { key: "open", header: t("crm.pipeline.reports.open"), type: "number", cell: (r) => r.open, sortValue: (r) => r.open },
+                { key: "rate", header: t("crm.pipeline.reports.winRate"), type: "number", cell: (r) => (r.rate === null ? "—" : `${r.rate}%`), sortValue: (r) => r.rate },
+                { key: "wonValue", header: t("crm.pipeline.reports.wonValue"), type: "money", cell: (r) => money(r.wonValue), sortValue: (r) => r.wonValue },
+              ]}
+            />
+          ) : rates.length === 0 ? (
             <p className="ds-muted">{t("crm.pipeline.reports.noData")}</p>
           ) : (
             <table className="w-full border-collapse text-left text-[length:var(--ds-text-sm)]">

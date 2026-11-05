@@ -4,7 +4,9 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Factory, FilePlus2, FileText, Lock, Printer, SearchX } from "lucide-react";
-import { EmptyState, SkeletonList, useToast } from "@/design-system/components";
+import { Chip, EmptyState, RowActionsMenu, SkeletonList, useToast, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDate } from "@/lib/dates/localeDate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useRecordCrumb } from "@/components/shell/useShell";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -38,6 +40,8 @@ function DealForm({ id }: { id: string }) {
   const fmt = useFormatter();
   const { can } = useAuth();
   const { toast } = useToast();
+  // UI_STANDARD (UI-6): the quotations on the grid, their buttons in the row menu; old table with the flag off.
+  const standard = useUiStandard();
   const client = useQueryClient();
   const branding = useCompanyBranding();
   const { config: crmConfig } = useCrmConfig();
@@ -110,6 +114,33 @@ function DealForm({ id }: { id: string }) {
     <div className="overflow-x-auto">
       {quotations.length === 0 ? (
         <p className="ds-muted">{t("crm.engine.noQuotes")}</p>
+      ) : standard ? (
+        <StandardGrid<CrmQuotation>
+          id="crm.deal.quotations"
+          label={t("crm.engine.quoteActions")}
+          rows={quotations}
+          rowKey={(q) => q.id}
+          columns={[
+            { key: "number", header: t("crm.print.quoteNo"), type: "code", cell: (q) => <span className="ds-mono">{q.quote_number}</span>, sortValue: (q) => q.quote_number },
+            { key: "status", header: t("crm.engine.fields.status"), type: "status", cell: (q) => <Chip>{t(`crm.quoteStatus.${q.status}`)}</Chip>, sortValue: (q) => q.status },
+            { key: "validUntil", header: t("crm.quote.validUntil"), type: "date", cell: (q) => formatGridDate(q.valid_until), sortValue: (q) => q.valid_until },
+            { key: "total", header: t("crm.quote.total"), type: "money", cell: (q) => `${formatFigure(q.total_amount, 2, fmt.locale)} ${t("common.currency")}`, sortValue: (q) => q.total_amount },
+          ]}
+          rowActions={(q) => (
+            <RowActionsMenu
+              label={t("crm.engine.quoteActions")}
+              linkAs={Link}
+              items={[
+                ...(canWrite && q.status !== "CONVERTED" ? [{ key: "open", label: t("crm.quote.open"), icon: <FileText className="h-4 w-4" />, onSelect: () => setQuote({ open: true, quotation: q }) }] : []),
+                { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" />, onSelect: () => setPrintData({ quotation: q, deal, branding, crmConfig }) },
+                ...(canConvert && WON.includes(q.status) && !q.production_order_id && !quotations.some((x) => x.status === "CONVERTED")
+                  ? [{ key: "convert", label: t("crm.quote.convert"), icon: <Factory className="h-4 w-4" />, disabled: busy, onSelect: () => void convert(q) }]
+                  : []),
+                ...(q.production_order_id ? [{ key: "order", label: t("crm.quote.viewOrder"), href: `/production/${q.production_order_id}` }] : []),
+              ]}
+            />
+          )}
+        />
       ) : (
         <table className="w-full min-w-[36rem] border-collapse text-left">
           <thead>
