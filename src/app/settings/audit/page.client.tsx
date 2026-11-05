@@ -34,6 +34,7 @@ import {
 import type { Json } from "@/types/database.types";
 import { Chip, useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatGridDateTime } from "@/lib/dates/localeDate";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 
 const PAGE_SIZE = 50;
@@ -359,7 +360,7 @@ export default function AuditSettingsPage() {
                   empty={t("audit.empty")}
                   onOpen={(row) => setDiffRow(row)}
                   columns={[
-                    { key: "time", header: t("audit.colTime"), type: "datetime", cell: (row) => formatDateTime(row.created_at), sortValue: (row) => row.created_at },
+                    { key: "time", header: t("audit.colTime"), type: "datetime", cell: (row) => formatGridDateTime(row.created_at), sortValue: (row) => row.created_at },
                     {
                       key: "user",
                       header: t("audit.colUser"),

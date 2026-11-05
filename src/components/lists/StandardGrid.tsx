@@ -13,6 +13,9 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { sortRows, standardGridKey, toggleSort, type GridSort, type SortValue } from "./standardGridLogic";
 import { useColumnPrefs } from "./useColumnPrefs";
 
+/** Starting width (px) of date columns: dd.mm.yyyy (HH:mm) in tabular figures plus the cell padding. */
+const DATE_WIDTH: Partial<Record<string, number>> = { date: 108, datetime: 152 };
+
 /** A column of StandardGrid: a DataGrid column plus the value it sorts by. */
 export interface StandardColumn<R> extends GridColumn<R> {
   /** The column sorts by this value (header click); no value: the column does not sort. */
@@ -95,7 +98,11 @@ export function StandardGrid<R>(props: StandardGridProps<R>) {
   const controlled = controlledOnSort !== undefined;
   const sort = controlled ? controlledSort ?? null : ownSort;
   const sortable = useMemo(() => new Set(columns.filter((c) => c.sortValue || (controlled && c.sortable)).map((c) => c.key)), [columns, controlled]);
-  const gridColumns = useMemo<GridColumn<R>[]>(() => columns.map((c) => ({ ...c, sortable: sortable.has(c.key) })), [columns, sortable]);
+  // Dates get the width of their full text in tabular figures ("25.10.2026" is cut at the type's 96 px).
+  const gridColumns = useMemo<GridColumn<R>[]>(
+    () => columns.map((c) => ({ ...c, width: c.width ?? (c.type ? DATE_WIDTH[c.type] : undefined), sortable: sortable.has(c.key) })),
+    [columns, sortable]
+  );
   const shown = useMemo(() => {
     if (controlled) return rows;
     const byKey = new Map(columns.map((c) => [c.key, c.sortValue]));
