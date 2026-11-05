@@ -14,6 +14,8 @@ import {
   type PolywoodImportRow,
 } from "../lib/import";
 import { useI18n } from "@/i18n/I18nProvider";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
 import { Download, Upload } from "lucide-react";
 
 interface PolywoodImportPanelProps {
@@ -23,6 +25,8 @@ interface PolywoodImportPanelProps {
 
 export default function PolywoodImportPanel({ onImported, initialProductId }: PolywoodImportPanelProps) {
   const { t } = useI18n();
+  // UI_STANDARD (UI-6): the import preview on the grid (errors as a chip with the full text in a tooltip); old table with the flag off.
+  const standard = useUiStandard();
   const [rows, setRows] = useState<PolywoodImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -157,6 +161,41 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
               {importing ? t("common.loading") : t("polywood.import.submit")}
             </button>
           </div>
+          {standard ? (
+            <StandardGrid<PolywoodImportRow>
+              id="polywood.import.preview"
+              label={t("polywood.import.title")}
+              rows={rows}
+              rowKey={(row) => String(row.rowNumber)}
+              showCount
+              columns={[
+                { key: "row", header: "#", type: "number", width: 56, cell: (row) => row.rowNumber, sortValue: (row) => row.rowNumber },
+                { key: "code", header: t("polywood.table.code"), type: "code", cell: (row) => <span className="ds-mono">{row.code || "—"}</span>, sortValue: (row) => row.code },
+                { key: "name", header: t("polywood.table.product"), width: 220, cell: (row) => row.name, sortValue: (row) => row.name },
+                { key: "category", header: t("polywood.import.category"), cell: (row) => row.category || "—", sortValue: (row) => row.category },
+                { key: "subCategory", header: t("polywood.import.subCategory"), cell: (row) => row.subCategory || "—", sortValue: (row) => row.subCategory },
+                {
+                  key: "unit",
+                  header: t("polywood.import.unitColumn"),
+                  width: 150,
+                  cell: (row) => (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Chip>{unitBadgeLabel(row)}</Chip>
+                      {!isMeterUnit(row.unit) && row.quantity > 0 ? <span className="ds-mono ds-muted">{`qty: ${row.quantity}`}</span> : null}
+                    </span>
+                  ),
+                },
+                { key: "stock", header: t("polywood.import.groupedStock"), width: 180, className: "ds-mono", cell: (row) => stockSummaryLabel(row) || formatStockSummary(row) || "—" },
+                {
+                  key: "status",
+                  header: t("common.status"),
+                  width: 200,
+                  cell: (row) => (row.errors.length > 0 ? <span className="ds-text-danger" title={row.errors.join("; ")}>{row.errors.join("; ")}</span> : <span className="ds-text-success">{t("polywood.import.rowOk")}</span>),
+                  sortValue: (row) => row.errors.length,
+                },
+              ]}
+            />
+          ) : (
           <div className="max-h-[28rem] overflow-auto">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-app-card-hover font-bold uppercase text-app">
@@ -206,6 +245,7 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : null}
 
