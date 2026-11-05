@@ -5,6 +5,8 @@ import { ArrowLeftRight } from "lucide-react";
 import { COUNT_MEASURE, fieldLabel, fieldMap, formatNumber, isNumericField, pivotTable, type Formatter } from "../logic";
 import type { ViewDefinition, ViewRecord } from "../types";
 import { groupByLabel } from "./SearchPanel";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
 
 /** Measures a pivot or graph can show: the record count and every numeric field. */
 export function measureOptions(def: ViewDefinition, fmt: Formatter): { value: string; label: string }[] {
@@ -45,6 +47,14 @@ export function PivotView<R extends ViewRecord>({ definition: def, records, fmt 
   const table = useMemo(() => pivotTable(records, def, rows, cols || null, measure, fmt), [records, def, rows, cols, measure, fmt]);
   const axisOptions = groupBys.map((g) => ({ value: g, label: groupByLabel(def, g, fmt) }));
   const show = (n: number | null) => (n === null ? "" : formatMeasure(def, measure, n, fmt));
+  // UI_STANDARD (UI-6): the pivot on the grid (sticky first column and totals row); old table with the flag off.
+  const standard = useUiStandard();
+  const rowIndexes = table.rows.map((_, i) => i);
+  const pivotColumns: StandardColumn<number>[] = [
+    { key: "row", header: groupByLabel(def, rows, fmt), width: 200, className: "font-medium", cell: (ri) => table.rows[ri].label, sortValue: (ri) => table.rows[ri].label },
+    ...table.cols.map<StandardColumn<number>>((c, ci) => ({ key: `c:${c.key}`, header: c.label, type: "number", cell: (ri) => show(table.cells[ri][ci]), sortValue: (ri) => table.cells[ri][ci] })),
+    ...(cols ? [{ key: "total", header: fmt.t("views.total"), type: "number", className: "font-semibold", cell: (ri: number) => show(table.rowTotals[ri]), sortValue: (ri: number) => table.rowTotals[ri] } satisfies StandardColumn<number>] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -65,6 +75,20 @@ export function PivotView<R extends ViewRecord>({ definition: def, records, fmt 
           {fmt.t("views.pivot.flip")}
         </button>
       </div>
+      {standard ? (
+        <StandardGrid<number>
+          id={`views.pivot.${def.model.key}`}
+          label={`${groupByLabel(def, rows, fmt)}${cols ? ` × ${groupByLabel(def, cols, fmt)}` : ""}`}
+          rows={rowIndexes}
+          rowKey={(ri) => table.rows[ri].key}
+          columns={pivotColumns}
+          totals={{
+            row: fmt.t("views.total"),
+            ...Object.fromEntries(table.cols.map((c, ci) => [`c:${c.key}`, show(table.colTotals[ci])])),
+            ...(cols ? { total: show(table.total) } : {}),
+          }}
+        />
+      ) : (
       <div className="ds-card overflow-x-auto">
         <table className="w-full border-collapse">
           <caption className="sr-only">{`${groupByLabel(def, rows, fmt)}${cols ? ` × ${groupByLabel(def, cols, fmt)}` : ""}`}</caption>
@@ -115,6 +139,7 @@ export function PivotView<R extends ViewRecord>({ definition: def, records, fmt 
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 }
