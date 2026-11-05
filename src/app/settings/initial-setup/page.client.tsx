@@ -15,6 +15,9 @@ import {
   parseProductImportRows,
 } from "@/lib/initial-setup/productImport";
 import type { ProductImportRow } from "@/lib/initial-setup/types";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatFigure, formatQuantity } from "@/lib/dates/localeDate";
 import { downloadTextFile, readSpreadsheetRows } from "@/lib/csv/csvUtils";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
@@ -22,7 +25,9 @@ import { useToast } from "@/hooks/useToast";
 import { ArrowRight, Download, FileSpreadsheet, Landmark, Package, Upload } from "lucide-react";
 
 export default function InitialSetupPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the import preview on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
 
@@ -153,6 +158,21 @@ export default function InitialSetupPage() {
                       {importing ? t("initialSetup.importing") : t("initialSetup.confirmImport")}
                     </button>
                   </div>
+                  {standard ? (
+                    <StandardGrid<ProductImportRow>
+                      id="settings.initial-setup.preview"
+                      label={t("initialSetup.confirmImport")}
+                      rows={importPreview.slice(0, 8)}
+                      rowKey={(row) => `${row.sku}-${row.barcode}-${importPreview.indexOf(row)}`}
+                      columns={[
+                        { key: "barcode", header: t("initialSetup.importHeaders.barcode"), type: "code", cell: (row) => <span className="ds-mono">{row.barcode || "—"}</span> },
+                        { key: "sku", header: t("initialSetup.importHeaders.sku"), type: "code", cell: (row) => <span className="ds-mono">{row.sku || "—"}</span> },
+                        { key: "name", header: t("initialSetup.importHeaders.name"), width: 220, cell: (row) => row.name },
+                        { key: "price", header: t("initialSetup.importHeaders.retailPrice"), type: "money", cell: (row) => formatFigure(row.retailPrice, 2, locale) },
+                        { key: "stock", header: t("initialSetup.importHeaders.initialStock"), type: "number", cell: (row) => formatQuantity(row.initialStock, locale) },
+                      ]}
+                    />
+                  ) : (
                   <div className="max-h-48 overflow-auto">
                     <table className="app-table text-[11px]">
                       <thead>
@@ -177,6 +197,7 @@ export default function InitialSetupPage() {
                       </tbody>
                     </table>
                   </div>
+                  )}
                 </div>
               )}
 

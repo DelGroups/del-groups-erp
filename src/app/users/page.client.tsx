@@ -29,6 +29,10 @@ import SeatLimitNudge from "@/components/limits/SeatLimitNudge";
 import { useLimitStatus } from "@/components/limits/useLimitStatus";
 import { isSeatLimitDbError } from "@/lib/limits/limits";
 import { formatGridDate } from "@/lib/dates/localeDate";
+import { Chip, Combobox, useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { comboboxLabels } from "@/i18n/uiStandardLabels";
+import type { TableRowActionItem } from "@/components/ui/table-row-actions-menu";
 
 function formatDate(value: string | null | undefined): string {
   return formatGridDate(value, { empty: "-" });
@@ -355,7 +359,9 @@ function EditUserModal({
 }
 
 function UsersView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): the users on the grid (role as a Combobox in the row, the same row menu); old table with the flag off.
+  const standard = useUiStandard();
   const { user: currentUser, refresh: refreshAuth } = useAuth();
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -488,6 +494,42 @@ function UsersView() {
     );
   }, [profiles, searchTerm]);
 
+  /** The row menu of a user (the same in the grid and the old table). */
+  const rowMenuItems = (profile: UserProfile): TableRowActionItem[] => [
+      {
+        key: "edit",
+        label: t("common.edit"),
+        icon: <Pencil className="h-4 w-4" />,
+        onClick: () => setEditingProfile(profile),
+      },
+      {
+        key: "toggle-active",
+        label: profile.is_active ? t("common.deactivate") : t("common.activate"),
+        icon: <ShieldCheck className="h-4 w-4" />,
+        disabled: profile.id === currentUser?.id,
+        onClick: () => void handleToggleActive(profile),
+      },
+      {
+        key: "resend-link",
+        label:
+          resendingId === profile.id
+            ? t("users.resendLinkSending")
+            : t("users.resendLink"),
+        icon: <Send className="h-4 w-4" />,
+        disabled: resendingId === profile.id,
+        onClick: () => void handleResendLink(profile),
+      },
+      {
+        key: "delete",
+        label: t("users.deleteUser"),
+        icon: <Trash2 className="h-4 w-4" />,
+        variant: "destructive",
+        disabled: profile.id === currentUser?.id,
+        onClick: () => setDeleteTarget(profile),
+      },
+
+  ];
+
   return (
     <div className="space-y-4 p-6">
       {successMsg && (
@@ -529,6 +571,63 @@ function UsersView() {
         <SeatLimitNudge users={limits.users} onReview={() => tableRef.current?.scrollIntoView({ behavior: "smooth" })} />
       ) : null}
 
+      {standard ? (
+        <div ref={tableRef}>
+          <StandardGrid<UserProfile>
+            id="settings.users"
+            label={t("users.userCol")}
+            rows={filteredProfiles}
+            rowKey={(profile) => profile.id}
+            loading={loading}
+            empty={t("users.empty")}
+            showCount
+            columns={[
+              {
+                key: "user",
+                header: t("users.userCol"),
+                width: 220,
+                className: "font-semibold",
+                cell: (profile) => (
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate">{profile.full_name || t("common.anonymous")}</span>
+                    {profile.id === currentUser?.id ? <Chip tone="brand">{t("common.you")}</Chip> : null}
+                  </span>
+                ),
+                sortValue: (profile) => profile.full_name,
+              },
+              { key: "email", header: t("users.emailCol"), width: 220, className: "ds-muted", cell: (profile) => profile.email || "—", sortValue: (profile) => profile.email },
+              {
+                key: "role",
+                header: t("users.roleCol"),
+                width: 200,
+                cell: (profile) => (
+                  <Combobox
+                    value={profile.role_id || ""}
+                    onChange={(next) => void handleRoleChange(profile.id, next ?? "")}
+                    options={[{ value: "", label: t("common.noRole") }, ...roles.map((role) => ({ value: role.id, label: role.name }))]}
+                    labels={comboboxLabels(t)}
+                    locale={locale}
+                    clearable={false}
+                    width="full"
+                    aria-label={`${t("users.roleCol")}: ${profile.full_name || profile.email || ""}`}
+                  />
+                ),
+                sortValue: (profile) => roles.find((role) => role.id === profile.role_id)?.name ?? "",
+              },
+              {
+                key: "status",
+                header: t("common.status"),
+                type: "status",
+                samples: [t("common.active"), t("common.inactive")],
+                cell: (profile) => <Chip tone={profile.is_active ? "success" : "neutral"}>{profile.is_active ? t("common.active") : t("common.inactive")}</Chip>,
+                sortValue: (profile) => (profile.is_active ? 0 : 1),
+              },
+              { key: "created", header: t("common.createdAt"), type: "date", className: "ds-muted", cell: (profile) => formatDate(profile.created_at), sortValue: (profile) => profile.created_at },
+            ]}
+            rowActions={(profile) => <TableRowActionsMenu items={rowMenuItems(profile)} />}
+          />
+        </div>
+      ) : (
       <div ref={tableRef} className="overflow-hidden rounded-2xl app-card">
         <table className="w-full text-left text-xs">
           <thead className="bg-app-card-hover text-[10px] font-bold uppercase tracking-wide text-app-muted">
@@ -595,41 +694,7 @@ function UsersView() {
                     {formatDate(profile.created_at)}
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <TableRowActionsMenu
-                      items={[
-                        {
-                          key: "edit",
-                          label: t("common.edit"),
-                          icon: <Pencil className="h-4 w-4" />,
-                          onClick: () => setEditingProfile(profile),
-                        },
-                        {
-                          key: "toggle-active",
-                          label: profile.is_active ? t("common.deactivate") : t("common.activate"),
-                          icon: <ShieldCheck className="h-4 w-4" />,
-                          disabled: profile.id === currentUser?.id,
-                          onClick: () => void handleToggleActive(profile),
-                        },
-                        {
-                          key: "resend-link",
-                          label:
-                            resendingId === profile.id
-                              ? t("users.resendLinkSending")
-                              : t("users.resendLink"),
-                          icon: <Send className="h-4 w-4" />,
-                          disabled: resendingId === profile.id,
-                          onClick: () => void handleResendLink(profile),
-                        },
-                        {
-                          key: "delete",
-                          label: t("users.deleteUser"),
-                          icon: <Trash2 className="h-4 w-4" />,
-                          variant: "destructive",
-                          disabled: profile.id === currentUser?.id,
-                          onClick: () => setDeleteTarget(profile),
-                        },
-                      ]}
-                    />
+                    <TableRowActionsMenu items={rowMenuItems(profile)} />
                   </td>
                 </tr>
               ))
@@ -637,6 +702,7 @@ function UsersView() {
           </tbody>
         </table>
       </div>
+      )}
 
       <p className="flex items-center gap-1.5 text-[11px] text-app-muted">
         <ShieldCheck className="h-3.5 w-3.5 text-app-muted" />
