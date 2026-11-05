@@ -102,15 +102,25 @@ export function uiGuardConfigs(allowlist) {
     for (const file of Object.keys(files)) add(file, category);
   }
   for (const [category, files] of Object.entries(UI_GUARD_EXEMPT)) for (const file of files) add(file, category);
-  for (const [category, globs] of Object.entries(UI_GUARD_EXEMPT_GLOBS)) for (const glob of globs) add(glob, category);
-  const groups = new Map();
+  // A listed file inside an exempt folder keeps that exemption too (flat config: the last matching
+  // block wins, and the file blocks come after the glob blocks).
   for (const [file, categories] of byFile) {
-    const key = [...new Set(categories)].sort().join(",");
-    groups.set(key, [...(groups.get(key) ?? []), file]);
+    for (const category of Object.keys(UI_GUARD_EXEMPT_GLOBS)) if (isExemptPath(file, category)) categories.push(category);
   }
+  const blocks = (entries) => {
+    const groups = new Map();
+    for (const [file, categories] of entries) {
+      const key = [...new Set(categories)].sort().join(",");
+      groups.set(key, [...(groups.get(key) ?? []), file]);
+    }
+    return [...groups].map(([key, files]) => ({ files, rules: { "no-restricted-syntax": ["error", ...restrictedSyntax(key.split(","))] } }));
+  };
+  const globEntries = Object.entries(UI_GUARD_EXEMPT_GLOBS).flatMap(([category, globs]) => globs.map((glob) => [glob, [category]]));
   return [
     { files: ["src/**/*.{ts,tsx}"], rules: { "no-restricted-syntax": ["error", ...restrictedSyntax()] } },
-    ...[...groups].map(([key, files]) => ({ files, rules: { "no-restricted-syntax": ["error", ...restrictedSyntax(key.split(","))] } })),
+    ...blocks(globEntries),
+    // Paths are globs to ESLint: "[id]" in a route folder must match itself, not one of "i" / "d".
+    ...blocks([...byFile].map(([file, categories]) => [file.replace(/[[\]]/g, (c) => `[${c}]`), categories])),
   ];
 }
 

@@ -79,6 +79,11 @@ test("grid components, print layouts and print sheets are exempt", () => {
   // Lint lifts the rule on the exempt globs too.
   const configs = uiGuardConfigs({});
   assert.ok(configs.some((c) => c.files.includes("src/design-system/**")));
+  // Route folders like [id] are escaped for ESLint's globs; a listed file in an exempt folder keeps both liftings.
+  const listed = uiGuardConfigs({ rawTable: { "src/app/p/[id]/page.tsx": 1 }, localeFormat: { "src/modules/x/CostSheet.tsx": 1 } });
+  assert.ok(listed.some((c) => c.files.includes("src/app/p/[[]id[]]/page.tsx")));
+  const sheet = listed.find((c) => c.files.includes("src/modules/x/CostSheet.tsx"));
+  assert.ok(sheet.rules["no-restricted-syntax"].every((r) => typeof r === "string" || !/toLocale|<table|ui\/table/.test(JSON.stringify(r))));
 });
 
 test("ui:guard fails on a new raw table and passes an allowlisted count", () => {
