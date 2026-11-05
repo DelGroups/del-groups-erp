@@ -8,6 +8,7 @@ import PayrollTaxBreakdown from "./PayrollTaxBreakdown";
 import { useI18n } from "@/i18n/I18nProvider";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
 
 interface PayPayrollModalProps {
   isOpen: boolean;
@@ -37,6 +38,36 @@ export default function PayPayrollModal({
   }, [isOpen, accounts]);
 
   if (!isOpen || !payroll) return null;
+
+  // IMP-5 (UI_STANDARD): the one payment dialog. pay_payroll_run_atomic takes one account, so the
+  // salary is paid from one account here (the net salary, fixed).
+  if (uiStandard) {
+    return (
+      <PaymentDialog
+        open
+        onClose={onClose}
+        direction="out"
+        title={t("employees.payroll.payTitle")}
+        counterpartyLabel={t("paymentDialog.employee")}
+        counterpartyName={payroll.employees?.full_name || "—"}
+        counterpartyCode={null}
+        openBalance={payroll.net_salary}
+        fixedAmount={payroll.net_salary}
+        maxLines={1}
+        accounts={accounts.map((a) => ({ id: a.id, name: a.name, balance: a.balance }))}
+        extraFields={
+          <PayrollTaxBreakdown compact breakdown={payrollRunToBreakdown(payroll)} advancesDeducted={payroll.advances_deducted} otherDeductions={payroll.other_deductions} />
+        }
+        submitLabel={t("employees.payroll.confirmPay")}
+        onSubmit={async (p) => {
+          const accountId = p.lines[0]?.account_id;
+          if (!accountId) return { success: false };
+          await onSubmit(accountId);
+          return { success: true };
+        }}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">

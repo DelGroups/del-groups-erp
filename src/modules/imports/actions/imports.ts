@@ -146,6 +146,40 @@ export interface ShipmentView {
    * import_shipment_line_warehouses table yet); the form then hides "Split across warehouses".
    */
   splitsAvailable?: boolean;
+  /** IMP-5: transport, tracking and the stage dates (all null before migration 20261105100000). */
+  tracking?: ShipmentTracking;
+}
+
+export interface ShipmentTracking {
+  transportMode: string | null;
+  carrierId: string | null;
+  trackingNo: string | null;
+  vehicleNo: string | null;
+  etd: string | null;
+  eta: string | null;
+  departedOn: string | null;
+  arrivedOn: string | null;
+  clearedOn: string | null;
+  confirmDate: string | null;
+  closedAt: string | null;
+}
+
+const textOrNull = (v: unknown) => (typeof v === "string" && v ? v : null);
+
+function trackingOf(h: Row): ShipmentTracking {
+  return {
+    transportMode: textOrNull(h.transport_mode),
+    carrierId: textOrNull(h.carrier_id),
+    trackingNo: textOrNull(h.tracking_no),
+    vehicleNo: textOrNull(h.vehicle_no),
+    etd: textOrNull(h.etd),
+    eta: textOrNull(h.eta),
+    departedOn: textOrNull(h.departed_on),
+    arrivedOn: textOrNull(h.arrived_on),
+    clearedOn: textOrNull(h.cleared_on),
+    confirmDate: textOrNull(h.confirm_date),
+    closedAt: textOrNull(h.closed_at),
+  };
 }
 
 const MISSING_TABLE = /42P01|PGRST205|does not exist|Could not find the table/i;
@@ -186,6 +220,7 @@ export async function getShipmentAction(id: string): Promise<ImportsResult<Shipm
         draft: shipmentFromRows(h, lines, costs, allocations, financials, splits.rows),
         financials,
         splitsAvailable: splits.available,
+        tracking: trackingOf(h),
         createdByName: isUuid(h.created_by) ? names.get(h.created_by) ?? null : null,
         createdAt: (h.created_at as string) ?? null,
         updatedAt: (h.updated_at as string) ?? null,
@@ -260,6 +295,8 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
       p_costs: draft.costs.map((c, i) => {
         const duty = c.splitMethod === "per_line_duty";
         return {
+          // IMP-5: a stored cost keeps its id (its payments in the draft refer to it).
+          id: isUuid(c.key) ? c.key : null,
           position: i,
           cost_type: c.costType,
           partner_id: c.partnerId,
@@ -285,6 +322,8 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
       if (error.message.includes("imports_not_draft")) return { success: false, error: "imports.errors.notDraft" };
       if (error.message.includes("imports_not_found")) return { success: false, error: "imports.errors.notFound" };
       if (error.message.includes("imports_warehouse_split")) return { success: false, error: "imports.errors.invalid", issues: ["line_warehouse_split"] };
+      // IMP-5: a cost paid in the draft keeps its amount, currency, rate, VAT, flag and partner.
+      if (error.message.includes("imports_cost_paid_locked")) return { success: false, error: "imports.errors.costPaidLocked" };
       throw new Error(error.message);
     }
     const saved = data as { id: string; number: string };

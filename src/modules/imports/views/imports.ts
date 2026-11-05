@@ -6,6 +6,7 @@ import { countIf, figure, money, sumIf, type Formatter } from "@/views/logic";
 import type { Kpi } from "@/views/components/KpiCards";
 import type { ModelDef, ViewDefinition, ViewRecord } from "@/views/types";
 import { SHIPMENT_STATUSES, type ShipmentStatus } from "../lib/shipment";
+import { daysInTransit, etaOverdue, STAGES, stageOf, type Stage } from "../lib/stages";
 
 export const IMPORTS_VIEW_KEY = "imports.shipments";
 
@@ -29,10 +30,17 @@ export interface ShipmentRecord extends ViewRecord {
   created_at: string | null;
   updated_at: string | null;
   created_by_name: string | null;
+  /** IMP-5: the stage (null for a cancelled shipment), ETA, days on the way, ETA passed. */
+  stage: Stage | "cancelled";
+  eta: string | null;
+  days_in_transit: number | null;
+  eta_overdue: "overdue" | null;
 }
 
 const num = (v: unknown) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 export function shipmentToRecord(row: Record<string, unknown>): ShipmentRecord {
   const status = typeof row.status === "string" && (SHIPMENT_STATUSES as readonly string[]).includes(row.status) ? (row.status as ShipmentStatus) : "draft";
@@ -56,8 +64,21 @@ export function shipmentToRecord(row: Record<string, unknown>): ShipmentRecord {
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
     created_by_name: str(row.created_by_name),
+    stage: stageOf({ status, arrivedOn: str(row.arrived_on) }) ?? "cancelled",
+    eta: str(row.eta),
+    days_in_transit: daysInTransit({ status, departedOn: str(row.departed_on), confirmDate: str(row.confirm_date), arrivedOn: str(row.arrived_on) }, today()),
+    eta_overdue: etaOverdue({ eta: str(row.eta), status, arrivedOn: str(row.arrived_on) }, today()) ? "overdue" : null,
   };
 }
+
+const STAGE_COLORS: Record<Stage, string> = {
+  order: "#64748b",
+  transit: "#0ea5e9",
+  customs: "#6366f1",
+  cleared: "#8b5cf6",
+  receipt: "#f59e0b",
+  closed: "#10b981",
+};
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
   draft: "#64748b",
@@ -86,6 +107,17 @@ export function importsDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetchOn
     fields: [
       { name: "number", labelKey: "imports.fields.number", type: "char", searchable: true, readonly: true },
       { name: "status", labelKey: "common.status", type: "selection", groupable: true, readonly: true, options: SHIPMENT_STATUSES.map((s) => ({ value: s, labelKey: `imports.status.${s}`, color: STATUS_COLORS[s] })) },
+      {
+        name: "stage",
+        labelKey: "imports.stages.field",
+        type: "selection",
+        groupable: true,
+        readonly: true,
+        options: [...STAGES.map((s) => ({ value: s, labelKey: `imports.stages.${s}`, color: STAGE_COLORS[s] })), { value: "cancelled", labelKey: "imports.status.cancelled", color: STATUS_COLORS.cancelled }],
+      },
+      { name: "eta", labelKey: "imports.tracking.eta", type: "date", readonly: true },
+      { name: "days_in_transit", labelKey: "imports.tracking.inTransit", type: "integer", readonly: true },
+      { name: "eta_overdue", labelKey: "imports.tracking.etaState", type: "selection", readonly: true, options: [{ value: "overdue", labelKey: "imports.tracking.overdue", color: "#e11d48" }] },
       { name: "supplier_id", labelKey: "imports.fields.supplier", type: "many2one", displayField: "supplier_name", searchable: true, groupable: true, readonly: true },
       { name: "currency_code", labelKey: "imports.fields.currency", type: "char", groupable: true, readonly: true },
       { name: "invoice_no", labelKey: "imports.fields.invoiceNo", type: "char", searchable: true, readonly: true },
@@ -110,16 +142,17 @@ export function importsDefinition(fetchers: Pick<ModelDef, "fetchAll" | "fetchOn
         conditions: () => [{ field: "status", op: "in" as const, value: ["draft", "confirmed", "cleared", "partially_received"] }],
       },
     ],
-    groupBys: ["status", "supplier_id", "currency_code", "invoice_date:month"],
+    groupBys: ["stage", "status", "supplier_id", "currency_code", "invoice_date:month"],
     views: ["list", "kanban", "pivot", "graph"],
     list: {
-      columns: ["number", "status", "supplier_id", "currency_code", "invoice_no", "invoice_date", "goods_fc", "goods_azn", "costs_azn", "landed_azn", "created_by_name", "created_at"],
+      columns: ["number", "stage", "supplier_id", "currency_code", "invoice_no", "invoice_date", "eta", "eta_overdue", "days_in_transit", "goods_fc", "goods_azn", "costs_azn", "landed_azn", "created_by_name", "created_at"],
       sums: ["goods_azn", "costs_azn", "landed_azn", "vat_azn"],
       standard: ["created_at", "created_by_name"],
-      optional: ["customs_declaration_date", "line_count", "vat_azn", "updated_at"],
+      optional: ["status", "customs_declaration_date", "line_count", "vat_azn", "updated_at"],
       standardLabels: { invoice_date: "listColumns.documentDate", created_at: "listColumns.issuedAt", created_by_name: "listColumns.createdBy" },
     },
-    kanban: { groupBy: "status", title: "number", subtitle: "supplier_id", amount: "landed_azn", fields: ["invoice_no", "invoice_date"] },
+    // IMP-5: the board by stage, with the ETA and days on the way on each card.
+    kanban: { groupBy: "stage", title: "number", subtitle: "supplier_id", amount: "landed_azn", fields: ["eta", "eta_overdue", "days_in_transit"] },
     form: { title: "number", statusField: "status", fields: ["supplier_id", "currency_code", "invoice_no", "invoice_date", "goods_azn", "landed_azn"] },
     pivot: { rows: "supplier_id", cols: "status", measure: "landed_azn" },
     graph: { groupBy: "supplier_id", measure: "landed_azn", type: "bar" },

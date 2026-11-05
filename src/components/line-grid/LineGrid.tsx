@@ -123,6 +123,8 @@ export interface LineGridProps<L> {
   onAddFrom?: (key: string) => void;
   /** Extra items of a row's "…" menu, before Duplicate (e.g. "Split across warehouses"). */
   rowMenuItems?: (line: L, index: number) => readonly LineMenuItem[];
+  /** A line that cannot be changed (a posted cost): its cells read only, no Duplicate / Remove. */
+  rowEditable?: (line: L, index: number) => boolean;
   /** Optional columns shown whatever the user chose (data a split method needs). */
   forceShown?: readonly string[];
   density?: GridDensity;
@@ -194,6 +196,7 @@ function LineGridInner<L>({
   addMenu,
   onAddFrom,
   rowMenuItems,
+  rowEditable,
   forceShown,
   density = "compact",
   className,
@@ -345,7 +348,7 @@ function LineGridInner<L>({
       label: `${col.header}: ${nameOf(line, index)}`,
       error,
       invalid: !!error,
-      editable,
+      editable: editable && (rowEditable ? rowEditable(line, index) : true),
       inDrawer,
       openDetails: inDrawer || !(optional.length || details) ? undefined : () => setDrawer(key),
     };
@@ -442,7 +445,7 @@ function LineGridInner<L>({
                       {item.label}
                     </DropdownMenu.Item>
                   ))}
-                  {editable && onDuplicate ? (
+                  {editable && onDuplicate && (rowEditable ? rowEditable(line, index) : true) ? (
                     <DropdownMenu.Item className="ds-menu-item" onSelect={() => onDuplicate(index)}>
                       <Copy className="h-4 w-4" aria-hidden />
                       {labels.duplicate}
@@ -460,7 +463,7 @@ function LineGridInner<L>({
                       </DropdownMenu.Item>
                     </>
                   ) : null}
-                  {editable && onRemove ? (
+                  {editable && onRemove && (rowEditable ? rowEditable(line, index) : true) ? (
                     <>
                       <DropdownMenu.Separator className="ds-menu-sep" />
                       <DropdownMenu.Item className="ds-menu-item ds-line-danger" onSelect={() => remove(index)}>

@@ -12,6 +12,7 @@ import { fetchPartnerList, partnerDisplayName } from "@/lib/partners/fetchPartne
 import type { PartnerRecord } from "@/lib/partners/types";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
 
 type PaymentFormModalProps = {
   open: boolean;
@@ -71,6 +72,67 @@ export default function PaymentFormModal({
       setCashAccountId(filteredAccounts[0].id);
     }
   }, [open, filteredAccounts, cashAccountId]);
+
+  // IMP-5 (UI_STANDARD): the one payment dialog; one payment may use several accounts.
+  if (uiStandard && open) {
+    const partner = partners.find((p) => p.id === partnerId);
+    return (
+      <>
+        <PaymentDialog
+          open
+          onClose={onClose}
+          direction={paymentType}
+          title={t("payments.newPayment")}
+          counterpartyLabel={t("payments.partner")}
+          counterpartyName={partner ? partnerDisplayName(partner) : null}
+          counterpartyCode={paymentType === "in" ? "1200" : "2100"}
+          counterpartyField={
+            <EntityLookup
+              entity="partner"
+              value={partnerId}
+              selectedLabel={partner ? partnerDisplayName(partner) : undefined}
+              placeholder={t("payments.selectPartner")}
+              createDefaults={{ partnerRoles: { customer: paymentType === "in", supplier: paymentType === "out" } }}
+              required
+              width="full"
+              aria-label={t("payments.partner")}
+              onChange={(id) => setPartnerId(id ?? "")}
+            />
+          }
+          extraFields={
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("payments.type")}>
+              <span className="ds-label">{t("payments.type")}</span>
+              {(["in", "out"] as const).map((k) => (
+                <button key={k} type="button" role="radio" aria-checked={paymentType === k} className={`ds-btn ds-btn-sm ${paymentType === k ? "ds-btn-primary" : ""}`} onClick={() => setPaymentType(k)}>
+                  {k === "in" ? t("payments.typeIn") : t("payments.typeOut")}
+                </button>
+              ))}
+            </div>
+          }
+          openBalance={null}
+          onSubmit={async (p) => {
+            if (!partnerId) return { success: false, error: t("payments.partnerRequired") };
+            const result = await createPartnerPaymentAction({
+              partnerId,
+              amount: p.totalAzn,
+              paymentType,
+              paymentMethod: p.lines[0]?.method === "cash" ? "cash" : "bank",
+              paymentDate: p.paymentDate,
+              referenceNote: p.note,
+              cashAccountId: p.lines[0]?.account_id ?? null,
+              idempotencyKey: `ui-payment:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+              lines: p.lines,
+            });
+            if (!result.success) return { success: false, error: result.error };
+            showSuccess(t("payments.created"));
+            onSaved();
+            return { success: true };
+          }}
+        />
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </>
+    );
+  }
 
   if (!open) return null;
 

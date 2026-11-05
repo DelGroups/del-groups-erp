@@ -22,5 +22,5 @@ export default async function UiLabPage({ searchParams }: { searchParams: Promis
   // ?frame=page (UI-5): one page as the app builds it, for the page-scroll checks of ui:guard.
   const { frame } = await searchParams;
   // ?frame=import (IMP-4): the import form with sample data.
-  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} frame={frame === "page" || frame === "import" ? frame : undefined} />;
+  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} frame={frame === "page" || frame === "import" || frame === "pay" ? frame : undefined} />;
 }

@@ -6,6 +6,7 @@ import { assertPaymentAccountId } from "@/lib/forms/paymentValidation";
 import { supabase } from "@/lib/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TreasuryPaymentSplit } from "@/lib/finance/officialTransaction";
+import { processInvoicePaymentLines } from "@/lib/payments/invoicePaymentLines";
 
 export interface RecordPurchasePaymentInput {
   purchaseId: string;
@@ -102,6 +103,13 @@ export async function recordPurchasePaymentWithClient(
       const splitTotal = splits.reduce((sum, s) => sum + s.amount, 0);
       if (Math.abs(splitTotal - input.amount) > 0.02) {
         return { success: false, error: "Əsas və ƏDV məbləğlərinin cəmi ödənişə uyğun gəlmir" };
+      }
+
+      // IMP-5: several accounts are one payment and one journal entry; a database without
+      // payment lines yet takes them one by one, as before.
+      if (splits.length > 1) {
+        const lines = await processInvoicePaymentLines(client, { documentType: "purchase", documentId: input.purchaseId, splits, notes: input.notes, paymentDate: input.paymentDate });
+        if (!lines.legacy) return lines;
       }
 
       for (const split of splits) {

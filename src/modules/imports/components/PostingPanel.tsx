@@ -18,6 +18,9 @@ import { ACTION_PARAM, invalidateModel, figure, useFormatter } from "@/views";
 import { forgetRowAction, hasRowActionIntent } from "@/views/rowActions";
 import {
   addCostAction,
+  clearShipmentAction,
+  logEventAction,
+  updateTrackingAction,
   cancelShipmentAction,
   closeShipmentAction,
   deleteDraftShipmentAction,
@@ -32,7 +35,7 @@ import {
   type PostingResult,
   type PostingView,
 } from "../actions/posting";
-import { cbarRateAction, type ImportLookups } from "../actions/imports";
+import { cbarRateAction, type ImportLookups, type ShipmentTracking } from "../actions/imports";
 import {
   actionsFor,
   removalFor,
@@ -53,13 +56,33 @@ import { differsFromPlan } from "../lib/lineWarehouses";
 import { newCost, suggestedVat, type CostLineDraft, type ImportProduct, type ShipmentDraft } from "../lib/shipment";
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { DialogField, ImportDialog } from "./ImportDialog";
+import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { ImportStageBar, type StageBarFact } from "./ImportStageBar";
+import { ImportTimeline } from "./ImportTimeline";
+import { ClearDialog, MilestoneDialog, TrackingDialog } from "./ImportStageDialogs";
+import { daysInTransit, etaOverdue, nextAction, stageViews } from "../lib/stages";
 import { costTypeLabel } from "./LandedCostPanel";
 import ReceivingSheet, { type ReceivingSheetData } from "./ReceivingSheet";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | "prepay" | "delete" | null;
+type Dialogs = "confirm" | "receive" | "addCost" | "close" | "cancel" | "prepay" | "delete" | "clear" | null;
+
+export type ImportTab = "general" | "landed" | "payments" | "receipts" | "journal" | "history";
+
+/** IMP-5: what the form gives the stage layout. */
+export interface PostingStage {
+  tab: ImportTab;
+  tabKeys: readonly ImportTab[];
+  onTabChange: (tab: ImportTab) => void;
+  tracking?: ShipmentTracking;
+  createdAt?: string | null;
+  /** The general and landed-cost tabs (the form's own content). */
+  children: React.ReactNode;
+  /** Under the timeline in "Tarixçə": notes and attachments. */
+  history?: React.ReactNode;
+}
 
 /**
  * Posting of an import shipment (IMP-2): Confirm, Receive, + Add cost, Pay, Close, Reopen and
@@ -71,12 +94,15 @@ export function PostingPanel({
   lookups,
   config,
   dirty,
+  stage,
 }: {
   draft: ShipmentDraft;
   lookups: ImportLookups;
   config: ImportsConfig;
   /** The form has unsaved changes: Confirm waits for a save. */
   dirty: boolean;
+  /** IMP-5 (UI_STANDARD): the stage layout: stage bar, the page's tabs and their content. */
+  stage?: PostingStage;
 }) {
   const { t, formatDate } = useI18n();
   const fmt = useFormatter();
@@ -101,6 +127,9 @@ export function PostingPanel({
   const [tab, setTab] = useState<"payables" | "receipts" | "journal">("payables");
   const [paying, setPaying] = useState<PayableView | null>(null);
   const [settling, setSettling] = useState<CostLineDraft | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(false);
+  const [milestone, setMilestone] = useState<"departed" | "arrived_customs" | "note" | null>(null);
+  const uiStandard = useUiStandard();
   const { printData, setPrintData } = useDocumentPrint<ReceivingSheetData>(700);
 
   const products = useMemo(() => new Map(lookups.products.map((p) => [p.id, p])), [lookups.products]);
@@ -169,6 +198,21 @@ export function PostingPanel({
   const received = (view.data?.receipts ?? []).flatMap((r) => r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, qtyStockUnit: l.qtyStockUnit, warehouseId: l.warehouseId })));
   const lines = receiveLines(draft, products, received);
   const estimates = draft.costs.filter((c) => c.isEstimate);
+  // IMP-5: the goods still open for a supplier prepayment (the shipment's currency).
+  const goodsFc = Math.round(draft.lines.reduce((sum, l) => sum + l.qtyPurchase * l.unitPriceFc, 0) * 100) / 100;
+  const goodsOpenFc = Math.max(0, Math.round((goodsFc - (view.data?.prepayments ?? []).filter((p) => !p.costLineId && p.status === "open").reduce((sum, p) => sum + p.amountFc, 0)) * 100) / 100);
+  const fetchCbar = async (currency: string, day: string) => {
+    const r = await cbarRateAction(currency, day);
+    return r.success ? r.data.rate : null;
+  };
+  const postingError = (r: { error: string; detail?: string }) => {
+    const known = t(r.error);
+    return [known !== r.error ? known : null, r.detail].filter(Boolean).join(" ") || t("importPosting.failed");
+  };
+  const afterPosting = async (done: string) => {
+    toast(done, undefined, "success");
+    await refresh();
+  };
 
   const printSheet = (rows: { shipmentLineId: string; warehouseId: string | null; qtyStock: number }[], receiptNumber: string | null, onDate: string) =>
     setPrintData({
@@ -181,6 +225,396 @@ export function PostingPanel({
       date: onDate,
       warehouseNames,
     });
+
+  /** IMP-5: the page's stage bar, tabs and the posting tabs (payments, receipt, journal, history). */
+  function stageLayout() {
+    const tr = stage?.tracking;
+    const facts = { status: draft.status, arrivedOn: tr?.arrivedOn ?? null };
+    const views = stageViews({
+      status: draft.status,
+      createdAt: stage?.createdAt ?? null,
+      confirmDate: tr?.confirmDate ?? null,
+      departedOn: tr?.departedOn ?? null,
+      arrivedOn: tr?.arrivedOn ?? null,
+      clearedOn: tr?.clearedOn ?? null,
+      firstReceiptDate: view.data?.receipts[0]?.receiptDate ?? null,
+      closedAt: tr?.closedAt ?? null,
+    });
+    const next = nextAction(facts);
+    const allowed =
+      next === "confirm" ? actions.includes("confirm") : next === "receive" ? actions.includes("receive") : next === "close" ? actions.includes("close") : next === "clear" ? canApprove : next === "arrived" ? canManage : false;
+    const onNext = () => {
+      if (next === "confirm") open("confirm");
+      else if (next === "arrived") setMilestone("arrived_customs");
+      else if (next === "clear") open("clear");
+      else if (next === "receive") open("receive");
+      else if (next === "close") open("close");
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    const transit = tr ? daysInTransit({ ...tr, status: draft.status }, today) : null;
+    const overdue = tr ? etaOverdue({ eta: tr.eta, status: draft.status, arrivedOn: tr.arrivedOn }, today) : false;
+    const carrier = tr?.carrierId ? lookups.suppliers.find((s) => s.id === tr.carrierId)?.name ?? null : null;
+    const factsList: StageBarFact[] = ([
+      tr?.transportMode || carrier ? { key: "carrier", label: t("imports.tracking.carrierMode"), value: [carrier, tr?.transportMode ? t(`imports.transportModes.${tr.transportMode}`) : null].filter(Boolean).join(" · ") } : null,
+      tr?.trackingNo ? { key: "no", label: t("imports.tracking.trackingNo"), value: <span className="ds-mono">{tr.trackingNo}</span> } : null,
+      tr?.vehicleNo ? { key: "vehicle", label: t("imports.tracking.vehicleNo"), value: <span className="ds-mono">{tr.vehicleNo}</span> } : null,
+      tr?.departedOn ? { key: "dep", label: t("imports.tracking.departedOn"), value: formatDate(tr.departedOn) } : null,
+      tr?.eta ? { key: "eta", label: t("imports.tracking.eta"), value: <span style={overdue ? { color: "var(--ds-danger-strong)", fontWeight: 600 } : undefined}>{formatDate(tr.eta)}{overdue ? ` · ${t("imports.tracking.overdue")}` : ""}</span> } : null,
+      transit !== null ? { key: "transit", label: t("imports.tracking.inTransit"), value: t("imports.tracking.days", { count: transit }) } : null,
+    ] as (StageBarFact | null)[]).filter((x): x is StageBarFact => !!x);
+    const closedOrCancelled = draft.status === "closed" || draft.status === "cancelled";
+    const menu = [
+      draft.status === "draft" && canManage && draft.supplierId ? { key: "prepay", label: t("importPosting.prepay"), icon: <HandCoins className="h-4 w-4" />, onSelect: () => open("prepay"), disabled: busy || dirty } : null,
+      draft.status === "confirmed" && actions.includes("receive") ? { key: "receive", label: t("imports.stages.receiveBeforeClear"), icon: <PackageCheck className="h-4 w-4" />, onSelect: () => open("receive") } : null,
+      !closedOrCancelled && canManage ? { key: "milestone", label: t("imports.stages.addMilestone"), onSelect: () => setMilestone("note") } : null,
+      !closedOrCancelled && canManage && stage?.tracking ? { key: "tracking", label: t("imports.tracking.edit"), onSelect: () => setTrackingOpen(true) } : null,
+      actions.includes("reopen") ? { key: "reopen", label: t("importPosting.reopen"), icon: <RotateCcw className="h-4 w-4" />, onSelect: () => void run(() => reopenShipmentAction(id), t("importPosting.reopened")) } : null,
+      canCancel ? { key: "cancel", label: t("importPosting.cancel"), icon: <Ban className="h-4 w-4" />, destructive: true, onSelect: () => open("cancel") } : null,
+      canDelete ? { key: "delete", label: t("importPosting.deleteDraft"), icon: <Trash2 className="h-4 w-4" />, destructive: true, disabled: dirty, onSelect: () => open("delete") } : null,
+    ].filter((x): x is NonNullable<typeof x> => !!x);
+    const tab = stage?.tab ?? "general";
+    const tabKeys = stage?.tabKeys ?? [];
+    return (
+      <div className="flex flex-col gap-4">
+        <ImportStageBar
+          stages={views}
+          cancelled={draft.status === "cancelled"}
+          nextLabel={next && allowed ? t(`imports.stageNext.${next}`) : null}
+          onNext={onNext}
+          nextDisabled={busy || (next === "confirm" && dirty)}
+          nextHint={next === "confirm" && dirty ? t("importPosting.saveFirst") : undefined}
+          menu={menu}
+          facts={factsList}
+          onEditTracking={!closedOrCancelled && canManage && stage?.tracking ? () => setTrackingOpen(true) : undefined}
+        />
+        <div className="ds-doc-tabs" role="tablist" aria-label={t("imports.tabs.label")}>
+          {tabKeys.map((k) => (
+            <button key={k} type="button" role="tab" id={`imports-tab-${k}`} aria-selected={tab === k} aria-controls={`imports-panel-${k}`} className="ds-tab" onClick={() => stage?.onTabChange(k)}>
+              {t(`imports.tabs.${k}`)}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel" id={`imports-panel-${tab}`} aria-labelledby={`imports-tab-${tab}`} className="flex flex-col gap-4">
+          {tab === "general" || tab === "landed" ? stage?.children : null}
+          {tab === "payments" ? (
+            <section className="ds-card ds-card-pad flex flex-col gap-3" aria-label={t("imports.tabs.payments")}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">{t("imports.tabs.payments")}</h2>
+                {draft.status === "draft" && canManage && draft.supplierId ? (
+                  <button type="button" className="ds-btn ds-btn-sm" disabled={busy || dirty} onClick={() => open("prepay")}>
+                    <HandCoins className="h-4 w-4" aria-hidden />
+                    {t("importPosting.prepay")}
+                  </button>
+                ) : null}
+              </div>
+              {posted && estimates.length ? (
+                <ul className="flex flex-col gap-1">
+                  {estimates.map((c) => (
+                    <li key={c.key} className="flex flex-wrap items-center justify-between gap-2 text-[length:var(--ds-text-sm)]">
+                      <span>{t("importPosting.estimateOpen", { cost: c.description || costTypeLabel(c.costType, config, t), amount: money(costTotalAzn(c)) })}</span>
+                      <button type="button" className="ds-btn ds-btn-sm" onClick={() => { setOpKey(newKey()); setSettling(c); }}>
+                        {t("importPosting.setActual")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {view.data?.prepayments.length ? (
+                <ul className="flex flex-col gap-1 text-[length:var(--ds-text-sm)]" aria-label={t("importPosting.prepayments")}>
+                  {view.data.prepayments.map((p) => (
+                    <li key={p.id} className="tabular-nums">
+                      {p.costLineId ? `${t("imports.costPay.advanceFor", { cost: (() => { const c = draft.costs.find((x) => x.key === p.costLineId); return c ? c.description || costTypeLabel(c.costType, config, t) : "—"; })() })} · ` : ""}
+                      {t("importPosting.prepaymentLine", { date: formatDate(p.paymentDate), amount: `${p.amountFc} ${p.currencyCode}`, rate: p.rate, azn: money(p.amountAzn) })}
+                      <span className="ms-2 ds-chip ds-chip-flat">{t(`importPosting.prepaymentStatus.${p.status}`)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {view.data && posted ? (
+                <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} />
+              ) : !posted ? (
+                <p className="ds-muted text-[length:var(--ds-text-sm)]">{t("imports.costPay.draftHint")}</p>
+              ) : null}
+            </section>
+          ) : null}
+          {tab === "receipts" ? (
+            <section className="ds-card ds-card-pad flex flex-col gap-3" aria-label={t("imports.tabs.receipts")}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">{t("imports.tabs.receipts")}</h2>
+                {actions.includes("receive") ? (
+                  <button type="button" className="ds-btn ds-btn-sm ds-btn-primary" disabled={busy || !view.data} onClick={() => open("receive")}>
+                    <PackageCheck className="h-4 w-4" aria-hidden />
+                    {t("importPosting.receive")}
+                  </button>
+                ) : null}
+              </div>
+              {draft.status === "confirmed" && actions.includes("receive") ? <p className="text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-warning)" }}>{t("imports.stages.notClearedWarning")}</p> : null}
+              {view.data && posted ? (
+                <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
+              ) : (
+                <p className="ds-muted text-[length:var(--ds-text-sm)]">{t("imports.stages.receiptAfterConfirm")}</p>
+              )}
+            </section>
+          ) : null}
+          {tab === "journal" ? (
+            <section className="ds-card ds-card-pad flex flex-col gap-3" aria-label={t("imports.tabs.journal")}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">{t("imports.tabs.journal")}</h2>
+                {posted && view.data ? <span className="text-[length:var(--ds-text-xs)] ds-muted tabular-nums">{t("importPosting.transit", { amount: money(view.data.transitBalance) })}</span> : null}
+              </div>
+              {view.data ? <JournalTab view={view.data} money={money} formatDate={formatDate} /> : null}
+            </section>
+          ) : null}
+          {tab === "history" ? (
+            <>
+              <section className="ds-card ds-card-pad flex flex-col gap-3" aria-label={t("imports.tabs.history")}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-semibold">{t("imports.tabs.history")}</h2>
+                  {!closedOrCancelled && canManage ? (
+                    <button type="button" className="ds-btn ds-btn-sm" onClick={() => setMilestone("note")}>
+                      {t("imports.stages.addMilestone")}
+                    </button>
+                  ) : null}
+                </div>
+                <ImportTimeline events={view.data?.events ?? []} config={config} />
+              </section>
+              {stage?.history}
+            </>
+          ) : null}
+        </div>
+        {dialogs}
+      </div>
+    );
+  }
+
+  const dialogs = (
+    <>
+      {/* Confirm */}
+      <ConfirmDialog
+        open={dialog === "confirm"}
+        busy={busy}
+        onOpenChange={(o) => setDialog(o ? "confirm" : null)}
+        defaultDate={draft.invoiceDate ?? today()}
+        onSubmit={(d) => run(() => confirmShipmentAction(id, d, opKey), t("importPosting.confirmed"))}
+      />
+
+      {view.data?.prepayments.length ? (
+        <ul className="flex flex-col gap-1 text-[length:var(--ds-text-sm)]" aria-label={t("importPosting.prepayments")}>
+          {view.data.prepayments.map((p) => (
+            <li key={p.id} className="tabular-nums">
+              {t("importPosting.prepaymentLine", { date: formatDate(p.paymentDate), amount: `${p.amountFc} ${p.currencyCode}`, rate: p.rate, azn: money(p.amountAzn) })}
+              <span className="ms-2 ds-chip ds-chip-flat">{t(`importPosting.prepaymentStatus.${p.status}`)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {dialog === "prepay" && uiStandard ? (
+        <PaymentDialog
+          open
+          onClose={() => setDialog(null)}
+          direction="out"
+          title={t("importPosting.prepayTitle")}
+          counterpartyLabel={t("imports.fields.supplier")}
+          counterpartyName={supplierName}
+          documentLabel={t("imports.sheet.file")}
+          documentNumber={draft.number}
+          currency={draft.currencyCode}
+          openBalance={goodsOpenFc}
+          defaultRate={draft.currencyCode === "AZN" ? 1 : draft.invoiceRate}
+          onFetchRate={draft.currencyCode === "AZN" ? undefined : (d) => fetchCbar(draft.currencyCode, d)}
+          onSubmit={async (p) => {
+            const r = await prepayAction(id, p.paymentDate, p.note, p.amountFc ?? p.totalAzn, p.rate ?? 1, p.lines, opKey);
+            if (!r.success) return { success: false, error: postingError(r) };
+            await afterPosting(t("importPosting.prepaid"));
+            setDialog(null);
+            return { success: true };
+          }}
+        />
+      ) : dialog === "prepay" ? (
+        <PrepayDialog
+          draft={draft}
+          busy={busy}
+          accounts={lookups.accounts}
+          money={money}
+          onClose={() => setDialog(null)}
+          onSubmit={(d, note, amountFc, rate, splits) => run(() => prepayAction(id, d, note, amountFc, rate, splits, opKey), t("importPosting.prepaid"))}
+        />
+      ) : null}
+
+      {dialog === "receive" && view.data ? (
+        <ReceiveDialog
+          busy={busy}
+          lines={lines}
+          products={products}
+          warehouses={lookups.warehouses}
+          onClose={() => setDialog(null)}
+          onPrint={(rows, d) => printSheet(rows.map((r) => ({ shipmentLineId: r.shipmentLineId, warehouseId: r.warehouseId, qtyStock: r.expected })), null, d)}
+          onSubmit={(payload, d, note) => run(() => receiveShipmentAction(id, payload, d, note, opKey), t("importPosting.received"))}
+        />
+      ) : null}
+
+      {dialog === "addCost" ? (
+        <CostDialog
+          mode="add"
+          busy={busy}
+          config={config}
+          lookups={lookups}
+          initial={newCost("other", config)}
+          onClose={() => setDialog(null)}
+          onSubmit={(cost, splits, d) => run(() => addCostAction(id, cost, splits, d, opKey), t("importPosting.costAdded"))}
+        />
+      ) : null}
+
+      {settling ? (
+        <CostDialog
+          mode="settle"
+          busy={busy}
+          config={config}
+          lookups={lookups}
+          initial={settling}
+          onClose={() => setSettling(null)}
+          onSubmit={async (cost, _splits, d) => {
+            const ok = await run(
+              () => finalizeCostAction(id, settling.key, { amount: cost.amount, currencyCode: cost.currencyCode, rateToAzn: cost.rateToAzn, vatAmountAzn: cost.vatAmountAzn }, d, opKey),
+              t("importPosting.costSettled")
+            );
+            if (ok) setSettling(null);
+            return ok;
+          }}
+        />
+      ) : null}
+
+      {paying && uiStandard ? (
+        // IMP-5: the one payment dialog; several accounts, the exchange difference in the preview.
+        <PaymentDialog
+          open
+          onClose={() => setPaying(null)}
+          direction="out"
+          title={t("importPosting.payTitle")}
+          counterpartyLabel={t("importPosting.partner")}
+          counterpartyName={paying.partnerName}
+          documentLabel={t("imports.sheet.file")}
+          documentNumber={draft.number}
+          currency={paying.currencyCode}
+          openBalance={paying.currencyCode === "AZN" ? paying.openAzn : paying.openFc}
+          bookingRate={paying.currencyCode === "AZN" ? null : paying.bookingRate}
+          minDate={paying.documentDate}
+          onFetchRate={paying.currencyCode === "AZN" ? undefined : (d) => fetchCbar(paying.currencyCode, d)}
+          onSubmit={async (p) => {
+            const r = await payPayableAction(paying.id, p.paymentDate, p.note, p.lines, opKey, p.amountFc, p.rate);
+            if (!r.success) return { success: false, error: postingError(r) };
+            await afterPosting(t("importPosting.paid"));
+            setPaying(null);
+            return { success: true };
+          }}
+        />
+      ) : paying ? (
+        <PayDialog
+          payable={paying}
+          busy={busy}
+          accounts={lookups.accounts}
+          money={money}
+          onClose={() => setPaying(null)}
+          onSubmit={async (d, note, splits, amountFc, rate) => {
+            const ok = await run(() => payPayableAction(paying.id, d, note, splits, opKey, amountFc, rate), t("importPosting.paid"));
+            if (ok) setPaying(null);
+            return ok;
+          }}
+        />
+      ) : null}
+
+      <ImportDialog
+        open={dialog === "close"}
+        onOpenChange={(o) => setDialog(o ? "close" : null)}
+        title={t("importPosting.closeTitle")}
+        description={t("importPosting.closeHint")}
+        closeLabel={t("common.close")}
+        cancelLabel={t("common.cancel")}
+        submitLabel={t("importPosting.close")}
+        busy={busy}
+        onSubmit={() => void run(() => closeShipmentAction(id, opKey), t("importPosting.closed"))}
+      >
+        {null}
+      </ImportDialog>
+
+      <TypeToConfirmDialog
+        open={dialog === "delete"}
+        onOpenChange={(o) => setDialog(o ? "delete" : null)}
+        confirmText={draft.number ?? ""}
+        consequences={[t("importPosting.deleteHint")]}
+        labels={{
+          title: t("importPosting.deleteTitle"),
+          description: t("importPosting.deleteHint"),
+          instruction: t("importPosting.deleteType"),
+          copy: t("sales.engine.void.copy"),
+          cancel: t("common.cancel"),
+          confirm: t("importPosting.deleteDraft"),
+          working: t("common.loading"),
+          audit: t("importPosting.deleteAudit"),
+        }}
+        onConfirm={async () => {
+          const result = await deleteDraftShipmentAction(id);
+          if (!result.success) {
+            toast(t("common.error"), t(result.error) + (result.detail ? ` ${result.detail}` : ""), "error");
+            return;
+          }
+          toast(t("importPosting.deleted"), undefined, "success");
+          setDialog(null);
+          await invalidateModel(client, IMPORTS_VIEW_KEY);
+          router.push("/imports");
+        }}
+      />
+      <CancelDialog open={dialog === "cancel"} busy={busy} onOpenChange={(o) => setDialog(o ? "cancel" : null)} onSubmit={(reason) => run(() => cancelShipmentAction(id, reason, opKey), t("importPosting.cancelled"))} />
+
+      {printData ? createPortal(<div className="print-area"><ReceivingSheet data={printData} /></div>, document.body) : null}
+      {trackingOpen && stage?.tracking ? (
+        <TrackingDialog
+          draft={draft}
+          tracking={stage.tracking}
+          lookups={lookups}
+          busy={busy}
+          onClose={() => setTrackingOpen(false)}
+          onSubmit={(fields) => run(() => updateTrackingAction(id, fields), t("imports.tracking.saved"))}
+        />
+      ) : null}
+      {dialog === "clear" ? (
+        <ClearDialog
+          draft={draft}
+          busy={busy}
+          estimates={draft.costs.filter((c) => c.isEstimate && ["customs_duty", "customs_fee", "customs_vat", "broker"].includes(c.costType))}
+          costLabel={(c) => c.description || costTypeLabel(c.costType, config, t)}
+          onClose={() => setDialog(null)}
+          onSettle={(c) => {
+            setOpKey(newKey());
+            setSettling(c);
+          }}
+          onSubmit={async (input) => {
+            if (input.changed) {
+              const u = await updateTrackingAction(id, { customs_declaration_no: input.declarationNo, customs_declaration_date: input.declarationDate });
+              if (!u.success) {
+                toast(t("importPosting.failed"), postingError(u), "error");
+                return false;
+              }
+            }
+            return run(() => clearShipmentAction(id, input.date, opKey), t("imports.stages.cleared"));
+          }}
+        />
+      ) : null}
+      {milestone ? (
+        <MilestoneDialog
+          kind={milestone}
+          busy={busy}
+          onClose={() => setMilestone(null)}
+          onSubmit={(kind, d, note) => run(() => logEventAction(id, kind, d, note), t("imports.stages.milestoneSaved"))}
+        />
+      ) : null}
+    </>
+  );
+
+  if (stage) {
+    return stageLayout();
+  }
 
   if (!draft.id) return null;
 
@@ -294,139 +728,7 @@ export function PostingPanel({
         </>
       ) : null}
 
-      {/* Confirm */}
-      <ConfirmDialog
-        open={dialog === "confirm"}
-        busy={busy}
-        onOpenChange={(o) => setDialog(o ? "confirm" : null)}
-        defaultDate={draft.invoiceDate ?? today()}
-        onSubmit={(d) => run(() => confirmShipmentAction(id, d, opKey), t("importPosting.confirmed"))}
-      />
-
-      {view.data?.prepayments.length ? (
-        <ul className="flex flex-col gap-1 text-[length:var(--ds-text-sm)]" aria-label={t("importPosting.prepayments")}>
-          {view.data.prepayments.map((p) => (
-            <li key={p.id} className="tabular-nums">
-              {t("importPosting.prepaymentLine", { date: formatDate(p.paymentDate), amount: `${p.amountFc} ${p.currencyCode}`, rate: p.rate, azn: money(p.amountAzn) })}
-              <span className="ms-2 ds-chip ds-chip-flat">{t(`importPosting.prepaymentStatus.${p.status}`)}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {dialog === "prepay" ? (
-        <PrepayDialog
-          draft={draft}
-          busy={busy}
-          accounts={lookups.accounts}
-          money={money}
-          onClose={() => setDialog(null)}
-          onSubmit={(d, note, amountFc, rate, splits) => run(() => prepayAction(id, d, note, amountFc, rate, splits, opKey), t("importPosting.prepaid"))}
-        />
-      ) : null}
-
-      {dialog === "receive" && view.data ? (
-        <ReceiveDialog
-          busy={busy}
-          lines={lines}
-          products={products}
-          warehouses={lookups.warehouses}
-          onClose={() => setDialog(null)}
-          onPrint={(rows, d) => printSheet(rows.map((r) => ({ shipmentLineId: r.shipmentLineId, warehouseId: r.warehouseId, qtyStock: r.expected })), null, d)}
-          onSubmit={(payload, d, note) => run(() => receiveShipmentAction(id, payload, d, note, opKey), t("importPosting.received"))}
-        />
-      ) : null}
-
-      {dialog === "addCost" ? (
-        <CostDialog
-          mode="add"
-          busy={busy}
-          config={config}
-          lookups={lookups}
-          initial={newCost("other", config)}
-          onClose={() => setDialog(null)}
-          onSubmit={(cost, splits, d) => run(() => addCostAction(id, cost, splits, d, opKey), t("importPosting.costAdded"))}
-        />
-      ) : null}
-
-      {settling ? (
-        <CostDialog
-          mode="settle"
-          busy={busy}
-          config={config}
-          lookups={lookups}
-          initial={settling}
-          onClose={() => setSettling(null)}
-          onSubmit={async (cost, _splits, d) => {
-            const ok = await run(
-              () => finalizeCostAction(id, settling.key, { amount: cost.amount, currencyCode: cost.currencyCode, rateToAzn: cost.rateToAzn, vatAmountAzn: cost.vatAmountAzn }, d, opKey),
-              t("importPosting.costSettled")
-            );
-            if (ok) setSettling(null);
-            return ok;
-          }}
-        />
-      ) : null}
-
-      {paying ? (
-        <PayDialog
-          payable={paying}
-          busy={busy}
-          accounts={lookups.accounts}
-          money={money}
-          onClose={() => setPaying(null)}
-          onSubmit={async (d, note, splits, amountFc, rate) => {
-            const ok = await run(() => payPayableAction(paying.id, d, note, splits, opKey, amountFc, rate), t("importPosting.paid"));
-            if (ok) setPaying(null);
-            return ok;
-          }}
-        />
-      ) : null}
-
-      <ImportDialog
-        open={dialog === "close"}
-        onOpenChange={(o) => setDialog(o ? "close" : null)}
-        title={t("importPosting.closeTitle")}
-        description={t("importPosting.closeHint")}
-        closeLabel={t("common.close")}
-        cancelLabel={t("common.cancel")}
-        submitLabel={t("importPosting.close")}
-        busy={busy}
-        onSubmit={() => void run(() => closeShipmentAction(id, opKey), t("importPosting.closed"))}
-      >
-        {null}
-      </ImportDialog>
-
-      <TypeToConfirmDialog
-        open={dialog === "delete"}
-        onOpenChange={(o) => setDialog(o ? "delete" : null)}
-        confirmText={draft.number ?? ""}
-        consequences={[t("importPosting.deleteHint")]}
-        labels={{
-          title: t("importPosting.deleteTitle"),
-          description: t("importPosting.deleteHint"),
-          instruction: t("importPosting.deleteType"),
-          copy: t("sales.engine.void.copy"),
-          cancel: t("common.cancel"),
-          confirm: t("importPosting.deleteDraft"),
-          working: t("common.loading"),
-          audit: t("importPosting.deleteAudit"),
-        }}
-        onConfirm={async () => {
-          const result = await deleteDraftShipmentAction(id);
-          if (!result.success) {
-            toast(t("common.error"), t(result.error) + (result.detail ? ` ${result.detail}` : ""), "error");
-            return;
-          }
-          toast(t("importPosting.deleted"), undefined, "success");
-          setDialog(null);
-          await invalidateModel(client, IMPORTS_VIEW_KEY);
-          router.push("/imports");
-        }}
-      />
-      <CancelDialog open={dialog === "cancel"} busy={busy} onOpenChange={(o) => setDialog(o ? "cancel" : null)} onSubmit={(reason) => run(() => cancelShipmentAction(id, reason, opKey), t("importPosting.cancelled"))} />
-
-      {printData ? createPortal(<div className="print-area"><ReceivingSheet data={printData} /></div>, document.body) : null}
+      {dialogs}
     </section>
   );
 }

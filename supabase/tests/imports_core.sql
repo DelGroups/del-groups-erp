@@ -271,5 +271,6 @@ end $$;
 \ir ../migrations/20261030120000_imports_fx.sql
 \ir ../migrations/20261103100000_imports_delete_draft.sql
 \ir ../migrations/20261104100000_imports_line_warehouses.sql
+\ir ../migrations/20261105100000_imports_stages_pay.sql
 
 select 'ALL CHECKS PASSED';

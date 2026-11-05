@@ -426,7 +426,12 @@ select set_config('request.jwt.claims', '', false);
 
 -- 11. Safe to run again.
 \ir ../migrations/20261030110000_imports_posting.sql
--- IMP-3 replaces pay_import_payable and confirm_import_shipment: apply it again after.
+-- Later migrations replace functions of this one (IMP-3: pay_import_payable, confirm; IMP-5:
+-- confirm, pay, prepay, the draft save): every later imports migration is applied again after
+-- it, in order. A new migration that replaces these functions belongs at the end of this list.
 \ir ../migrations/20261030120000_imports_fx.sql
+\ir ../migrations/20261103100000_imports_delete_draft.sql
+\ir ../migrations/20261104100000_imports_line_warehouses.sql
+\ir ../migrations/20261105100000_imports_stages_pay.sql
 
 select 'ALL CHECKS PASSED';

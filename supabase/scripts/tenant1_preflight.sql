@@ -154,6 +154,9 @@ union all
 select 'pending', '20261104100000_imports_line_warehouses: Warehouse split of import lines',
        case when to_regclass('public.import_shipment_line_warehouses') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261105100000_imports_stages_pay: Payment lines, Pay on import costs, import stages',
+       case when to_regclass('public.import_shipment_events') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

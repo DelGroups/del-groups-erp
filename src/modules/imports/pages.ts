@@ -6,3 +6,5 @@ export { default as ImportSettingsScreen } from "./components/ImportSettingsScre
 export { default as ImportReportsScreen } from "./components/ImportReportsScreen";
 /** IMP-4: the import form with sample data, for /dev/ui-lab?frame=import. */
 export { ImportFormLab } from "./components/ImportFormLab";
+/** IMP-5: the stage bar and the payment dialog with sample data, for /dev/ui-lab?frame=pay. */
+export { ImportPayLab } from "./components/ImportPayLab";

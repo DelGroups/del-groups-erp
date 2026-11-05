@@ -10,6 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import type { PermissionKey } from "@/types/database.types";
 import { costPayload, parsePostingError } from "../lib/posting";
 import { isUuid, parseShipmentDraft, type CostLineDraft } from "../lib/shipment";
+import { TRANSPORT_MODES } from "../lib/stages";
 import { shipmentFromRows } from "../lib/rows";
 
 /**
@@ -126,11 +127,23 @@ async function draftAndConfig(id: string) {
 export interface PaySplitInput {
   account_id: string;
   amount: number;
+  /** IMP-5: cash / transfer / card, and a note per account line. */
+  method?: string | null;
+  note?: string | null;
 }
 
+const METHODS = new Set(["cash", "transfer", "card"]);
 const cleanSplits = (splits: unknown): PaySplitInput[] | null =>
   Array.isArray(splits)
-    ? splits.slice(0, 20).filter((s) => isUuid(s?.account_id) && Number(s?.amount) > 0).map((s) => ({ account_id: s.account_id, amount: Math.round(Number(s.amount) * 100) / 100 }))
+    ? splits
+        .slice(0, 20)
+        .filter((s) => isUuid(s?.account_id) && Number(s?.amount) > 0)
+        .map((s) => ({
+          account_id: s.account_id,
+          amount: Math.round(Number(s.amount) * 100) / 100,
+          method: typeof s.method === "string" && METHODS.has(s.method) ? s.method : null,
+          note: typeof s.note === "string" && s.note.trim() ? s.note.trim().slice(0, 200) : null,
+        }))
     : null;
 
 /** A cost added after confirmation; split here with the shipment's other costs. */
@@ -220,6 +233,75 @@ export async function prepayAction(shipmentId: string, onDate: string | null, no
   }
 }
 
+/** IMP-5: pay one cost of a draft shipment (an advance to its partner, settled on confirm). */
+export async function payCostAdvanceAction(costLineId: string, onDate: string | null, note: string | null, amountFc: number, rate: number, splits: unknown, idempotencyKey: string): Promise<PostingResult<Row>> {
+  try {
+    await guard("can_manage_imports");
+    if (!isUuid(costLineId)) return { success: false, error: "imports.errors.notFound" };
+    const paid = cleanSplits(splits);
+    if (!paid || !paid.length) return { success: false, error: "importPosting.errors.splits_required" };
+    return await rpc("pay_import_cost_advance", {
+      p_cost_line_id: costLineId,
+      p_payment_date: date(onDate),
+      p_note: typeof note === "string" ? note.slice(0, 500) : null,
+      p_amount_fc: Number(amountFc) || 0,
+      p_rate: Number(rate) || 0,
+      p_splits: paid,
+      p_idempotency_key: key(idempotencyKey),
+    });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** IMP-5: "Gömrükdən buraxıldı" (needs the declaration number, date and the customs rate). */
+export async function clearShipmentAction(id: string, onDate: string | null, idempotencyKey: string): Promise<PostingResult<Row>> {
+  try {
+    await guard("can_approve_imports");
+    if (!isUuid(id)) return { success: false, error: "imports.errors.notFound" };
+    return await rpc("clear_import_shipment", { p_id: id, p_date: date(onDate), p_idempotency_key: key(idempotencyKey) });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+
+
+/** IMP-5: transport and tracking at any stage (and the declaration once confirmed); only given keys change. */
+export async function updateTrackingAction(id: string, fields: Record<string, unknown>): Promise<PostingResult<Row>> {
+  try {
+    await guard("can_manage_imports");
+    if (!isUuid(id)) return { success: false, error: "imports.errors.notFound" };
+    const out: Row = {};
+    const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : v === null ? "" : undefined);
+    for (const k of ["etd", "eta", "departed_on", "arrived_on", "customs_declaration_date"]) {
+      if (k in fields) out[k] = fields[k] === null || fields[k] === "" ? "" : date(fields[k]) ?? undefined;
+    }
+    if ("transport_mode" in fields) out.transport_mode = (TRANSPORT_MODES as readonly string[]).includes(String(fields.transport_mode)) ? fields.transport_mode : "";
+    if ("carrier_id" in fields) out.carrier_id = isUuid(fields.carrier_id) ? fields.carrier_id : "";
+    for (const [k, max] of [["tracking_no", 100], ["vehicle_no", 100], ["customs_declaration_no", 100], ["note", 500]] as const) {
+      if (k in fields) out[k] = text(fields[k], max);
+    }
+    if ("customs_rate" in fields) out.customs_rate = Number(fields.customs_rate) > 0 ? Number(fields.customs_rate) : "";
+    for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
+    return await rpc("update_import_tracking", { p_id: id, p_fields: out });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** IMP-5: a manual milestone (departed, arrived at customs) or a note on the timeline. */
+export async function logEventAction(id: string, kind: "departed" | "arrived_customs" | "note", onDate: string | null, note: string | null): Promise<PostingResult<Row>> {
+  try {
+    await guard("can_manage_imports");
+    if (!isUuid(id)) return { success: false, error: "imports.errors.notFound" };
+    if (!["departed", "arrived_customs", "note"].includes(kind)) return { success: false, error: "imports.errors.failed" };
+    return await rpc("log_import_event", { p_shipment_id: id, p_kind: kind, p_event_date: date(onDate), p_note: typeof note === "string" ? note.slice(0, 1000) : null });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export async function closeShipmentAction(id: string, idempotencyKey: string): Promise<PostingResult<Row>> {
   try {
     await guard("can_approve_imports");
@@ -292,6 +374,20 @@ export interface PrepaymentView {
   amountAzn: number;
   status: "open" | "applied" | "cancelled";
   note: string | null;
+  /** IMP-5: a payment for this cost of the draft (null = a supplier prepayment for the goods). */
+  costLineId: string | null;
+  partnerId: string | null;
+}
+
+/** IMP-5: one event of the shipment's timeline. */
+export interface ShipmentEventView {
+  id: string;
+  kind: string;
+  eventDate: string;
+  note: string | null;
+  data: Record<string, unknown>;
+  createdByName: string | null;
+  createdAt: string;
 }
 
 export interface ReceiptView {
@@ -341,6 +437,8 @@ export interface PostingView {
   receipts: ReceiptView[];
   journal: JournalEntryView[];
   transitBalance: number;
+  /** IMP-5: the timeline (empty before migration 20261105100000). */
+  events: ShipmentEventView[];
 }
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -359,6 +457,9 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
       admin.rpc("import_shipment_transit_balance", { p_shipment_id: shipmentId }),
       rows(admin.from("import_prepayments").select("*").eq("shipment_id", shipmentId).order("payment_date")),
     ]);
+    // IMP-5: the timeline; before the migration the table is not there yet.
+    const eventsRes = await admin.from("import_shipment_events").select("*").eq("shipment_id", shipmentId).order("event_date");
+    const events = eventsRes.error ? [] : ((eventsRes.data as Row[] | null) ?? []);
     const paymentIds = payments.map((p) => p.id);
     const receiptIds = receipts.map((r) => r.id);
     const entryIds = entries.map((e) => e.id);
@@ -375,7 +476,7 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
       partnerIds.length ? rows(admin.from("partners").select("id, name").in("id", partnerIds)) : Promise.resolve([] as Row[]),
       supplierIds.length ? rows(admin.from("suppliers").select("id, full_name, company_name").in("id", supplierIds)) : Promise.resolve([] as Row[]),
     ]);
-    const creators = [...new Set(receipts.map((r) => r.created_by).filter(isUuid))];
+    const creators = [...new Set([...receipts.map((r) => r.created_by), ...events.map((e) => e.created_by)].filter(isUuid))];
     const names = creators.length ? await fetchProfileDisplayNames(admin as unknown as ProfileNamesClient, creators) : new Map<string, string>();
     const coaById = new Map(coa.map((c) => [String(c.id), c]));
     const partnerName = new Map(partners.map((p) => [String(p.id), String(p.name ?? "")]));
@@ -469,7 +570,20 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
           amountAzn: num(p.amount_azn),
           status: p.status === "applied" || p.status === "cancelled" ? p.status : "open",
           note: (p.note as string | null) ?? null,
+          costLineId: isUuid(p.cost_line_id) ? p.cost_line_id : null,
+          partnerId: isUuid(p.partner_id) ? p.partner_id : null,
         })),
+        events: events
+          .map((e) => ({
+            id: String(e.id),
+            kind: String(e.kind),
+            eventDate: String(e.event_date),
+            note: (e.note as string | null) ?? null,
+            data: e.data && typeof e.data === "object" ? (e.data as Record<string, unknown>) : {},
+            createdByName: isUuid(e.created_by) ? names.get(e.created_by) ?? null : null,
+            createdAt: String(e.created_at),
+          }))
+          .sort((a, b) => (a.eventDate === b.eventDate ? a.createdAt.localeCompare(b.createdAt) : a.eventDate.localeCompare(b.eventDate))),
       },
     };
   } catch (err) {

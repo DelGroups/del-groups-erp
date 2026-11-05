@@ -177,6 +177,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_line_warehouses.sql | tee "$RUNNER_TEMP/imports_line_warehouses.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_line_warehouses.txt"
 
+      # One payment from several accounts; Pay on import costs; stages and tracking (IMP-5).
+      - name: Imports stages and pay checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/imports_stages_pay.sql | tee "$RUNNER_TEMP/imports_stages_pay.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/imports_stages_pay.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

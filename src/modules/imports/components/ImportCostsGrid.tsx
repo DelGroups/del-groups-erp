@@ -13,16 +13,37 @@ import { methodsFor, type ImportsConfig } from "@/lib/imports/config";
 import { COST_TYPES, round2, type CostType, type LandedCostIssue, type LandedCostResult, type SplitMethod } from "@/lib/imports/landedCost";
 import type { ImportLookups } from "../actions/imports";
 import type { PlausibilityWarning } from "../lib/landedChecks";
+import type { CostPaymentState, CostPaymentStatus } from "../lib/costPayments";
 import { newCost, newRowKey, suggestedVat, type CostLineDraft, type ShipmentDraft } from "../lib/shipment";
 import { costTypeLabel } from "./LandedCostPanel";
 import { ManualSplitDrawer } from "./ManualSplitDrawer";
 
-/** The status of a cost on a draft, from its own fields (IMP-5 brings the real payments). */
-function costStatus(c: CostLineDraft): { key: "paidNow" | "estimate" | "payable" | "noPartner"; tone: ChipTone } {
-  if (c.paidNow) return { key: "paidNow", tone: "success" };
-  if (c.isEstimate) return { key: "estimate", tone: "info" };
-  if (!c.partnerId) return { key: "noPartner", tone: "neutral" };
-  return { key: "payable", tone: "warning" };
+/** The chip of a cost's payment status (IMP-5). */
+const STATUS_TONE: Record<CostPaymentStatus, ChipTone> = {
+  estimate: "info",
+  not_recorded: "neutral",
+  debt: "warning",
+  partial: "warning",
+  paid: "success",
+  nothing_due: "neutral",
+};
+
+/** IMP-5: payments and posting of the costs, from the form. */
+export interface CostPaymentProps {
+  /** The payment state of a cost (chip and "Pay"). */
+  stateOf: (cost: CostLineDraft) => CostPaymentState;
+  /** Why "Pay" is not offered yet, or null. */
+  blockedOf: (cost: CostLineDraft) => "no_partner" | "save_first" | null;
+  onPay: (cost: CostLineDraft) => void;
+  /** The shipment is confirmed: stored costs are posted (read only); new ones are posted from the grid. */
+  posted: boolean;
+  /** Ids of the costs stored in the database. */
+  storedIds: ReadonlySet<string>;
+  /** Costs paid while a draft: amount, currency, rate, VAT, flag and partner are locked. */
+  lockedIds: ReadonlySet<string>;
+  /** After confirm: post a new cost (add_import_cost). */
+  onPost?: (cost: CostLineDraft) => void;
+  busyKey?: string | null;
 }
 
 /**
@@ -44,6 +65,7 @@ export function ImportCostsGrid({
   rateBusy,
   onFetchRate,
   onRemember,
+  payments,
 }: {
   draft: ShipmentDraft;
   setDraft: (update: (d: ShipmentDraft) => ShipmentDraft) => void;
@@ -55,6 +77,8 @@ export function ImportCostsGrid({
   rateBusy: string | null;
   onFetchRate: (cost: CostLineDraft) => void;
   onRemember: (patch: { supplier?: LookupRecord; account?: LookupRecord }) => void;
+  /** IMP-5: payment status and "Pay" per cost (UI_STANDARD). */
+  payments?: CostPaymentProps;
 }) {
   const { t, locale } = useI18n();
   const [manualFor, setManualFor] = useState<string | null>(null);
@@ -232,7 +256,7 @@ export function ImportCostsGrid({
             <LineText muted>{t("imports.costFields.notSplit")}</LineText>
           ) : (
             <LineSelectCell
-              ctx={ctx}
+              ctx={payments?.lockedIds.has(c.key) && editable && !payments.posted ? { ...ctx, editable: true } : ctx}
               value={c.splitMethod}
               disabled={!c.isCapitalized}
               options={methodsFor(c.costType).map((m) => ({ value: m, label: t(`imports.methods.${m}`) }))}
@@ -285,58 +309,56 @@ export function ImportCostsGrid({
         type: "status",
         width: 120,
         cell: (c) => {
-          const s = costStatus(c);
-          return <Chip tone={s.tone}>{t(`imports.costStatus.${s.key}`)}</Chip>;
+          if (!payments) return <LineText muted>—</LineText>;
+          if (payments.posted && !payments.storedIds.has(c.key)) return <Chip tone="neutral">{t("imports.costPayStatus.not_recorded")}</Chip>;
+          const st = payments.stateOf(c);
+          const label =
+            st.status === "debt"
+              ? t("imports.costPay.debt", { amount: formatMoney(st.openAzn, locale, { currency: "AZN" }) })
+              : t(`imports.costPayStatus.${st.status}`);
+          return <Chip tone={STATUS_TONE[st.status]}>{label}</Chip>;
         },
       },
       {
         key: "payment",
         header: t("imports.costFields.payment"),
         type: "text",
-        width: 200,
-        // Today's "paid now from an account", compacted into one cell (IMP-5 replaces it with "Pay").
-        cell: (c, ctx) => (
-          <span className="flex h-full min-w-0 items-center gap-1.5">
-            <input
-              type="checkbox"
-              className="ds-grid-checkbox shrink-0"
-              checked={c.paidNow}
-              disabled={!ctx.editable}
-              aria-label={`${t("imports.costFields.paidNow")}: ${nameOf(c, ctx.index)}`}
-              title={t("imports.costFields.paidNow")}
-              onChange={(e) => setCost(c.key, { paidNow: e.target.checked, ...(e.target.checked ? {} : { cashAccountId: null }) })}
-            />
-            {c.paidNow ? (
-              ctx.editable ? (
-                <span className="ds-line-lookup min-w-0 flex-1">
-                  <EntityLookup
-                    entity="account"
-                    size="sm"
-                    width="full"
-                    inlineAdd={false}
-                    value={c.cashAccountId}
-                    selectedLabel={lookups.accounts.find((a) => a.id === c.cashAccountId)?.name}
-                    invalid={!c.cashAccountId}
-                    onChange={(id, row) => {
-                      if (row) onRemember({ account: row });
-                      setCost(c.key, { cashAccountId: id });
-                    }}
-                    aria-label={`${t("imports.costFields.account")}: ${nameOf(c, ctx.index)}`}
-                  />
-                </span>
-              ) : (
-                <LineText>{lookups.accounts.find((a) => a.id === c.cashAccountId)?.name ?? "—"}</LineText>
-              )
-            ) : (
-              <LineText muted>{t("imports.costFields.paidLater")}</LineText>
-            )}
-          </span>
-        ),
+        width: 150,
+        // IMP-5: "Pay" opens the one payment dialog; after confirm a new cost is posted first.
+        cell: (c) => {
+          if (!payments) return <LineText muted>—</LineText>;
+          if (payments.posted && !payments.storedIds.has(c.key)) {
+            return (
+              <button
+                type="button"
+                className="ds-btn ds-btn-sm ds-btn-primary"
+                disabled={!!payments.busyKey || !(c.amount > 0 || c.splitMethod === "per_line_duty")}
+                onClick={() => payments.onPost?.(c)}
+                data-line-focus=""
+              >
+                {payments.busyKey === c.key ? t("common.saving") : t("imports.costPay.post")}
+              </button>
+            );
+          }
+          const st = payments.stateOf(c);
+          if (!st.mode) {
+            return <LineText muted>{st.paidFc > 0 ? formatMoney(st.paidFc, locale, { currency: st.currency }) : "—"}</LineText>;
+          }
+          const blocked = payments.blockedOf(c);
+          return (
+            <span className="flex h-full min-w-0 items-center gap-1.5" title={blocked ? t(`imports.costPayBlocked.${blocked}`) : undefined}>
+              <button type="button" className="ds-btn ds-btn-sm" disabled={!!blocked || !!payments.busyKey} onClick={() => payments.onPay(c)} data-line-focus="">
+                {t("imports.costPay.pay")}
+              </button>
+              {st.paidFc > 0 ? <LineText muted>{formatMoney(st.paidFc, locale, { currency: st.currency })}</LineText> : null}
+            </span>
+          );
+        },
       },
     ];
     // Rebuilt with the draft and the live result; the helpers only close over stable values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.costs, result, plausibility, rateBusy, lookups.suppliers, lookups.accounts, config, t, locale]);
+  }, [draft.costs, result, plausibility, rateBusy, lookups.suppliers, lookups.accounts, config, t, locale, payments]);
 
   const blocking = result.errors.filter((e) => e.code === "zero_basis" || e.code === "manual_mismatch");
   const manualCost = manualFor ? draft.costs.find((c) => c.key === manualFor) ?? null : null;
@@ -354,6 +376,7 @@ export function ImportCostsGrid({
         editable={editable}
         addMenu={COST_TYPES.map((c) => ({ key: c, label: costTypeLabel(c, config, t) }))}
         onAddFrom={(type) => setDraft((d) => ({ ...d, costs: [...d.costs, newCost(type as CostType, config)] }))}
+        rowEditable={(c) => (payments ? (payments.posted ? !payments.storedIds.has(c.key) : !payments.lockedIds.has(c.key)) : true)}
         rowMenuItems={(c) =>
           c.splitMethod === "manual" && c.isCapitalized && draft.lines.length
             ? [{ key: "manual", label: t("imports.manual.open"), icon: <SplitSquareHorizontal className="h-4 w-4" aria-hidden />, onSelect: () => setManualFor(c.key) }]

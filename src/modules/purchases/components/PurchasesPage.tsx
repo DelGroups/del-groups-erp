@@ -495,6 +495,7 @@ export default function PurchasesPage() {
 
       {paymentPurchase && (
         <DocumentPaymentModal
+          direction="out"
           isOpen
           onClose={() => setPaymentPurchase(null)}
           documentLabel={t("purchases.invoiceNo")}
