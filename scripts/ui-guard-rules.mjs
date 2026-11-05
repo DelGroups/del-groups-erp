@@ -31,10 +31,57 @@ export const UI_GUARD_RULES = {
     ],
     pattern: /\.toLocale(?:Date|Time)?String\(|Intl\.DateTimeFormat\b/g,
   },
+  // UI-6: every list, report and line table is a DataGrid (StandardGrid / ListGrid / ListView) or a
+  // LineGrid. A raw <table> or the old src/components/ui/table.tsx counts once per occurrence.
+  rawTable: {
+    message:
+      "UI standard: render tables with DataGrid (StandardGrid from @/components/lists/StandardGrid) or LineGrid (@/components/line-grid), not a raw <table> or @/components/ui/table (docs/ui-standard.md).",
+    selectors: ['JSXOpeningElement[name.name="table"]', 'ImportDeclaration[source.value="@/components/ui/table"]'],
+    pattern: /<table\b|from\s+["']@\/components\/ui\/table["']/g,
+  },
 };
 
 /** Files the rules never apply to: the formatting module itself. */
 export const UI_GUARD_EXEMPT = { localeFormat: ["src/lib/dates/localeDate.ts"] };
+
+/**
+ * Folders and file names a rule never applies to: the grid components themselves and print
+ * layouts (a printed document is a real table on paper). Globs for lint, matched by
+ * globToRegExp for the allowlist counts.
+ */
+export const UI_GUARD_EXEMPT_GLOBS = {
+  rawTable: [
+    "src/design-system/**",
+    "src/components/print/**",
+    "src/components/line-grid/**",
+    "src/**/*PrintTemplate.tsx",
+    "src/**/*PrintLayout.tsx",
+    "src/**/*Sheet.tsx",
+  ],
+};
+
+const REGEXP_SPECIAL = new Set([".", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]", "\\"]);
+
+/** A glob (`**` + slash, `**`, `*`) as a regular expression over a repo-relative path. */
+export function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    if (glob.startsWith("**/", i)) {
+      re += "(?:.*/)?";
+      i += 2;
+    } else if (glob.startsWith("**", i)) {
+      re += ".*";
+      i += 1;
+    } else if (glob[i] === "*") re += "[^/]*";
+    else re += REGEXP_SPECIAL.has(glob[i]) ? `\\${glob[i]}` : glob[i];
+  }
+  return new RegExp(`^${re}$`);
+}
+
+/** The file is exempt from the category through one of its globs. */
+export function isExemptPath(file, category) {
+  return (UI_GUARD_EXEMPT_GLOBS[category] ?? []).some((glob) => globToRegExp(glob).test(file));
+}
 
 /** no-restricted-syntax entries for every category not in `allowed`. */
 export function restrictedSyntax(allowed = []) {
@@ -55,6 +102,7 @@ export function uiGuardConfigs(allowlist) {
     for (const file of Object.keys(files)) add(file, category);
   }
   for (const [category, files] of Object.entries(UI_GUARD_EXEMPT)) for (const file of files) add(file, category);
+  for (const [category, globs] of Object.entries(UI_GUARD_EXEMPT_GLOBS)) for (const glob of globs) add(glob, category);
   const groups = new Map();
   for (const [file, categories] of byFile) {
     const key = [...new Set(categories)].sort().join(",");
@@ -76,7 +124,7 @@ export function scanSources(entries) {
   const out = Object.fromEntries(Object.keys(UI_GUARD_RULES).map((k) => [k, {}]));
   for (const [file, text] of entries) {
     for (const category of Object.keys(UI_GUARD_RULES)) {
-      if (UI_GUARD_EXEMPT[category]?.includes(file)) continue;
+      if (UI_GUARD_EXEMPT[category]?.includes(file) || isExemptPath(file, category)) continue;
       const n = countViolations(text, category);
       if (n) out[category][file] = n;
     }

@@ -1984,3 +1984,17 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-timeline-dot[data-tone="danger"] {
   background: var(--ds-danger-strong);
 }
+
+/* UI-6: text tones of grid cells (income / expense amounts, overdue dates) from the tokens. */
+[data-ds] .ds-text-success {
+  color: var(--ds-success);
+}
+[data-ds] .ds-text-danger {
+  color: var(--ds-danger);
+}
+[data-ds] .ds-text-warning {
+  color: var(--ds-warning);
+}
+[data-ds] .ds-text-info {
+  color: var(--ds-info);
+}
