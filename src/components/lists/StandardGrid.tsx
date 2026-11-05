@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { dataGridLabels } from "@/i18n/uiStandardLabels";
 import { clearColumnWidths, setColumnWidth } from "@/lib/lists/columns";
 import { useTheme } from "@/theme/ThemeProvider";
+// Pure helpers (sorting, "code · name", sums) live in standardGridLogic.ts, covered by node --test.
 import { sortRows, standardGridKey, toggleSort, type GridSort, type SortValue } from "./standardGridLogic";
 import { useColumnPrefs } from "./useColumnPrefs";
 
