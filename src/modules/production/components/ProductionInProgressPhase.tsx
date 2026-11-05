@@ -808,7 +808,7 @@ export default function ProductionInProgressPhase({
 
           {standard ? (
             <StandardGrid<MaterialRow>
-              id="production.materials"
+              id="production-materials"
               label={t("forms.selectProduct")}
               rows={order.materials}
               rowKey={(row) => row.id}
@@ -998,7 +998,7 @@ export default function ProductionInProgressPhase({
 
           {standard ? (
             <StandardGrid<ExpenseRow>
-              id="production.services"
+              id="production-services"
               label={t("production.workflow.addExpense")}
               rows={order.expenses}
               rowKey={(row) => row.id}
@@ -1098,7 +1098,7 @@ export default function ProductionInProgressPhase({
 
           {standard ? (
             <StandardGrid<(typeof paymentRows)[number]>
-              id="production.payments"
+              id="production-payments"
               label={t("production.workflow.paymentsHint")}
               rows={paymentRows}
               rowKey={(row) => `${row.kind}-${paymentRows.indexOf(row)}`}

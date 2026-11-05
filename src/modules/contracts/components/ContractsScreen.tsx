@@ -101,7 +101,7 @@ function ContractRecordView({ record, close }: { record: ContractRecord; close: 
           </div>
           {standard ? (
             <StandardGrid<LinkedDocument>
-              id="contracts.record.linked"
+              id="contracts-record-linked"
               label={t("official.linkedInvoices")}
               rows={docs}
               rowKey={(d) => `${d.kind}-${d.id}`}

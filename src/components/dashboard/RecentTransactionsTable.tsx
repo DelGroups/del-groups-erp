@@ -28,7 +28,7 @@ export default function RecentTransactionsTable({ rows }: RecentTransactionsTabl
         <div className="px-5 py-10 text-center text-xs text-app-muted">{t("dashboard.noTransactions")}</div>
       ) : standard ? (
         <StandardGrid<RecentActivityRow>
-          id="dashboard.recent-activity"
+          id="dashboard-recent-activity"
           label={t("dashboard.recentActivity")}
           rows={rows}
           rowKey={(row) => row.id}

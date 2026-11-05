@@ -68,7 +68,7 @@ export default function ActivityTypesSettingsPage() {
               <>
                 {standard ? (
                   <StandardGrid<(typeof rows)[number]>
-                    id="settings.activity-types"
+                    id="settings-activity-types"
                     label={t("views.chatter.typesAdmin.name")}
                     rows={rows}
                     rowKey={(r) => r.code}

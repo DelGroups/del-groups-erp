@@ -163,7 +163,7 @@ export default function PolywoodImportPanel({ onImported, initialProductId }: Po
           </div>
           {standard ? (
             <StandardGrid<PolywoodImportRow>
-              id="polywood.import.preview"
+              id="polywood-import-preview"
               label={t("polywood.import.title")}
               rows={rows}
               rowKey={(row) => String(row.rowNumber)}

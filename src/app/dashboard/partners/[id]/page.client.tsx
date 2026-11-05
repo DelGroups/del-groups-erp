@@ -215,7 +215,7 @@ export default function PartnerDetailPageClient() {
           <div className="app-card p-8 text-center text-sm text-app-muted">{t("partners.notFound")}</div>
         ) : standard && tab === "sales" ? (
           <StandardGrid<PartnerDashboardData["sales"][number]>
-            id="partners.detail.sales"
+            id="partners-detail-sales"
             label={t("partners.tabs.sales")}
             rows={data.sales}
             rowKey={(sale) => sale.id}
@@ -230,7 +230,7 @@ export default function PartnerDetailPageClient() {
           />
         ) : standard && tab === "purchases" ? (
           <StandardGrid<PartnerDashboardData["purchases"][number]>
-            id="partners.detail.purchases"
+            id="partners-detail-purchases"
             label={t("partners.tabs.purchases")}
             rows={data.purchases}
             rowKey={(purchase) => purchase.id}
@@ -244,7 +244,7 @@ export default function PartnerDetailPageClient() {
           />
         ) : standard ? (
           <StandardGrid<PartnerDashboardData["ledger"][number]>
-            id="partners.detail.ledger"
+            id="partners-detail-ledger"
             label={t("partners.tabs.ledger")}
             rows={data.ledger}
             rowKey={(entry) => `${entry.type}-${entry.id}`}

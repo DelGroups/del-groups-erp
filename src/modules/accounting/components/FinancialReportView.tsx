@@ -53,7 +53,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
           {summary.byCategory.length > 0 ? (
             <Section title={k("byCategory")}>
               <StandardGrid<CategoryRow>
-                id="reports.financial.by-category"
+                id="reports-financial-by-category"
                 label={k("byCategory")}
                 rows={summary.byCategory}
                 rowKey={(r) => `${r.type}-${r.category}`}
@@ -77,7 +77,7 @@ export default function FinancialReportView({ data, loading }: FinancialReportVi
           ) : null}
           <Section title={k("ledger")} description={k("ledgerHint")}>
             <StandardGrid<LedgerRow>
-              id="reports.financial.ledger"
+              id="reports-financial-ledger"
               label={k("ledger")}
               rows={ledger}
               rowKey={(r) => r.id}

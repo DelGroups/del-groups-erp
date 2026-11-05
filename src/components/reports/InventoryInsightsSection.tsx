@@ -37,7 +37,7 @@ export default function InventoryInsightsSection({
           <p className="py-6 text-center text-xs text-app-muted">{t("reports.executive.noMaterials")}</p>
         ) : standard ? (
           <StandardGrid<MaterialUsageRow>
-            id="reports.executive.top-materials"
+            id="reports-executive-top-materials"
             label={t("reports.executive.topMaterialsTitle")}
             rows={topMaterials}
             rowKey={(row) => row.productId}

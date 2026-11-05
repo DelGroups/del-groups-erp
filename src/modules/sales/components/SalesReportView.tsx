@@ -51,7 +51,7 @@ export default function SalesReportView({ data, loading }: SalesReportViewProps)
       {standard ? (
         <Section title={k("title")} description={k("hint")}>
           <StandardGrid<TopProduct>
-            id="reports.sales.top-products"
+            id="reports-sales-top-products"
             label={k("title")}
             rows={topProducts}
             rowKey={(row) => `${row.product_id}-${topProducts.indexOf(row)}`}

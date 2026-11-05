@@ -250,7 +250,7 @@ export default function ExpenseCategoriesManager({
           <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyCategories")}</div>
         ) : standard ? (
           <StandardGrid<FlatCategory>
-            id="expenses.categories"
+            id="expenses-categories"
             label={t("expenses.categoriesTabTitle")}
             rows={flattenTree(tree)}
             rowKey={(r) => r.node.id}

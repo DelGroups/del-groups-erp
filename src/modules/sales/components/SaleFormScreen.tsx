@@ -142,7 +142,7 @@ function SaleForm({ id }: { id: string }) {
   const items: SaleItem[] = sale.items ?? [];
   const linesTab = standard ? (
     <StandardGrid<SaleItem>
-      id="sales.record.lines"
+      id="sales-record-lines"
       label={t("sales.engine.tabs.lines", { count: items.length })}
       rows={items}
       rowKey={(item) => item.id || String(items.indexOf(item))}

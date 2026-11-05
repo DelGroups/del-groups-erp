@@ -76,7 +76,7 @@ export default function ModulesSettingsPage() {
                 </p>
                 {standard ? (
                   <StandardGrid<ModuleOverview["modules"][number]>
-                    id="settings.modules"
+                    id="settings-modules"
                     label={t("settings.modules.colModule")}
                     rows={overview.modules}
                     rowKey={(m) => m.id}

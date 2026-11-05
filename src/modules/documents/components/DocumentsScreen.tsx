@@ -316,7 +316,7 @@ function FolderView({ folder, folders, docs, loading, fmt }: { folder: DocumentF
         </ul>
       ) : standard ? (
         <StandardGrid<DocumentRow>
-          id="library.documents"
+          id="library-documents"
           label={folderLabel(folder, t)}
           rows={shown}
           rowKey={(d) => d.id}

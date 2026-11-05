@@ -64,7 +64,7 @@ function PartnerBalanceTable<T extends { id: string; code: string; name: string;
     };
     return (
       <StandardGrid<T>
-        id="finance.opening-balances.partners"
+        id="finance-opening-balances-partners"
         label={t("finance.openingBalances.openingBalanceCol")}
         rows={rows}
         rowKey={(r) => r.id}

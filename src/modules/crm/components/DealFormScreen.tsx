@@ -116,7 +116,7 @@ function DealForm({ id }: { id: string }) {
         <p className="ds-muted">{t("crm.engine.noQuotes")}</p>
       ) : standard ? (
         <StandardGrid<CrmQuotation>
-          id="crm.deal.quotations"
+          id="crm-deal-quotations"
           label={t("crm.engine.quoteActions")}
           rows={quotations}
           rowKey={(q) => q.id}

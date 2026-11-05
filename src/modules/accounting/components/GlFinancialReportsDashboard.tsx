@@ -158,7 +158,7 @@ export default function GlFinancialReportsDashboard({
         <h3 className="mb-3 text-sm font-bold text-app">{t("glReports.generalLedgerTitle")}</h3>
         {standard ? (
           <StandardGrid<LedgerRow>
-            id="reports.gl.ledger"
+            id="reports-gl-ledger"
             label={t("glReports.generalLedgerTitle")}
             rows={ledger.rows}
             rowKey={(r) => r.lineId}

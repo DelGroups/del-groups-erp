@@ -41,7 +41,7 @@ export default function InventoryTurnoverTable({ data, loading }: InventoryTurno
     ];
     return (
       <StandardGrid<Row>
-        id="reports.inventory-turnover"
+        id="reports-inventory-turnover"
         label={t("inventoryTurnover.pageTitle")}
         columns={columns}
         rows={data.rows}

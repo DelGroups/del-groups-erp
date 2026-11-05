@@ -140,7 +140,7 @@ function Reports() {
           </div>
           {standard ? (
             <StandardGrid<(typeof forecast)[number]>
-              id="crm.reports.forecast"
+              id="crm-reports-forecast"
               label={t("crm.pipeline.reports.forecast")}
               rows={forecast}
               rowKey={(f) => f.month}
@@ -198,7 +198,7 @@ function Reports() {
           <h3 id="crm-winrate" className="font-semibold">{t("crm.pipeline.reports.winRateByUser")}</h3>
           {standard ? (
             <StandardGrid<(typeof rates)[number]>
-              id="crm.reports.win-rate"
+              id="crm-reports-win-rate"
               label={t("crm.pipeline.reports.winRateByUser")}
               rows={rates}
               rowKey={(r) => r.userId ?? "none"}

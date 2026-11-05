@@ -160,7 +160,7 @@ export default function InitialSetupPage() {
                   </div>
                   {standard ? (
                     <StandardGrid<ProductImportRow>
-                      id="settings.initial-setup.preview"
+                      id="settings-initial-setup-preview"
                       label={t("initialSetup.confirmImport")}
                       rows={importPreview.slice(0, 8)}
                       rowKey={(row) => `${row.sku}-${row.barcode}-${importPreview.indexOf(row)}`}

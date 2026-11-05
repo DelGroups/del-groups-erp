@@ -127,7 +127,7 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
 
             {standard ? (
               <DocumentLinesGrid
-                id="sales.detail.lines"
+                id="sales-detail-lines"
                 label={t("dashboard.product")}
                 lines={(sale.items ?? []).map((item, idx) => ({ key: item.id || String(idx), name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
                 headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}

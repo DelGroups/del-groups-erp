@@ -150,7 +150,7 @@ export default function WarehousesPage() {
             </div>
             {standard ? (
               <StandardGrid<Warehouse>
-                id="inventory.warehouses"
+                id="inventory-warehouses"
                 label={t("warehouses.listTitle")}
                 rows={warehouses}
                 rowKey={(w) => w.id}

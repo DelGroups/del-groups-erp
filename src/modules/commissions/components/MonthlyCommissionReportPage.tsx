@@ -216,7 +216,7 @@ export default function MonthlyCommissionReportPage() {
                     </h4>
                     {standard ? (
                       <StandardGrid<SellerCommissionSummary["details"][number]>
-                        id="commissions.monthly.breakdown"
+                        id="commissions-monthly-breakdown"
                         label={`${t("commissions.categoryBreakdown")} · ${summary.seller_name}`}
                         rows={summary.details}
                         rowKey={(d) => d.category}

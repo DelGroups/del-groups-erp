@@ -185,7 +185,7 @@ function DocumentRecordView({ record, printReport }: { record: ConsignmentDocRec
   ];
   const table = standard ? (
     <StandardGrid<(typeof all)[number]>
-      id="consignments.document-lines"
+      id="consignments-document-lines"
       label={t("sales.engine.tabs.lines", { count: all.length })}
       rows={all}
       rowKey={(l) => `${l.code ?? ""}:${l.name}:${all.indexOf(l)}`}

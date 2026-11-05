@@ -93,7 +93,7 @@ function Lines({ items, extra }: { items: readonly { product_name: string; produ
       { key: "qty", header: t("modals.salesView.quantity"), type: "number", cell: (item) => `${formatFigure(item.quantity, 2, locale)} ${item.unit}`, sortValue: (item) => item.quantity },
       ...(extra ? [{ key: "notes", header: t("inventoryCount.notes"), className: "ds-muted", cell: (item: Item) => extra(items.indexOf(item)) } satisfies StandardColumn<Item>] : []),
     ];
-    return <StandardGrid<Item> id={extra ? "inventory.record.lines-notes" : "inventory.record.lines"} label={t("dashboard.product")} columns={columns} rows={items} rowKey={(item) => String(items.indexOf(item))} />;
+    return <StandardGrid<Item> id={extra ? "inventory-record-lines-notes" : "inventory-record-lines"} label={t("dashboard.product")} columns={columns} rows={items} rowKey={(item) => String(items.indexOf(item))} />;
   }
   return (
     <table className="w-full border-collapse text-left">

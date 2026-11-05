@@ -300,7 +300,7 @@ export default function StudioFieldsEditor() {
         <p className="text-xs text-app-muted">{t("studio.empty")}</p>
       ) : standard ? (
         <StandardGrid<StudioField>
-          id="studio.fields"
+          id="studio-fields"
           label={t("studio.label")}
           rows={fields}
           rowKey={(field) => field.id}

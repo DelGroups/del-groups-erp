@@ -105,7 +105,7 @@ export default function PendingCommissionsView({
 
           {standard ? (
             <StandardGrid<SalesCommission>
-              id="commissions.pending"
+              id="commissions-pending"
               label={t("commissions.pendingTotal")}
               rows={summary.commissions}
               rowKey={(c) => c.id}

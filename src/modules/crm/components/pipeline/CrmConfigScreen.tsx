@@ -357,7 +357,7 @@ function TargetsCard({ teams, people, targets, busy, run }: { teams: readonly Cr
       </form>
       {standard ? (
         <StandardGrid<(typeof targets)[number]>
-          id="crm.config.targets"
+          id="crm-config-targets"
           label={t("crm.pipeline.config.targets")}
           rows={targets}
           rowKey={(x) => x.id}

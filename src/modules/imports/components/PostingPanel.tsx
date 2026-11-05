@@ -747,7 +747,7 @@ function PayablesTab({ view, money, config, canPay, onPay, formatDate }: { view:
     return (
       <div className="flex flex-col gap-2">
         <StandardGrid<PayableView>
-          id="imports.payables"
+          id="imports-payables"
           label={t("importPosting.payableCols.partner")}
           rows={view.payables}
           rowKey={(p) => p.id}
@@ -881,7 +881,7 @@ function JournalTab({ view, money, formatDate }: { view: PostingView; money: (n:
           {e.description ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{e.description}</p> : null}
           {standard ? (
             <StandardGrid<(typeof e.lines)[number]>
-              id="imports.journal.lines"
+              id="imports-journal-lines"
               label={`${e.entryNo} · ${t(`importPosting.entryTypes.${e.documentType}`)}`}
               rows={e.lines}
               rowKey={(l) => String(e.lines.indexOf(l))}

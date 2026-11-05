@@ -321,7 +321,7 @@ export default function ProductionBoardPage() {
           </div>
         ) : standard ? (
           <StandardGrid<ProductionOrder>
-            id="production.orders"
+            id="production-orders"
             label={t("production.projectName")}
             rows={orders}
             rowKey={(order) => order.id}

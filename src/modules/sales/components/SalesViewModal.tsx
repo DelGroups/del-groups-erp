@@ -67,7 +67,7 @@ export default function SalesViewModal({ sale, onClose, onPrint, onPayment }: Sa
           ) : null}
           {standard ? (
             <DocumentLinesGrid
-              id="sales.view.lines"
+              id="sales-view-lines"
               empty={t("modals.salesView.noLineItems")}
               label={t("dashboard.product")}
               lines={(sale.items ?? []).map((item, idx) => ({ key: item.id || String(idx), name: item.product_name ?? "—", quantity: item.quantity ?? 0, unit: item.unit ?? null, price: item.unit_price ?? 0, total: item.total ?? 0 }))}

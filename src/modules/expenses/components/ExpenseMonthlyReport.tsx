@@ -86,7 +86,7 @@ export default function ExpenseMonthlyReport({ rows, loading, rangeLabel }: Prop
         <div className="p-8 text-center text-sm text-app-muted">{t("expenses.emptyRecords")}</div>
       ) : standard ? (
         <StandardGrid<(typeof report.lines)[number]>
-          id={`expenses.monthly.${group}`}
+          id={`expenses-monthly-${group}`}
           label={t("expenses.doc.reportHint")}
           rows={report.lines}
           rowKey={(line) => line.label}

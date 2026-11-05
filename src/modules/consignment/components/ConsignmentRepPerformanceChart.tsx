@@ -115,7 +115,7 @@ export default function ConsignmentRepPerformanceChart({ data }: ConsignmentRepP
           {standard ? (
             <div className="mt-3">
               <StandardGrid<ConsignmentRepPerformanceRow>
-                id="consignments.rep-performance"
+                id="consignments-rep-performance"
                 label={t("consignments.salesRep")}
                 rows={data}
                 rowKey={(row) => row.repName}

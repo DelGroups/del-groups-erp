@@ -42,7 +42,7 @@ export default function PurchaseRequisitionsPanel({ onOpenPurchase }: Props) {
   if (standard && !error) {
     return (
       <StandardGrid<PurchaseRequisitionRow>
-        id="purchases.requisitions"
+        id="purchases-requisitions"
         label={t("purchases.requisitionNo")}
         rows={rows}
         rowKey={(row) => row.id}

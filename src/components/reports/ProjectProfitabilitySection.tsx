@@ -122,7 +122,7 @@ export default function ProjectProfitabilitySection({ rows }: ProjectProfitabili
 
           {standard ? (
             <StandardGrid<ProjectProfitabilityRow>
-              id="reports.executive.projects"
+              id="reports-executive-projects"
               label={t("reports.executive.orderNo")}
               rows={rows}
               rowKey={(row) => row.orderId}

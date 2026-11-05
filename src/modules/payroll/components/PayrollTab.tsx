@@ -165,7 +165,7 @@ export default function PayrollTab({ accounts, canManageHr, showError, showSucce
         <div className="app-table-wrap">
           {standard ? (
             <StandardGrid<PayrollRun>
-              id="payroll.runs"
+              id="payroll-runs"
               label={t("employees.tabs.payroll")}
               rows={payrollRuns}
               rowKey={(row) => row.id}

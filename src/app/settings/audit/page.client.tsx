@@ -351,7 +351,7 @@ export default function AuditSettingsPage() {
             <section className="app-card app-card-elevated overflow-hidden">
               {standard ? (
                 <StandardGrid<AuditLogRow>
-                  id="settings.audit"
+                  id="settings-audit"
                   label={t("audit.colAction")}
                   rows={rows}
                   rowKey={(row) => row.id}

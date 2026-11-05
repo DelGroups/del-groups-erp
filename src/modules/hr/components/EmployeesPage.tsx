@@ -405,7 +405,7 @@ export default function EmployeesPage({ extraTabs = [] }: { extraTabs?: Employee
               {gridColumns.grid ? (
                 // UI_STANDARD (UI-6): the leaves on the grid, approve / reject in the row menu.
                 <StandardGrid<EmployeeLeave>
-                  id="hr.leaves"
+                  id="hr-leaves"
                   label={t("employees.leaves.newTitle")}
                   rows={leaves}
                   rowKey={(leave) => leave.id}

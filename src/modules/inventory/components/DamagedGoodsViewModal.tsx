@@ -67,7 +67,7 @@ export default function DamagedGoodsViewModal({
 
           {standard ? (
             <StandardGrid<WriteoffRecord["items"][number]>
-              id="inventory.writeoff.lines"
+              id="inventory-writeoff-lines"
               label={t("dashboard.product")}
               rows={writeoff.items}
               rowKey={(item) => item.id || String(writeoff.items.indexOf(item))}

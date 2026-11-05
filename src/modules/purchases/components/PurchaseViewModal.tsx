@@ -54,7 +54,7 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
           </div>
           {standard ? (
             <DocumentLinesGrid
-              id="purchases.view.lines"
+              id="purchases-view-lines"
               label={t("dashboard.product")}
               lines={purchase.items.map((item, idx) => ({ key: item.id || String(idx), name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
               headers={{ product: t("dashboard.product"), quantity: t("forms.quantity"), price: t("forms.price"), total: t("forms.lineTotal") }}

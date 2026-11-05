@@ -187,7 +187,7 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
 
   const lines = standard ? (
     <DocumentLinesGrid
-      id="purchases.record.lines"
+      id="purchases-record-lines"
       label={t("sales.engine.tabs.lines", { count: purchase.items.length })}
       lines={purchase.items.map((item, i) => ({ key: item.id || String(i), code: item.product_code, name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
       headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}

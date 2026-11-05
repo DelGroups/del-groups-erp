@@ -99,7 +99,7 @@ export default function ContractLinkedInvoicesModal({ contract, onClose }: Props
             <p className="text-center text-app-muted">{t("common.loading")}</p>
           ) : standard ? (
             <StandardGrid<LinkedDocument>
-              id="contracts.linked-invoices"
+              id="contracts-linked-invoices"
               label={t("official.linkedInvoices")}
               rows={documents}
               rowKey={(doc) => `${doc.kind}-${doc.id}`}

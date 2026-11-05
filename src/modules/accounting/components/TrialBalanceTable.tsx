@@ -37,7 +37,7 @@ export default function TrialBalanceTable({ data, loading }: TrialBalanceTablePr
     ];
     return (
       <StandardGrid<Row>
-        id="accounting.trial-balance"
+        id="accounting-trial-balance"
         label={t("osv.pageTitle")}
         columns={columns}
         rows={data.rows}

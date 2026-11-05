@@ -208,7 +208,7 @@ export default function BillingSettingsPage() {
                   {standard ? (
                     <div className="px-6 pb-5 pt-3">
                       <StandardGrid<BillingOverview["invoices"][number]>
-                        id="settings.billing.invoices"
+                        id="settings-billing-invoices"
                         label={t("tenantBilling.invoices")}
                         rows={overview.invoices}
                         rowKey={(i) => i.id}

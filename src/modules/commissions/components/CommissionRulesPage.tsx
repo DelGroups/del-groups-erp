@@ -202,7 +202,7 @@ export default function CommissionRulesPage() {
             </div>
 
             {standard ? (
-              <CommissionRulesGrid id="settings.commissions.rules" rules={rules} loading={loading} onDelete={(ruleId) => void handleDelete(ruleId)} />
+              <CommissionRulesGrid id="settings-commissions-rules" rules={rules} loading={loading} onDelete={(ruleId) => void handleDelete(ruleId)} />
             ) : loading ? (
               <div className="p-8 text-center text-app-muted text-xs">{t("common.loading")}</div>
             ) : rules.length === 0 ? (

@@ -50,7 +50,7 @@ test("code · name on one line, sums over rows, storage key", () => {
   assert.equal(codeName("Kassa", "Kassa"), "Kassa");
   assert.equal(codeName(null, undefined), "—");
   assert.equal(sumBy([{ v: 0.1 }, { v: 0.2 }, { v: null }, { v: Number.NaN }], (r) => r.v), 0.3);
-  assert.equal(standardGridKey("cash-bank.accounts"), "grid:cash-bank.accounts");
+  assert.equal(standardGridKey("cash-bank-accounts"), "grid:cash-bank-accounts");
 });
 
 // ── Raw-table guard ───────────────────────────────────────────────────────────
@@ -119,7 +119,9 @@ test("every converted screen keeps the flag switch (old table with UI_STANDARD o
   assert.ok(converted.length > 0);
   for (const file of converted) {
     const text = read(file);
-    assert.match(text, /useUiStandard\(\)|columns\.grid|uiStandard\b/, `${file}: no UI_STANDARD switch`);
-    assert.match(text, /StandardGrid|ListGrid|DataGrid|LineGrid/, `${file}: no grid`);
+    // useUiStandard(), or the list's own switch (columns.grid / gridColumns.grid from useTableColumns).
+    assert.match(text, /useUiStandard\(\)|[cC]olumns\.grid|uiStandard\b/, `${file}: no UI_STANDARD switch`);
+    // StandardGrid, ListGrid, DataGrid, LineGrid or a module grid built on them (CommissionRulesGrid, DocumentLinesGrid).
+    assert.match(text, /<\w*Grid\b/, `${file}: no grid`);
   }
 });

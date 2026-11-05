@@ -574,7 +574,7 @@ function UsersView() {
       {standard ? (
         <div ref={tableRef}>
           <StandardGrid<UserProfile>
-            id="settings.users"
+            id="settings-users"
             label={t("users.userCol")}
             rows={filteredProfiles}
             rowKey={(profile) => profile.id}

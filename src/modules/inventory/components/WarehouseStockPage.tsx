@@ -254,7 +254,7 @@ export default function WarehouseStockPage() {
 
             {standard ? (
               <StandardGrid<WarehouseStockRow>
-                id="inventory.warehouse-stock"
+                id="inventory-warehouse-stock"
                 label={t("inventory.columns.qtyOnHand")}
                 rows={paginatedRows}
                 rowKey={(row) => row.id}

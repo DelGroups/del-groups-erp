@@ -77,7 +77,7 @@ export function PivotView<R extends ViewRecord>({ definition: def, records, fmt 
       </div>
       {standard ? (
         <StandardGrid<number>
-          id={`views.pivot.${def.model.key}`}
+          id={`views-pivot-${def.model.key}`}
           label={`${groupByLabel(def, rows, fmt)}${cols ? ` × ${groupByLabel(def, cols, fmt)}` : ""}`}
           rows={rowIndexes}
           rowKey={(ri) => table.rows[ri].key}

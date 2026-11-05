@@ -591,7 +591,7 @@ export default function ConsignmentsPage() {
                 </div>
                 {standard ? (
                   <StandardGrid<ConsignmentInventoryRow>
-                    id="consignments.stock"
+                    id="consignments-stock"
                     label={t("consignments.tabStock")}
                     rows={filteredInventory}
                     rowKey={(row) => row.id}
@@ -729,7 +729,7 @@ export default function ConsignmentsPage() {
                 <h3 className="mb-3 font-semibold">{t("consignments.agingTitle")}</h3>
                 {standard ? (
                   <StandardGrid<ConsignmentInventoryRow>
-                    id="consignments.aging"
+                    id="consignments-aging"
                     label={t("consignments.agingTitle")}
                     rows={agingRows}
                     rowKey={(row) => row.id}

@@ -1020,7 +1020,7 @@ export default function ProductionOrderDetailPage() {
                 {uiStandard ? (
                   <div className="mb-3">
                     <StandardGrid<OutsourcingRow>
-                      id="production.order.outsourcing"
+                      id="production-order-outsourcing"
                       label={t("production.outsourcing")}
                       rows={order.outsourcing}
                       rowKey={(row) => row.id}
@@ -1244,7 +1244,7 @@ export default function ProductionOrderDetailPage() {
                   </div>
                   {uiStandard ? (
                     <StandardGrid<MaterialRow>
-                      id="production.order.materials"
+                      id="production-order-materials"
                       label={t("forms.selectProduct")}
                       rows={group.rows}
                       rowKey={(row) => row.id}
@@ -1478,7 +1478,7 @@ export default function ProductionOrderDetailPage() {
             {uiStandard ? (
               <div className="mb-3">
                 <StandardGrid<ExpenseRow>
-                  id="production.order.expenses"
+                  id="production-order-expenses"
                   label={t("production.tabs.expenses")}
                   rows={order.expenses}
                   rowKey={(row) => row.id}

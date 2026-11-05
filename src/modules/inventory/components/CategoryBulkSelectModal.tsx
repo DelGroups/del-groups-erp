@@ -168,7 +168,7 @@ export default function CategoryBulkSelectModal({
 
         {standard ? (
           <StandardGrid<Product>
-            id="inventory.category-bulk-select"
+            id="inventory-category-bulk-select"
             label={t("forms.productName")}
             rows={filteredProducts}
             rowKey={(product) => product.id}

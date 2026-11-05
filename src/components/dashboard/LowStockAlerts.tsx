@@ -41,7 +41,7 @@ export default function LowStockAlerts({ products }: LowStockAlertsProps) {
         </div>
       ) : standard ? (
         <StandardGrid<LowStockProduct>
-          id="dashboard.low-stock"
+          id="dashboard-low-stock"
           label={t("dashboard.lowStock")}
           rows={products}
           rowKey={(p) => p.id}

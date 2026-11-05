@@ -195,7 +195,7 @@ export default function LegacyCommissionRulesPage() {
             </div>
 
             {standard ? (
-              <CommissionRulesGrid id="commissions.rules" rules={rules} loading={loading} onDelete={(ruleId) => void handleDelete(ruleId)} />
+              <CommissionRulesGrid id="commissions-rules" rules={rules} loading={loading} onDelete={(ruleId) => void handleDelete(ruleId)} />
             ) : loading ? (
               <div className="p-8 text-center text-app-muted text-xs">{t("common.loading")}</div>
             ) : rules.length === 0 ? (

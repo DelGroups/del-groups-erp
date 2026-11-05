@@ -81,7 +81,7 @@ export default function AdvancesTab({
         )}
         {standard ? (
           <StandardGrid<EmployeeAdvance>
-            id="payroll.advances"
+            id="payroll-advances"
             label={t("employees.tabs.advances")}
             rows={advances}
             rowKey={(adv) => adv.id}

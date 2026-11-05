@@ -158,7 +158,7 @@ export default function StockIntegrityPage() {
 
                 {standard ? (
                   <StandardGrid<StockIssue>
-                    id={`settings.stock-integrity.${group.kind === "duplicate_name" ? "duplicates" : "issues"}`}
+                    id={`settings-stock-integrity-${group.kind === "duplicate_name" ? "duplicates" : "issues"}`}
                     label={t(`stockIntegrity.kinds.${group.kind}`)}
                     rows={group.kind === "duplicate_name" ? groupDuplicateNames(group.rows).flatMap((names) => names.rows) : group.rows}
                     rowKey={(row) => `${row.issue}-${row.product_id}`}

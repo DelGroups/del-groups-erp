@@ -198,7 +198,7 @@ export default function CashBankPage() {
 
           {standard ? (
             <StandardGrid<AccountLedgerBalance>
-              id="cash-bank.accounts"
+              id="cash-bank-accounts"
               label={t("cashBank.listTitle")}
               rows={accounts}
               rowKey={(a) => a.account_id}
