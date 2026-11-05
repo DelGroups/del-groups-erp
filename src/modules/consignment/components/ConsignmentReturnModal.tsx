@@ -7,6 +7,9 @@ import type { ConsignmentLookups } from "../actions/consignment";
 import type { ConsignmentInventoryRow } from "../lib/types";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 export interface ConsignmentReturnModalProps {
   open: boolean;
@@ -26,8 +29,8 @@ export interface ConsignmentReturnModalProps {
 }
 
 export default function ConsignmentReturnModal(props: ConsignmentReturnModalProps) {
-  const { t } = useI18n();
-  // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-2 lookups, UI-6 lines on LineGrid): partner, sales rep and warehouse through EntityLookup.
   const uiStandard = useUiStandard();
   const { lookups, partnerId, setPartnerId, partnerInventory, saving } = props;
 
@@ -106,6 +109,37 @@ export default function ConsignmentReturnModal(props: ConsignmentReturnModalProp
 
         {!partnerId ? (
           <p className="text-sm text-app-muted">{t("consignments.selectPartnerFirst")}</p>
+        ) : uiStandard ? (
+          <LineGrid<ConsignmentInventoryRow>
+            id="consignment-return-lines"
+            label={t("consignments.opTypeReturn")}
+            lines={partnerInventory.filter((row) => row.remaining_qty > 0)}
+            lineKey={(row) => row.id}
+            lineLabel={(row) => row.product_name}
+            labels={lineGridLabels(t)}
+            columns={[
+              { key: "product", header: t("print.product"), width: 240, cell: (row) => <LineText>{row.product_name}</LineText> },
+              { key: "remaining", header: t("consignments.remaining"), type: "number", cell: (row) => <LineText className="font-semibold">{formatQuantity(row.remaining_qty, locale)}</LineText> },
+              {
+                key: "returnQty",
+                header: t("consignments.returnQty"),
+                type: "number",
+                width: 128,
+                error: (row) => (Number(props.returnQtyByProduct[row.product_id] || 0) > row.remaining_qty ? t("consignments.qtyExceedsRemaining") : null),
+                cell: (row, ctx) => {
+                  const raw = props.returnQtyByProduct[row.product_id];
+                  return (
+                    <LineNumberCell
+                      ctx={ctx}
+                      value={raw ? Number(raw) : null}
+                      max={row.remaining_qty}
+                      onChange={(value) => props.setReturnQtyByProduct((prev) => ({ ...prev, [row.product_id]: value === null ? "" : String(value) }))}
+                    />
+                  );
+                },
+              },
+            ]}
+          />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="min-w-full text-sm">

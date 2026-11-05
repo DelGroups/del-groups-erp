@@ -25,6 +25,8 @@ import type { Product } from "@/types/database.types";
 import { ArrowLeft, PackagePlus, Trash2 } from "lucide-react";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
 
 interface InitialBalanceLine {
   id: string;
@@ -263,6 +265,42 @@ export default function ConsignmentInitialBalanceNewPage() {
                 <BarcodeScanField onScan={handleBarcodeScan} label={t("consignments.scanBarcode")} />
               </div>
 
+              {uiStandard ? (
+                <LineGrid<InitialBalanceLine>
+                  id="consignment-initial-balance-lines"
+                  label={t("consignments.linesPanel")}
+                  lines={lines}
+                  lineKey={(line) => line.id}
+                  lineLabel={(line, index) => line.product_name || `#${index + 1}`}
+                  labels={lineGridLabels(t)}
+                  onAddLine={() => setLines((prev) => [...prev, createEmptyLine()])}
+                  onRemove={(index) => removeLine(lines[index].id)}
+                  columns={[
+                    {
+                      key: "product",
+                      header: t("consignments.colProductBarcode"),
+                      width: 280,
+                      cell: (line) => (
+                        <ProductCombobox
+                          products={lookups?.products || []}
+                          selectedId={line.product_id}
+                          selectedName={line.product_name}
+                          onSelect={(product) => handleProductSelect(line.id, product)}
+                          instanceId={line.id}
+                        />
+                      ),
+                    },
+                    { key: "unit", header: t("consignments.colUnit"), type: "code", width: 96, cell: (line) => <LineText muted>{line.unit}</LineText> },
+                    {
+                      key: "quantity",
+                      header: t("consignments.colInitialQty"),
+                      type: "number",
+                      width: 128,
+                      cell: (line, ctx) => <LineNumberCell ctx={ctx} value={line.quantity} onChange={(value) => updateLine(line.id, { quantity: value ?? 0 })} />,
+                    },
+                  ]}
+                />
+              ) : (
               <div className="overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)]">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-[color:var(--erp-bg-table-header)]">
@@ -308,12 +346,15 @@ export default function ConsignmentInitialBalanceNewPage() {
                   </tbody>
                 </table>
               </div>
+              )}
 
+              {uiStandard ? null : (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <Button type="button" appearance="outline" onClick={() => setLines((prev) => [...prev, createEmptyLine()])}>
                   {t("forms.addRow")}
                 </Button>
               </div>
+              )}
             </Panel>
           </div>
         )}

@@ -45,6 +45,9 @@ import { useProfileNames } from "@/components/lists/useProfileNames";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { profileName } from "@/lib/profiles/displayNames";
 import { ListGrid } from "@/components/lists/ListGrid";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { Chip, useUiStandard } from "@/design-system/components";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 /** Column choice key of the history list (prompt 24c). */
 const HISTORY_LIST_KEY = "consignment.documents";
@@ -94,7 +97,9 @@ function dispatchValue(items: ConsignmentDispatchItem[]): number {
 }
 
 export default function ConsignmentsPage() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
+  // UI_STANDARD (UI-6): the stock and the aging alerts on the grid as well; old tables with the flag off.
+  const standard = useUiStandard();
   const router = useRouter();
   const { can } = useAuth();
   const canManage = can("can_manage_consignments");
@@ -168,6 +173,15 @@ export default function ConsignmentsPage() {
   }, [inventory]);
 
   const agingRows = inventory.filter((row) => row.is_aging);
+  /** A quantity column of the stock grids (right-aligned, sortable). */
+  const qtyColumn = (key: string, header: string, value: (row: ConsignmentInventoryRow) => number, className?: string): StandardColumn<ConsignmentInventoryRow> => ({
+    key,
+    header,
+    type: "number",
+    className,
+    cell: (row) => formatQuantity(value(row), locale),
+    sortValue: value,
+  });
 
   const kpiStockValue = useMemo(
     () => inventory.reduce((sum, row) => sum + row.remaining_qty * row.unit_price, 0),
@@ -575,6 +589,41 @@ export default function ConsignmentsPage() {
                     ))}
                   </select>
                 </div>
+                {standard ? (
+                  <StandardGrid<ConsignmentInventoryRow>
+                    id="consignments.stock"
+                    label={t("consignments.tabStock")}
+                    rows={filteredInventory}
+                    rowKey={(row) => row.id}
+                    showCount
+                    columns={[
+                      { key: "partner", header: t("consignments.partner"), cell: (row) => row.partner_name, sortValue: (row) => row.partner_name },
+                      {
+                        key: "product",
+                        header: t("print.product"),
+                        width: 240,
+                        cell: (row) => (
+                          <span>
+                            {row.product_name}
+                            {row.category ? <span className="ds-muted"> · {row.category}</span> : null}
+                          </span>
+                        ),
+                        sortValue: (row) => row.product_name,
+                      },
+                      qtyColumn("sent", t("consignments.sent"), (row) => row.delivered_qty),
+                      qtyColumn("sold", t("consignments.sold"), (row) => row.sold_qty, "ds-text-success"),
+                      qtyColumn("returned", t("consignments.returned"), (row) => row.returned_qty, "ds-text-warning"),
+                      qtyColumn("remaining", t("consignments.remaining"), (row) => row.remaining_qty, "font-semibold"),
+                      {
+                        key: "aging",
+                        header: t("consignments.aging"),
+                        type: "status",
+                        cell: (row) => (row.is_aging ? <Chip tone="warning">{`${row.aging_days} ${t("consignments.days")}`}</Chip> : "—"),
+                        sortValue: (row) => (row.is_aging ? row.aging_days : null),
+                      },
+                    ]}
+                  />
+                ) : (
                 <div className="overflow-x-auto rounded-xl border border-app">
                   <table className="min-w-full text-sm">
                     <thead className="bg-app-surface text-left text-xs uppercase text-app-muted">
@@ -614,6 +663,7 @@ export default function ConsignmentsPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </section>
             )}
 
@@ -677,7 +727,21 @@ export default function ConsignmentsPage() {
             {tab === "alerts" && (
               <section className="rounded-xl border border-app bg-app-surface p-4">
                 <h3 className="mb-3 font-semibold">{t("consignments.agingTitle")}</h3>
-                {agingRows.length === 0 ? (
+                {standard ? (
+                  <StandardGrid<ConsignmentInventoryRow>
+                    id="consignments.aging"
+                    label={t("consignments.agingTitle")}
+                    rows={agingRows}
+                    rowKey={(row) => row.id}
+                    empty={t("consignments.noAging")}
+                    columns={[
+                      { key: "partner", header: t("consignments.partner"), cell: (row) => row.partner_name, sortValue: (row) => row.partner_name },
+                      { key: "product", header: t("print.product"), cell: (row) => row.product_name, sortValue: (row) => row.product_name },
+                      qtyColumn("remaining", t("consignments.remaining"), (row) => row.remaining_qty),
+                      { key: "aging", header: t("consignments.aging"), type: "number", cell: (row) => `${row.aging_days} ${t("consignments.days")}`, sortValue: (row) => row.aging_days },
+                    ]}
+                  />
+                ) : agingRows.length === 0 ? (
                   <p className="text-sm text-app-muted">{t("consignments.noAging")}</p>
                 ) : (
                   <table className="min-w-full text-sm">

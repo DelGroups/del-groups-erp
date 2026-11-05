@@ -14,6 +14,9 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Users } from "lucide-react";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { formatFigure } from "@/lib/dates/localeDate";
 
 export interface ConsignmentRepPerformanceRow {
   repName: string;
@@ -32,8 +35,10 @@ function readCssColor(name: string, fallback: string): string {
 }
 
 export default function ConsignmentRepPerformanceChart({ data }: ConsignmentRepPerformanceChartProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { theme } = useTheme();
+  // UI_STANDARD (UI-6): the numbers under the chart on the grid; old table with the flag off.
+  const standard = useUiStandard();
   const [colors, setColors] = useState({
     grid: "#334155",
     muted: "#94a3b8",
@@ -107,6 +112,29 @@ export default function ConsignmentRepPerformanceChart({ data }: ConsignmentRepP
             </ResponsiveContainer>
           </div>
 
+          {standard ? (
+            <div className="mt-3">
+              <StandardGrid<ConsignmentRepPerformanceRow>
+                id="consignments.rep-performance"
+                label={t("consignments.salesRep")}
+                rows={data}
+                rowKey={(row) => row.repName}
+                columns={[
+                  { key: "rep", header: t("consignments.salesRep"), className: "font-semibold", cell: (row) => row.repName, sortValue: (row) => row.repName },
+                  { key: "dispatched", header: t("consignments.repPerformanceDispatched"), type: "money", cell: (row) => `${formatFigure(row.dispatched, 0, locale)} ${currency}`, sortValue: (row) => row.dispatched },
+                  { key: "sold", header: t("consignments.repPerformanceSold"), type: "money", className: "ds-text-success", cell: (row) => `${formatFigure(row.sold, 0, locale)} ${currency}`, sortValue: (row) => row.sold },
+                  {
+                    key: "conversion",
+                    header: t("consignments.repPerformanceConversion"),
+                    type: "number",
+                    className: "font-semibold",
+                    cell: (row) => `${formatFigure(row.dispatched > 0 ? (row.sold / row.dispatched) * 100 : 0, 0, locale)}%`,
+                    sortValue: (row) => (row.dispatched > 0 ? row.sold / row.dispatched : 0),
+                  },
+                ]}
+              />
+            </div>
+          ) : (
           <div className="mt-3 overflow-x-auto rounded-lg border border-app">
             <table className="min-w-full text-sm">
               <thead className="bg-app text-left text-xs uppercase text-app-muted">
@@ -132,6 +160,7 @@ export default function ConsignmentRepPerformanceChart({ data }: ConsignmentRepP
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </div>

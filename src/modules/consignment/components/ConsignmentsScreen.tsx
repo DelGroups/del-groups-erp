@@ -19,6 +19,9 @@ import type { ConsignmentDispatch, ConsignmentMonthlyReport, ConsignmentReturn }
 import { consignmentDocuments, consignmentKpis, documentsDefinition, DOCS_VIEW_KEY, partnerStockDefinition, repPerformance, STOCK_VIEW_KEY, type ConsignmentDocRecord } from "../views/consignment";
 import ConsignmentDeliveryPrintTemplate from "./ConsignmentDeliveryPrintTemplate";
 import ConsignmentRepPerformanceChart from "./ConsignmentRepPerformanceChart";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid } from "@/components/lists/StandardGrid";
+import { codeName } from "@/components/lists/standardGridLogic";
 
 type Row = Record<string, unknown>;
 const unwrap = async <T,>(p: Promise<{ success: true; data?: T } | { success: false; error: string }>): Promise<T> => {
@@ -172,13 +175,29 @@ function DocumentRecordView({ record, printReport }: { record: ConsignmentDocRec
   const lines = (dispatch?.items ?? ret?.items ?? []).map((i) => ({ name: i.product_name, code: i.product_code, qty: i.quantity, unit: i.unit, price: i.unit_price }));
   const soldLines = (report?.sold_items ?? []).map((i) => ({ name: i.product_name, code: i.product_code, qty: i.quantity_sold, unit: null, price: i.unit_price }));
   const all = lines.length ? lines : soldLines;
+  // UI_STANDARD (UI-6): the document lines on the grid ("code · name", totals); old table with the flag off.
+  const standard = useUiStandard();
   const actions: FormAction[] = [
     ...(record.document_type === "DISPATCH" && dispatch
       ? [{ key: "print", label: t("common.print"), primary: true, icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => setPrintData(dispatch) }]
       : []),
     ...(report ? [{ key: "print", label: t("common.print"), primary: true, icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => printReport(report) }] : []),
   ];
-  const table = (
+  const table = standard ? (
+    <StandardGrid<(typeof all)[number]>
+      id="consignments.document-lines"
+      label={t("sales.engine.tabs.lines", { count: all.length })}
+      rows={all}
+      rowKey={(l) => `${l.code ?? ""}:${l.name}:${all.indexOf(l)}`}
+      columns={[
+        { key: "product", header: t("dashboard.product"), width: 260, cell: (l) => codeName(l.code, l.name), sortValue: (l) => l.name },
+        { key: "qty", header: t("modals.salesView.quantity"), type: "number", cell: (l) => `${formatFigure(l.qty, 2, locale)}${l.unit ? ` ${l.unit}` : ""}`, sortValue: (l) => l.qty },
+        { key: "price", header: t("modals.salesView.price"), type: "money", cell: (l) => formatFigure(l.price, 2, locale), sortValue: (l) => l.price },
+        { key: "total", header: t("modals.salesView.lineTotal"), type: "money", className: "font-semibold", cell: (l) => formatFigure(l.qty * l.price, 2, locale), sortValue: (l) => l.qty * l.price },
+      ]}
+      totals={{ total: formatFigure(all.reduce((sum, l) => sum + l.qty * l.price, 0), 2, locale) }}
+    />
+  ) : (
     <table className="w-full border-collapse text-left">
       <thead>
         <tr>

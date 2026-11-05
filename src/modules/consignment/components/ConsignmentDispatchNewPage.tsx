@@ -29,6 +29,9 @@ import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { lineGridLabels } from "@/i18n/uiStandardLabels";
+import { formatQuantity } from "@/lib/dates/localeDate";
 
 interface DispatchLine {
   id: string;
@@ -61,7 +64,7 @@ function createEmptyLine(): DispatchLine {
 }
 
 export default function ConsignmentDispatchNewPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // UI_STANDARD (UI-2 lookups): partner, sales rep and warehouse through EntityLookup.
   const uiStandard = useUiStandard();
   // Names of a rep / warehouse picked or created in a lookup that `lookups` does not list yet.
@@ -390,6 +393,46 @@ export default function ConsignmentDispatchNewPage() {
                 />
               </div>
 
+              {uiStandard ? (
+                <LineGrid<DispatchLine>
+                  id="consignment-dispatch-lines"
+                  label={t("consignments.linesPanel")}
+                  lines={lines}
+                  lineKey={(line) => line.id}
+                  lineLabel={(line, index) => line.product_name || `#${index + 1}`}
+                  labels={lineGridLabels(t)}
+                  onAddLine={() => setLines((prev) => [...prev, createEmptyLine()])}
+                  onRemove={(index) => removeLine(lines[index].id)}
+                  columns={[
+                    {
+                      key: "product",
+                      header: t("consignments.colProductBarcode"),
+                      width: 280,
+                      cell: (line) => (
+                        <ProductCombobox
+                          products={lookups?.products || []}
+                          selectedId={line.product_id}
+                          selectedName={line.product_name}
+                          onSelect={(product) => void handleProductSelect(line.id, product)}
+                          instanceId={line.id}
+                        />
+                      ),
+                    },
+                    { key: "unit", header: t("consignments.colUnit"), type: "code", width: 96, cell: (line) => <LineText muted>{line.unit}</LineText> },
+                    { key: "available", header: t("consignments.colAvailable"), type: "number", cell: (line) => <LineText>{formatQuantity(line.available_stock, locale)}</LineText> },
+                    {
+                      key: "quantity",
+                      header: t("consignments.colDispatchQty"),
+                      type: "number",
+                      width: 128,
+                      error: (line) => (line.quantity > line.available_stock ? t("consignments.qtyExceedsStock", { name: line.product_name }) : null),
+                      cell: (line, ctx) => (
+                        <LineNumberCell ctx={ctx} value={line.quantity} max={line.available_stock} onChange={(value) => updateLine(line.id, { quantity: value ?? 0 })} />
+                      ),
+                    },
+                  ]}
+                />
+              ) : (
               <div className="overflow-x-auto rounded-[var(--erp-radius-md)] border border-[color:var(--erp-border-default)]">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-[color:var(--erp-bg-table-header)]">
@@ -443,12 +486,15 @@ export default function ConsignmentDispatchNewPage() {
                   </tbody>
                 </table>
               </div>
+              )}
 
+              {uiStandard ? null : (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <Button type="button" appearance="outline" onClick={() => setLines((prev) => [...prev, createEmptyLine()])}>
                   {t("forms.addRow")}
                 </Button>
               </div>
+              )}
             </Panel>
           </div>
         )}
