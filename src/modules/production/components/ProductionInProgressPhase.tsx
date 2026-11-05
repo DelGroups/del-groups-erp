@@ -18,6 +18,13 @@ import {
   type WarehouseProductOption,
 } from "../actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useUiStandard } from "@/design-system/components";
+import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { formatMoney as gridMoney, formatQuantity } from "@/lib/dates/localeDate";
+
+type MaterialRow = ProductionOrder["materials"][number];
+type ExpenseRow = ProductionOrder["expenses"][number];
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { fetchProductByBarcode, findCatalogItemByScan } from "@/lib/products/barcode";
@@ -95,7 +102,10 @@ export default function ProductionInProgressPhase({
   setError,
   onUpdated,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // UI_STANDARD (UI-6): materials, services and payments on the grid (delete in the row menu); old tables with the flag off.
+  const standard = useUiStandard();
+  const fig = (n: number) => gridMoney(n, locale, { currency: null });
   const { canViewProductionFinancials } = usePermissions();
   const showFinancials = canViewProductionFinancials();
   const currency = t("common.currency");
@@ -796,6 +806,36 @@ export default function ProductionInProgressPhase({
             </div>
           ) : null}
 
+          {standard ? (
+            <StandardGrid<MaterialRow>
+              id="production.materials"
+              label={t("forms.selectProduct")}
+              rows={order.materials}
+              rowKey={(row) => row.id}
+              empty={t("common.noData")}
+              columns={[
+                { key: "no", header: "№", type: "number", width: 56, className: "ds-muted", cell: (row) => order.materials.indexOf(row) + 1 },
+                { key: "product", header: t("forms.selectProduct"), width: 240, className: "font-medium", cell: (row) => row.product_name, sortValue: (row) => row.product_name },
+                { key: "warehouse", header: t("production.warehouse"), cell: (row) => row.warehouse_name || "—", sortValue: (row) => row.warehouse_name },
+                { key: "qty", header: t("forms.quantity"), type: "number", cell: (row) => `${formatQuantity(row.quantity, locale)} ${row.unit}`, sortValue: (row) => row.quantity },
+                ...(showFinancials
+                  ? ([
+                      { key: "unitCost", header: t("production.unitCost"), type: "money", cell: (row) => fig(Number(row.unit_cost) || 0), sortValue: (row) => Number(row.unit_cost) || 0 },
+                      {
+                        key: "lineTotal",
+                        header: t("forms.lineTotal"),
+                        type: "money",
+                        className: "font-semibold",
+                        cell: (row) => fig(Number(row.line_cost) > 0 ? Number(row.line_cost) : row.quantity * (Number(row.unit_cost) || 0)),
+                      },
+                    ] satisfies StandardColumn<MaterialRow>[])
+                  : []),
+              ]}
+              rowActions={(row) => (
+                <TableRowActionsMenu items={[{ key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, disabled: saving, onClick: () => void deleteMaterial(row.id), variant: "destructive" }]} />
+              )}
+            />
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="min-w-full text-sm">
               <thead className="bg-app-card-hover/60 text-left text-xs uppercase text-app-muted">
@@ -857,6 +897,7 @@ export default function ProductionInProgressPhase({
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : null}
 
@@ -955,6 +996,32 @@ export default function ProductionInProgressPhase({
             </button>
           </div>
 
+          {standard ? (
+            <StandardGrid<ExpenseRow>
+              id="production.services"
+              label={t("production.workflow.addExpense")}
+              rows={order.expenses}
+              rowKey={(row) => row.id}
+              empty={t("common.noData")}
+              columns={[
+                { key: "description", header: t("production.workflow.descriptionCol"), width: 220, cell: (row) => row.description, sortValue: (row) => row.description },
+                { key: "category", header: t("production.workflow.category"), cell: (row) => expenseCategoryLabel(row.category), sortValue: (row) => row.category },
+                { key: "contractor", header: t("production.workflow.contractor"), cell: (row) => parseProductionExpenseNotes(row.notes).contractor || "—" },
+                { key: "amount", header: t("production.workflow.amountAzn"), type: "money", className: "font-semibold", cell: (row) => fig(row.amount), sortValue: (row) => row.amount },
+                {
+                  key: "account",
+                  header: t("production.workflow.accountCol"),
+                  cell: (row) =>
+                    row.account_name ||
+                    (row.account_id ? accountsById.get(row.account_id)?.name : null) ||
+                    (row.finance_expense_id ? t("production.postedToFinance") : t("production.projectOnlyCost")),
+                },
+              ]}
+              rowActions={(row) => (
+                <TableRowActionsMenu items={[{ key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, disabled: saving, onClick: () => void deleteExpense(row.id), variant: "destructive" }]} />
+              )}
+            />
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="min-w-full text-sm">
               <thead className="bg-app-card-hover/60 text-left text-xs uppercase text-app-muted">
@@ -1007,6 +1074,7 @@ export default function ProductionInProgressPhase({
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : null}
 
@@ -1028,6 +1096,20 @@ export default function ProductionInProgressPhase({
             />
           </div>
 
+          {standard ? (
+            <StandardGrid<(typeof paymentRows)[number]>
+              id="production.payments"
+              label={t("production.workflow.paymentsHint")}
+              rows={paymentRows}
+              rowKey={(row) => `${row.kind}-${paymentRows.indexOf(row)}`}
+              empty={t("common.noData")}
+              columns={[
+                { key: "label", header: t("production.workflow.descriptionCol"), width: 240, cell: (row) => row.label },
+                { key: "account", header: t("production.workflow.accountCol"), cell: (row) => row.account || "—" },
+                { key: "amount", header: t("production.workflow.amountAzn"), type: "money", className: "font-semibold", cell: (row) => fig(row.amount), sortValue: (row) => row.amount },
+              ]}
+            />
+          ) : (
           <div className="overflow-x-auto rounded-xl border border-app">
             <table className="min-w-full text-sm">
               <thead className="bg-app-card-hover/60 text-left text-xs uppercase text-app-muted">
@@ -1056,6 +1138,7 @@ export default function ProductionInProgressPhase({
               </tbody>
             </table>
           </div>
+          )}
 
           <p className="text-xs text-app-muted">{t("production.workflow.paymentsHint")}</p>
         </div>
