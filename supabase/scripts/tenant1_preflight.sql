@@ -157,6 +157,9 @@ union all
 select 'pending', '20261105100000_imports_stages_pay: Payment lines, Pay on import costs, import stages',
        case when to_regclass('public.import_shipment_events') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261106100000_imports_duty_override: Customs duty typed from the declaration',
+       case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'import_cost_lines' and column_name = 'amount_typed') then 'present' else 'missing' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
