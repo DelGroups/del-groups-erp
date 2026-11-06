@@ -5504,6 +5504,7 @@ export const enMessages: Messages = {
       method_not_for_type: "{cost}: this method only works for customs duty, so it is split by value.",
       manual_mismatch: "{cost}: the amounts typed per line differ from the cost by {amount} AZN.",
       zero_basis: "{cost}: nothing to split it by (prices, weights or quantities are 0).",
+      duty_by_value: "No duty rate on the lines, split by value",
     },
     landed: {
       title: "Landed cost",
@@ -5609,7 +5610,8 @@ export const enMessages: Messages = {
       paidLater: "paid later",
       notSplit: "not split (1410)",
       toVatAccount: "→ 1410",
-      computedDutyHint: "Computed from the lines' duty rates",
+      dutyTypedHelp: "The duty is computed from the lines' rates. If you type the amount from the customs declaration, that amount is used",
+      dutyRecompute: "Compute",
       vatSuggestLabel: "Suggest {rate}% VAT",
     },
     settings: {

@@ -6,7 +6,9 @@
  *   1. every amount to AZN with its own rate (goods at the invoice rate);
  *   2. customs value per line = goods + the capitalized costs of the "customs value" types
  *      (international freight and insurance by default), each split by its own method;
- *   3. customs duty per line = line customs value × duty_rate_pct (method per_line_duty);
+ *   3. customs duty per line = line customs value × duty_rate_pct (method per_line_duty); with
+ *      the amount typed from the customs declaration (IMP-6) that amount is the duty, split in
+ *      proportion to the computed duty of each line (by customs value when every rate is 0);
  *   4. every other capitalized cost split by its own method;
  *   5. customs VAT suggestion = rate × (customs value + duty), recoverable, never capitalized.
  * VAT amounts are never part of the landed cost. Each cost is split in cents, rounded to the
@@ -73,8 +75,13 @@ export interface LandedCostLineInput {
 export interface LandedCostCostInput {
   id: string;
   costType: CostType;
-  /** In the cost's own currency; ignored for per_line_duty (computed). */
+  /** In the cost's own currency; for per_line_duty only used when `amountTyped` (else computed). */
   amount: number;
+  /**
+   * IMP-6, customs duty per line: the amount is the duty from the customs declaration (AZN) and
+   * replaces the duty computed from the lines' rates. False or missing: computed as before.
+   */
+  amountTyped?: boolean;
   /** AZN per unit of the cost's currency (1 for AZN). */
   rateToAzn: number;
   /** Recoverable VAT on this cost, already in AZN (never capitalized). */
@@ -102,7 +109,9 @@ export type LandedCostIssueCode =
   | "missing_chargeable"
   | "method_not_for_type"
   | "manual_mismatch"
-  | "zero_basis";
+  | "zero_basis"
+  /** IMP-6: a typed duty with no duty rate on any line, split by customs value instead. */
+  | "duty_by_value";
 
 export interface LandedCostIssue {
   code: LandedCostIssueCode;
@@ -115,7 +124,7 @@ export interface LandedCostLineResult {
   id: string;
   goodsAzn: number;
   customsValueAzn: number;
-  /** Duty from the line's rate (part of the landed cost through a customs_duty cost line). */
+  /** Duty of the line: from its rate, or its share of a typed duty (IMP-6). */
   dutyAzn: number;
   /** AZN per cost line id (capitalized costs only). */
   allocations: Record<string, number>;
@@ -142,6 +151,8 @@ export interface LandedCostTotals {
   goodsAzn: number;
   customsValueAzn: number;
   dutyAzn: number;
+  /** Duty from the lines' rates, also when a typed declaration amount replaces it (IMP-6). */
+  computedDutyAzn: number;
   capitalizedAzn: number;
   recoverableVatAzn: number;
   customsVatSuggestionAzn: number;
@@ -298,12 +309,31 @@ export function calculateLandedCost(input: LandedCostInput): LandedCostResult {
     return cents;
   });
 
-  // 2. Customs duty per line from each line's rate.
-  const dutyCents = lines.map((l, i) => toCents(fromCents(customsValueCents[i]) * (finite(l.dutyRatePct) / 100)));
+  // 2. Customs duty per line from each line's rate, or the typed declaration amount (IMP-6) split
+  //    in proportion to those computed duties (by customs value when every rate is 0).
+  const computedDutyCents = lines.map((l, i) => toCents(fromCents(customsValueCents[i]) * (finite(l.dutyRatePct) / 100)));
+  const typedDuty = prepared.filter(isDuty).some((p) => p.cost.amountTyped);
+  const effectiveDutyCents = lines.map(() => 0);
   for (const p of prepared.filter(isDuty)) {
-    const total = dutyCents.reduce((s, c) => s + c, 0);
-    record(p, "per_line_duty", p.capitalized && lines.length ? dutyCents : null, total);
+    let shares: number[] | null;
+    let total: number;
+    if (p.cost.amountTyped) {
+      total = toCents(finite(p.cost.amount));
+      shares = lines.length ? allocateCents(total, computedDutyCents) : null;
+      if (lines.length && !shares) {
+        shares = allocateCents(total, customsValueCents);
+        if (total !== 0) warnings.push({ code: "duty_by_value", costId: p.cost.id });
+      }
+      if (lines.length && !shares && total !== 0) errors.push({ code: "zero_basis", costId: p.cost.id });
+    } else {
+      total = computedDutyCents.reduce((s, c) => s + c, 0);
+      shares = lines.length ? computedDutyCents : null;
+    }
+    (shares ?? []).forEach((c, i) => (effectiveDutyCents[i] += c));
+    record(p, "per_line_duty", p.capitalized && shares ? shares : null, total);
   }
+  // Without a typed duty the line duty stays the computed one (also with no duty cost line).
+  const dutyCents = typedDuty ? effectiveDutyCents : computedDutyCents;
   // per_line_duty on another cost type cannot be computed: split by value with a warning.
   for (const p of prepared.filter((x) => x.cost.splitMethod === "per_line_duty" && !isDuty(x))) {
     warnings.push({ code: "method_not_for_type", costId: p.cost.id });
@@ -358,6 +388,7 @@ export function calculateLandedCost(input: LandedCostInput): LandedCostResult {
       goodsAzn: fromCents(goodsTotal),
       customsValueAzn: fromCents(customsValueTotal),
       dutyAzn: fromCents(dutyTotal),
+      computedDutyAzn: fromCents(computedDutyCents.reduce((s, c) => s + c, 0)),
       capitalizedAzn: fromCents(capitalized),
       recoverableVatAzn: fromCents(sumCents(costs.map((c) => c.vatAzn))),
       customsVatSuggestionAzn: round2(fromCents(customsValueTotal + dutyTotal) * (finite(settings.customsVatRatePct) / 100)),

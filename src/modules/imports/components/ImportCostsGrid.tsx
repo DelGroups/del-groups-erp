@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Percent, RefreshCw, SplitSquareHorizontal } from "lucide-react";
+import { Calculator, Percent, RefreshCw, SplitSquareHorizontal } from "lucide-react";
 import { EntityLookup, type LookupRecord } from "@/components/lookups";
 import { LineGrid, LineNumberCell, LineSelectCell, LineText, LineTextCell, type LineColumn } from "@/components/line-grid";
 import { Chip, IconButton, type ChipTone } from "@/design-system/components";
@@ -14,7 +14,7 @@ import { COST_TYPES, round2, type CostType, type LandedCostIssue, type LandedCos
 import type { ImportLookups } from "../actions/imports";
 import type { PlausibilityWarning } from "../lib/landedChecks";
 import type { CostPaymentState, CostPaymentStatus } from "../lib/costPayments";
-import { newCost, newRowKey, suggestedVat, type CostLineDraft, type ShipmentDraft } from "../lib/shipment";
+import { isTypedDuty, newCost, newRowKey, suggestedVat, type CostLineDraft, type ShipmentDraft } from "../lib/shipment";
 import { costTypeLabel } from "./LandedCostPanel";
 import { ManualSplitDrawer } from "./ManualSplitDrawer";
 
@@ -144,10 +144,29 @@ export function ImportCostsGrid({
         type: "money",
         width: 104,
         cell: (c, ctx) =>
-          c.splitMethod === "per_line_duty" ? (
-            <span className="block" title={t("imports.costFields.computedDutyHint")}>
-              <LineText muted>{money(byId.get(c.key)?.amountAzn ?? 0)}</LineText>
+          c.splitMethod === "per_line_duty" && c.costType === "customs_duty" ? (
+            // IMP-6: empty = computed from the lines' rates (shown as the placeholder); a typed
+            // amount (AZN, from the customs declaration) is the duty. "Hesabla" clears it.
+            <span className="ds-rate-field">
+              <LineNumberCell
+                ctx={ctx}
+                value={isTypedDuty(c) ? c.amount : null}
+                placeholder={money(result.totals.computedDutyAzn)}
+                onChange={(v) =>
+                  setCost(c.key, v === null ? { amountTyped: false, amount: 0 } : { amountTyped: true, amount: v, currencyCode: "AZN", rateToAzn: 1 })
+                }
+              />
+              {ctx.editable && isTypedDuty(c) ? (
+                <IconButton
+                  size="sm"
+                  label={`${t("imports.costFields.dutyRecompute")}: ${nameOf(c, index(c.key))}`}
+                  icon={<Calculator className="h-3.5 w-3.5" />}
+                  onClick={() => setCost(c.key, { amountTyped: false, amount: 0 })}
+                />
+              ) : null}
             </span>
+          ) : c.splitMethod === "per_line_duty" ? (
+            <LineText muted>{money(byId.get(c.key)?.amountAzn ?? 0)}</LineText>
           ) : (
             <LineNumberCell ctx={ctx} value={c.amount} onChange={(v) => setCost(c.key, { amount: v ?? 0 })} />
           ),
@@ -361,6 +380,9 @@ export function ImportCostsGrid({
   }, [draft.costs, result, plausibility, rateBusy, lookups.suppliers, lookups.accounts, config, t, locale, payments]);
 
   const blocking = result.errors.filter((e) => e.code === "zero_basis" || e.code === "manual_mismatch");
+  // IMP-6: a typed duty that had no line rate to follow and was split by customs value.
+  const dutyByValue = result.warnings.filter((w) => w.code === "duty_by_value");
+  const hasLineDuty = draft.costs.some((c) => c.costType === "customs_duty" && c.splitMethod === "per_line_duty");
   const manualCost = manualFor ? draft.costs.find((c) => c.key === manualFor) ?? null : null;
 
   return (
@@ -385,6 +407,21 @@ export function ImportCostsGrid({
         onRemove={(index) => setDraft((d) => ({ ...d, costs: d.costs.filter((_, i) => i !== index) }))}
         onDuplicate={(index) => setDraft((d) => ({ ...d, costs: d.costs.flatMap((c, i) => (i === index ? [c, { ...c, key: newRowKey("c"), paidNow: false, cashAccountId: null }] : [c])) }))}
       />
+      {hasLineDuty ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("imports.costFields.dutyTypedHelp")}</p> : null}
+      {dutyByValue.length ? (
+        <ul className="flex flex-wrap gap-1.5" aria-live="polite">
+          {dutyByValue.map((w) => {
+            const i = draft.costs.findIndex((c) => c.key === w.costId);
+            const c = draft.costs[i];
+            if (!c) return null;
+            return (
+              <li key={`duty-${w.costId}`}>
+                <Chip tone="warning">{`${nameOf(c, i)}: ${t("imports.issues.duty_by_value")}`}</Chip>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       {blocking.length ? (
         <ul className="flex flex-col gap-1 text-[length:var(--ds-text-xs)]" role="alert">
           {blocking.map((e) => {

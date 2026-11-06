@@ -5503,6 +5503,7 @@ export const azMessages = {
       method_not_for_type: "{cost}: bu üsul yalnız gömrük rüsumu üçündür, ona görə dəyərə görə bölünür.",
       manual_mismatch: "{cost}: sətirlərə yazılan məbləğlər xərcdən {amount} AZN fərqlənir.",
       zero_basis: "{cost}: bölmək üçün əsas yoxdur (qiymət, çəki və ya miqdar 0-dır).",
+      duty_by_value: "Rüsum faizi yoxdur, dəyərə görə bölündü",
     },
     landed: {
       title: "Maya dəyəri",
@@ -5608,7 +5609,8 @@ export const azMessages = {
       paidLater: "sonra ödənilir",
       notSplit: "bölünmür (1410)",
       toVatAccount: "→ 1410",
-      computedDutyHint: "Sətirlərin rüsum faizindən hesablanır",
+      dutyTypedHelp: "Rüsum sətirlərdəki faizdən hesablanır. Gömrük bəyannaməsindəki məbləği yazsanız, o istifadə olunacaq",
+      dutyRecompute: "Hesabla",
       vatSuggestLabel: "ƏDV {rate}% təklif et",
     },
     settings: {

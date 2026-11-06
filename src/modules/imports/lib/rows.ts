@@ -76,6 +76,8 @@ export function shipmentFromRows(
           partnerId: str(c.partner_id),
           description: str(c.description),
           amount: money(c.amount),
+          // IMP-6: the typed declaration duty (a database without the column reads as computed).
+          amountTyped: c.amount_typed === true && method === "per_line_duty",
           currencyCode: isImportCurrency(c.currency_code) ? c.currency_code : "AZN",
           rateToAzn: num(c.rate_to_azn, 1),
           vatAmountAzn: money(c.vat_amount_azn),
