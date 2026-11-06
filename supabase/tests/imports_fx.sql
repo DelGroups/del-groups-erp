@@ -206,5 +206,6 @@ select set_config('request.jwt.claims', '', false);
 \ir ../migrations/20261104100000_imports_line_warehouses.sql
 \ir ../migrations/20261105100000_imports_stages_pay.sql
 \ir ../migrations/20261106100000_imports_duty_override.sql
+\ir ../migrations/20261107100000_gl_partner_cash_account.sql
 
 select 'ALL CHECKS PASSED';
