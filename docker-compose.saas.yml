@@ -1,0 +1,84 @@
+# Trial / SaaS stack on the Hetzner VPS (SAAS-1), next to production. Off until Del creates
+# /opt/del-groups-erp/.env.saas AND /opt/del-groups-erp/.env.control-panel (see
+# docs/runbooks/saas-trial-stack.md); erp-deploy.sh then builds and restarts it after each
+# production deploy. erp.del-groups.com (docker-compose.prod.yml, project del-groups-erp) is not
+# touched by anything here.
+#
+#   cp.del-groups.com           → control-panel:3100
+#   <slug>.erp.del-groups.com   → erp-saas:3000 (multi-tenant: tenant resolved from the Host)
+#
+#   docker compose -p del-groups-saas --env-file .env.saas --env-file .env.control-panel \
+#     -f docker-compose.saas.yml up -d --build
+name: del-groups-saas
+
+services:
+  erp-saas:
+    build:
+      context: .
+      args:
+        # No Supabase build args on purpose: in multi-tenant mode every request gets its
+        # tenant's Supabase URL and anon key from the control plane, and nothing of the
+        # production project may be baked into this image as a fallback.
+        NEXT_PUBLIC_SUPABASE_URL: ""
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://erp.del-groups.com}
+    # Its own tag: never the production image (del-groups-erp:latest).
+    image: del-groups-erp-saas:latest
+    # required: false only so CI can build without it; erp-deploy.sh starts this stack only
+    # when the file exists.
+    env_file:
+      - path: /opt/del-groups-erp/.env.saas
+        required: false
+    restart: unless-stopped
+    # In multi-tenant mode /login answers only for a registered domain, so the container checks
+    # /api/tenant/health instead: it answers for any Host without a tenant lookup.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/tenant/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    # Loopback only (SSH tunnel tests); the public way in is Caddy over the frontend network.
+    ports:
+      - "127.0.0.1:3003:3000"
+    mem_limit: 1g
+    networks:
+      edge:
+        aliases: [erp-saas]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  control-panel:
+    build:
+      # The panel reuses src/design-system, so the context is the repo root.
+      context: .
+      dockerfile: control-panel/Dockerfile
+      args:
+        # The control panel's OWN Supabase project (from .env.control-panel), never an ERP one.
+        # Read with --env-file .env.control-panel last, so these are the panel's values.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env.control-panel}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.control-panel}
+    image: del-groups-control-panel:latest
+    env_file:
+      - path: /opt/del-groups-erp/.env.control-panel
+        required: false
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    mem_limit: 512m
+    networks:
+      edge:
+        aliases: [control-panel]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edge:
+    external: true
+    name: del-social-ai_frontend
