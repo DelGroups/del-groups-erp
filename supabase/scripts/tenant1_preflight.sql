@@ -160,6 +160,9 @@ union all
 select 'pending', '20261106100000_imports_duty_override: Customs duty typed from the declaration',
        case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'import_cost_lines' and column_name = 'amount_typed') then 'present' else 'missing' end
 union all
+select 'pending', '20261107100000_gl_partner_cash_account: Partner payments on the cash account''s own ledger',
+       case when to_regprocedure('public.gl_coa_for_cash_account(uuid, text)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
