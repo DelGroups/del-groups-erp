@@ -159,8 +159,10 @@ docker build -f control-panel/Dockerfile -t del-groups-control-panel \
 ```
 
 With compose it is off by default. Set `CP_SUPABASE_URL` / `CP_SUPABASE_ANON_KEY`, then run
-`docker compose --profile control-panel up`. It listens on port 3100. The production deploy
-(`admin.<product-domain>`) comes later.
+`docker compose --profile control-panel up`. It listens on port 3100.
+
+On the Hetzner VPS it runs as `cp.del-groups.com` next to the multi-tenant trial ERP, from
+`docker-compose.saas.yml`: `docs/runbooks/saas-trial-stack.md`.
 
 ## Layout
 

@@ -160,6 +160,13 @@ a host name takes precedence over the catch-all `https://` block. Caddy calls th
 URL over the internal Docker network, so the endpoint needs no public exposure, and it
 answers for any `Host` (the proxy does not resolve a tenant for `/api/tenant/*`).
 
+**Trial stack on the VPS (SAAS-1).** A second, multi-tenant ERP for trial companies
+(`<slug>.erp.del-groups.com`) and the control panel (`cp.del-groups.com`) run next to production
+from `docker-compose.saas.yml` (project `del-groups-saas`), off until
+`/opt/del-groups-erp/.env.saas` and `.env.control-panel` exist. Its healthcheck is
+`/api/tenant/health`, which answers for any host, so it needs no `ERP_HEALTHCHECK_HOST`.
+Setup, Caddy blocks, DNS and rollback: `docs/runbooks/saas-trial-stack.md`.
+
 **Cache invalidation.** The control panel can clear the ERP's tenant cache at once after a
 change: set the same random `TENANT_WEBHOOK_SECRET` in both apps and
 `ERP_TENANT_WEBHOOK_URL=https://<erp-domain>/api/tenant/invalidate` in the control panel.
