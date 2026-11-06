@@ -5505,6 +5505,7 @@ export const ruMessages: Messages = {
       method_not_for_type: "{cost}: этот способ подходит только для пошлины, поэтому распределено по стоимости.",
       manual_mismatch: "{cost}: суммы по строкам отличаются от расхода на {amount} AZN.",
       zero_basis: "{cost}: не по чему распределить (цены, вес или количества равны 0).",
+      duty_by_value: "Ставки пошлины нет, распределено по стоимости",
     },
     landed: {
       title: "Себестоимость",
@@ -5610,7 +5611,8 @@ export const ruMessages: Messages = {
       paidLater: "оплата позже",
       notSplit: "не распределяется (1410)",
       toVatAccount: "→ 1410",
-      computedDutyHint: "Считается по ставкам пошлины строк",
+      dutyTypedHelp: "Пошлина считается по ставкам в строках. Если ввести сумму из таможенной декларации, будет использована она",
+      dutyRecompute: "Рассчитать",
       vatSuggestLabel: "Предложить НДС {rate}%",
     },
     settings: {

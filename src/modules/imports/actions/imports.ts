@@ -301,8 +301,10 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
           cost_type: c.costType,
           partner_id: c.partnerId,
           description: c.description,
-          // A duty split per line stores the computed duty, in AZN.
+          // A duty split per line stores its duty in AZN: the computed one, or the amount typed
+          // from the customs declaration (IMP-6, amount_typed), which no save recomputes.
           amount: duty ? result.costs[i].amountAzn : c.amount,
+          amount_typed: duty && c.amountTyped,
           currency_code: duty ? "AZN" : c.currencyCode,
           rate_to_azn: duty || c.currencyCode === "AZN" ? 1 : c.rateToAzn,
           vat_amount_azn: c.vatAmountAzn,

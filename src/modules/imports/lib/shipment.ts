@@ -58,6 +58,11 @@ export interface CostLineDraft {
   partnerId: string | null;
   description: string | null;
   amount: number;
+  /**
+   * IMP-6, customs duty per line: `amount` (AZN) is the duty typed from the customs declaration.
+   * False: the duty is computed from the lines' rates and `amount` is ignored.
+   */
+  amountTyped: boolean;
   currencyCode: ImportCurrency;
   rateToAzn: number;
   vatAmountAzn: number;
@@ -161,6 +166,7 @@ export function newCost(costType: CostType, config: ImportsConfig): CostLineDraf
     partnerId: defaults.defaultPartnerId,
     description: null,
     amount: 0,
+    amountTyped: false,
     currencyCode: "AZN",
     rateToAzn: 1,
     vatAmountAzn: 0,
@@ -171,6 +177,11 @@ export function newCost(costType: CostType, config: ImportsConfig): CostLineDraf
     cashAccountId: null,
     manual: {},
   };
+}
+
+/** IMP-6: a customs duty split per line whose amount was typed from the declaration. */
+export function isTypedDuty(cost: Pick<CostLineDraft, "costType" | "splitMethod" | "amountTyped">): boolean {
+  return cost.costType === "customs_duty" && cost.splitMethod === "per_line_duty" && cost.amountTyped === true;
 }
 
 /** VAT of a cost in AZN at the cost type's default rate (the user can change it). */
@@ -197,6 +208,7 @@ export function landedCostInput(draft: ShipmentDraft, config: ImportsConfig, mar
       id: c.key,
       costType: c.costType,
       amount: c.amount,
+      amountTyped: isTypedDuty(c),
       rateToAzn: c.currencyCode === "AZN" ? 1 : c.rateToAzn,
       vatAmountAzn: c.vatAmountAzn,
       isCapitalized: c.isCapitalized,
@@ -326,6 +338,7 @@ export function parseShipmentDraft(value: unknown): ShipmentDraft {
         partnerId: uuidOrNull(c.partnerId),
         description: text(c.description, 500),
         amount: numOr(c.amount, 0),
+        amountTyped: c.amountTyped === true,
         currencyCode: isImportCurrency(c.currencyCode) ? c.currencyCode : "AZN",
         rateToAzn: numOr(c.rateToAzn, 1),
         vatAmountAzn: numOr(c.vatAmountAzn, 0),

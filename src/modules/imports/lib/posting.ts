@@ -310,6 +310,8 @@ export function costPayload(draft: ShipmentDraft, config: ImportsConfig, cost: C
     vat_amount_azn: cost.vatAmountAzn,
     is_capitalized: cost.costType === "customs_vat" ? false : cost.isCapitalized,
     split_method: cost.splitMethod,
+    // IMP-6: a duty typed from the declaration (its amount above is that duty, split by allocationsFor).
+    amount_typed: duty && cost.amountTyped === true,
     is_estimate: cost.isEstimate,
     allocations: allocationsFor(draft, config, cost),
   };
