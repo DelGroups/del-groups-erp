@@ -16,7 +16,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 40: after production, the deploy also builds the trial stack's two images when it is on
+    # (SAAS-1, docker-compose.saas.yml); production is live before that part starts.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
 

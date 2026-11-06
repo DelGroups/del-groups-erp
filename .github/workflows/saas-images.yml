@@ -1,0 +1,73 @@
+name: saas-images
+
+# SAAS-1: the trial stack's two images (docker-compose.saas.yml) must build before a change
+# reaches main, because every production deploy rebuilds them after erp.del-groups.com is live.
+# Then the trial ERP is started alone and must turn healthy with no tenant at all
+# (/api/tenant/health). Placeholder values only: no secret and no Supabase project is used.
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker-compose.saas.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.*"
+      - "src/**"
+      - "public/**"
+      - "control-panel/**"
+      - "supabase/baseline/**"
+      - "supabase/modules/**"
+      - "supabase/migrations/**"
+      - "scripts/server/erp-deploy.sh"
+      - ".github/workflows/saas-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saas-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Placeholder env files
+        run: |
+          # The values only have to be well formed: nothing connects to them in this job.
+          printf 'NEXT_PUBLIC_SITE_URL=https://erp.del-groups.com\n' > "$RUNNER_TEMP/env.saas"
+          printf 'NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co\nNEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key\n' > "$RUNNER_TEMP/env.cp"
+
+      - name: Build both images (docker compose -f docker-compose.saas.yml build)
+        run: |
+          docker compose -p del-groups-saas --env-file "$RUNNER_TEMP/env.saas" --env-file "$RUNNER_TEMP/env.cp" \
+            -f docker-compose.saas.yml build
+
+      - name: The trial ERP is healthy without any tenant
+        run: |
+          # The external network production and Caddy share on the server.
+          docker network create del-social-ai_frontend
+          # Multi-tenant mode on, pointing at nothing that answers: health must not need it.
+          printf 'CONTROL_PLANE_URL=https://placeholder.supabase.co\nCONTROL_PLANE_SERVICE_ROLE_KEY=placeholder\nTENANT_WEBHOOK_SECRET=placeholder\nNEXT_PUBLIC_SITE_URL=https://erp.del-groups.com\n' > "$RUNNER_TEMP/env.saas.run"
+          docker run -d --name erp-saas-check --network del-social-ai_frontend --env-file "$RUNNER_TEMP/env.saas.run" \
+            --health-cmd "wget -qO- http://127.0.0.1:3000/api/tenant/health" --health-interval 3s --health-retries 20 \
+            -p 127.0.0.1:3003:3000 del-groups-erp-saas:latest
+          for _ in $(seq 1 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' erp-saas-check)
+            [ "$status" = healthy ] && break
+            sleep 3
+          done
+          docker inspect -f '{{.State.Health.Status}}' erp-saas-check
+          [ "$(docker inspect -f '{{.State.Health.Status}}' erp-saas-check)" = healthy ]
+          curl -fsS http://127.0.0.1:3003/api/tenant/health
+          # An unknown host gets "not found" (multi-tenant mode is really on).
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: nobody.erp.del-groups.com' http://127.0.0.1:3003/api/products)" != 200
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs --tail 80 erp-saas-check || true

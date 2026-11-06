@@ -58,3 +58,5 @@ next-env.d.ts
 
 .vercel
 .env*
+# Templates (names only, no values) stay tracked.
+!.env.saas.example
