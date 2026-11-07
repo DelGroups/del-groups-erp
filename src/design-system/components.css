@@ -1365,6 +1365,15 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds].ds-root.ds-scope-transparent {
   background: transparent;
 }
+/* A scope that only provides context (ViewToastScope, FIX-1): no box, no background and no
+   text style of its own, so it can wrap a page frame without changing how it looks. */
+[data-ds].ds-root.ds-scope-contents {
+  background: none;
+  color: inherit;
+  display: contents;
+  font-size: inherit;
+  line-height: inherit;
+}
 
 /* ══ LineGrid (UI-3, docs/ui-standard.md "Line grids") ═══════════════════════════════════ */
 [data-ds] .ds-line-grid {

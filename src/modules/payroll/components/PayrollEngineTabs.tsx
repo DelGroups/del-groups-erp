@@ -10,7 +10,7 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { payrollRunToBreakdown } from "@/lib/tax/azPayroll";
 import type { PayrollRun } from "@/types/database.types";
 import type { EmployeesPageTabProps } from "@/modules/hr";
-import { EngineScreen, FormView, invalidateModel, useFormatter, useViewAccess, type FormAction, type ViewData } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, useViewAccess, ViewToastScope, type FormAction, type ViewData } from "@/views";
 import { calculateMonthlyPayrollAction, payEmployeeAdvanceAction, payPayrollRunAction } from "../actions/payroll";
 import { fetchEmployeeAdvances, fetchPayrollRuns } from "../lib/payrollRuns";
 import { advanceKpis, advancesDefinition, ADVANCES_VIEW_KEY, canPayRun, payrollDefinition, payrollKpis, PAYROLL_VIEW_KEY, payrollToRecord, type PayrollRecord } from "../views/payroll";
@@ -23,7 +23,16 @@ const PAYROLL = payrollDefinition({});
 const ADVANCES = advancesDefinition({ fetchAll: async () => (await fetchEmployeeAdvances()) as unknown as Record<string, unknown>[] });
 
 /** A month's payroll on the view engine (new UI): calculate, review taxes per employee, pay. */
-export function PayrollEngineTab({ accounts, canManageHr, header }: EmployeesPageTabProps) {
+export function PayrollEngineTab(props: EmployeesPageTabProps) {
+  // Its toasts and side panels sit next to <EngineScreen>, so the screen brings its own toast scope (FIX-1).
+  return (
+    <ViewToastScope>
+      <PayrollEngineTabBody {...props} />
+    </ViewToastScope>
+  );
+}
+
+function PayrollEngineTabBody({ accounts, canManageHr, header }: EmployeesPageTabProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const client = useQueryClient();
@@ -159,7 +168,16 @@ function PayrollRecordView({ record, run, taxConfig, canPay, onPay }: { record: 
 }
 
 /** Salary advances on the view engine (new UI): new advances are paid out with the classic dialog. */
-export function AdvancesEngineTab({ employees, accounts, canManageHr, createOpen, setCreateOpen, header }: EmployeesPageTabProps) {
+export function AdvancesEngineTab(props: EmployeesPageTabProps) {
+  // Its toasts and side panels sit next to <EngineScreen>, so the screen brings its own toast scope (FIX-1).
+  return (
+    <ViewToastScope>
+      <AdvancesEngineTabBody {...props} />
+    </ViewToastScope>
+  );
+}
+
+function AdvancesEngineTabBody({ employees, accounts, canManageHr, createOpen, setCreateOpen, header }: EmployeesPageTabProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const client = useQueryClient();
