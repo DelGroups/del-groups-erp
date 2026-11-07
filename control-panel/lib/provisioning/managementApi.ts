@@ -25,6 +25,12 @@ export function redactSecrets(text: string, secrets: readonly string[] = []): st
   return out
     .replace(/\bsbp_[A-Za-z0-9]+/g, "[redacted]")
     .replace(/\bsb_(secret|publishable)_[A-Za-z0-9_-]+/g, "[redacted]")
+    // Resend API keys (the SMTP password when TENANT_SMTP_HOST is smtp.resend.com).
+    .replace(/\bre_[A-Za-z0-9_]{8,}/g, "[redacted]")
+    // An auth config echoed back in an error (short passwords escape the list above).
+    .replace(/("smtp_pass"\s*:\s*")[^"]*"/g, '$1[redacted]"')
+    // A generated auth link carries a one-time token.
+    .replace(/([?&#](?:token|token_hash|access_token|refresh_token)=)[^&\s"']+/g, "$1[redacted]")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[redacted]")
     .slice(0, 1000);
 }
@@ -58,7 +64,12 @@ export interface ManagementApi {
   applyMigration(ref: string, name: string, query: string): Promise<void>;
   runQuery<T = Record<string, unknown>>(ref: string, query: string): Promise<T[]>;
   updateAuthConfig(ref: string, config: Record<string, unknown>): Promise<void>;
+  /** Seconds an emailed / generated invite or recovery link stays valid (mailer_otp_exp). */
+  getLinkLifetime(ref: string): Promise<number>;
 }
+
+/** Supabase's default link lifetime (1 hour), used when the project does not report one. */
+export const DEFAULT_LINK_LIFETIME_SECONDS = 3600;
 
 function project(raw: Record<string, unknown>): ProjectInfo {
   return {
@@ -151,6 +162,12 @@ export function createManagementApi(options: { token: string; fetch: Fetch; base
     },
     async updateAuthConfig(ref, config) {
       await call("PATCH", `/v1/projects/${encodeURIComponent(ref)}/config/auth`, config);
+    },
+    async getLinkLifetime(ref) {
+      // Only mailer_otp_exp is read; the rest of the response (it includes smtp_pass) is dropped.
+      const raw = await call<Record<string, unknown> | null>("GET", `/v1/projects/${encodeURIComponent(ref)}/config/auth`);
+      const seconds = Number(raw?.mailer_otp_exp);
+      return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_LINK_LIFETIME_SECONDS;
     },
   };
 }

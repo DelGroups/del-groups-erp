@@ -17,6 +17,8 @@ import { loadMigrationView } from "./migrations/view";
 import { migrationConfig, repoLatestVersion } from "@/lib/migrations/server";
 import { dbVersion, SKIPPED_STATUSES } from "@/lib/migrations/plan";
 import { erpSqlDir } from "@/lib/provisioning/config";
+import AdminAccessPanel from "./access/AdminAccessPanel";
+import { LINK_STATUSES } from "@/lib/provisioning/tenantAccess";
 
 interface Tenant {
   id: string;
@@ -312,6 +314,21 @@ export default async function TenantDetailPage({
           }}
         />
       </section>
+
+      {database?.supabase_project_ref ? (
+        <section className="cp-panel">
+          <h2 className="cp-panel-title">{t("adminAccess.title")}</h2>
+          <AdminAccessPanel
+            tenantId={tenant.id}
+            locale={locale}
+            adminEmail={provisioning.job?.options.adminEmail || null}
+            smtpHost={provisioningSettings?.smtp?.host ?? null}
+            canLink={(LINK_STATUSES as readonly string[]).includes(tenant.status)}
+            configured={Boolean(provisioningSettings)}
+            labels={messages.adminAccess}
+          />
+        </section>
+      ) : null}
 
       <section className="cp-panel">
         <h2 className="cp-panel-title">{t("migrations.title")}</h2>

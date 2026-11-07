@@ -175,6 +175,21 @@ body {
   color: var(--erp-color-success-hover);
 }
 
+/* ── Dialog (native <dialog>, e.g. the admin invite link) ─────────────── */
+.cp-dialog {
+  background: var(--erp-bg-panel);
+  border: 1px solid var(--erp-border-default);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: var(--erp-shadow-lg);
+  color: var(--erp-text-main);
+  max-width: min(40rem, calc(100vw - 2rem));
+  padding: var(--erp-panel-padding-y) var(--erp-panel-padding-x);
+  width: 100%;
+}
+.cp-dialog::backdrop {
+  background: color-mix(in srgb, var(--erp-text-main) 35%, transparent);
+}
+
 /* ── Buttons, badges, links ────────────────────────────────────────────── */
 .cp-button {
   align-items: center;

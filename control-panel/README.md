@@ -9,9 +9,9 @@ This first version manages records only:
 - sign-in for platform admins;
 - tenants: list, create and edit;
 - tenant detail: status, domains, modules, user count, database version and history;
-- plans list.
-
-Provisioning (creating tenant databases) comes later.
+- plans list;
+- provisioning: one click creates a tenant's own Supabase project and installs the ERP
+  (see "Provisioning" below).
 
 ## Security model
 
@@ -74,6 +74,37 @@ Database checks, without Supabase: on a plain Postgres 17, run `scripts/db/supab
 `supabase/tests/rls_and_audit.sql`, `runtime_lookup.sql` and `tenant_migrations.sql`. Each
 prints `ALL CHECKS PASSED`. CI does this in
 `.github/workflows/control-panel.yml`.
+
+## Provisioning
+
+"Create the ERP" on a tenant page (needs `SUPABASE_MANAGEMENT_API_TOKEN`, `SUPABASE_ORG_SLUG`,
+`TENANT_BASE_DOMAIN`) runs `lib/provisioning/engine.ts` one step at a time while the page is
+open: create the Supabase project, wait until it is healthy, store its keys in Vault, install
+the schema, configure Auth (`configure_auth`), check storage, enable the chosen modules,
+register `<slug>.<TENANT_BASE_DOMAIN>`, invite the admin (`invite_admin`) and activate. Every
+step can be retried; secrets never reach the step output or the log (`redactSecrets`).
+
+**Sign-in emails.** `configure_auth` sets the site URL, invite-only sign-up and the invite /
+password-reset templates in the tenant's language. Supabase's own email service only delivers to
+members of the Supabase organization and is heavily rate limited, so a real admin would never get
+the invite. With `TENANT_SMTP_HOST`, `TENANT_SMTP_PORT`, `TENANT_SMTP_USER`, `TENANT_SMTP_PASS`
+and `TENANT_SMTP_SENDER_EMAIL` (optional `TENANT_SMTP_SENDER_NAME`) set, it also sends the
+tenant project the SMTP server (`lib/provisioning/smtp.ts`, 30 auth emails per hour). Unset, the
+tenant keeps Supabase's default email. Half-filled settings block provisioning and are listed on
+the tenant page. The default target is Resend SMTP (`smtp.resend.com`, port 465, user `resend`,
+password = a Resend API key).
+
+**Admin access** (tenant page, once the tenant has a database):
+
+- **Re-apply email settings** sends the same Auth settings again, for tenants provisioned before
+  SMTP was set or after changing it. Logged as `auth_config` in the history.
+- **Copy invite link** (trial and active tenants) makes a fresh invite link for the admin named at
+  provisioning, or a set-password (recovery) link if that user already exists, pointing at
+  `https://<primary domain>/auth/set-password`. No email is sent: Del sends the link himself
+  (WhatsApp, email). The tenant's server key is fetched fresh from the Management API, used once
+  and dropped; the link is shown once in a dialog with how long it is valid (the project's
+  `mailer_otp_exp`, 1 hour by default) and is not stored anywhere. The history records
+  `admin_link` with the email and the link kind, never the link.
 
 ## Tenant database migrations
 
@@ -177,6 +208,7 @@ On the Hetzner VPS it runs as `cp.del-groups.com` next to the multi-tenant trial
 | `proxy.ts` | session refresh and redirect to `/login` (not for the payment webhook) |
 | `lib/billing` | prices, limits, invoices, dunning, payment providers, PDF and emails (`run.ts` ties them together) |
 | `assets/fonts` | Noto Sans for invoice PDFs (SIL Open Font License, `OFL.txt`) |
+| `lib/provisioning` | tenant provisioning steps, Management API client, Auth emails and SMTP, admin access links |
 | `lib/migrations` | tenant migrations: pending files, canary-first run (used by the panel and `scripts/tenants/migrate-all.ts`) |
 | `supabase/migrations` | control-plane schema |
 | `supabase/tests` | database checks (RLS, audit, Vault) |
