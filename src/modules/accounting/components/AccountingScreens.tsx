@@ -11,7 +11,7 @@ import { createAccountAction, deleteAccountAction, fetchAccountLedgerBalancesAct
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { fetchPartnerPayments } from "@/lib/payments/fetchPayments";
 import type { UnifiedLedgerTransaction } from "@/lib/finance/unifiedLedger";
-import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
+import { EngineScreen, FormView, invalidateModel, RecordPanel, useFormatter, ViewToastScope, type FormAction, type RowActionSpec } from "@/views";
 import {
   accountKpis,
   accountsDefinition,
@@ -116,6 +116,15 @@ type AccountForm = { id: string | null; code: string; name: string; type: string
 
 /** Cash registers and bank accounts on the view engine (new UI). */
 export function CashBankScreen() {
+  // Its toasts and side panels sit next to <EngineScreen>, so the screen brings its own toast scope (FIX-1).
+  return (
+    <ViewToastScope>
+      <CashBankScreenBody />
+    </ViewToastScope>
+  );
+}
+
+function CashBankScreenBody() {
   const { t } = useI18n();
   const { can } = useAuth();
   const [form, setForm] = useState<AccountForm | null>(null);

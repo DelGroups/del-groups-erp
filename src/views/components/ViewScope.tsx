@@ -15,15 +15,30 @@ import type { FilterContext } from "../types";
  * design-system scope in the user's theme and the tenant brand colour, and toasts.
  */
 export function ViewScope({ children }: { children: React.ReactNode }) {
+  return (
+    <PageLayout>
+      <ViewToastScope className="mx-auto w-full max-w-[100rem] rounded-[var(--ds-radius-xl)] p-3 md:p-5">{children}</ViewToastScope>
+    </PageLayout>
+  );
+}
+
+/**
+ * The design-system scope (user's theme, tenant brand) and toasts of ViewScope, without the page
+ * layout. A screen wraps its outer component in it when the screen itself calls useToast(), or
+ * renders a side panel or dialog that does, next to <EngineScreen> rather than inside it:
+ * useToast() throws without a provider above it (FIX-1). Without a className it adds no box and
+ * no text style of its own (ds-scope-contents), so wrapping the page frame changes nothing on
+ * screen; the <EngineScreen> inside keeps its own scope, and toasts and panels portal into the
+ * same overlay layer.
+ */
+export function ViewToastScope({ children, className = "ds-scope-contents" }: { children: React.ReactNode; className?: string }) {
   const { theme } = useTheme();
   const { brand } = useNewUi();
   const { t } = useI18n();
   return (
-    <PageLayout>
-      <DesignScope theme={theme === "daylight" ? "light" : "dark"} brand={brand} className="mx-auto w-full max-w-[100rem] rounded-[var(--ds-radius-xl)] p-3 md:p-5">
-        <ToastProvider closeLabel={t("common.close")}>{children}</ToastProvider>
-      </DesignScope>
-    </PageLayout>
+    <DesignScope theme={theme === "daylight" ? "light" : "dark"} brand={brand} className={className}>
+      <ToastProvider closeLabel={t("common.close")}>{children}</ToastProvider>
+    </DesignScope>
   );
 }
 

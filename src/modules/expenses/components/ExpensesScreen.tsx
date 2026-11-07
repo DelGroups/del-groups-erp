@@ -8,7 +8,7 @@ import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { EngineScreen, FormView, invalidateModel, useFormatter, type FormAction, type RowActionSpec } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, ViewToastScope, type FormAction, type RowActionSpec } from "@/views";
 import {
   approveExpenseAction,
   cancelExpenseAction,
@@ -37,6 +37,15 @@ const DEFINITION = expensesDefinition({ fetchAll });
 
 /** Expense documents on the view engine (new UI), with the classic approval flow. */
 export default function ExpensesScreen() {
+  // Its toasts and side panels sit next to <EngineScreen>, so the screen brings its own toast scope (FIX-1).
+  return (
+    <ViewToastScope>
+      <ExpensesScreenBody />
+    </ViewToastScope>
+  );
+}
+
+function ExpensesScreenBody() {
   const { t } = useI18n();
   const { can } = useAuth();
   const { toast } = useToast();

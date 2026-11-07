@@ -17,7 +17,7 @@ export { GraphView } from "./components/GraphView";
 export { CalendarView } from "./components/CalendarView";
 export { SearchPanel } from "./components/SearchPanel";
 export { validateDefinition, type Formatter } from "./logic";
-export { ViewScope, useFormatter, useFilterContext } from "./components/ViewScope";
+export { ViewScope, ViewToastScope, useFormatter, useFilterContext } from "./components/ViewScope";
 export { EngineScreen, RECORD_PARAM, type EngineScreenProps } from "./components/EngineScreen";
 export { KpiCards, type Kpi } from "./components/KpiCards";
 export { RecordPanel } from "./components/RecordPanel";

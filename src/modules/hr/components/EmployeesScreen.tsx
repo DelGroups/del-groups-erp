@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { getDepartmentLabel, type Employee, type EmployeeLeave } from "@/types/database.types";
-import { EngineScreen, FormView, invalidateModel, useFormatter, ViewScope, type FormAction, type RowActionSpec } from "@/views";
+import { EngineScreen, FormView, invalidateModel, useFormatter, ViewScope, ViewToastScope, type FormAction, type RowActionSpec } from "@/views";
 import { createEmployeeAction, createEmployeeLeaveAction, deleteEmployeeAction, updateEmployeeAction, updateEmployeeLeaveStatusAction } from "../actions/hr";
 import { fetchAccounts, fetchEmployees } from "../lib/employees";
 import { fetchEmployeeDepartments } from "../lib/employeeDepartments";
@@ -37,8 +37,13 @@ export default function EmployeesScreen({ extraTabs = [] }: { extraTabs?: Employ
   const params = useSearchParams();
   const tab = params.get("tab") ?? "directory";
   const extra = extraTabs.find((x) => x.id === tab);
-  if (extra) return <ExtraTab tab={extra} tabs={extraTabs} />;
-  return tab === "leaves" ? <LeavesTab tabs={extraTabs} /> : <DirectoryTab tabs={extraTabs} />;
+  // The directory and leave tabs (and payroll) toast from next to their <EngineScreen>, so the
+  // screen brings its own toast scope (FIX-1).
+  return (
+    <ViewToastScope>
+      {extra ? <ExtraTab tab={extra} tabs={extraTabs} /> : tab === "leaves" ? <LeavesTab tabs={extraTabs} /> : <DirectoryTab tabs={extraTabs} />}
+    </ViewToastScope>
+  );
 }
 
 function Tabs({ active, tabs }: { active: string; tabs: EmployeesPageTab[] }) {
