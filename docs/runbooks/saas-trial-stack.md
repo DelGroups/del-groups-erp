@@ -65,6 +65,7 @@ nano .env.control-panel   # see the table below
 | `ERP_TENANT_WEBHOOK_URL` | `http://erp-saas:3000/api/tenant/invalidate` (over the docker network) |
 | `TENANT_WEBHOOK_SECRET` | the same value as in `.env.saas` |
 | `SUPABASE_MANAGEMENT_API_TOKEN`, `SUPABASE_ORG_SLUG` | optional, for provisioning |
+| `TENANT_SMTP_HOST`, `TENANT_SMTP_PORT`, `TENANT_SMTP_USER`, `TENANT_SMTP_PASS`, `TENANT_SMTP_SENDER_EMAIL` (`TENANT_SMTP_SENDER_NAME` optional) | tenants' sign-in emails: `smtp.resend.com`, `465`, `resend`, a Resend API key, e.g. `no-reply@del-groups.com` (SAAS-2; all or none) |
 | `ERP_SQL_DIR`, `BILLING_FONT_DIR` | leave empty (the image sets them) |
 
 Check that no production key slipped into the trial ERP. This prints nothing when everything is

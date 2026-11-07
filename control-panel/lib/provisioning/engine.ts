@@ -18,6 +18,7 @@ import {
   type ModuleRow,
 } from "./plan.ts";
 import { authEmailConfig } from "./emails.ts";
+import { describeEmailSetup, smtpAuthConfig, smtpSecrets } from "./smtp.ts";
 
 export interface ProvisioningStore {
   /** Takes the job for a while; false when another tab is running it. */
@@ -47,6 +48,17 @@ export interface TenantAuth {
     fullName: string;
     redirectTo: string;
   }): Promise<"invited" | "exists">;
+  /**
+   * A fresh link for the admin, without sending any email: an invite link, or a recovery
+   * (set-password) link when the admin already exists. The link is returned, never stored.
+   */
+  generateAdminLink(input: {
+    apiUrl: string;
+    serviceRoleKey: string;
+    email: string;
+    fullName: string;
+    redirectTo: string;
+  }): Promise<{ link: string; kind: "invite" | "recovery" }>;
 }
 
 export interface ProvisioningDeps {
@@ -77,6 +89,30 @@ export function projectApiUrl(ref: string): string {
 
 export function tenantDomain(slug: string, config: ProvisioningConfig): string {
   return `${slug}.${config.baseDomain}`;
+}
+
+/**
+ * The tenant project's Auth settings: site URL, invite-only, emails in the tenant's language
+ * and, when TENANT_SMTP_* is set, the custom SMTP server. Used by configure_auth and by
+ * "Re-apply email settings".
+ */
+export function tenantAuthConfig(
+  tenant: { name: string; language: "az" | "en" | "ru" },
+  siteUrl: string,
+  config: ProvisioningConfig
+): Record<string, unknown> {
+  return {
+    site_url: siteUrl,
+    uri_allow_list: `${siteUrl}/**`,
+    disable_signup: true,
+    ...authEmailConfig(tenant.language, tenant.name),
+    ...(config.smtp ? smtpAuthConfig(config.smtp, tenant.name) : {}),
+  };
+}
+
+/** Everything redactSecrets() must remove before a message is logged or stored. */
+export function configSecrets(config: ProvisioningConfig): string[] {
+  return [config.managementToken, ...smtpSecrets(config.smtp)];
 }
 
 function stepOutput(job: JobSnapshot, step: ProvisioningStep): Record<string, unknown> {
@@ -158,13 +194,12 @@ async function runStep(step: StepRow, job: JobSnapshot, deps: ProvisioningDeps):
     }
 
     case "configure_auth": {
-      await api.updateAuthConfig(projectRef(job), {
-        site_url: siteUrl,
-        uri_allow_list: `${siteUrl}/**`,
-        disable_signup: true,
-        ...authEmailConfig(tenant.language, tenant.name),
-      });
-      return { kind: "done", output: { site_url: siteUrl }, message: `auth site URL ${siteUrl}, invite-only, emails in ${tenant.language}` };
+      await api.updateAuthConfig(projectRef(job), tenantAuthConfig(tenant, siteUrl, config));
+      return {
+        kind: "done",
+        output: { site_url: siteUrl, custom_smtp: Boolean(config.smtp) },
+        message: `auth site URL ${siteUrl}, invite-only, emails in ${tenant.language}, ${describeEmailSetup(config.smtp)}`,
+      };
     }
 
     case "storage_buckets": {
@@ -246,7 +281,7 @@ export async function advanceJob(deps: ProvisioningDeps, jobId: string): Promise
 
     const outcome = await runStep(next, job, deps);
     const output = outcome.output ? { ...next.output, ...outcome.output } : next.output;
-    await store.log(jobId, next.step, "info", redactSecrets(outcome.message, [deps.config.managementToken]));
+    await store.log(jobId, next.step, "info", redactSecrets(outcome.message, configSecrets(deps.config)));
 
     if (outcome.kind !== "done") {
       await store.updateStep(jobId, next.step, { output });
@@ -260,7 +295,7 @@ export async function advanceJob(deps: ProvisioningDeps, jobId: string): Promise
     }
     return "progress";
   } catch (error) {
-    const message = redactSecrets(error instanceof Error ? error.message : String(error), [deps.config.managementToken]);
+    const message = redactSecrets(error instanceof Error ? error.message : String(error), configSecrets(deps.config));
     if (current) await store.updateStep(jobId, current, { status: "failed", error: message });
     await store.updateJob(jobId, { status: "failed" });
     await store.log(jobId, current, "error", message);
