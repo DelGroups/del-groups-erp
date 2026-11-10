@@ -37,6 +37,7 @@
     "motion": "^13.4.4",
     "next": "16.3.0",
     "papaparse": "^5.7.0",
+    "pdfmake": "0.3.11",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-barcode": "^1.6.1",

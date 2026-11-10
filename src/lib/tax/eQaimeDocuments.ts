@@ -23,13 +23,15 @@ function money(value: number): number {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
-async function fetchPartyVoen(table: "customers" | "suppliers", id: string | null | undefined): Promise<string> {
+/** INV-2 reuses it for the invoice files. */
+export async function fetchPartyVoen(table: "customers" | "suppliers", id: string | null | undefined): Promise<string> {
   if (!id) return "";
   const { data } = await supabase.from(table).select("voen").eq("id", id).maybeSingle();
   return (data?.voen as string) || "";
 }
 
-async function resolveBranding(branding: CompanyBranding): Promise<CompanyBranding> {
+/** Branding with the VÖEN and names from the settings when the hook has not loaded them yet. */
+export async function resolveBranding(branding: CompanyBranding): Promise<CompanyBranding> {
   if (branding.voen && branding.companyName) return branding;
   const [{ profile }, { data: taxRow }] = await Promise.all([
     loadCompanyProfile(supabase as unknown as SupabaseClient),

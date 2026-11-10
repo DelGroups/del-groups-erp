@@ -194,14 +194,21 @@ export interface XlsxBook<Row> {
 
 const utf8 = { decode: (b: Uint8Array | number[]) => new TextDecoder().decode(b instanceof Uint8Array ? b : Uint8Array.from(b)), encode: (s: string) => new TextEncoder().encode(s) };
 
-/** The .xlsx file's bytes. */
-export function writeXlsxBytes<Row>(XLSX: XlsxModule, book: XlsxBook<Row>): Uint8Array {
-  const data = buildXlsxSheet(book.columns, book.rows);
-  const sheet = XLSX.utils.aoa_to_sheet([data.header, ...data.cells]);
-  sheet["!cols"] = data.widths.map((wch) => ({ wch }));
+/**
+ * One sheet's .xlsx bytes: SheetJS writes the cells, then the bold style is added to styles.xml
+ * and `patchSheet` gets the sheet XML with that style's index (bold header, frozen row, …).
+ * Shared by the list export and the invoice export (INV-2).
+ */
+export function writeSheetBytes(
+  XLSX: XlsxModule,
+  sheetData: { name: string; rows: unknown[][]; widths: number[]; rtl?: boolean },
+  patchSheet: (sheetXml: string, boldStyle: number) => string
+): Uint8Array {
+  const sheet = XLSX.utils.aoa_to_sheet(sheetData.rows);
+  sheet["!cols"] = sheetData.widths.map((wch) => ({ wch }));
   const wb = XLSX.utils.book_new();
-  if (book.rtl) wb.Workbook = { Views: [{ RTL: true }] };
-  XLSX.utils.book_append_sheet(wb as never, sheet as never, xlsxSheetName(book.sheetName));
+  if (sheetData.rtl) wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb as never, sheet as never, sheetData.name);
   const raw = new Uint8Array(XLSX.write(wb as never, { type: "array", bookType: "xlsx" }));
 
   const zip = XLSX.CFB.read(raw, { type: "array" });
@@ -214,16 +221,23 @@ export function writeXlsxBytes<Row>(XLSX: XlsxModule, book: XlsxBook<Row>): Uint
   if (!styles || !sheetXml) return raw;
   const patched = patchStylesXml(utf8.decode(styles.content));
   styles.content = utf8.encode(patched.xml);
-  sheetXml.content = utf8.encode(patchSheetXml(utf8.decode(sheetXml.content), patched.headerStyle));
+  sheetXml.content = utf8.encode(patchSheet(utf8.decode(sheetXml.content), patched.headerStyle));
   const out = XLSX.CFB.write(zip, { fileType: "zip", type: "array" });
   return out instanceof ArrayBuffer ? new Uint8Array(out) : Uint8Array.from(out);
 }
 
-/** Builds the file in the browser and downloads it. */
-export async function exportXlsx<Row>(fileName: string, book: XlsxBook<Row>): Promise<void> {
-  const XLSX = (await import("xlsx")) as unknown as XlsxModule;
-  const bytes = writeXlsxBytes(XLSX, book);
-  const blob = new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+/** The .xlsx file's bytes. */
+export function writeXlsxBytes<Row>(XLSX: XlsxModule, book: XlsxBook<Row>): Uint8Array {
+  const data = buildXlsxSheet(book.columns, book.rows);
+  return writeSheetBytes(
+    XLSX,
+    { name: xlsxSheetName(book.sheetName), rows: [data.header, ...data.cells], widths: data.widths, rtl: book.rtl },
+    patchSheetXml
+  );
+}
+
+/** Saves a file the browser made (a link click on an object URL). */
+export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -233,3 +247,12 @@ export async function exportXlsx<Row>(fileName: string, book: XlsxBook<Row>): Pr
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/** Builds the file in the browser and downloads it. */
+export async function exportXlsx<Row>(fileName: string, book: XlsxBook<Row>): Promise<void> {
+  const XLSX = (await import("xlsx")) as unknown as XlsxModule;
+  const bytes = writeXlsxBytes(XLSX, book);
+  downloadBlob(new Blob([bytes as BlobPart], { type: XLSX_MIME }), fileName);
+}
+
+export const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

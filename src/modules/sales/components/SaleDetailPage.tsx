@@ -8,6 +8,8 @@ import PageLayout from "@/components/layout/PageLayout";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { fetchSaleById, getSaleRemaining, type SaleRecord } from "../lib/fetchSales";
 import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
+import { InvoiceExportButtons } from "@/components/invoices/invoiceExportActions";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useUiStandard } from "@/design-system/components";
 import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
@@ -31,6 +33,8 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
   const { profile } = useAuth();
   const canViewProfitability = canDelegateInvoiceIssuer(profile?.role);
   const invoicePrint = useInvoicePrintSystem();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" next to Print.
+  const invoiceExport = useInvoiceExport();
   const branding = useCompanyBranding();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [sale, setSale] = useState<SaleRecord | null>(null);
@@ -77,6 +81,9 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
                 }
               }}
             />
+            {invoiceExport.enabled ? (
+              <InvoiceExportButtons t={t} disabled={!sale} onExport={(format) => sale && void invoiceExport.exportSale(sale, format)} />
+            ) : null}
             <button
               type="button"
               disabled={!sale}
@@ -209,6 +216,7 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
         closeModal={invoicePrint.closeModal}
         confirmPrint={invoicePrint.confirmPrint}
       />
+      {invoiceExport.dialog}
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

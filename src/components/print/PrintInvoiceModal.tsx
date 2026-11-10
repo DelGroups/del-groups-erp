@@ -9,6 +9,8 @@ interface PrintInvoiceModalProps {
   open: boolean;
   docNo?: string;
   officialOnly?: boolean;
+  /** Another heading, e.g. for the PDF download (INV-2); the print title otherwise. */
+  title?: string;
   onClose: () => void;
   onSelect: (mode: PrintMode) => void;
 }
@@ -17,6 +19,7 @@ export default function PrintInvoiceModal({
   open,
   docNo,
   officialOnly = false,
+  title,
   onClose,
   onSelect,
 }: PrintInvoiceModalProps) {
@@ -29,7 +32,7 @@ export default function PrintInvoiceModal({
       <div className="app-modal w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>
-            <h3 className="text-sm font-bold text-app">{t("print.modal.title")}</h3>
+            <h3 className="text-sm font-bold text-app">{title ?? t("print.modal.title")}</h3>
             {docNo ? (
               <p className="mt-0.5 font-mono text-xs text-app-muted">{docNo}</p>
             ) : null}

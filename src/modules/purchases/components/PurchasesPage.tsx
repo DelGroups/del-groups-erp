@@ -11,6 +11,7 @@ import PurchaseForm from "./PurchaseForm";
 import PurchaseDocumentStatusBadge from "./PurchaseDocumentStatusBadge";
 import { isPurchaseDraft, normalizePurchaseDocumentStatus } from "@/lib/invoices/invoiceStatus";
 import PurchaseViewModal from "./PurchaseViewModal";
+import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { purchaseDocumentDate } from "../lib/purchaseDates";
@@ -82,6 +83,8 @@ export default function PurchasesPage() {
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
+  const invoiceExport = useInvoiceExport();
   const canDeletePurchases = can("can_delete_purchases");
   const canEditPurchases = can("can_edit_purchases");
   // Fix F1: a posted purchase is changed by admins only (can_edit_posted_purchases; the database checks it).
@@ -279,6 +282,7 @@ export default function PurchasesPage() {
         <DocumentListActions
           onView={() => void openView(row)}
           onPrint={() => void openPrint(row)}
+          onInvoiceExport={invoiceExport.enabled ? (format) => void invoiceExport.exportPurchase(() => fetchPurchaseById(row.id), format) : undefined}
           onPayment={() => void openPayment(row)}
           onEQaimeExport={(format) => exportEQaime(row, format)}
           paymentDisabled={debtBreakdown.totalRemaining <= 0}

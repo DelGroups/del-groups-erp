@@ -9,6 +9,8 @@ import { DocumentLinesGrid } from "@/components/lists/DocumentLinesGrid";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
+import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
+import { InvoiceExportButtons } from "@/components/invoices/invoiceExportActions";
 
 interface PurchaseViewModalProps {
   purchase: PurchaseRecord;
@@ -20,6 +22,8 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
   // UI_STANDARD (UI-6): the purchase lines on the grid; old table with the flag off.
   const standard = useUiStandard();
   const branding = useCompanyBranding();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" next to the e-qaimə export.
+  const invoiceExport = useInvoiceExport();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
@@ -89,9 +93,16 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
               <span className="text-emerald-600">{t("print.paid")}: {purchase.paid_amount.toFixed(2)}</span>
               <span className="text-rose-600">{t("modals.purchaseView.debt")}: {purchase.debt_amount.toFixed(2)}</span>
             </div>
-            <EQaimeExportButton
-              onExport={(format) => exportPurchaseEQaime(purchase, branding, format)}
-            />
+            {invoiceExport.enabled ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <InvoiceExportButtons t={t} onExport={(format) => void invoiceExport.exportPurchase(purchase, format)} />
+                <EQaimeExportButton onExport={(format) => exportPurchaseEQaime(purchase, branding, format)} />
+              </div>
+            ) : (
+              <EQaimeExportButton
+                onExport={(format) => exportPurchaseEQaime(purchase, branding, format)}
+              />
+            )}
           </div>
         </div>
       </div>
