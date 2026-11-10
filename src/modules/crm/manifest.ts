@@ -17,7 +17,7 @@ export default defineModule({
   ],
   menus: [
     { path: "/crm", label: "nav.items.pipeline", icon: "KanbanSquare", section: "crm", order: 10 },
-    { path: "/settings/crm", label: "nav.items.crmSettings", icon: "KanbanSquare", section: "settings", order: 80 },
+    { path: "/settings/crm", label: "settingsNav.crm.title", icon: "KanbanSquare", section: "settings", order: 80 },
   ],
   routes: [
     { prefix: "/crm", permission: "can_view_crm" },

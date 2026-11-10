@@ -230,67 +230,67 @@
       "icon": "SlidersHorizontal",
       "items": [
         {
-          "titleKey": "nav.items.settings",
+          "titleKey": "settingsNav.company.title",
           "path": "/settings",
           "icon": "Settings"
         },
         {
-          "titleKey": "nav.items.roles",
+          "titleKey": "settingsNav.roles.title",
           "path": "/settings/roles",
           "icon": "ShieldCheck"
         },
         {
-          "titleKey": "nav.items.users",
+          "titleKey": "settingsNav.users.title",
           "path": "/users",
           "icon": "Users"
         },
         {
-          "titleKey": "nav.items.commissionRules",
+          "titleKey": "settingsNav.commissions.title",
           "path": "/settings/commissions",
           "icon": "Percent"
         },
         {
-          "titleKey": "nav.items.initialSetup",
+          "titleKey": "settingsNav.initialSetup.title",
           "path": "/settings/initial-setup",
           "icon": "Landmark"
         },
         {
-          "titleKey": "nav.items.backup",
+          "titleKey": "settingsNav.backup.title",
           "path": "/settings/backup",
           "icon": "Database"
         },
         {
-          "titleKey": "nav.items.barcode",
+          "titleKey": "settingsNav.barcode.title",
           "path": "/settings/barcode",
           "icon": "Barcode"
         },
         {
-          "titleKey": "nav.items.crmSettings",
+          "titleKey": "settingsNav.crm.title",
           "path": "/settings/crm",
           "icon": "SquareKanban"
         },
         {
-          "titleKey": "nav.items.taxPayroll",
+          "titleKey": "settingsNav.taxPayroll.title",
           "path": "/settings/tax-payroll",
           "icon": "Scale"
         },
         {
-          "titleKey": "nav.items.procurement",
+          "titleKey": "settingsNav.procurement.title",
           "path": "/settings/procurement",
           "icon": "ShoppingBag"
         },
         {
-          "titleKey": "nav.items.aiIntegration",
+          "titleKey": "settingsNav.ai.title",
           "path": "/settings/ai",
           "icon": "Sparkles"
         },
         {
-          "titleKey": "nav.items.studio",
+          "titleKey": "settingsNav.studio.title",
           "path": "/settings/studio",
           "icon": "Blocks"
         },
         {
-          "titleKey": "nav.items.audit",
+          "titleKey": "settingsNav.audit.title",
           "path": "/settings/audit",
           "icon": "ScrollText"
         }

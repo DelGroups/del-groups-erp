@@ -22,8 +22,14 @@ import {
   type EQaimeExportFormat,
   type TaxPayrollConfig,
 } from "@/lib/tax/payrollConfig";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
+import { Combobox } from "@/design-system/components";
+import { comboboxLabels } from "@/i18n/uiStandardLabels";
+import { SettingsSaveBar, useUnsavedChangesGuard } from "@/components/settings/v2/SettingsSaveBar";
+import { useSettingsDraft } from "@/components/settings/v2/useSettingsDraft";
 
 export default function TaxPayrollSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
@@ -31,6 +37,11 @@ export default function TaxPayrollSettingsPage() {
   const [config, setConfig] = useState<TaxPayrollConfig>(DEFAULT_TAX_PAYROLL_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // SETTINGS_V2: one save bar that shows while something changed, and a warning on leaving.
+  const draft = useSettingsDraft<TaxPayrollConfig>(DEFAULT_TAX_PAYROLL_CONFIG);
+  const { markSaved } = draft;
+  const dirty = settingsV2 && draft.isDirty(config);
+  const leaveDialog = useUnsavedChangesGuard(dirty);
 
   useEffect(() => {
     void getTaxPayrollConfigAction().then((result) => {
@@ -40,8 +51,9 @@ export default function TaxPayrollSettingsPage() {
         return;
       }
       if (result.data) setConfig(result.data);
+      markSaved(result.data ?? DEFAULT_TAX_PAYROLL_CONFIG);
     });
-  }, [showError]);
+  }, [showError, markSaved]);
 
   const patch = (partial: Partial<TaxPayrollConfig>) => {
     setConfig((current) => parseTaxPayrollConfig({ ...current, ...partial }));
@@ -57,34 +69,12 @@ export default function TaxPayrollSettingsPage() {
       return;
     }
     if (result.data) setConfig(result.data);
+    markSaved(result.data ?? config);
     showSuccess(t("taxPayrollSettings.saved"));
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="tax-payroll" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-6xl space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                  <Scale className="h-6 w-6 text-app-accent" />
-                  {t("taxPayrollSettings.title")}
-                </h1>
-                <p className="mt-1 text-sm text-app-muted">{t("taxPayrollSettings.description")}</p>
-              </div>
-              <button
-                type="button"
-                className="btn-primary inline-flex items-center gap-2"
-                disabled={!canManage || saving || loading}
-                onClick={() => void handleSave()}
-              >
-                <Save className="h-4 w-4" />
-                {saving ? t("common.saving") : t("common.save")}
-              </button>
-            </header>
+  const settingsBody = (
+    <>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="app-card app-card-elevated space-y-4 p-5">
@@ -105,38 +95,60 @@ export default function TaxPayrollSettingsPage() {
 
                 <label className="block text-xs font-semibold text-app-muted">
                   {t("taxPayrollSettings.defaultVat")}
-                  <select
-                    className="app-input mt-1 w-full"
-                    value={config.default_vat_rate}
-                    disabled={!canManage}
-                    onChange={(event) =>
-                      patch({ default_vat_rate: event.target.value as DefaultVatRateOption })
-                    }
-                  >
-                    {DEFAULT_VAT_RATE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {t(`taxPayrollSettings.vatRates.${option}`)}
-                      </option>
-                    ))}
-                  </select>
+                  {settingsV2 ? (
+                    <Combobox
+                      className="mt-1"
+                      value={config.default_vat_rate}
+                      disabled={!canManage}
+                      labels={comboboxLabels(t)}
+                      options={DEFAULT_VAT_RATE_OPTIONS.map((option) => ({ value: option, label: t(`taxPayrollSettings.vatRates.${option}`) }))}
+                      onChange={(value) => value && patch({ default_vat_rate: value as DefaultVatRateOption })}
+                    />
+                  ) : (
+                    <select
+                      className="app-input mt-1 w-full"
+                      value={config.default_vat_rate}
+                      disabled={!canManage}
+                      onChange={(event) =>
+                        patch({ default_vat_rate: event.target.value as DefaultVatRateOption })
+                      }
+                    >
+                      {DEFAULT_VAT_RATE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`taxPayrollSettings.vatRates.${option}`)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </label>
 
                 <label className="block text-xs font-semibold text-app-muted">
                   {t("taxPayrollSettings.exportFormat")}
-                  <select
-                    className="app-input mt-1 w-full"
-                    value={config.e_qaime_export_format}
-                    disabled={!canManage}
-                    onChange={(event) =>
-                      patch({ e_qaime_export_format: event.target.value as EQaimeExportFormat })
-                    }
-                  >
-                    {E_QAIME_EXPORT_FORMATS.map((option) => (
-                      <option key={option} value={option}>
-                        {t(`taxPayrollSettings.formats.${option}`)}
-                      </option>
-                    ))}
-                  </select>
+                  {settingsV2 ? (
+                    <Combobox
+                      className="mt-1"
+                      value={config.e_qaime_export_format}
+                      disabled={!canManage}
+                      labels={comboboxLabels(t)}
+                      options={E_QAIME_EXPORT_FORMATS.map((option) => ({ value: option, label: t(`taxPayrollSettings.formats.${option}`) }))}
+                      onChange={(value) => value && patch({ e_qaime_export_format: value as EQaimeExportFormat })}
+                    />
+                  ) : (
+                    <select
+                      className="app-input mt-1 w-full"
+                      value={config.e_qaime_export_format}
+                      disabled={!canManage}
+                      onChange={(event) =>
+                        patch({ e_qaime_export_format: event.target.value as EQaimeExportFormat })
+                      }
+                    >
+                      {E_QAIME_EXPORT_FORMATS.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`taxPayrollSettings.formats.${option}`)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </label>
               </section>
 
@@ -207,6 +219,44 @@ export default function TaxPayrollSettingsPage() {
                 </label>
               </section>
             </div>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="tax-payroll">
+        {settingsBody}
+        <SettingsSaveBar dirty={dirty} saving={saving} disabled={!canManage || loading} onSave={() => void handleSave()} onDiscard={() => setConfig(draft.saved)} />
+        {leaveDialog}
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="tax-payroll" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-6xl space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                  <Scale className="h-6 w-6 text-app-accent" />
+                  {t("taxPayrollSettings.title")}
+                </h1>
+                <p className="mt-1 text-sm text-app-muted">{t("taxPayrollSettings.description")}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary inline-flex items-center gap-2"
+                disabled={!canManage || saving || loading}
+                onClick={() => void handleSave()}
+              >
+                <Save className="h-4 w-4" />
+                {saving ? t("common.saving") : t("common.save")}
+              </button>
+            </header>
+            {settingsBody}
           </div>
         </div>
 

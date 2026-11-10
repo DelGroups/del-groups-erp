@@ -6,6 +6,9 @@ import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
+import { useSettingsItems } from "@/components/settings/useSettingsItems";
+import { SETTINGS_HOME } from "@/lib/settings/items";
+import type { ModuleId } from "@/modules/types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getNavItemPermission, getRequiredPermission } from "@/lib/auth/routePermissions";
 import { NAV_SECTIONS, type NavItem, type NavSection } from "@/lib/navigation/navConfig";
@@ -18,6 +21,7 @@ import {
   trailCrumbs,
   SHELL_EXTRA_ITEMS,
   extraItemsFor,
+  replaceSectionItems,
   TRAIL_STORAGE_KEY,
   visibleSections,
   withExtraItems,
@@ -44,9 +48,11 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
   const pathname = usePathname();
   const { newCrm, newImports } = useNewUi();
 
+  const { items: settingsItems, v2: settingsV2 } = useSettingsItems();
+
   const sections = useMemo(
-    () =>
-      visibleSections<NavItem, NavSection>(
+    () => {
+      const visible = visibleSections<NavItem, NavSection>(
         withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm, newImports }), (e) => ({
           path: e.path,
           titleKey: e.titleKey,
@@ -60,8 +66,17 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
           permissionFor: (path) => getNavItemPermission(path) ?? getRequiredPermission(path),
           can: (p) => can(p as Parameters<typeof can>[0]),
         }
-      ),
-    [can, isAdmin, isEnabled, newCrm, newImports]
+      );
+      // SET-1: the Settings app lists the one settings list (same pages, names and rules as
+      // SettingsTabs and the SETTINGS_V2 menu), not the module menus. With SETTINGS_V2 the hub
+      // comes first, so the launcher tile and the palette open it.
+      const settings = NAV_SECTIONS.find((s) => s.id === "settings");
+      if (!settings) return visible;
+      const items: NavItem[] = settingsItems.map((i) => ({ path: i.path, titleKey: i.titleKey, icon: i.Icon, module: (i.module ?? "core") as ModuleId }));
+      if (settingsV2 && items.length) items.unshift({ path: SETTINGS_HOME, titleKey: "settingsNav.allSettings", icon: settings.icon, module: "core" as ModuleId });
+      return replaceSectionItems<NavItem, NavSection>(visible, NAV_SECTIONS.map((s) => s.id), settings, items);
+    },
+    [can, isAdmin, isEnabled, newCrm, newImports, settingsItems, settingsV2]
   );
 
   const apps = useMemo<ShellApp[]>(

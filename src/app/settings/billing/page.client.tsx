@@ -16,6 +16,7 @@ import { daysUntil, invoiceOwed, usageMeters, type BillingOverview, type Invoice
 import { RowActionsMenu } from "@/design-system/components";
 import { useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 const METER_ICON: Record<LimitKind, LucideIcon> = { users: Users, storage: HardDrive, ai: Bot };
 const STATUS_BADGE: Record<InvoiceStatus, BadgeVariant> = { issued: "info", paid: "success", overdue: "danger", void: "neutral" };
@@ -32,6 +33,7 @@ function meterFigure(kind: LimitKind, value: number): string {
 }
 
 export default function BillingSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t, formatDate } = useI18n();
   // UI_STANDARD (UI-6): the invoices on the grid; old table with the flag off.
   const standard = useUiStandard();
@@ -73,20 +75,8 @@ export default function BillingSettingsPage() {
   }, {});
   const planName = (id: string) => overview?.plans.find((p) => p.id === id)?.name ?? "";
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="billing" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-4xl space-y-6">
-            <header>
-              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                <CreditCard className="h-6 w-6 text-app-accent" />
-                {t("tenantBilling.title")}
-              </h1>
-              <p className="mt-1 text-sm text-app-muted">{t("tenantBilling.description")}</p>
-            </header>
+  const settingsBody = (
+    <>
 
             {ready && !isAdmin ? (
               <div className="app-card p-6 text-sm text-app-muted">{t("tenantBilling.adminOnly")}</div>
@@ -298,6 +288,30 @@ export default function BillingSettingsPage() {
                 />
               </>
             )}
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="billing">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="billing" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-4xl space-y-6">
+            <header>
+              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                <CreditCard className="h-6 w-6 text-app-accent" />
+                {t("tenantBilling.title")}
+              </h1>
+              <p className="mt-1 text-sm text-app-muted">{t("tenantBilling.description")}</p>
+            </header>
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

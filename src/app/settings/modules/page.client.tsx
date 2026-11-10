@@ -12,6 +12,7 @@ import { Chip } from "@/design-system/components";
 import { useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import type { ModuleState } from "@/modules/enabled";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 const STATE_LABEL: Record<ModuleState, string> = {
   enabled: "settings.modules.stateEnabled",
@@ -26,6 +27,7 @@ const STATE_CLASS: Record<ModuleState, string> = {
 };
 
 export default function ModulesSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t, formatDate } = useI18n();
   // UI_STANDARD (UI-6): the modules on the grid; old table with the flag off.
   const standard = useUiStandard();
@@ -48,20 +50,8 @@ export default function ModulesSettingsPage() {
 
   const moduleName = (id: string) => t(`modules.names.${id}`);
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="modules" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-5xl space-y-6">
-            <header>
-              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                <Boxes className="h-6 w-6 text-app-accent" />
-                {t("settings.modules.title")}
-              </h1>
-              <p className="mt-1 text-sm text-app-muted">{t("settings.modules.description")}</p>
-            </header>
+  const settingsBody = (
+    <>
 
             {ready && !isAdmin ? (
               <div className="app-card p-6 text-sm text-app-muted">{t("settings.modules.adminOnly")}</div>
@@ -156,6 +146,30 @@ export default function ModulesSettingsPage() {
                 )}
               </>
             )}
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="modules">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="modules" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <header>
+              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                <Boxes className="h-6 w-6 text-app-accent" />
+                {t("settings.modules.title")}
+              </h1>
+              <p className="mt-1 text-sm text-app-muted">{t("settings.modules.description")}</p>
+            </header>
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

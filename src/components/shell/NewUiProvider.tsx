@@ -19,6 +19,8 @@ export interface NewUiServerValue {
   newCrm?: boolean;
   /** NEW_IMPORTS is on (server env): the Imports module (IMP-1) in the new shell. */
   newImports?: boolean;
+  /** SETTINGS_V2 is on (server env): the new Settings layout (SET-1) in the new shell. */
+  settingsV2?: boolean;
   /** NEW_HOME (server env) and NEW_HOME_AUDIENCE: the widget home page (prompt 24b). */
   newHome?: { enabled: boolean; audience: NewHomeAudience };
 }
@@ -36,12 +38,14 @@ interface NewUiValue {
   newCrm: boolean;
   /** NEW_IMPORTS is on; only matters while `active`. */
   newImports: boolean;
+  /** SETTINGS_V2 is on; only matters while `active` (useSettingsItems combines both). */
+  settingsV2: boolean;
   /** This user gets the widget home (NEW_HOME on, audience admins/all); only while `active`. */
   newHome: boolean;
   setPreferred: (on: boolean) => void;
 }
 
-const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, newCrm: false, newImports: false, newHome: false, setPreferred: () => undefined };
+const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, newCrm: false, newImports: false, settingsV2: false, newHome: false, setPreferred: () => undefined };
 const NewUiContext = createContext<NewUiValue>(OFF);
 
 /**
@@ -77,10 +81,11 @@ export function NewUiProvider({ value, children }: { value: NewUiServerValue; ch
       canToggle: newShellCanToggle({ available: true, isAdmin, audience, signedIn }),
       newCrm: value.newCrm === true,
       newImports: value.newImports === true,
+      settingsV2: value.settingsV2 === true,
       newHome: newHomeActive({ enabled: value.newHome?.enabled === true, audience: value.newHome?.audience ?? "admins", isAdmin }),
       setPreferred,
     };
-  }, [value.available, value.brand, value.audience, value.newCrm, value.newImports, value.newHome?.enabled, value.newHome?.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
+  }, [value.available, value.brand, value.audience, value.newCrm, value.newImports, value.settingsV2, value.newHome?.enabled, value.newHome?.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
 
   return <NewUiContext.Provider value={ctx}>{children}</NewUiContext.Provider>;
 }

@@ -12,8 +12,10 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { useUiStandard } from "@/design-system/components";
 import { CommissionRulesGrid } from "./CommissionRulesGrid";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 export default function CommissionRulesPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   // UI_STANDARD (UI-6): the rules on the grid; the old table with the flag off.
   const standard = useUiStandard();
@@ -78,37 +80,8 @@ export default function CommissionRulesPage() {
     }
   };
 
-  return (
-    <PageLayout>
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/settings"
-              className="p-2 hover:bg-app-card-hover rounded-lg transition-colors text-app-muted"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-app">
-                {t("commissions.settingsTitle")}
-              </h1>
-              <p className="text-xs text-app-muted mt-0.5">
-                {t("commissions.settingsDescription")}
-              </p>
-            </div>
-          </div>
-
-          <Link
-  href="/commissions"
-  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
->
-  <Calculator className="w-4 h-4" />
-  {t("commissions.pendingCommissions")}
-</Link>
-        </div>
-
-        <div className="p-6 space-y-6 max-w-6xl">
+  const settingsBody = (
+    <>
           {/* Add Rule Form */}
           <div className="app-card app-card-elevated p-6">
             <h2 className="text-sm font-semibold text-app-accent flex items-center gap-1.5 mb-4">
@@ -250,6 +223,56 @@ export default function CommissionRulesPage() {
               </table>
             )}
           </div>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="commissions" actions={
+          <Link
+  href="/commissions"
+  className="ds-btn ds-btn-primary"
+>
+  <Calculator className="w-4 h-4" />
+  {t("commissions.pendingCommissions")}
+</Link>
+      }>
+        <div className="space-y-6">{settingsBody}</div>
+      <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-app app-glass px-6 py-4">
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/settings"
+              className="p-2 hover:bg-app-card-hover rounded-lg transition-colors text-app-muted"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-app">
+                {t("commissions.settingsTitle")}
+              </h1>
+              <p className="text-xs text-app-muted mt-0.5">
+                {t("commissions.settingsDescription")}
+              </p>
+            </div>
+          </div>
+
+          <Link
+  href="/commissions"
+  className="bg-[image:var(--app-gradient)] hover:brightness-110 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+>
+  <Calculator className="w-4 h-4" />
+  {t("commissions.pendingCommissions")}
+</Link>
+        </div>
+
+        <div className="p-6 space-y-6 max-w-6xl">
+          {settingsBody}
         </div>
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>

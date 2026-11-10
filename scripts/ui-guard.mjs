@@ -131,7 +131,9 @@ export const PAGE_SIZES = [
 ];
 
 /** Signed-in routes of the page checks (the main lists and forms). */
-export const MAIN_ROUTES = ["/", "/sales", "/purchases", "/dashboard/payments", "/customers", "/products", "/sales/new", "/purchases/new", "/imports", "/imports/new"];
+// Settings pages (SET-1): the hub (SETTINGS_V2) or company profile, and every page of the settings list.
+export const SETTINGS_ROUTES = ["/settings", "/settings/company", "/settings/roles", "/users", "/settings/commissions", "/settings/initial-setup", "/settings/tax-payroll", "/settings/audit", "/settings/procurement", "/settings/imports", "/settings/crm", "/settings/activity-types", "/settings/barcode", "/settings/stock-integrity", "/settings/modules", "/settings/studio", "/settings/ai", "/settings/backup"];
+export const MAIN_ROUTES = ["/", "/sales", "/purchases", "/dashboard/payments", "/customers", "/products", "/sales/new", "/purchases/new", "/imports", "/imports/new", ...SETTINGS_ROUTES];
 
 const settle = (page, ms = 1200) => page.waitForTimeout(ms);
 const scrollRoot = (page, fraction) =>

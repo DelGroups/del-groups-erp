@@ -23,8 +23,10 @@ import { formatRpcError } from "@/lib/forms/rpcErrors";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { ArrowRight, Download, FileSpreadsheet, Landmark, Package, Upload } from "lucide-react";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 export default function InitialSetupPage() {
+  const settingsV2 = useSettingsV2();
   const { t, locale } = useI18n();
   // UI_STANDARD (UI-6): the import preview on the grid; old table with the flag off.
   const standard = useUiStandard();
@@ -85,17 +87,8 @@ export default function InitialSetupPage() {
     setImportPreview([]);
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_view_settings">
-        <SettingsTabs activeTab="initial-setup" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-5xl space-y-6">
-            <header>
-              <h1 className="text-xl font-bold text-app">{t("initialSetup.title")}</h1>
-              <p className="mt-1 text-sm text-app-muted">{t("initialSetup.description")}</p>
-            </header>
+  const settingsBody = (
+    <>
 
             <a
               href="/finance/opening-balances"
@@ -205,6 +198,27 @@ export default function InitialSetupPage() {
                 <p className="mt-3 text-xs font-semibold text-emerald-400">{importResult}</p>
               )}
             </section>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="initial-setup">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_view_settings">
+        <SettingsTabs activeTab="initial-setup" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <header>
+              <h1 className="text-xl font-bold text-app">{t("initialSetup.title")}</h1>
+              <p className="mt-1 text-sm text-app-muted">{t("initialSetup.description")}</p>
+            </header>
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

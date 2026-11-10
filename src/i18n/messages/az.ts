@@ -4014,6 +4014,113 @@ export const azMessages = {
     motionClose: "Sifarişi bağla",
     motionOtherPage: "Başqa səhifə",
   },
+  settingsNav: {
+    groups: {
+      company: "Şirkət",
+      access: "İstifadəçilər və giriş",
+      trade: "Satış və alış",
+      inventory: "Anbar",
+      system: "Sistem",
+    },
+    company: {
+      title: "Şirkət profili",
+      description: "Ad, loqo, möhür, rekvizitlər və ƏDV dərəcəsi.",
+    },
+    initialSetup: {
+      title: "İlkin quraşdırma",
+      description: "Kassa və bank açılış qalıqları, məhsulların toplu idxalı.",
+    },
+    taxPayroll: {
+      title: "Vergi və əməkhaqqı",
+      description: "VÖEN, standart ƏDV, e-qaimə formatı və əməkhaqqı tutulmaları.",
+    },
+    users: {
+      title: "İstifadəçilər",
+      description: "İstifadəçiləri dəvət edin, rollarını və statuslarını dəyişin.",
+    },
+    roles: {
+      title: "Rollar və icazələr",
+      description: "Rollar yaradın və hər modul üzrə icazələri təyin edin.",
+    },
+    audit: {
+      title: "Audit jurnalı",
+      description: "Kritik əməliyyatların əvvəl/sonra izi və risk xəbərdarlıqları.",
+    },
+    commissions: {
+      title: "Komissiya qaydaları",
+      description: "Satış həcminə və kateqoriyaya görə faiz pillələri.",
+    },
+    procurement: {
+      title: "Satınalma",
+      description: "Avtomatik sifariş qaydaları və təchizatçı balı.",
+    },
+    imports: {
+      title: "İdxal ayarları",
+      description: "Xərc növləri, gömrük ƏDV-si və standart bölgü üsulları.",
+    },
+    crm: {
+      title: "CRM pipeline və təkliflər",
+      description: "Pipeline mərhələləri və qiymət təklifi şablonu.",
+    },
+    activityTypes: {
+      title: "Fəaliyyət növləri",
+      description: "Qeydlər üzərində planlaşdırılan zəng, görüş və tapşırıq növləri.",
+    },
+    barcode: {
+      title: "Barkod etiketləri",
+      description: "Stiker ölçüsü, barkod növü və etiketdə çap olunan sahələr.",
+    },
+    stockIntegrity: {
+      title: "Stok yoxlanışı",
+      description: "Məhsul, anbar və qalıqlar arasındakı uyğunsuzluqları tapın və düzəldin.",
+    },
+    modules: {
+      title: "Modullar",
+      description: "Şirkətin planındakı modullar və onların vəziyyəti.",
+    },
+    studio: {
+      title: "Studio (xüsusi sahələr)",
+      description: "Sənəd və kartlara öz sahələrinizi əlavə edin.",
+    },
+    ai: {
+      title: "AI inteqrasiyası",
+      description: "ERP köməkçisini n8n AI agentinə qoşun.",
+    },
+    backup: {
+      title: "Backup və export",
+      description: "Tam sistem backup-ı, bərpa və modul exportu.",
+    },
+    billing: {
+      title: "Ödənişlər",
+      description: "Plan, istifadə və hesab-fakturalar.",
+    },
+    hub: {
+      description: "Şirkətin, istifadəçilərin və modulların bütün ayarları bir yerdə.",
+      search: "Ayarlarda axtar",
+      searchPlaceholder: "Məs.: vergi, rollar, barkod",
+      empty: "“{query}” üzrə ayar tapılmadı.",
+      emptyHint: "Başqa söz yoxlayın və ya axtarışı təmizləyin.",
+      clear: "Təmizlə",
+      usersCount: "{count} istifadəçi",
+      modulesOff: "{count} modul söndürülüb",
+      allModulesOn: "Bütün modullar aktivdir",
+    },
+    menu: "Ayarlar menyusu",
+    menuOpen: "Ayarlar bölməsini seçin",
+    allSettings: "Bütün ayarlar",
+    saveBar: {
+      unsaved: "Yadda saxlanmamış dəyişikliklər var",
+      discard: "Ləğv et",
+      save: "Yadda saxla",
+      saving: "Saxlanılır…",
+    },
+    leave: {
+      title: "Dəyişikliklər yadda saxlanmayıb",
+      body: "Səhifədən çıxsanız, etdiyiniz dəyişikliklər itəcək.",
+      stay: "Səhifədə qal",
+      leave: "Saxlamadan çıx",
+    },
+  },
   newShell: {
     homeMenu: "Ana menyu",
     extra_polywood: "Polywood qalığı",
@@ -4059,6 +4166,8 @@ export const azMessages = {
     menu: "Menyu",
     mobileNav: "Əsas naviqasiya",
     appMenu: "{app} menyusu",
+    tabsScrollBack: "Əvvəlki bölmələr",
+    tabsScrollForward: "Növbəti bölmələr",
     breadcrumb: "Naviqasiya yolu",
     more: "Gizli səviyyələri göstər",
     kpi_dashboard: "Bu ay satış",

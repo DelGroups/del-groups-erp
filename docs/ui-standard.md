@@ -171,6 +171,14 @@ warehouse, account, employee, expense or product category, consignment shop, par
 - **Inputs with a leading icon** use `app-input pl-9`; `.app-input` keeps its padding in `@layer components` so the utility wins.
 - **Breadcrumbs.** A page with a fixed address (a list, a "new" form) starts a new trail; record pages opened from it extend the trail. Every page has a translated crumb label (`lib/navigation/breadcrumbs.ts`).
 
+## Settings (SET-1)
+
+- **One list of settings pages:** `src/lib/settings/items.ts` (`SETTINGS_ITEMS`): path, name, one-line description, icon, group, permission, module, `adminOnly`, `newUiOnly`, feature flag. The shell's Settings app (tab bar, launcher, command palette, phone drawer), the classic `SettingsTabs`, the breadcrumbs and the `SETTINGS_V2` hub and side menu all read it through `useSettingsItems()`, so a page has one name and one visibility rule everywhere. A new settings page is one entry there (and its manifest menu uses the same `titleKey`; `tests/settingsRedesign.test.mjs` checks it).
+- **One navigation:** in the new shell `SettingsTabs` renders nothing (the app tab bar is the menu); in the classic shell it stays.
+- **App tab bar** (`AppTabBar`, every app): no visible scrollbar; it scrolls with the wheel, touch and the keyboard; a fade and a small arrow show only on a side that hides tabs; the active tab is scrolled into view.
+- **`SETTINGS_V2`** (server env, off by default, new shell only): `/settings` is a hub (search + cards in groups), the company profile moves to `/settings/company`, every settings page gets the side menu (a menu sheet on phones) instead of the app tab bar, and the standard `PageHeader`. Pages wrap their body in `SettingsV2Page`; with the flag off they render their old JSX unchanged.
+- **Settings forms** with `SETTINGS_V2`: design-system fields, two columns from `@md`, section cards, one `SettingsSaveBar` (`erp-sticky-actions`) that shows only while something changed, and `useUnsavedChangesGuard` (browser prompt on reload/close, our dialog on in-app links).
+
 ## Guards
 
 - **Lint (`npm run lint`)** fails on a native `<select>`, `<input type="date">`, `<datalist>`, `toLocaleString`, `toLocaleDateString` or `Intl.DateTimeFormat` in `src/`.

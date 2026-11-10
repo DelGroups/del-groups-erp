@@ -38,6 +38,7 @@ import {
   type BarcodePaperSize,
   type BarcodeSymbolType,
 } from "@/lib/barcode/labelConfig";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 function ToggleRow({
   label,
@@ -65,6 +66,7 @@ function ToggleRow({
 }
 
 export default function BarcodeSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const router = useRouter();
   const { t } = useI18n();
   const { can } = useAuth();
@@ -137,41 +139,8 @@ export default function BarcodeSettingsPage() {
     showSuccess(t("barcodeSettings.saved"));
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="barcode" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-7xl space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                  <Barcode className="h-6 w-6 text-app-accent" />
-                  {t("barcodeSettings.title")}
-                </h1>
-                <p className="mt-1 text-sm text-app-muted">{t("barcodeSettings.description")}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn-ghost inline-flex items-center gap-2"
-                  onClick={() => setPrintJob(config)}
-                >
-                  <Printer className="h-4 w-4" />
-                  {t("barcodeSettings.testPrint")}
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary inline-flex items-center gap-2"
-                  disabled={!canManage || saving || loading}
-                  onClick={() => void handleSave()}
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? t("common.saving") : t("common.save")}
-                </button>
-              </div>
-            </header>
+  const settingsBody = (
+    <>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,22rem)_1fr]">
               <section className="app-card app-card-elevated space-y-4 p-5">
@@ -354,6 +323,84 @@ export default function BarcodeSettingsPage() {
 
               <p className="text-[11px] text-app-muted">{t("barcodeSettings.api.hint")}</p>
             </section>
+    </>
+  );
+  const settingsActions = (
+    <>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost inline-flex items-center gap-2"
+                  onClick={() => setPrintJob(config)}
+                >
+                  <Printer className="h-4 w-4" />
+                  {t("barcodeSettings.testPrint")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary inline-flex items-center gap-2"
+                  disabled={!canManage || saving || loading}
+                  onClick={() => void handleSave()}
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? t("common.saving") : t("common.save")}
+                </button>
+              </div>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="barcode" actions={settingsActions}>
+        {settingsBody}
+        {printJob ? (
+        <PrintableLabelArea>
+        <ThermalLabelPrintTemplate
+        items={[SAMPLE_THERMAL_LABEL]}
+        branding={branding}
+        config={printJob}
+        />
+        </PrintableLabelArea>
+        ) : null}
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="barcode" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                  <Barcode className="h-6 w-6 text-app-accent" />
+                  {t("barcodeSettings.title")}
+                </h1>
+                <p className="mt-1 text-sm text-app-muted">{t("barcodeSettings.description")}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost inline-flex items-center gap-2"
+                  onClick={() => setPrintJob(config)}
+                >
+                  <Printer className="h-4 w-4" />
+                  {t("barcodeSettings.testPrint")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary inline-flex items-center gap-2"
+                  disabled={!canManage || saving || loading}
+                  onClick={() => void handleSave()}
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? t("common.saving") : t("common.save")}
+                </button>
+              </div>
+            </header>
+            {settingsBody}
           </div>
         </div>
 

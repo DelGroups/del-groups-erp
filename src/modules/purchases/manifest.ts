@@ -23,7 +23,7 @@ export default defineModule({
   ],
   menus: [
     { path: "/purchases", label: "nav.items.purchases", icon: "ShoppingBag", section: "trade", order: 20 },
-    { path: "/settings/procurement", label: "nav.items.procurement", icon: "ShoppingBag", section: "settings", order: 100 },
+    { path: "/settings/procurement", label: "settingsNav.procurement.title", icon: "ShoppingBag", section: "settings", order: 100 },
   ],
   routes: [
     { prefix: "/purchases", permission: "can_view_purchases" },

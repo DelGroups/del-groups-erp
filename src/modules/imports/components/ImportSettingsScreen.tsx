@@ -10,20 +10,32 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { methodsFor, type ImportCostTypeConfig, type ImportsConfig } from "@/lib/imports/config";
 import { COST_TYPES, type CostType, type SplitMethod } from "@/lib/imports/landedCost";
 import { ViewScope } from "@/views";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
+import { SettingsSaveBar, useUnsavedChangesGuard } from "@/components/settings/v2/SettingsSaveBar";
+import { sameValue } from "@/lib/settings/form";
 import { getImportsConfigAction, importLookupsAction, saveImportsConfigAction } from "../actions/imports";
 
 const CONFIG_KEY = ["imports", "config"] as const;
 
 /** Settings › Imports (IMP-1): customs VAT, chargeable weight and the defaults of each cost type. */
 export default function ImportSettingsScreen() {
+  // SETTINGS_V2 (SET-1): the settings frame (side menu, page header, save bar).
+  const settingsV2 = useSettingsV2();
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="imports">
+        <Settings v2 />
+      </SettingsV2Page>
+    );
+  }
   return (
     <ViewScope>
-      <Settings />
+      <Settings v2={false} />
     </ViewScope>
   );
 }
 
-function Settings() {
+function Settings({ v2 }: { v2: boolean }) {
   const { t } = useI18n();
   const config = useQuery({
     queryKey: CONFIG_KEY,
@@ -46,16 +58,19 @@ function Settings() {
     return <EmptyState icon={AlertTriangle} title={t(key)} description={t("imports.errors.loadHint")} />;
   }
   if (!config.data) return <SkeletonList loading rows={6} label={t("common.loading")}>{null}</SkeletonList>;
-  return <SettingsForm key={config.dataUpdatedAt} initial={config.data} suppliers={suppliers.data?.suppliers ?? []} />;
+  return <SettingsForm key={config.dataUpdatedAt} initial={config.data} suppliers={suppliers.data?.suppliers ?? []} v2={v2} />;
 }
 
-function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; suppliers: { id: string; name: string }[] }) {
+function SettingsForm({ initial, suppliers, v2 }: { initial: ImportsConfig; suppliers: { id: string; name: string }[]; v2: boolean }) {
   const { t } = useI18n();
   const uiStandard = useUiStandard();
   const { toast } = useToast();
   const client = useQueryClient();
   const [config, setConfig] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(initial);
+  const dirty = v2 && !sameValue(config, saved);
+  const leaveDialog = useUnsavedChangesGuard(dirty);
 
   const setType = (type: CostType, patch: Partial<ImportCostTypeConfig>) =>
     setConfig((c) => ({ ...c, costTypes: { ...c.costTypes, [type]: { ...c.costTypes[type], ...patch } } }));
@@ -70,12 +85,14 @@ function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; supplier
       toast(t("imports.errors.saveFailed"), t(r.error), "error");
       return;
     }
+    setSaved(config);
     toast(t("imports.settings.saved"), undefined, "success");
     await client.invalidateQueries({ queryKey: CONFIG_KEY });
   };
 
   return (
     <div className="flex flex-col gap-4">
+      {v2 ? null : (
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <Link href="/imports" className="ds-btn ds-btn-sm ds-btn-ghost mb-1">
@@ -90,6 +107,7 @@ function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; supplier
           {saving ? t("common.saving") : t("common.save")}
         </button>
       </header>
+      )}
 
       <section className="ds-card ds-card-pad grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label={t("imports.settings.general")}>
         <label className="flex flex-col gap-1">
@@ -177,6 +195,8 @@ function SettingsForm({ initial, suppliers }: { initial: ImportsConfig; supplier
           </table>
         </div>
       </section>
+      {v2 ? <SettingsSaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={() => setConfig(saved)} /> : null}
+      {leaveDialog}
     </div>
   );
 }

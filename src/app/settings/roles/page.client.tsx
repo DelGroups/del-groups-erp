@@ -5,6 +5,7 @@ import { ShieldCheck, Users } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 import RolesPermissionsTab from "@/components/settings/RolesPermissionsTab";
 import UserPermissionsTab from "@/components/settings/UserPermissionsTab";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -14,7 +15,27 @@ type RolesPageTab = "roles" | "users";
 export default function RolesSettingsPage() {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<RolesPageTab>("roles");
+  const settingsV2 = useSettingsV2();
 
+  if (settingsV2) {
+    const tab = (id: RolesPageTab, Icon: typeof Users, label: string) => (
+      <button type="button" role="tab" id={`roles-tab-${id}`} aria-controls="roles-panel" aria-selected={activeTab === id} className="ds-tab" onClick={() => setActiveTab(id)}>
+        <Icon className="h-4 w-4" aria-hidden />
+        {label}
+      </button>
+    );
+    return (
+      <SettingsV2Page id="roles" permission="can_manage_roles">
+        <div className="ds-doc-tabs" role="tablist" aria-label={t("settingsNav.roles.title")}>
+          {tab("roles", ShieldCheck, t("settings.rolesTab"))}
+          {tab("users", Users, t("settings.userPermissionsTab"))}
+        </div>
+        <div id="roles-panel" role="tabpanel" aria-labelledby={`roles-tab-${activeTab}`} className="-mx-[var(--erp-content-padding-x,0px)] md:mx-0">
+          {activeTab === "roles" ? <RolesPermissionsTab /> : <UserPermissionsTab />}
+        </div>
+      </SettingsV2Page>
+    );
+  }
   return (
     <PageLayout>
       <div className="border-b border-app app-glass px-6 py-4">

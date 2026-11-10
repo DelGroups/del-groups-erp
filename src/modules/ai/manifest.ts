@@ -8,7 +8,7 @@ export default defineModule({
   depends: ["core"],
   permissions: [],
   matrix: [],
-  menus: [{ path: "/settings/ai", label: "nav.items.aiIntegration", icon: "Sparkles", section: "settings", order: 110 }],
+  menus: [{ path: "/settings/ai", label: "settingsNav.ai.title", icon: "Sparkles", section: "settings", order: 110 }],
   routes: [{ prefix: "/settings/ai", permission: "can_manage_settings" }],
   aiTools: [],
   settings: [{ key: "n8n_ai_config", type: "json" }],

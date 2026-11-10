@@ -233,7 +233,8 @@ test("My activities links open the record's new-UI screen", () => {
   assert.match(customers, /if \(!newUi \|\| openedFromLink\.current/);
   assert.match(read("src/views/chatter/RecordChatter.tsx"), /if \(!active \|\| !recordId/);
   // The activity types page is an admin settings tab shown only with the new UI.
-  assert.match(read("src/components/settings/SettingsTabs.tsx"), /id: "activity-types",[\s\S]*?adminOnly: true,\s+newUiOnly: true,/);
+  // (SET-1: the rule lives in the one settings list that SettingsTabs and the shell read.)
+  assert.match(read("src/lib/settings/items.ts"), /id: "activity-types",[^\n]*adminOnly: true, newUiOnly: true/);
 });
 
 test("every chatter text exists in az, en and ru", () => {

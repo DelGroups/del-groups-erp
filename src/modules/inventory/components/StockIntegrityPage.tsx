@@ -27,6 +27,7 @@ import {
   type StockIssueGroup,
   type StockIssueKind,
 } from "../lib/stockIntegrity";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 type PendingFix = { kind: StockIssueKind; productIds: string[] | null; count: number };
 
@@ -40,6 +41,7 @@ function fmt(value: number | null): string {
  * and "Fix all of this kind"; the rest link to the product for a person to correct.
  */
 export default function StockIntegrityPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   // UI_STANDARD (UI-6): each issue group on the grid (fix / open product in the row menu); old tables with the flag off.
   const standard = useUiStandard();
@@ -92,37 +94,8 @@ export default function StockIntegrityPage() {
       <Badge variant="warning">{t("stockIntegrity.needsReview")}</Badge>
     );
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="stock-integrity" />
-        {!isAdmin ? (
-          <Alert variant="warning" className="m-6">
-            {t("permission.deniedBody")}
-          </Alert>
-        ) : (
-          <div className="space-y-5 p-6">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div className="max-w-2xl">
-                <h1 className="flex items-center gap-2 text-lg font-semibold text-app">
-                  <ShieldCheck className="h-5 w-5 text-app-accent" />
-                  {t("stockIntegrity.title")}
-                </h1>
-                <p className="mt-1 text-sm text-app-muted">{t("stockIntegrity.description")}</p>
-              </div>
-              <Button
-                appearance="outline"
-                color="secondary"
-                onClick={() => {
-                  setLoading(true);
-                  void load();
-                }}
-                loading={loading}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {t("stockIntegrity.refresh")}
-              </Button>
-            </header>
+  const settingsBody = (
+    <>
 
             <Alert variant="info">{t("stockIntegrity.noLedgerNote")}</Alert>
 
@@ -279,6 +252,92 @@ export default function StockIntegrityPage() {
                 )}
               </section>
             ))}
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="stock-integrity" actions={isAdmin ? (
+        <>
+              <Button
+                appearance="outline"
+                color="secondary"
+                onClick={() => {
+                  setLoading(true);
+                  void load();
+                }}
+                loading={loading}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {t("stockIntegrity.refresh")}
+              </Button>
+        </>
+      ) : null}>
+        {!isAdmin ? (
+          <Alert variant="warning" className="m-6">
+            {t("permission.deniedBody")}
+          </Alert>
+        ) : (
+          <div className="space-y-5">{settingsBody}</div>
+        )}
+        <Modal
+          open={pending !== null}
+          onOpenChange={(next) => (next || fixing ? undefined : setPending(null))}
+          title={t("stockIntegrity.title")}
+          className="max-w-md"
+          footer={
+            <>
+              <Button appearance="outline" color="secondary" onClick={() => setPending(null)} disabled={fixing}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={() => pending && void runFix(pending)} loading={fixing}>
+                {pending ? t("stockIntegrity.fixAll", { count: pending.count }) : t("stockIntegrity.fix")}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-app">
+            {pending
+              ? t("stockIntegrity.confirmFixAll", { count: pending.count, kind: t(`stockIntegrity.kinds.${pending.kind}`) })
+              : null}
+          </p>
+          {pending ? <p className="mt-2 text-xs text-app-muted">{t(`stockIntegrity.hints.${pending.kind}`)}</p> : null}
+        </Modal>
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="stock-integrity" />
+        {!isAdmin ? (
+          <Alert variant="warning" className="m-6">
+            {t("permission.deniedBody")}
+          </Alert>
+        ) : (
+          <div className="space-y-5 p-6">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div className="max-w-2xl">
+                <h1 className="flex items-center gap-2 text-lg font-semibold text-app">
+                  <ShieldCheck className="h-5 w-5 text-app-accent" />
+                  {t("stockIntegrity.title")}
+                </h1>
+                <p className="mt-1 text-sm text-app-muted">{t("stockIntegrity.description")}</p>
+              </div>
+              <Button
+                appearance="outline"
+                color="secondary"
+                onClick={() => {
+                  setLoading(true);
+                  void load();
+                }}
+                loading={loading}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {t("stockIntegrity.refresh")}
+              </Button>
+            </header>
+            {settingsBody}
           </div>
         )}
 

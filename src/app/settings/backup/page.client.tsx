@@ -31,8 +31,10 @@ import {
   Receipt,
   Wallet,
 } from "lucide-react";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 export default function BackupSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
@@ -155,17 +157,8 @@ export default function BackupSettingsPage() {
     },
   ] as const;
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_view_settings">
-        <SettingsTabs activeTab="backup" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-5xl space-y-6">
-            <header>
-              <h1 className="text-xl font-bold text-app">{t("backup.title")}</h1>
-              <p className="mt-1 text-sm text-app-muted">{t("backup.description")}</p>
-            </header>
+  const settingsBody = (
+    <>
 
             {(statusMsg || statusError) && (
               <div
@@ -255,6 +248,34 @@ export default function BackupSettingsPage() {
                 })}
               </div>
             </section>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="backup">
+        {settingsBody}
+        <ConfirmRestoreModal
+        open={!!restoreFile}
+        filename={restoreFile?.name ?? ""}
+        loading={restoring}
+        onCancel={() => setRestoreFile(null)}
+        onConfirm={() => void handleConfirmRestore()}
+        />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_view_settings">
+        <SettingsTabs activeTab="backup" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-5xl space-y-6">
+            <header>
+              <h1 className="text-xl font-bold text-app">{t("backup.title")}</h1>
+              <p className="mt-1 text-sm text-app-muted">{t("backup.description")}</p>
+            </header>
+            {settingsBody}
           </div>
         </div>
 
