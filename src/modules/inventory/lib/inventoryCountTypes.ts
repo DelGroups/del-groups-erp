@@ -1,3 +1,5 @@
+import type { CountResponsible } from "./countTeam";
+
 export type InventoryCountStatus = "draft" | "in_progress" | "review" | "posted";
 
 export const INVENTORY_COUNT_STATUSES: InventoryCountStatus[] = ["draft", "in_progress", "review", "posted"];
@@ -66,6 +68,8 @@ export interface InventoryCountLine {
 
 export interface InventoryCountDetail extends InventoryCountDocument {
   lines: InventoryCountLine[];
+  /** INV-4: the chosen employees (empty for older counts that only have free text). */
+  responsibles: CountResponsible[];
 }
 
 export interface CreateInventoryCountInput {
@@ -76,6 +80,8 @@ export interface CreateInventoryCountInput {
   /** Only valid together with category_name. */
   subcategory_name?: string | null;
   responsible_name?: string;
+  /** INV-4 (COUNT_TEAM): the chosen employees; their names become responsible_name. */
+  responsible_employee_ids?: string[];
   notes?: string;
 }
 

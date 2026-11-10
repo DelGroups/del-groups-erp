@@ -2867,6 +2867,22 @@ export const enMessages: Messages = {
     draftDeleted: "Draft document deleted",
   },
   inventoryCount: {
+    // INV-4 (COUNT_TEAM): responsible people from the employee list.
+    team: {
+      choose: "Choose employees",
+      search: "Search name, code or position…",
+      empty: "No matching employees",
+      loadError: "The employee list did not load. Refresh the page.",
+      clear: "Clear the chosen employees",
+      selected: "selected",
+      chosen: "Chosen responsible people",
+      remove: "Remove {name}",
+      previousText: "Written before",
+      max: "You can choose at most {count} people.",
+      tooMany: "Too many responsible people for one count. Shorten the list.",
+      edit: "Responsible people",
+      editTitle: "Change the responsible people",
+    },
     listTitle: "Inventory count",
     listDescription: "Stocktaking documents: create, count, review variances and validate",
     newCount: "New count",

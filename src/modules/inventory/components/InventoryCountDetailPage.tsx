@@ -51,6 +51,7 @@ import {
   startInventoryCountAction,
   saveInventoryCountProgressAction,
   searchInventoryCountProductsAction,
+  setInventoryCountResponsiblesAction,
   submitInventoryCountAction,
   unpostInventoryCountAction,
   updateInventoryCountHeaderAction,
@@ -68,6 +69,9 @@ import {
   type InventoryCountProductHit,
 } from "../lib/inventoryCountSearch";
 import { countToday } from "../lib/inventoryCountDates";
+import { canEditCountTeam, countTeamView, teamChanged } from "../lib/countTeam";
+import { useCountTeam } from "./CountTeamFlag";
+import { CountTeamPicker, useCountEmployeeOptions } from "./CountTeamPicker";
 import { formatTime } from "@/lib/dates/localeDate";
 
 const PAGE_SIZE = 100;
@@ -344,7 +348,10 @@ export default function InventoryCountDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [unpostOpen, setUnpostOpen] = useState(false);
   const [unpostReason, setUnpostReason] = useState("");
-  const [headerForm, setHeaderForm] = useState<{ count_date: string; responsible_name: string; notes: string } | null>(null);
+  const [headerForm, setHeaderForm] = useState<{ count_date: string; responsible_name: string; notes: string; team: string[] } | null>(null);
+  // COUNT_TEAM (INV-4): responsible people from the employee list; the list loads with the dialog.
+  const countTeam = useCountTeam();
+  const employees = useCountEmployeeOptions(countTeam && headerForm !== null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<LineFilter>("all");
   const [page, setPage] = useState(0);
@@ -485,6 +492,9 @@ export default function InventoryCountDetailPage() {
   const isPosted = status === "posted";
   // Header: anyone in draft; admins while counting or in review; nobody once posted.
   const canEditHeader = status === "draft" || (isAdmin && (status === "in_progress" || status === "review"));
+  // INV-4: the people may change where the header cannot (counting: anyone; posted: admins).
+  const canEditTeam = countTeam && canEditCountTeam(status, isAdmin);
+  const team = countTeamView(doc ?? { responsible_name: null });
 
   const summary = useMemo(() => {
     let counted = 0;
@@ -665,13 +675,36 @@ export default function InventoryCountDetailPage() {
   };
 
   const handleSaveHeader = async () => {
-    if (!headerForm) return;
+    if (!headerForm || !doc) return;
     setBusy(true);
-    const result = await updateInventoryCountHeaderAction(countId, headerForm);
-    setBusy(false);
-    if (!result.success) {
-      showError(translateError(result.error));
-      return;
+    // COUNT_TEAM: the people first (the step the database may refuse: an employee who left, the
+    // status rule), so a refusal changes nothing. Their names become the responsible text.
+    let responsibleText = doc.responsible_name ?? "";
+    let teamSaved = false;
+    if (countTeam && teamChanged(countTeamView(doc).ids, headerForm.team)) {
+      const result = await setInventoryCountResponsiblesAction(countId, headerForm.team);
+      if (!result.success) {
+        setBusy(false);
+        showError(translateError(result.error));
+        return;
+      }
+      responsibleText = result.data?.responsible_name ?? "";
+      teamSaved = true;
+    }
+    if (canEditHeader) {
+      const result = await updateInventoryCountHeaderAction(countId, {
+        count_date: headerForm.count_date,
+        notes: headerForm.notes,
+        // With COUNT_TEAM the text follows the people (kept as the RPC wrote it).
+        responsible_name: countTeam ? responsibleText : headerForm.responsible_name,
+      });
+      if (!result.success) {
+        setBusy(false);
+        showError(translateError(result.error));
+        // The people are saved already: show them, so the page never shows an older state.
+        if (teamSaved) await load();
+        return;
+      }
     }
     setHeaderForm(null);
     showSuccess(t("inventoryCount.headerSaved"));
@@ -748,7 +781,7 @@ export default function InventoryCountDetailPage() {
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
-      {canEditHeader ? (
+      {canEditHeader || canEditTeam ? (
         <Button
           appearance="outline"
           color="secondary"
@@ -758,11 +791,12 @@ export default function InventoryCountDetailPage() {
               count_date: doc.count_date,
               responsible_name: doc.responsible_name || "",
               notes: doc.notes || "",
+              team: team.ids,
             })
           }
         >
           <PencilLine className="h-4 w-4" />
-          {t("inventoryCount.editHeader")}
+          {canEditHeader ? t("inventoryCount.editHeader") : t("inventoryCount.team.edit")}
         </Button>
       ) : null}
       {isPosted && isAdmin ? (
@@ -1318,7 +1352,7 @@ export default function InventoryCountDetailPage() {
       <Modal
         open={headerForm !== null}
         onOpenChange={(next) => (next || busy ? undefined : setHeaderForm(null))}
-        title={t("inventoryCount.editHeaderTitle")}
+        title={canEditHeader ? t("inventoryCount.editHeaderTitle") : t("inventoryCount.team.editTitle")}
         className="max-w-md"
         footer={
           <>
@@ -1333,6 +1367,7 @@ export default function InventoryCountDetailPage() {
       >
         {headerForm ? (
           <div className="grid gap-3">
+            {canEditHeader ? (
             <div>
               <label className="erp-label" htmlFor="header-date">
                 {t("inventoryCount.countDate")}
@@ -1353,16 +1388,33 @@ export default function InventoryCountDetailPage() {
                 <p className="mt-1 text-xs text-app-muted">{t("inventoryCount.dateTodayOnly")}</p>
               ) : null}
             </div>
-            <div>
+            ) : null}
+            <div className="min-w-0">
               <label className="erp-label" htmlFor="header-responsible">
                 {t("inventoryCount.responsible")}
               </label>
+              {countTeam ? (
+                <CountTeamPicker
+                  id="header-responsible"
+                  value={headerForm.team}
+                  onChange={(ids) => setHeaderForm({ ...headerForm, team: ids })}
+                  options={employees.options}
+                  chosen={doc.responsibles}
+                  legacyText={team.legacyText}
+                  loading={employees.loading}
+                  error={employees.error}
+                  onEmployeeCreated={employees.add}
+                  disabled={!canEditTeam}
+                />
+              ) : (
               <Input
                 id="header-responsible"
                 value={headerForm.responsible_name}
                 onChange={(e) => setHeaderForm({ ...headerForm, responsible_name: e.target.value })}
               />
+              )}
             </div>
+            {canEditHeader ? (
             <div>
               <label className="erp-label" htmlFor="header-notes">
                 {t("inventoryCount.notes")}
@@ -1375,6 +1427,7 @@ export default function InventoryCountDetailPage() {
                 className="app-input w-full resize-none text-sm"
               />
             </div>
+            ) : null}
           </div>
         ) : null}
       </Modal>

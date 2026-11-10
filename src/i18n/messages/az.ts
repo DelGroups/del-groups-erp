@@ -2865,6 +2865,22 @@ export const azMessages = {
     draftDeleted: "Qaralama sənədi silindi",
   },
   inventoryCount: {
+    // INV-4 (COUNT_TEAM): responsible people from the employee list.
+    team: {
+      choose: "İşçiləri seçin",
+      search: "Ad, kod və ya vəzifə axtarın…",
+      empty: "Uyğun işçi yoxdur",
+      loadError: "İşçi siyahısı yüklənmədi. Səhifəni yeniləyin.",
+      clear: "Seçilən işçiləri təmizlə",
+      selected: "seçilib",
+      chosen: "Seçilən məsul şəxslər",
+      remove: "{name} siyahıdan çıxar",
+      previousText: "Əvvəl yazılıb",
+      max: "Ən çox {count} nəfər seçmək olar.",
+      tooMany: "Bir sayıma çox sayda məsul şəxs seçilib. Siyahını qısaldın.",
+      edit: "Məsul şəxslər",
+      editTitle: "Məsul şəxsləri dəyişin",
+    },
     listTitle: "Anbar inventarizasiyası",
     listDescription: "Sayım sənədləri: yaradın, sayın, fərqləri yoxlayın və təsdiqləyin",
     newCount: "Yeni inventarizasiya",

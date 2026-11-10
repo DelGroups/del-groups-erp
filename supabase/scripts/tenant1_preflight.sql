@@ -163,6 +163,9 @@ union all
 select 'pending', '20261107100000_gl_partner_cash_account: Partner payments on the cash account''s own ledger',
        case when to_regprocedure('public.gl_coa_for_cash_account(uuid, text)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261110100000_inventory_count_responsibles: Inventory count responsible people (employees)',
+       case when to_regprocedure('public.inventory_count_set_responsibles(uuid, uuid[], uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

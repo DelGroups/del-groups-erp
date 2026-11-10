@@ -26,6 +26,8 @@ import { isUiLabOpen, isUiStandardEnabled } from "@/lib/features/uiStandard";
 import { UiStandardProvider } from "@/design-system/components/UiStandard";
 import { isInvoiceToolsEnabled } from "@/lib/features/invoiceTools";
 import { InvoiceToolsProvider } from "@/components/invoices/InvoiceToolsFlag";
+import { isCountTeamEnabled } from "@/lib/features/countTeam";
+import { CountTeamProvider } from "@/modules/inventory/components/CountTeamFlag";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
@@ -123,6 +125,8 @@ export default async function RootLayout({
                         <UiStandardProvider enabled={uiStandard}>
                           {/* INVOICE_TOOLS (INV-1): "New product" in the invoice forms. */}
                           <InvoiceToolsProvider enabled={isInvoiceToolsEnabled()}>
+                          {/* COUNT_TEAM (INV-4): the count's responsible people from the employee list. */}
+                          <CountTeamProvider enabled={isCountTeamEnabled()}>
                             {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
                             {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
                             {tenant.status !== null ? <LimitBanner /> : null}
@@ -131,6 +135,7 @@ export default async function RootLayout({
                             {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
                             <LegacyModalEscape />
                             <TableColumnResizer />
+                          </CountTeamProvider>
                           </InvoiceToolsProvider>
                         </UiStandardProvider>
                       </ListColumnsFlagProvider>
