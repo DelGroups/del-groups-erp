@@ -5,6 +5,7 @@ import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
 import QueryProvider from "@/components/providers/QueryProvider";
 import SonnerProvider from "@/components/providers/SonnerProvider";
+import LegacyModalEscape from "@/components/ui/LegacyModalEscape";
 import I18nProvider from "@/i18n/I18nProvider";
 import ThemeProvider from "@/theme/ThemeProvider";
 import { TableColumnResizer } from "@/components/ui/TableColumnResizer";
@@ -123,6 +124,8 @@ export default async function RootLayout({
                           {tenant.status !== null ? <LimitBanner /> : null}
                           {children}
                           <SonnerProvider />
+                          {/* Escape closes the old .app-modal dialogs (UI-7 live check, audit OVL-01). */}
+                          <LegacyModalEscape />
                           <TableColumnResizer />
                         </UiStandardProvider>
                       </ListColumnsFlagProvider>
