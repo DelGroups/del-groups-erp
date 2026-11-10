@@ -18,6 +18,7 @@ import {
   type CompositeBomIndexEntry,
 } from "@/lib/products/modularRoles";
 import { productCode } from "@/lib/products/productOptionLabel";
+import { QuickCreateDialog, type LookupRecord } from "@/components/lookups";
 import type { Product } from "@/types/database.types";
 
 type TabId = "standard" | "configurator";
@@ -27,6 +28,11 @@ type InvoiceProductSelectorModalProps = {
   products: Product[];
   onClose: () => void;
   onSelect: (product: Product, quantity: number, closeAfter: boolean) => void;
+  /**
+   * INVOICE_TOOLS (INV-1): show "New product" under the list. The created product is selected
+   * like a picked one (quantity 1). The caller checks the flag and the product permission.
+   */
+  canCreateProduct?: boolean;
 };
 
 function productMatchesQuery(product: Product, query: string): boolean {
@@ -91,6 +97,7 @@ export default function InvoiceProductSelectorModal({
   products,
   onClose,
   onSelect,
+  canCreateProduct = false,
 }: InvoiceProductSelectorModalProps) {
   const { t } = useI18n();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -108,6 +115,9 @@ export default function InvoiceProductSelectorModal({
   const [closeAfterSelect, setCloseAfterSelect] = useState(true);
   const [resolvingKit, setResolvingKit] = useState(false);
   const [kitError, setKitError] = useState<string | null>(null);
+  /** INV-1: the product quick-create is open over the selector (it owns Escape and Enter). */
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createQuery, setCreateQuery] = useState("");
 
   const categoryPills = useMemo(() => {
     const set = new Set<string>();
@@ -213,6 +223,7 @@ export default function InvoiceProductSelectorModal({
     if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (createOpen) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
@@ -246,6 +257,7 @@ export default function InvoiceProductSelectorModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
     open,
+    createOpen,
     tab,
     onClose,
     onSelect,
@@ -351,6 +363,12 @@ export default function InvoiceProductSelectorModal({
     };
 
     finishSelect(resolvedProduct, configuratorQty);
+  };
+
+  const openCreateProduct = () => {
+    // What was typed becomes the product name only when the search found nothing.
+    setCreateQuery(filteredProducts.length === 0 ? query.trim() : "");
+    setCreateOpen(true);
   };
 
   if (!open) return null;
@@ -506,6 +524,26 @@ export default function InvoiceProductSelectorModal({
                 </tbody>
               </table>
             </div>
+            {canCreateProduct ? (
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <button
+                  type="button"
+                  onClick={openCreateProduct}
+                  aria-haspopup="dialog"
+                  className="inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-app bg-app-card px-3 text-xs font-semibold text-app hover:bg-app-card-hover"
+                >
+                  <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="truncate">
+                    {filteredProducts.length === 0 && query.trim()
+                      ? t("invoiceTools.newProductNamed", { name: query.trim() })
+                      : t("invoiceTools.newProduct")}
+                  </span>
+                </button>
+                {filteredProducts.length === 0 ? (
+                  <span className="min-w-0 text-xs text-app-muted">{t("invoiceTools.newProductHint")}</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-5 p-5">
@@ -622,6 +660,18 @@ export default function InvoiceProductSelectorModal({
           </label>
         </div>
       </div>
+      {canCreateProduct ? (
+        <QuickCreateDialog
+          entity="product"
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          query={createQuery}
+          onCreated={(record: LookupRecord) => {
+            setQuery("");
+            onSelect(record as unknown as Product, 1, closeAfterSelect);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

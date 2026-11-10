@@ -84,6 +84,8 @@ import { defaultVatMode, vatRateToNumber } from "@/lib/tax/payrollConfig";
 import { DEFAULT_INVOICE_ROW_COUNT, createEmptyPurchaseLineItems } from "@/lib/forms/invoiceDefaults";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import { EntityLookup, mergeRecord, type LookupRecord } from "@/components/lookups";
+import { InvoiceNewProductButton, useInvoiceNewProductAllowed } from "@/components/invoices/InvoiceNewProductButton";
+import { createdProductTarget, isEmptyPurchaseLine } from "@/lib/invoices/newProduct";
 import { reorderByKeys } from "@/components/line-grid";
 import { PurchaseLinesGrid } from "./PurchaseLinesGrid";
 import { useUiStandard } from "@/design-system/components";
@@ -246,6 +248,8 @@ export default function PurchaseForm({
   const { t } = useI18n();
   // UI_STANDARD (UI-2 lookups): supplier, warehouse and payment account through EntityLookup.
   const uiStandard = useUiStandard();
+  // INVOICE_TOOLS (INV-1): "New product" in the items header.
+  const newProductAllowed = useInvoiceNewProductAllowed();
   const { config: taxConfig, loading: taxConfigLoading } = useTaxPayrollConfig();
   const { config: procurementConfig } = useProcurementConfig();
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
@@ -467,6 +471,21 @@ export default function PurchaseForm({
     const product = productList.find((p) => p.id === record.id) ?? (record as unknown as Product);
     if (!productList.some((p) => p.id === product.id)) setProductList((prev) => mergeRecord(prev, product));
     applyProductToRow(rowId, product);
+  };
+
+  // INV-1: a product created with "New product" goes on the first empty line (or a new one) and
+  // through the same handler as a product picked in a line.
+  const handleNewProductCreated = (record: LookupRecord) => {
+    const target = createdProductTarget(items, isEmptyPurchaseLine, (row) => row.id);
+    let rowId: string;
+    if (target.kind === "line") {
+      rowId = target.id;
+    } else {
+      const row = createEmptyPurchaseLineItem();
+      rowId = row.id;
+      setItems((prev) => [...prev, row]);
+    }
+    handleProductRecord(rowId, record);
   };
 
   const duplicateRow = (id: string) =>
@@ -1037,6 +1056,14 @@ export default function PurchaseForm({
         <div className="app-table-wrap">
           <div className="app-table-section-bar text-xs font-bold">
             <span>{t("forms.receivedProducts")}</span>
+            {/* INV-1: pushed right, next to "Add row" (the bar spreads its children apart). */}
+            {newProductAllowed ? (
+              <InvoiceNewProductButton
+                className="ms-auto"
+                onCreated={handleNewProductCreated}
+                disabled={saving || documentLocked}
+              />
+            ) : null}
             {/* UI-3: lines are added from the grid's own "+ Add a line" row. */}
             {uiStandard ? null : (
             <button

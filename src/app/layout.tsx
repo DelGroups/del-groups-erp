@@ -24,6 +24,8 @@ import { isListColumnsEnabled } from "@/lib/features/listColumns";
 import { ListColumnsFlagProvider } from "@/components/lists/ListColumnsFlag";
 import { isUiLabOpen, isUiStandardEnabled } from "@/lib/features/uiStandard";
 import { UiStandardProvider } from "@/design-system/components/UiStandard";
+import { isInvoiceToolsEnabled } from "@/lib/features/invoiceTools";
+import { InvoiceToolsProvider } from "@/components/invoices/InvoiceToolsFlag";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { loadBrandColor } from "@/design-system/server";
@@ -119,14 +121,17 @@ export default async function RootLayout({
                     <NewUiProvider value={newUi}>
                       <ListColumnsFlagProvider enabled={isListColumnsEnabled()}>
                         <UiStandardProvider enabled={uiStandard}>
-                          {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
-                          {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
-                          {tenant.status !== null ? <LimitBanner /> : null}
-                          {children}
-                          <SonnerProvider />
-                          {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
-                          <LegacyModalEscape />
-                          <TableColumnResizer />
+                          {/* INVOICE_TOOLS (INV-1): "New product" in the invoice forms. */}
+                          <InvoiceToolsProvider enabled={isInvoiceToolsEnabled()}>
+                            {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
+                            {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
+                            {tenant.status !== null ? <LimitBanner /> : null}
+                            {children}
+                            <SonnerProvider />
+                            {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
+                            <LegacyModalEscape />
+                            <TableColumnResizer />
+                          </InvoiceToolsProvider>
                         </UiStandardProvider>
                       </ListColumnsFlagProvider>
                     </NewUiProvider>
