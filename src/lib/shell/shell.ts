@@ -8,7 +8,7 @@
  * No React, Next or icon imports: item and section types are generic.
  */
 
-import { isFixedPath } from "../navigation/breadcrumbs";
+import { crumbLabel, isFixedPath } from "../navigation/breadcrumbs";
 
 // ── Flag ─────────────────────────────────────────────────────────────────────
 
@@ -280,6 +280,50 @@ export function collapseCrumbs(crumbs: readonly Crumb[], max = 4): { visible: Cr
   if (crumbs.length <= max) return { visible: [...crumbs], hidden: [], collapsedAt: null };
   const tail = crumbs.slice(crumbs.length - (max - 2));
   return { visible: [crumbs[0], ...tail], hidden: crumbs.slice(1, crumbs.length - (max - 2)), collapsedAt: 1 };
+}
+
+// ── Unified UI (UI-7): App › Page › Record and the back button ───────────────
+
+/**
+ * Crumbs of a page in the unified UI (docs/ui-standard.md NAV-2): the app first (linking to its
+ * first page), then the menu page the path belongs to, then every deeper segment (a "new" form, a
+ * record) with its route-map label. The last crumb is the current page, without a link. Without an
+ * app (the launcher, a page no menu lists) there are no crumbs.
+ */
+export function appCrumbs(input: {
+  app: { title: string; href: string } | null;
+  item: { path: string; title: string } | null;
+  pathname: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}): Crumb[] {
+  const { app, item, t } = input;
+  if (!app || !item) return [];
+  const path = input.pathname.replace(/\/+$/, "") || "/";
+  const crumbs: Crumb[] = [
+    { label: app.title, href: app.href },
+    { label: item.title, href: item.path },
+  ];
+  const rest = path === item.path ? [] : path.slice(item.path === "/" ? 1 : item.path.length + 1).split("/").filter(Boolean);
+  let acc = item.path === "/" ? "" : item.path;
+  for (const segment of rest) {
+    acc += `/${segment}`;
+    crumbs.push({ label: crumbLabel(acc, segment, t), href: acc });
+  }
+  return crumbs.map((c, i) => (i === crumbs.length - 1 ? { label: c.label } : c));
+}
+
+/**
+ * Where the shell back button goes in the unified UI (NAV-4): the nearest crumb above the current
+ * page that is another page; on an app's first page (its only parent is the page itself) the
+ * launcher. Never the browser history.
+ */
+export function parentCrumbHref(crumbs: readonly Crumb[], pathname: string): string {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  for (let i = crumbs.length - 2; i >= 0; i--) {
+    const href = crumbs[i].href;
+    if (href && href !== path) return href;
+  }
+  return SHELL_HOME;
 }
 
 /** ⌘ on Apple devices, Ctrl elsewhere (shown in the search hint). */

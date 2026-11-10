@@ -1,0 +1,60 @@
+/**
+ * Unified UI (UI-7 phase 2, docs/ui-standard.md TOK-1, TOK-2). Applies ONLY while UI_UNIFIED is
+ * on for the user: the new shell puts `data-ui-unified` on <html>; with the flag off this file
+ * matches nothing.
+ *
+ * 1. Legacy --app-* colours alias the --ds-* tokens inside design scopes (the shell wraps every
+ *    page in one while the flag is on), so classic glass cards, gradients and table headers take
+ *    the design-system theme. tests/uiUnified.test.mjs checks that every --app-* token of
+ *    globals.css has an alias here.
+ * 2. One font family: Inter (the body stack started with a Persian font).
+ */
+
+html[data-ui-unified] [data-ds] {
+  --app-accent: var(--ds-brand);
+  --app-accent-hover: var(--ds-brand-hover);
+  --app-accent-ring: var(--ds-brand-soft);
+  --app-accent-secondary: var(--ds-info);
+  --app-accent-soft: var(--ds-brand-soft);
+  --app-bg: var(--ds-bg);
+  --app-bg-glow: none;
+  --app-border: var(--ds-border);
+  --app-border-hover: var(--ds-border-strong);
+  --app-card: var(--ds-surface);
+  --app-card-hover: var(--ds-surface-sunken);
+  --app-error-soft: var(--ds-danger-soft);
+  --app-error-text: var(--ds-danger-strong);
+  --app-glass: var(--ds-surface);
+  /* A flat brand fill: valid both as a colour and inside background-image. */
+  --app-gradient: linear-gradient(var(--ds-brand), var(--ds-brand));
+  --app-info-soft: var(--ds-info-soft);
+  --app-info-text: var(--ds-info);
+  --app-input-bg: var(--ds-surface);
+  --app-overlay: var(--ds-overlay);
+  --app-primary: var(--ds-brand);
+  --app-primary-foreground: var(--ds-brand-fg);
+  --app-primary-hover: var(--ds-brand-hover);
+  --app-shadow: var(--ds-elevation-1);
+  --app-shadow-hover: var(--ds-elevation-2);
+  --app-sidebar: var(--ds-surface-sunken);
+  --app-sidebar-border: var(--ds-border);
+  --app-sidebar-muted: var(--ds-text-muted);
+  --app-sidebar-text: var(--ds-text);
+  --app-success-border: var(--ds-success);
+  --app-success-soft: var(--ds-success-soft);
+  --app-success-text: var(--ds-success);
+  --app-surface: var(--ds-surface);
+  --app-table-header: var(--ds-surface-sunken);
+  --app-table-hover: var(--ds-surface-sunken);
+  --app-text: var(--ds-text);
+  --app-text-muted: var(--ds-text-muted);
+  --app-warning-soft: var(--ds-warning-soft);
+  --app-warning-text: var(--ds-warning);
+}
+
+/* 2. Inter everywhere (next/font sets --font-sans on <body>). */
+html[data-ui-unified] body,
+html[data-ui-unified] [data-ds] {
+  font-family: var(--font-sans), "Inter", "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  letter-spacing: normal;
+}

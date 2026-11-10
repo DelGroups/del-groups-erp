@@ -39,6 +39,68 @@ export const UI_GUARD_RULES = {
     selectors: ['JSXOpeningElement[name.name="table"]', 'ImportDeclaration[source.value="@/components/ui/table"]'],
     pattern: /<table\b|from\s+["']@\/components\/ui\/table["']/g,
   },
+  // ── UI-7 phase 2: the UI rulebook (docs/ui-standard.md). Files that break a rule today are in
+  // the allowlist with their count; it may only shrink, so new code follows the rule. ──
+  windowDialog: {
+    message: "UI rulebook ACT-5: ask with ConfirmDialog and report with useToast (@/design-system/components), not window.confirm / alert / prompt.",
+    selectors: [
+      'CallExpression[callee.object.name="window"][callee.property.name=/^(confirm|alert|prompt)$/]',
+      'CallExpression[callee.type="Identifier"][callee.name=/^(alert|prompt)$/]',
+    ],
+    pattern: /\bwindow\.(?:confirm|alert|prompt)\(|(?<![.\w])(?:alert|prompt)\(/g,
+  },
+  appModal: {
+    message: "UI rulebook OVL-1: use Dialog / Drawer / ConfirmDialog from @/design-system/components, not an .app-modal overlay.",
+    selectors: ["Literal[value=/(^|\s)app-modal(\s|$)/]", "TemplateElement[value.raw=/(^|\s)app-modal(\s|$)/]"],
+    pattern: /(?<![\w-])app-modal(?![\w-])/g,
+  },
+  fixedOverlay: {
+    message: "UI rulebook OVL-1: overlays come from Dialog / Drawer / Popover (Radix, one layer), not a hand-made `fixed inset-0` box.",
+    selectors: ["Literal[value=/(^|\s)fixed inset-0(\s|$)/]", "TemplateElement[value.raw=/(^|\s)fixed inset-0(\s|$)/]"],
+    pattern: /(?<![\w-])fixed inset-0(?![\w-])/g,
+  },
+  tinyText: {
+    message: "UI rulebook TOK-2: nothing below 12 px; use text-[length:var(--ds-text-xs)] (12 px) or larger.",
+    // esquery cannot read "[" in a selector regex: "." stands for the brackets.
+    selectors: ["Literal[value=/text-.(9|10|11)px./]", "TemplateElement[value.raw=/text-.(9|10|11)px./]"],
+    pattern: /text-\[(?:9|10|11)px\]/g,
+  },
+  uppercase: {
+    message: "UI rulebook TXT-1: sentence case; no `uppercase` class (it also makes labels wider than their column).",
+    selectors: ["Literal[value=/(^|\s)uppercase(\s|$)/]", "TemplateElement[value.raw=/(^|\s)uppercase(\s|$)/]"],
+    pattern: /(?<=^|[\s"'`])uppercase(?=[\s"'`]|$)/gm,
+  },
+  legacyButton: {
+    message: "UI rulebook ACT-1: use Button / buttonClass from @/design-system/components; no btn-primary, gradient or app-gradient buttons.",
+    selectors: [
+      "Literal[value=/(^|\s)(btn-primary|app-gradient|bg-gradient-to-[a-z]+)(\s|$)/]",
+      "TemplateElement[value.raw=/(^|\s)(btn-primary|app-gradient|bg-gradient-to-[a-z]+)(\s|$)/]",
+    ],
+    pattern: /(?<![\w-])(?:btn-primary|app-gradient|bg-gradient-to-[a-z]+)(?![\w-])/g,
+  },
+  rawPalette: {
+    message: "UI rulebook TOK-1: colours come from tokens by meaning (var(--ds-danger), ds-muted …), not Tailwind palette classes such as text-rose-500.",
+    selectors: [
+      "Literal[value=/(^|[\s:])(text|bg|border|ring|fill|stroke|from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}/]",
+      "TemplateElement[value.raw=/(^|[\s:])(text|bg|border|ring|fill|stroke|from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}/]",
+    ],
+    pattern: /(?<=^|[\s"'`:])(?:text|bg|border|ring|fill|stroke|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}/gm,
+  },
+  toastMessage: {
+    message: "UI rulebook OVL-3: report with useToast from @/design-system/components, not the old ToastMessage.",
+    selectors: ["ImportDeclaration[source.value=/ToastMessage$/]"],
+    pattern: /from\s+["'][^"']*ToastMessage["']/g,
+  },
+  rawH1: {
+    message: "UI rulebook PAGE-1: the page title is PageHeader's <h1> (@/design-system/components); no other <h1>.",
+    selectors: ['JSXOpeningElement[name.name="h1"]'],
+    pattern: /<h1\b/g,
+  },
+  rawTabRole: {
+    message: "UI rulebook NAV-5: in-page tabs are Tabs / SegmentedControl from @/design-system/components, not a hand-made role=\"tab\".",
+    selectors: ['JSXAttribute[name.name="role"][value.value="tab"]'],
+    pattern: /role=["']tab["']/g,
+  },
 };
 
 /** Files the rules never apply to: the formatting module itself. */
@@ -50,6 +112,14 @@ export const UI_GUARD_EXEMPT = { localeFormat: ["src/lib/dates/localeDate.ts"] }
  * globToRegExp for the allowlist counts.
  */
 export const UI_GUARD_EXEMPT_GLOBS = {
+  // The design system builds the standard parts these rules point to.
+  rawTabRole: ["src/design-system/**"],
+  fixedOverlay: ["src/design-system/**"],
+  // Print layouts are paper: their own type, colours and headings.
+  tinyText: ["src/components/print/**", "src/**/*PrintTemplate.tsx", "src/**/*PrintLayout.tsx"],
+  uppercase: ["src/components/print/**", "src/**/*PrintTemplate.tsx", "src/**/*PrintLayout.tsx"],
+  rawPalette: ["src/components/print/**", "src/**/*PrintTemplate.tsx", "src/**/*PrintLayout.tsx"],
+  rawH1: ["src/design-system/**", "src/components/print/**", "src/**/*PrintTemplate.tsx", "src/**/*PrintLayout.tsx"],
   rawTable: [
     "src/design-system/**",
     "src/components/print/**",
@@ -115,7 +185,11 @@ export function uiGuardConfigs(allowlist) {
     }
     return [...groups].map(([key, files]) => ({ files, rules: { "no-restricted-syntax": ["error", ...restrictedSyntax(key.split(","))] } }));
   };
-  const globEntries = Object.entries(UI_GUARD_EXEMPT_GLOBS).flatMap(([category, globs]) => globs.map((glob) => [glob, [category]]));
+  // One block per glob with all its categories: in flat config the last block for a file wins, so
+  // a glob listed under several categories must lift them together.
+  const byGlob = new Map();
+  for (const [category, globs] of Object.entries(UI_GUARD_EXEMPT_GLOBS)) for (const glob of globs) byGlob.set(glob, [...(byGlob.get(glob) ?? []), category]);
+  const globEntries = [...byGlob];
   return [
     { files: ["src/**/*.{ts,tsx}"], rules: { "no-restricted-syntax": ["error", ...restrictedSyntax()] } },
     ...blocks(globEntries),

@@ -324,7 +324,9 @@ test("the back-to-home button shows inside every module and never on the home me
 test("the top bar uses the back button only when it should show; it is a link with a label and motion", () => {
   const shell = read("src/components/shell/NewShell.tsx");
   assert.match(shell, /const backButton = shellBackButton\(pathname, current\?\.id \?\? null\);/);
-  assert.match(shell, /\{current && backButton\.show \? \(\s*<ShellBackButton app=\{current\} href=\{backButton\.href\} \/>/);
+  assert.match(shell, /\{current && backButton\.show \? \(\s*<ShellBackButton app=\{current\} href=\{backHref\} label=/);
+  // Without UI_UNIFIED the target is the launcher as before; with it, the parent crumb (UI-7 NAV-4).
+  assert.match(shell, /const backHref = uiUnified \? parentCrumbHref\(crumbs, pathname\) : backButton\.href;/);
   const button = read("src/components/shell/ShellBackButton.tsx");
   assert.match(button, /<Link\s+href=\{href\}/);
   assert.match(button, /aria-label=/);
