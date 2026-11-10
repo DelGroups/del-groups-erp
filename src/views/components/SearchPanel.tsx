@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   BarChart3,
@@ -14,12 +14,14 @@ import {
   Star,
   Table2,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
-import { useDesignScope } from "@/design-system/components";
-import { fieldLabel, fieldMap, parseGroupBy, toggleGroupBy, toggleIn, type Formatter } from "../logic";
+import { Combobox, useDesignScope } from "@/design-system/components";
+import { fieldLabel, fieldMap, nameOfValueKey, parseGroupBy, setValuePicks, toggleGroupBy, toggleIn, valueFilterOptions, type Formatter } from "../logic";
+import type { ComboOption } from "@/design-system/components/Combobox";
 import type { FavoritesApi } from "../data";
-import type { SearchState, ViewDefinition, ViewType } from "../types";
+import type { SearchState, ValueFilterDef, ViewDefinition, ViewRecord, ViewType } from "../types";
 import { MenuCheck, MenuItem, MenuLabel, MenuSeparator, ViewMenu } from "./Menu";
 
 const VIEW_ICONS: Record<Exclude<ViewType, "form">, React.ComponentType<{ className?: string }>> = {
@@ -49,6 +51,8 @@ export interface SearchPanelProps {
   onExport: () => void;
   /** Create button and other screen actions, at the end of the title row. */
   actions?: React.ReactNode;
+  /** All loaded records (before search and filters): the choices of the value filters (INV-3). */
+  records?: readonly ViewRecord[];
 }
 
 /**
@@ -56,13 +60,33 @@ export interface SearchPanelProps {
  * title with the record count, live search, filters, group by, favourites saved per user,
  * Excel export and the view switcher. Active filters and groupings show as removable chips.
  */
-export function SearchPanel({ definition: def, title, state, onChange, fmt, count, favorites, onExport, actions }: SearchPanelProps) {
+export function SearchPanel({ definition: def, title, state, onChange, fmt, count, favorites, onExport, actions, records = [] }: SearchPanelProps) {
   const { t } = fmt;
   const searchId = useId();
   const set = (patch: Partial<SearchState>) => onChange({ ...state, ...patch });
   const filters = def.filters ?? [];
   const groups = [...new Set(filters.map((f) => f.group))];
   const groupBys = def.groupBys ?? [];
+  // INV-3: value filters — choices from the loaded records, picks as chips (one per value).
+  const valueFilters = def.valueFilters ?? [];
+  const unknown = t("views.valueFilters.unknown");
+  const choices = useMemo(
+    () =>
+      new Map(
+        valueFilters.map((vf) => [vf.field, valueFilterOptions(records, vf, unknown, fmt.locale).map((o): ComboOption => ({ value: o.value, label: o.label, meta: String(o.count) }))] as const)
+      ),
+    [valueFilters, records, unknown, fmt.locale]
+  );
+  // A pick no loaded row has (e.g. from a favourite) says so, instead of looking like "Unknown".
+  const notLoaded = t("views.valueFilters.notLoaded");
+  const picks = valueFilters.flatMap((vf) =>
+    (state.values?.[vf.field] ?? []).map((value) => ({
+      vf,
+      value,
+      label: choices.get(vf.field)?.find((o) => o.value === value)?.label ?? nameOfValueKey(value) ?? notLoaded,
+    }))
+  );
+  const setPicks = (vf: ValueFilterDef, values: string[]) => set({ values: setValuePicks(state.values, vf.field, values) });
 
   return (
     <div className="flex flex-col gap-3">
@@ -86,6 +110,18 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
               <Facet key={key} icon={<Filter className="h-3 w-3" aria-hidden />} label={t(f.labelKey)} removeLabel={t("views.removeFacet", { name: t(f.labelKey) })} onRemove={() => set({ filters: state.filters.filter((k) => k !== key) })} />
             );
           })}
+          {picks.map(({ vf, value, label }) => {
+            const chip = t("views.valueFilters.chip", { name: t(vf.labelKey), value: label });
+            return (
+              <Facet
+                key={`${vf.field}:${value}`}
+                icon={<UserRound className="h-3 w-3" aria-hidden />}
+                label={chip}
+                removeLabel={t("views.removeFacet", { name: chip })}
+                onRemove={() => setPicks(vf, (state.values?.[vf.field] ?? []).filter((v) => v !== value))}
+              />
+            );
+          })}
           {state.groupBy.length ? (
             <Facet icon={<Layers className="h-3 w-3" aria-hidden />} label={state.groupBy.map((g) => groupByLabel(def, g, fmt)).join(" › ")} removeLabel={t("views.removeFacet", { name: t("views.groupBy") })} onRemove={() => set({ groupBy: [] })} />
           ) : null}
@@ -101,7 +137,10 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
               // Backspace in an empty box removes the last chip, as in most search panels.
               if (e.key === "Backspace" && !state.search) {
                 if (state.groupBy.length) set({ groupBy: state.groupBy.slice(0, -1) });
-                else if (state.filters.length) set({ filters: state.filters.slice(0, -1) });
+                else if (picks.length) {
+                  const last = picks[picks.length - 1];
+                  setPicks(last.vf, (state.values?.[last.vf.field] ?? []).filter((v) => v !== last.value));
+                } else if (state.filters.length) set({ filters: state.filters.slice(0, -1) });
               }
             }}
             placeholder={t("views.searchPlaceholder")}
@@ -162,6 +201,33 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
 
         {def.views.length > 1 ? <ViewSwitcher views={def.views} value={state.view} onChange={(view) => set({ view })} fmt={fmt} /> : null}
       </div>
+
+      {valueFilters.length ? (
+        // INV-3: one searchable multi-select per value filter; full width on phones, then side by side.
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("views.valueFilters.group")}>
+          {valueFilters.map((vf) => {
+            const name = t(vf.labelKey);
+            return (
+              <Combobox
+                key={vf.field}
+                className="min-w-0 basis-full sm:basis-56"
+                multiple={{ values: state.values?.[vf.field] ?? [], onChange: (values) => setPicks(vf, values), triggerLabel: name }}
+                options={choices.get(vf.field) ?? []}
+                labels={{
+                  placeholder: name,
+                  search: t("views.valueFilters.search"),
+                  empty: t("views.valueFilters.empty"),
+                  loading: t("common.loading"),
+                  clear: t("views.valueFilters.clear", { name }),
+                  selected: t("views.valueFilters.selected"),
+                }}
+                locale={fmt.locale}
+                aria-label={name}
+              />
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import type {
   GroupBySpec,
   SearchState,
   SortSpec,
+  ValueFilterDef,
   ViewDefinition,
   ViewRecord,
 } from "./types";
@@ -166,6 +167,10 @@ export function validateDefinition(def: ViewDefinition): string[] {
     const f = fields.get(def.calendar.dateField);
     if (f && !isDateField(f)) errors.push("calendar.dateField: must be a date field");
   }
+  for (const vf of def.valueFilters ?? []) {
+    if (!fields.has(vf.field) && !(vf.labelField && fields.has(vf.labelField))) errors.push(`valueFilters: unknown field "${vf.field}"`);
+  }
+  if (new Set((def.valueFilters ?? []).map((vf) => vf.field)).size !== (def.valueFilters ?? []).length) errors.push("valueFilters: duplicate fields");
   for (const m of [def.pivot?.measure, def.graph?.measure]) {
     const f = m && m !== COUNT_MEASURE ? fields.get(m) : undefined;
     if (f && !isNumericField(f)) errors.push(`measure "${m}": must be numeric`);
@@ -255,9 +260,129 @@ export function matchesSearch(record: ViewRecord, def: Pick<ViewDefinition, "fie
   return words.every((w) => hay.includes(w));
 }
 
-export function applySearch<R extends ViewRecord>(records: readonly R[], def: ViewDefinition<R>, state: Pick<SearchState, "search" | "filters">, ctx: FilterContext, fmt: Pick<Formatter, "t">): R[] {
+// ── Value filters (INV-3) ────────────────────────────────────────────────────
+
+/** Key of "no value" (rows without the person): listed as "Unknown". */
+export const UNKNOWN_VALUE = "__none";
+/** Prefix of a key made from the name, for rows that carry a name but no id (older rows). */
+const NAME_KEY = "name:";
+
+const present = (v: unknown): v is string | number => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
+
+/** The key a row has in a value filter: its id, else its name ("name:…"), else UNKNOWN_VALUE. */
+export function valueKeyOf(record: ViewRecord, vf: ValueFilterDef): string {
+  const id = record[vf.field];
+  if (present(id)) return String(id);
+  const name = vf.labelField ? record[vf.labelField] : undefined;
+  return present(name) ? `${NAME_KEY}${String(name).trim()}` : UNKNOWN_VALUE;
+}
+
+/**
+ * Keys of a value filter over a set of records: like valueKeyOf, but an older row with only a
+ * name joins the id that carries exactly that name, so one person is one choice. A name used by
+ * two ids (two people called the same) stays a name of its own.
+ */
+export function valueKeyResolver(records: readonly ViewRecord[], vf: ValueFilterDef): (record: ViewRecord) => string {
+  const labelField = vf.labelField;
+  if (!labelField) return (r) => valueKeyOf(r, vf);
+  const idsByName = new Map<string, Set<string>>();
+  for (const r of records) {
+    const id = r[vf.field];
+    const name = r[labelField];
+    if (!present(id) || !present(name)) continue;
+    const key = String(name).trim();
+    idsByName.set(key, (idsByName.get(key) ?? new Set<string>()).add(String(id)));
+  }
+  return (r) => {
+    const key = valueKeyOf(r, vf);
+    if (!key.startsWith(NAME_KEY)) return key;
+    const ids = idsByName.get(key.slice(NAME_KEY.length));
+    return ids?.size === 1 ? [...ids][0] : key;
+  };
+}
+
+/** The name kept in a "name:…" key (a picked person without an id), else null. */
+export function nameOfValueKey(key: string): string | null {
+  return key.startsWith(NAME_KEY) ? key.slice(NAME_KEY.length) : null;
+}
+
+/** The shown name of a row in a value filter, or null when it has none. */
+export function valueLabelOf(record: ViewRecord, vf: ValueFilterDef): string | null {
+  const v = record[vf.labelField ?? vf.field];
+  return present(v) ? String(v).trim() : null;
+}
+
+export interface ValueFilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+/**
+ * The choices of a value filter: each distinct value in the loaded records with its name and
+ * how many rows have it, sorted by name; "Unknown" (no value) last.
+ */
+export function valueFilterOptions(records: readonly ViewRecord[], vf: ValueFilterDef, unknownLabel: string, locale = "az"): ValueFilterOption[] {
+  const keyOf = valueKeyResolver(records, vf);
+  const byKey = new Map<string, ValueFilterOption>();
+  for (const r of records) {
+    const key = keyOf(r);
+    const option = byKey.get(key);
+    if (option) {
+      option.count += 1;
+      continue;
+    }
+    // Lists load newest first, so a person's label is the name on their newest row.
+    byKey.set(key, { value: key, label: key === UNKNOWN_VALUE ? unknownLabel : (valueLabelOf(r, vf) ?? unknownLabel), count: 1 });
+  }
+  const collator = new Intl.Collator(locale, { sensitivity: "base", numeric: true });
+  return [...byKey.values()].sort((a, b) => (a.value === UNKNOWN_VALUE ? 1 : 0) - (b.value === UNKNOWN_VALUE ? 1 : 0) || collator.compare(a.label, b.label));
+}
+
+/**
+ * Picked values: OR inside one value filter, AND between them. No picks = no condition.
+ * `keyOf` gives each filter's keys (valueKeyResolver over the records); default valueKeyOf.
+ */
+export function matchesValueFilters(
+  record: ViewRecord,
+  defs: readonly ValueFilterDef[],
+  picked: Readonly<Record<string, readonly string[]>> | undefined,
+  keyOf: (record: ViewRecord, vf: ValueFilterDef) => string = valueKeyOf
+): boolean {
+  if (!picked) return true;
+  for (const vf of defs) {
+    const values = picked[vf.field];
+    if (values?.length && !values.includes(keyOf(record, vf))) return false;
+  }
+  return true;
+}
+
+/** The picks with one filter's values replaced; an empty list drops the filter. */
+export function setValuePicks(picked: Readonly<Record<string, readonly string[]>> | undefined, field: string, values: readonly string[]): Record<string, string[]> {
+  const next: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(picked ?? {})) if (k !== field && v.length) next[k] = [...v];
+  const unique = [...new Set(values)];
+  if (unique.length) next[field] = unique;
+  return next;
+}
+
+/** The definition with its value filters, or without them while the screen has them off. */
+export function withValueFilters<R extends ViewRecord>(def: ViewDefinition<R>, enabled: boolean): ViewDefinition<R> {
+  if (enabled || !def.valueFilters) return def;
+  const rest: ViewDefinition<R> = { ...def };
+  delete rest.valueFilters;
+  return rest;
+}
+
+export function applySearch<R extends ViewRecord>(records: readonly R[], def: ViewDefinition<R>, state: Pick<SearchState, "search" | "filters" | "values">, ctx: FilterContext, fmt: Pick<Formatter, "t">): R[] {
   const filters = def.filters ?? [];
-  return records.filter((r) => matchesFilters(r, filters, state.filters, ctx) && matchesSearch(r, def, state.search, fmt));
+  const valueFilters = def.valueFilters ?? [];
+  // Keys resolved over all records, the same way the panel lists the choices.
+  const resolvers = new Map(valueFilters.filter((vf) => state.values?.[vf.field]?.length).map((vf) => [vf.field, valueKeyResolver(records, vf)] as const));
+  const keyOf = (r: ViewRecord, vf: ValueFilterDef) => resolvers.get(vf.field)?.(r) ?? valueKeyOf(r, vf);
+  return records.filter(
+    (r) => matchesFilters(r, filters, state.filters, ctx) && matchesValueFilters(r, valueFilters, state.values, keyOf) && matchesSearch(r, def, state.search, fmt)
+  );
 }
 
 // ── Date helpers (local time) ────────────────────────────────────────────────
@@ -696,12 +821,28 @@ export function sanitizeSearchState(raw: unknown, def: ViewDefinition): SearchSt
   return {
     search: typeof s.search === "string" ? s.search.slice(0, 200) : "",
     filters: Array.isArray(s.filters) ? [...new Set(s.filters.filter((k): k is string => typeof k === "string" && filterKeys.has(k)))] : [],
+    // Value filter picks (INV-3): only the definition's value filters, string keys, deduplicated.
+    ...sanitizeValues(s.values, def),
     groupBy: Array.isArray(s.groupBy) ? [...new Set(s.groupBy.filter((k): k is string => typeof k === "string" && groupable.has(k)))].slice(0, MAX_GROUP_LEVELS) : [],
     sort,
     view,
     // A favourite saved with its columns (prompt 24c) brings them back; without, the user's own.
     ...(s.columns && typeof s.columns === "object" ? { columns: mergeColumnPrefs(listColumnDefs(def), s.columns) } : {}),
   };
+}
+
+const MAX_VALUE_PICKS = 200;
+
+function sanitizeValues(raw: unknown, def: Pick<ViewDefinition, "valueFilters">): { values?: Record<string, string[]> } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const known = new Set((def.valueFilters ?? []).map((vf) => vf.field));
+  const out: Record<string, string[]> = {};
+  for (const [field, list] of Object.entries(raw as Record<string, unknown>)) {
+    if (!known.has(field) || !Array.isArray(list)) continue;
+    const values = [...new Set(list.filter((v): v is string => typeof v === "string" && v.length > 0 && v.length <= 300))].slice(0, MAX_VALUE_PICKS);
+    if (values.length) out[field] = values;
+  }
+  return Object.keys(out).length ? { values: out } : {};
 }
 
 /** Toggle a value in a list (filters, group by levels). Group by keeps its order of choice. */

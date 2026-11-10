@@ -4181,6 +4181,17 @@ export const azMessages = {
     kpi_activitiesToday: "Bu gün mənim fəaliyyətlərim",
   },
   views: {
+    // INV-3: value filters of the search panel (pick people / partners).
+    valueFilters: {
+      notLoaded: "Bu siyahıda yoxdur",
+      group: "Şəxslərə görə filtr",
+      search: "Ad axtarın…",
+      empty: "Uyğun gələn yoxdur",
+      clear: "“{name}” filtrini təmizlə",
+      selected: "seçilib",
+      unknown: "Naməlum",
+      chip: "{name}: {value}",
+    },
     chatter: {
       title: "Söhbət",
       sendMessage: "Mesaj göndər",
@@ -6187,6 +6198,13 @@ export const azMessages = {
   },
   // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
   invoiceTools: {
+    // INV-3 (INVOICE_TOOLS): person filters of the invoice lists.
+    filters: {
+      seller: "Satıcı",
+      createdBy: "Sənədi yaradan",
+      supplier: "Təchizatçı",
+      responsible: "Məsul şəxs",
+    },
     newProduct: "Yeni məhsul",
     newProductNamed: "Yeni məhsul: “{name}”",
     newProductHint: "Tapmadınız? Burada yaradın, sətrə əlavə olunacaq.",

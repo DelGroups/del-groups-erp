@@ -38,6 +38,8 @@ export interface EngineScreenProps<R extends ViewRecord> {
   header?: React.ReactNode;
   /** Data passed in instead of read by the screen (reports with their own filters). */
   data?: ViewData<R>;
+  /** Show the definition's value filters (INV-3; off = the screen as before). */
+  valueFilters?: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ export function EngineScreen<R extends ViewRecord>(props: EngineScreenProps<R>) 
   );
 }
 
-function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashboard, actions, openHref, renderRecord, recordTitle, onMove, header, data: given, rowActions, renderRowActions }: EngineScreenProps<R>) {
+function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashboard, actions, openHref, renderRecord, recordTitle, onMove, header, data: given, rowActions, renderRowActions, valueFilters }: EngineScreenProps<R>) {
   const fmt = useFormatter();
   const ctx = useFilterContext();
   const router = useRouter();
@@ -80,7 +82,7 @@ function EngineScreenBody<R extends ViewRecord>({ definition, title, kpis, dashb
       {header}
       {cards.length ? <KpiCards kpis={cards} label={fmt.t("views.dashboard")} onFilter={(filters) => setPreset((p) => ({ id: (p?.id ?? 0) + 1, filters }))} /> : null}
       {dashboard && data.status === "ready" && data.records.length ? dashboard(data.records, fmt) : null}
-      <ViewEngine data={data} title={title} fmt={fmt} ctx={ctx} preset={preset} openHref={href} onMove={onMove} actions={actions} rowActions={rowActions} renderRowActions={renderRowActions} />
+      <ViewEngine data={data} title={title} fmt={fmt} ctx={ctx} preset={preset} openHref={href} onMove={onMove} actions={actions} rowActions={rowActions} renderRowActions={renderRowActions} valueFilters={valueFilters} />
       {renderRecord ? (
         <RecordPanel open={!!open} onClose={close} title={open ? (recordTitle?.(open) ?? title) : title} closeLabel={fmt.t("common.close")}>
           {open ? renderRecord(open, { close, data }) : null}

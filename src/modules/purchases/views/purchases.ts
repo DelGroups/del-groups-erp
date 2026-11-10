@@ -38,6 +38,9 @@ export interface PurchaseListRecord extends ViewRecord {
   created_at: string | null;
   /** Prompt 24c. */
   created_by_name: string | null;
+  /** INV-3: ids behind the responsible person and the creator (filter by id). */
+  responsible_id: string | null;
+  created_by: string | null;
   vat_amount: number;
   due_date: string | null;
 }
@@ -83,6 +86,8 @@ export function purchaseToRecord(row: Record<string, unknown>): PurchaseListReco
     payment_state: paymentState(total, paid, remaining),
     warehouse_state: warehouseState(row.warehouse_sent, row.warehouse_slip_status),
     created_by_name: str(row.created_by_name),
+    responsible_id: str(row.responsible_id),
+    created_by: str(row.created_by),
     vat_amount: num(row.vat_amount),
     due_date: str(row.due_date),
     is_official: row.is_official === true,
@@ -154,6 +159,12 @@ export function purchasesDefinition(model: ModelDef<PurchaseListRecord>): ViewDe
       { name: "due_date", labelKey: "sales.engine.fields.dueDate", type: "date", readonly: true },
     ],
     filters: purchaseFilters(),
+    // INV-3 (INVOICE_TOOLS): pick suppliers / responsible people / creators; by id, shown by name.
+    valueFilters: [
+      { field: "supplier_id", labelField: "supplier_name", labelKey: "invoiceTools.filters.supplier" },
+      { field: "responsible_id", labelField: "responsible_name", labelKey: "invoiceTools.filters.responsible" },
+      { field: "created_by", labelField: "created_by_name", labelKey: "invoiceTools.filters.createdBy" },
+    ],
     groupBys: ["doc_status", "payment_state", "warehouse_state", "supplier_id", "warehouse_name", "responsible_name", "is_official", "doc_date:month", "doc_date:week", "doc_date:quarter"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
     list: {
