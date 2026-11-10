@@ -6185,6 +6185,12 @@ export const azMessages = {
       paidToHint: "Bu xərci kimə ödəyirsiniz: daşıyıcı, gömrük, broker. Siyahıda yoxdursa “+” ilə əlavə edin.",
     },
   },
+  // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
+  invoiceTools: {
+    newProduct: "Yeni məhsul",
+    newProductNamed: "Yeni məhsul: “{name}”",
+    newProductHint: "Tapmadınız? Burada yaradın, sətrə əlavə olunacaq.",
+  },
   // UI-7 phase 2 (UI_UNIFIED): app side menu, breadcrumbs, dialogs, save bar, states, not found.
   uiUnified: {
     menuGroups: {

@@ -6187,6 +6187,12 @@ export const ruMessages: Messages = {
       paidToHint: "Кому оплачивается этот расход: перевозчик, таможня, брокер. Нет в списке? Добавьте через «+».",
     },
   },
+  // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
+  invoiceTools: {
+    newProduct: "Новый товар",
+    newProductNamed: "Новый товар: «{name}»",
+    newProductHint: "Нет в списке? Создайте здесь, и он добавится в строки.",
+  },
   // UI-7 phase 2 (UI_UNIFIED): app side menu, breadcrumbs, dialogs, save bar, states, not found.
   uiUnified: {
     menuGroups: {

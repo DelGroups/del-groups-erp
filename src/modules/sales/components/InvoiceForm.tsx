@@ -98,6 +98,9 @@ import {
   fetchProductAvailableStockAction,
 } from "@/lib/actions/productBom";
 import InvoiceProductSelectorModal from "@/components/invoices/InvoiceProductSelectorModal";
+import { InvoiceNewProductButton, useInvoiceNewProductAllowed } from "@/components/invoices/InvoiceNewProductButton";
+import { createdProductTarget, isEmptySaleLine } from "@/lib/invoices/newProduct";
+import type { LookupRecord } from "@/components/lookups";
 import { ensurePolywoodWarehouseAction } from "@/lib/actions/polywood";
 import { createEmptySaleItems } from "@/lib/forms/invoiceDefaults";
 import InvoiceCutPieceModal, {
@@ -454,6 +457,8 @@ export default function UniversalInvoiceForm({
   const defaultVatRate = vatRateToNumber(taxConfig.default_vat_rate);
   const canSaveInvoice = can("can_create_invoice");
   const polywoodOnly = invoiceMode === "polywood";
+  // INVOICE_TOOLS (INV-1): "New product" in the items header and in the product selector.
+  const newProductAllowed = useInvoiceNewProductAllowed({ polywoodOnly });
   const {
     containerRef: gridContainerRef,
     tableProps: gridTableProps,
@@ -1021,6 +1026,32 @@ export default function UniversalInvoiceForm({
     setProductSelectorOpen(true);
   };
 
+  /** A product chosen in the selector (or created with "New product") joins the list and fills the line. */
+  const applyPickedProduct = async (rowId: string, product: Product, quantity?: number) => {
+    setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
+    await handleProductSelect(rowId, product, quantity);
+    if (isPolywoodProductRow(product)) {
+      window.setTimeout(() => {
+        void handlePolywoodQuantityBlur(rowId);
+      }, 0);
+    }
+  };
+
+  // INV-1: a product created with "New product" goes on the first empty line, or a new line.
+  const handleNewProductCreated = (record: LookupRecord) => {
+    const product = record as unknown as Product;
+    const target = createdProductTarget(items, isEmptySaleLine, (row) => row.id);
+    let rowId: string;
+    if (target.kind === "line") {
+      rowId = target.id;
+    } else {
+      const newRow = createEmptySaleItem(defaultWarehouse?.id || "", defaultWarehouse?.name || "");
+      rowId = newRow.id;
+      setItems((prev) => [...prev, newRow]);
+    }
+    void applyPickedProduct(rowId, product);
+  };
+
   const handleModalProductSelect = async (
     product: Product,
     quantity: number,
@@ -1029,13 +1060,7 @@ export default function UniversalInvoiceForm({
     if (!productSelectorTargetRowId) return;
 
     const targetRowId = productSelectorTargetRowId;
-    setProducts((prev) => [product, ...prev.filter((p) => p.id !== product.id)]);
-    await handleProductSelect(targetRowId, product, quantity);
-    if (isPolywoodProductRow(product)) {
-      window.setTimeout(() => {
-        void handlePolywoodQuantityBlur(targetRowId);
-      }, 0);
-    }
+    await applyPickedProduct(targetRowId, product, quantity);
 
     if (closeAfter) {
       setProductSelectorOpen(false);
@@ -2016,6 +2041,9 @@ export default function UniversalInvoiceForm({
                     <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
                   </Button>
                 ) : null}
+                {newProductAllowed ? (
+                  <InvoiceNewProductButton onCreated={handleNewProductCreated} disabled={saving || documentLocked} />
+                ) : null}
                 <Button type="button" variant="secondary" size="sm" className="min-w-0 max-w-full" onClick={addRow}>
                   <Plus className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("forms.addRow")}</span>
@@ -2035,6 +2063,13 @@ export default function UniversalInvoiceForm({
                     <Plus className="h-4 w-4 shrink-0" />
                     <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
                   </button>
+                ) : null}
+                {newProductAllowed ? (
+                  <InvoiceNewProductButton
+                    className="h-9 px-3 text-xs"
+                    onCreated={handleNewProductCreated}
+                    disabled={saving || documentLocked}
+                  />
                 ) : null}
                 <button
                   type="button"
@@ -3220,6 +3255,7 @@ export default function UniversalInvoiceForm({
         onSelect={(product, quantity, closeAfter) => {
           void handleModalProductSelect(product, quantity, closeAfter);
         }}
+        canCreateProduct={newProductAllowed && !documentLocked}
       />
     ) : null}
 

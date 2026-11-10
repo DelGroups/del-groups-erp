@@ -6186,6 +6186,12 @@ export const enMessages: Messages = {
       paidToHint: "Who you pay this cost to: carrier, customs, broker. Not in the list? Add it with “+”.",
     },
   },
+  // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
+  invoiceTools: {
+    newProduct: "New product",
+    newProductNamed: "New product: “{name}”",
+    newProductHint: "Not in the list? Create it here and it is added to the lines.",
+  },
   // UI-7 phase 2 (UI_UNIFIED): app side menu, breadcrumbs, dialogs, save bar, states, not found.
   uiUnified: {
     menuGroups: {
