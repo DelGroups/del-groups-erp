@@ -2005,16 +2005,18 @@ export default function UniversalInvoiceForm({
 
         <ItemsSectionWrap isPageLayout={isPageLayout}>
           {isPageLayout ? (
-            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b border-[color:var(--gt-border-color)]">
+            // Wraps on a phone, and the buttons may shrink (their labels ellipsize): the header was
+            // 409 px wide on a 390 px screen and the whole page scrolled sideways (UI-7 live check).
+            <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0 border-b border-[color:var(--gt-border-color)]">
               <CardTitle className="text-base">{t("invoice.invoiceItems")}</CardTitle>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
                 {!polywoodOnly ? (
-                  <Button type="button" size="sm" onClick={openProductSelectorModal}>
+                  <Button type="button" size="sm" className="min-w-0 max-w-full" onClick={openProductSelectorModal}>
                     <Plus className="h-4 w-4 shrink-0" />
                     <span className="truncate">{t("invoice.productSelector.openModalButton")}</span>
                   </Button>
                 ) : null}
-                <Button type="button" variant="secondary" size="sm" onClick={addRow}>
+                <Button type="button" variant="secondary" size="sm" className="min-w-0 max-w-full" onClick={addRow}>
                   <Plus className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("forms.addRow")}</span>
                 </Button>
