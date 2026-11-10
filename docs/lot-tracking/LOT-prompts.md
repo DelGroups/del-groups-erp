@@ -123,7 +123,12 @@ Context from the codebase (verify each point before relying on it):
    trigger present, never-raise wrapper).
 4. Update the module SQL ownership (supabase/modules/inventory/objects.json or the generator, as
    the repo does it) if new objects must be listed; run the checks the repo has for that.
-5. Run npm run lint, npm test, npm run build; run the SQL test on a local or branch database
+5. Date-change compatibility: if apply_document_date_change / document_date_changes (prompts DATE-1..3)
+   exist on main, register the lot rows with that engine: stock_lot_movements.movement_date and
+   stock_lots.received_date move with their document, and add a timeline check that no lot balance
+   goes negative at any date after the change. If the engine is not on main yet, say so in the PR and
+   leave a clearly marked TODO; do not invent a second date engine.
+6. Run npm run lint, npm test, npm run build; run the SQL test on a local or branch database
    (never production). Do not change any existing function except adding triggers.
 
 PR description (CLAUDE.md rule 11, Persian summary + English details): what changed, how it was
