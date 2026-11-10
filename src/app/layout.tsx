@@ -124,7 +124,7 @@ export default async function RootLayout({
                           {tenant.status !== null ? <LimitBanner /> : null}
                           {children}
                           <SonnerProvider />
-                          {/* Escape closes the old .app-modal dialogs (UI-7 live check, audit OVL-01). */}
+                          {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
                           <LegacyModalEscape />
                           <TableColumnResizer />
                         </UiStandardProvider>

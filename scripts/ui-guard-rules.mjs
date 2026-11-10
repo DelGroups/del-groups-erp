@@ -103,8 +103,12 @@ export const UI_GUARD_RULES = {
   },
 };
 
-/** Files the rules never apply to: the formatting module itself. */
-export const UI_GUARD_EXEMPT = { localeFormat: ["src/lib/dates/localeDate.ts"] };
+/** Files a rule never applies to: the formatting module, the Escape bridge of the old dialogs. */
+export const UI_GUARD_EXEMPT = {
+  localeFormat: ["src/lib/dates/localeDate.ts"],
+  // The Escape bridge for the old dialogs names their class to find them (it goes away with them).
+  appModal: ["src/lib/ui/legacyModal.ts", "src/components/ui/LegacyModalEscape.tsx"],
+};
 
 /**
  * Folders and file names a rule never applies to: the grid components themselves and print
