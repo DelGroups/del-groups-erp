@@ -51,7 +51,7 @@ export function ShellBackButton({ app, href, label: backLabel }: { app: ShellApp
           <Link
             href={href}
             onClick={markShellNavigation}
-            aria-label={backLabel ? `${app.title}: ${backLabel}` : `${label}: ${app.title}`}
+            aria-label={backLabel ? `${backLabel} (${app.title})` : `${label}: ${app.title}`}
             data-back={back ? "" : undefined}
             onPointerEnter={() => setHot(true)}
             onPointerLeave={() => setHot(false)}

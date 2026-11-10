@@ -119,6 +119,12 @@ test("with UI_UNIFIED the shell has no app tabs, the side menu and crumbs come f
   assert.match(shell, /uiUnified \? "ds-btn ds-btn-sm" : "ds-btn ds-btn-primary ds-btn-sm"/, "ACT-2: quick actions are not primary");
   assert.match(shell, /parentCrumbHref\(crumbs, pathname\)/, "NAV-4: back to the parent crumb");
   assert.match(shell, /root\.setAttribute\(UI_UNIFIED_ATTR, ""\)/);
+  // Live check: the collapse button sits in a fixed head; only the links scroll, with fades.
+  const menu = read("src/components/shell/AppSideMenu.tsx");
+  assert.match(menu, /className="ds-side-head"[\s\S]*ds-side-toggle[\s\S]*<nav ref=\{navRef\}/);
+  assert.match(menu, /data-fade-end=/);
+  assert.match(menu, /className="ds-dialog-title min-w-0 flex-1 truncate"/, "the sheet's close button sits at the edge");
+  assert.match(read("src/components/shell/ShellBackButton.tsx"), /`\$\{backLabel\} \(\$\{app\.title\}\)`/);
 });
 
 // ── Breadcrumbs and back (NAV-2, NAV-4) ──────────────────────────────────────
@@ -138,6 +144,8 @@ test("crumbs are App › Page › Record; the last crumb is the current page wit
   assert.match(record[2].label, /^breadcrumb\.saleDocument/);
   assert.equal(record[2].href, undefined);
   assert.deepEqual(appCrumbs({ app: null, item: null, pathname: "/apps", t }), [], "no app, no crumbs");
+  // Live check: Home and the launcher have no crumbs, even though "/" is the Home app's page.
+  assert.deepEqual(appCrumbs({ app: { title: "Əsas Panel", href: "/" }, item: { path: "/", title: "Ana səhifə" }, pathname: "/", t }), []);
 });
 
 test("back goes to the nearest other page above, and from an app's first page to the launcher", () => {

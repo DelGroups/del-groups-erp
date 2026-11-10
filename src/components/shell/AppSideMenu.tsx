@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -9,6 +9,7 @@ import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useDesignScope } from "@/design-system/components";
 import { motionPreset, overlayVariants, transitions } from "@/design-system/motion";
 import { useI18n } from "@/i18n/I18nProvider";
+import { tabScrollEdges } from "@/lib/shell/shell";
 import { APP_MENU_COLLAPSED_KEY, groupAppItems, parseCollapsed, type MenuGroup } from "@/lib/shell/appMenu";
 import { markShellNavigation, type ShellApp } from "./useShell";
 
@@ -109,23 +110,48 @@ export function AppSideMenu({ app, currentPath }: { app: ShellApp; currentPath: 
   const [collapsed, setCollapsed] = useCollapsed();
   const groups = groupAppItems(app.id, app.items);
   const label = t("newShell.appMenu", { app: app.title });
+  const navRef = useRef<HTMLElement | null>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+  // Live check (UI-7): a long menu on a short window scrolls inside itself with a hidden
+  // scrollbar; fades show on the side that hides links (NAV-1). The header with the collapse
+  // button stays put, so it never scrolls out of reach.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const update = () => {
+      const next = tabScrollEdges(nav.scrollTop, nav.clientHeight, nav.scrollHeight);
+      setEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
+    };
+    // First measure after paint (and on every scroll or resize).
+    const frame = requestAnimationFrame(update);
+    nav.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    return () => {
+      cancelAnimationFrame(frame);
+      nav.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [collapsed, groups.length]);
   return (
     <aside className="ds-side-aside" data-collapsed={collapsed ? "" : undefined}>
+      <div className="ds-side-head">
+        {collapsed ? null : <p className="ds-side-app">{app.title}</p>}
+        <button
+          type="button"
+          className="ds-icon-btn ds-side-toggle"
+          aria-label={collapsed ? t("uiUnified.menu.expand") : t("uiUnified.menu.collapse")}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden /> : <PanelLeftClose className="h-4 w-4" aria-hidden />}
+        </button>
+      </div>
       <Tooltip.Provider delayDuration={200}>
-        <nav aria-label={label} className="ds-side-nav">
-          {collapsed ? null : <p className="ds-side-app">{app.title}</p>}
+        <nav ref={navRef} aria-label={label} className="ds-side-nav" data-fade-start={edges.start ? "" : undefined} data-fade-end={edges.end ? "" : undefined}>
           <MenuLinks groups={groups} currentPath={currentPath} rail={collapsed} idPrefix={`side-${app.id}`} />
         </nav>
       </Tooltip.Provider>
-      <button
-        type="button"
-        className="ds-icon-btn ds-side-toggle"
-        aria-label={collapsed ? t("uiUnified.menu.expand") : t("uiUnified.menu.collapse")}
-        aria-expanded={!collapsed}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden /> : <PanelLeftClose className="h-4 w-4" aria-hidden />}
-      </button>
     </aside>
   );
 }
@@ -167,12 +193,12 @@ export function AppMenuSheet({ app, currentPath }: { app: ShellApp; currentPath:
                 transition={reduced ? transitions.instant : transitions.base}
               >
                 <div className="ds-dialog-header">
-                  <Dialog.Title className="ds-dialog-title">{app.title}</Dialog.Title>
+                  <Dialog.Title className="ds-dialog-title min-w-0 flex-1 truncate">{app.title}</Dialog.Title>
                   <Dialog.Close className="ds-icon-btn" aria-label={t("newShell.close")}>
                     <X className="h-5 w-5" aria-hidden />
                   </Dialog.Close>
                 </div>
-                <nav aria-label={label} className="ds-dialog-body">
+                <nav aria-label={label} className="ds-dialog-body ds-scroll-quiet">
                   <MenuLinks groups={groups} currentPath={currentPath} onNavigate={() => setOpen(false)} idPrefix={`sheet-${app.id}`} />
                 </nav>
               </motion.div>
