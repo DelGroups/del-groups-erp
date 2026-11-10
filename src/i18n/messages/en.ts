@@ -4015,6 +4015,113 @@ export const enMessages: Messages = {
     motionClose: "Close the order",
     motionOtherPage: "Another page",
   },
+  settingsNav: {
+    groups: {
+      company: "Company",
+      access: "Users and access",
+      trade: "Sales and purchasing",
+      inventory: "Inventory",
+      system: "System",
+    },
+    company: {
+      title: "Company profile",
+      description: "Name, logo, stamp, bank details and VAT rate.",
+    },
+    initialSetup: {
+      title: "Initial setup",
+      description: "Opening cash and bank balances, bulk product import.",
+    },
+    taxPayroll: {
+      title: "Tax and payroll",
+      description: "Tax ID, default VAT, e-invoice format and payroll deductions.",
+    },
+    users: {
+      title: "Users",
+      description: "Invite users, change their roles and status.",
+    },
+    roles: {
+      title: "Roles and permissions",
+      description: "Create roles and set permissions for every module.",
+    },
+    audit: {
+      title: "Audit log",
+      description: "Before/after trail of critical actions and risk alerts.",
+    },
+    commissions: {
+      title: "Commission rules",
+      description: "Rate tiers by monthly sales and category.",
+    },
+    procurement: {
+      title: "Procurement",
+      description: "Automatic reorder rules and supplier scoring.",
+    },
+    imports: {
+      title: "Import settings",
+      description: "Cost types, customs VAT and default split methods.",
+    },
+    crm: {
+      title: "CRM pipeline and quotes",
+      description: "Pipeline stages and the quote template.",
+    },
+    activityTypes: {
+      title: "Activity types",
+      description: "Call, meeting and task types planned on records.",
+    },
+    barcode: {
+      title: "Barcode labels",
+      description: "Sticker size, barcode type and the fields printed on a label.",
+    },
+    stockIntegrity: {
+      title: "Stock integrity",
+      description: "Find and fix mismatches between products, warehouses and stock.",
+    },
+    modules: {
+      title: "Modules",
+      description: "The modules in the company's plan and their status.",
+    },
+    studio: {
+      title: "Studio (custom fields)",
+      description: "Add your own fields to documents and records.",
+    },
+    ai: {
+      title: "AI integration",
+      description: "Connect the ERP assistant to an n8n AI agent.",
+    },
+    backup: {
+      title: "Backup and export",
+      description: "Full system backup, restore and module export.",
+    },
+    billing: {
+      title: "Billing",
+      description: "Plan, usage and invoices.",
+    },
+    hub: {
+      description: "Every setting of the company, its users and its modules in one place.",
+      search: "Search settings",
+      searchPlaceholder: "E.g. tax, roles, barcode",
+      empty: "No setting matches “{query}”.",
+      emptyHint: "Try another word or clear the search.",
+      clear: "Clear",
+      usersCount: "{count} users",
+      modulesOff: "{count} modules off",
+      allModulesOn: "All modules on",
+    },
+    menu: "Settings menu",
+    menuOpen: "Choose a settings page",
+    allSettings: "All settings",
+    saveBar: {
+      unsaved: "You have unsaved changes",
+      discard: "Discard",
+      save: "Save",
+      saving: "Saving…",
+    },
+    leave: {
+      title: "Changes are not saved",
+      body: "If you leave this page, your changes will be lost.",
+      stay: "Stay on page",
+      leave: "Leave without saving",
+    },
+  },
   newShell: {
     homeMenu: "Home menu",
     extra_polywood: "Polywood stock",
@@ -4060,6 +4167,8 @@ export const enMessages: Messages = {
     menu: "Menu",
     mobileNav: "Main navigation",
     appMenu: "{app} menu",
+    tabsScrollBack: "Previous tabs",
+    tabsScrollForward: "Next tabs",
     breadcrumb: "Breadcrumb",
     more: "Show hidden levels",
     kpi_dashboard: "Sales this month",

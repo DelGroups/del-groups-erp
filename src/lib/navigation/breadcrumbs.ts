@@ -1,3 +1,5 @@
+import { settingsCrumbKeys } from "../settings/items";
+
 export interface BreadcrumbItem {
   label: string;
   href?: string;
@@ -43,21 +45,9 @@ const PATH_I18N: Record<string, string> = {
   "/dashboard/reports/osv": "nav.items.trialBalance",
   "/dashboard/reports/reconciliation": "nav.items.reconciliationAct",
   "/dashboard/reports/inventory-turnover": "nav.items.inventoryTurnover",
-  "/settings": "nav.items.settings",
-  "/settings/roles": "nav.items.roles",
-  "/settings/commissions": "nav.items.commissionRules",
-  "/settings/initial-setup": "nav.items.initialSetup",
-  "/settings/backup": "nav.items.backup",
-  "/settings/barcode": "nav.items.barcode",
-  "/settings/crm": "nav.items.crmSettings",
-  "/settings/tax-payroll": "nav.items.taxPayroll",
-  "/settings/procurement": "nav.items.procurement",
-  "/settings/ai": "nav.items.aiIntegration",
-  "/settings/studio": "nav.items.studio",
-  "/settings/audit": "nav.items.audit",
-  "/settings/stock-integrity": "nav.items.stockIntegrity",
-  "/users": "nav.items.users",
   "/dashboard/inventory/polywood/import": "breadcrumb.polywoodImport",
+  // Settings pages (SET-1): the names of the one settings list (src/lib/settings/items.ts).
+  ...settingsCrumbKeys(),
   // Pages only the new shell lists (lib/shell/shell.ts SHELL_EXTRA_ITEMS): same labels as there.
   "/comissions/report": "newShell.extra_commissionReport",
   "/calendar": "newShell.extra_calendar",
@@ -69,7 +59,6 @@ const PATH_I18N: Record<string, string> = {
   "/imports": "newShell.extra_imports",
   "/imports/new": "imports.newShipment",
   "/imports/reports": "newShell.extra_importsReports",
-  "/settings/imports": "newShell.extra_importsSettings",
 };
 
 /** Single URL segment → i18n key when no full-path match exists. */
@@ -79,7 +68,7 @@ const SEGMENT_I18N: Record<string, string> = {
   products: "nav.items.products",
   warehouse: "nav.sections.inventory",
   dashboard: "nav.sections.dashboard",
-  settings: "nav.items.settings",
+  settings: "nav.sections.settings",
   production: "nav.items.production",
   reports: "nav.items.reports",
   finance: "nav.items.finance",
@@ -100,7 +89,7 @@ const SEGMENT_I18N: Record<string, string> = {
   commissions: "nav.items.commissions",
   comissions: "nav.items.commissions",
   crm: "nav.items.pipeline",
-  users: "nav.items.users",
+  users: "settingsNav.users.title",
   expenses: "nav.items.expenses",
   warehouses: "nav.items.warehouses",
 };

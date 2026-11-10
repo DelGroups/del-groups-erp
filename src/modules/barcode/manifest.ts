@@ -11,7 +11,7 @@ export default defineModule({
   menus: [
     {
       path: "/settings/barcode",
-      label: "nav.items.barcode",
+      label: "settingsNav.barcode.title",
       icon: "Barcode",
       section: "settings",
       order: 70,

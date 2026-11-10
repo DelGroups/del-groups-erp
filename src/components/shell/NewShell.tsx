@@ -45,6 +45,7 @@ import { AI_OPEN_EVENT, collapseCrumbs, filterApps, shellBackButton, shortcutMod
 import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
 import { ShellBackButton } from "./ShellBackButton";
+import { AppTabBar } from "./AppTabBar";
 import { MyActivitiesButton } from "./MyActivitiesButton";
 import { ReminderAlerts } from "@/modules/calendar";
 import { ShellHeaderSlotContext } from "./ShellHeaderSlot";
@@ -546,7 +547,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const router = useRouter();
   const pathname = usePathname();
   const { theme } = useTheme();
-  const { brand } = useNewUi();
+  const { brand, settingsV2 } = useNewUi();
   const { isEnabled } = useEnabledModules();
   const { apps, current, currentItemPath } = useShellApps();
   const crumbs = useBreadcrumbTrail();
@@ -652,18 +653,18 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             </span>
           </div>
 
-          {current && current.items.length > 1 ? (
-            <nav aria-label={t("newShell.appMenu", { app: current.title })} className="overflow-x-auto px-4" style={{ borderTop: "1px solid var(--ds-border)" }}>
-              <ul className="flex gap-5">
-                {current.items.map((item) => (
-                  <li key={item.path}>
-                    <ShellLink href={item.path} className="ds-tab" aria-current={item.path === currentItemPath ? "page" : undefined}>
-                      {item.title}
-                    </ShellLink>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+          {/* SETTINGS_V2: the settings side menu replaces the app tab bar (one navigation). */}
+          {current && current.items.length > 1 && !(settingsV2 && current.id === "settings") ? (
+            <AppTabBar
+              label={t("newShell.appMenu", { app: current.title })}
+              items={current.items}
+              currentPath={currentItemPath}
+              renderLink={(item, active) => (
+                <ShellLink href={item.path} className="ds-tab" aria-current={active ? "page" : undefined}>
+                  {item.title}
+                </ShellLink>
+              )}
+            />
           ) : null}
 
           {crumbs.length > 1 ? (

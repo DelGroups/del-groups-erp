@@ -17,6 +17,7 @@ import {
 import PageLayout from "@/components/layout/PageLayout";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -36,6 +37,17 @@ import type { TableRowActionItem } from "@/components/ui/table-row-actions-menu"
 
 function formatDate(value: string | null | undefined): string {
   return formatGridDate(value, { empty: "-" });
+}
+
+/** SET-1 fix: Escape closes the dialog without saving, like every other dialog (not while it saves). */
+function useEscapeToClose(onClose: () => void, busy: boolean) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, busy]);
 }
 
 function InviteUserModal({
@@ -59,6 +71,7 @@ function InviteUserModal({
   const [roleId, setRoleId] = useState(defaultRoleId);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  useEscapeToClose(onClose, submitting);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +96,11 @@ function InviteUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <form
         onSubmit={handleSubmit}
         className="app-modal my-10 w-full max-w-md space-y-4 p-6"
@@ -201,6 +218,7 @@ function EditUserModal({
   const [isActive, setIsActive] = useState(profile.is_active);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  useEscapeToClose(onClose, submitting);
   const isSelf = profile.id === currentUserId;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -232,7 +250,11 @@ function EditUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto app-scrim p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <form
         onSubmit={handleSubmit}
         className="app-modal my-10 w-full max-w-md space-y-4 p-6"
@@ -757,7 +779,15 @@ function UsersView() {
 
 export default function UsersPage() {
   const { t } = useI18n();
+  const settingsV2 = useSettingsV2();
 
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="users" permission="can_manage_users">
+        <UsersView />
+      </SettingsV2Page>
+    );
+  }
   return (
     <PageLayout>
         <div className="border-b border-app app-glass px-6 py-4">

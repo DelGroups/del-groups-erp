@@ -133,6 +133,45 @@ export function visibleSections<I extends ShellItem, S extends ShellSection<I>>(
     .filter((section) => section.items.length > 0);
 }
 
+/**
+ * Puts one app's items in place of what the module menus gave it (SET-1: the Settings app comes
+ * from the one settings list, src/lib/settings/items.ts). The app keeps its place in `order`
+ * (section ids of every app, in menu order); with no items it is left out.
+ */
+export function replaceSectionItems<I extends ShellItem, S extends ShellSection<I>>(
+  sections: readonly (S & { items: I[] })[],
+  order: readonly string[],
+  section: S,
+  items: I[]
+): (S & { items: I[] })[] {
+  const rest = sections.filter((s) => s.id !== section.id);
+  if (!items.length) return rest;
+  const rank = (id: string) => {
+    const at = order.indexOf(id);
+    return at < 0 ? order.length : at;
+  };
+  const at = rest.findIndex((s) => rank(s.id) > rank(section.id));
+  const next = { ...section, items };
+  return at < 0 ? [...rest, next] : [...rest.slice(0, at), next, ...rest.slice(at)];
+}
+
+/**
+ * The app tab bar (SET-1 fix): whether there is more to scroll on either side. Its scrollbar is
+ * hidden; arrow buttons and edge fades show only on the side that hides tabs.
+ */
+export function tabScrollEdges(scrollLeft: number, clientWidth: number, scrollWidth: number): { start: boolean; end: boolean } {
+  const max = Math.max(0, scrollWidth - clientWidth);
+  const left = Math.abs(scrollLeft); // negative in RTL
+  return { start: left > 1, end: max - left > 1 };
+}
+
+/** scrollLeft that brings a tab fully into view with `pad` px of room; unchanged when already visible. */
+export function scrollLeftToReveal(tabLeft: number, tabWidth: number, scrollLeft: number, clientWidth: number, pad = 32): number {
+  if (tabLeft - pad < scrollLeft) return Math.max(0, tabLeft - pad);
+  if (tabLeft + tabWidth + pad > scrollLeft + clientWidth) return tabLeft + tabWidth + pad - clientWidth;
+  return scrollLeft;
+}
+
 /** Is `path` (a menu item) the page at `pathname`? Longest-prefix logic lives in bestItem(). */
 function covers(path: string, pathname: string): boolean {
   if (path === "/") return pathname === "/";

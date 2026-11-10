@@ -16,6 +16,7 @@ import { NewUiProvider, type NewUiServerValue } from "@/components/shell/NewUiPr
 import { isNewUiEnabled, newUiAudienceSetting } from "@/lib/features/newUi";
 import { isNewCrmEnabled } from "@/lib/features/newCrm";
 import { isNewImportsEnabled } from "@/lib/features/newImports";
+import { isSettingsV2Enabled } from "@/lib/features/settingsV2";
 import { isNewHomeEnabled, newHomeAudience } from "@/lib/features/newHome";
 import { isListColumnsEnabled } from "@/lib/features/listColumns";
 import { ListColumnsFlagProvider } from "@/components/lists/ListColumnsFlag";
@@ -146,9 +147,10 @@ async function newUiServerValue(): Promise<NewUiServerValue> {
   const audience = parseNewUiAudience(newUiAudienceSetting());
   const newCrm = isNewCrmEnabled();
   const newImports = isNewImportsEnabled();
+  const settingsV2 = isSettingsV2Enabled();
   const newHome = { enabled: isNewHomeEnabled(), audience: newHomeAudience() };
   const preferred = parseNewUiCookie((await cookies()).get(NEW_UI_COOKIE)?.value, audience);
-  if (!preferred) return { available: true, preferred: false, brand: null, audience, newCrm, newImports, newHome };
+  if (!preferred) return { available: true, preferred: false, brand: null, audience, newCrm, newImports, settingsV2, newHome };
   const client = await createSupabaseServerClient();
-  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]), audience, newCrm, newImports, newHome };
+  return { available: true, preferred: true, brand: await loadBrandColor(client as unknown as Parameters<typeof loadBrandColor>[0]), audience, newCrm, newImports, settingsV2, newHome };
 }

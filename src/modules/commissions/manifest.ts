@@ -12,7 +12,7 @@ export default defineModule({
   ],
   menus: [
     { path: "/commissions", label: "nav.items.commissions", icon: "Percent", section: "hr", order: 20 },
-    { path: "/settings/commissions", label: "nav.items.commissionRules", icon: "Percent", section: "settings", order: 40 },
+    { path: "/settings/commissions", label: "settingsNav.commissions.title", icon: "Percent", section: "settings", order: 40 },
   ],
   routes: [
     { prefix: "/commissions", permission: "can_view_commissions" },

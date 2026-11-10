@@ -7,10 +7,24 @@ import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import AiN8nSettingsCard from "@/components/settings/AiN8nSettingsCard";
 import { useI18n } from "@/i18n/I18nProvider";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 export default function AiIntegrationSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
 
+  const settingsBody = (
+    <>
+            <AiN8nSettingsCard />
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="ai">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
   return (
     <PageLayout>
       <PermissionGuard permission="can_manage_settings">
@@ -25,7 +39,7 @@ export default function AiIntegrationSettingsPage() {
               </h1>
               <p className="mt-1 text-sm text-app-muted">{t("aiSettings.description")}</p>
             </header>
-            <AiN8nSettingsCard />
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/useToast";
 import { useCompanyProfile, useRefreshCompanyProfile } from "@/hooks/useCompanyProfile";
 import { saveCompanyProfileAction, uploadCompanyAssetAction } from "@/lib/actions/companyProfile";
 import { emailPlaceholder, type CompanyProfile } from "@/lib/company/profile";
+import { SettingsHub } from "@/components/settings/v2/SettingsHub";
+import { useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 import {
   Settings,
   Building2,
@@ -27,7 +29,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-export default function SettingsPage() {
+/** The company profile page as it was before SET-1 (classic shell, and SETTINGS_V2 off). */
+export function CompanyProfileClassic() {
   const { t } = useI18n();
   const { can, isAdmin } = useAuth();
   const company = useCompanyProfile();
@@ -356,4 +359,9 @@ export default function SettingsPage() {
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );
+}
+
+/** /settings: the hub with SETTINGS_V2 (the company profile moves to /settings/company), otherwise the company profile. */
+export default function SettingsPage() {
+  return useSettingsV2() ? <SettingsHub /> : <CompanyProfileClassic />;
 }

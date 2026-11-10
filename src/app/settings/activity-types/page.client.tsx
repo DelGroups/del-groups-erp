@@ -12,6 +12,7 @@ import { useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import { useActivityTypeActions, useActivityTypes } from "@/views/chatter/data";
 import { ACTIVITY_ICONS, activityTypeLabel, checkActivityType, isBuiltInType, type ActivityIcon } from "@/views/chatter/logic";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 /**
  * Activity types of the chatter (phase 19), admin only and only with the new UI on: the
@@ -19,6 +20,7 @@ import { ACTIVITY_ICONS, activityTypeLabel, checkActivityType, isBuiltInType, ty
  * deleted, so activities that use them keep their type.
  */
 export default function ActivityTypesSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   // UI_STANDARD (UI-6): the activity types on the grid; old table with the flag off.
   const standard = useUiStandard();
@@ -48,19 +50,8 @@ export default function ActivityTypesSettingsPage() {
     );
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="activity-types" />
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-3xl space-y-6">
-            <header>
-              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                <CalendarClock className="h-6 w-6 text-app-accent" />
-                {t("views.chatter.typesAdmin.title")}
-              </h1>
-              <p className="mt-1 text-sm text-app-muted">{t("views.chatter.typesAdmin.description")}</p>
-            </header>
+  const settingsBody = (
+    <>
 
             {ready && (!isAdmin || !active) ? (
               <div className="app-card p-6 text-sm text-app-muted">{t("views.chatter.typesAdmin.unavailable")}</div>
@@ -180,6 +171,29 @@ export default function ActivityTypesSettingsPage() {
                 </form>
               </>
             )}
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="activity-types">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="activity-types" />
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-3xl space-y-6">
+            <header>
+              <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                <CalendarClock className="h-6 w-6 text-app-accent" />
+                {t("views.chatter.typesAdmin.title")}
+              </h1>
+              <p className="mt-1 text-sm text-app-muted">{t("views.chatter.typesAdmin.description")}</p>
+            </header>
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

@@ -24,6 +24,9 @@ import {
   type CrmPipelineStage,
   type CrmStageKind,
 } from "../lib/config";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
+import { SettingsSaveBar, useUnsavedChangesGuard } from "@/components/settings/v2/SettingsSaveBar";
+import { useSettingsDraft } from "@/components/settings/v2/useSettingsDraft";
 
 function ToggleRow({
   label,
@@ -51,6 +54,7 @@ function ToggleRow({
 }
 
 export default function CrmSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
   const { can } = useAuth();
   const canManage = can("can_manage_settings");
@@ -58,6 +62,11 @@ export default function CrmSettingsPage() {
   const [config, setConfig] = useState<CrmConfig>(DEFAULT_CRM_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // SETTINGS_V2: one save bar that shows while something changed, and a warning on leaving.
+  const draft = useSettingsDraft<CrmConfig>(DEFAULT_CRM_CONFIG);
+  const { markSaved } = draft;
+  const dirty = settingsV2 && draft.isDirty(config);
+  const leaveDialog = useUnsavedChangesGuard(dirty);
   const [uploading, setUploading] = useState(false);
   const [newLabel, setNewLabel] = useState("");
 
@@ -69,8 +78,9 @@ export default function CrmSettingsPage() {
         return;
       }
       if (result.data) setConfig(result.data);
+      markSaved(result.data ?? DEFAULT_CRM_CONFIG);
     });
-  }, [showError]);
+  }, [showError, markSaved]);
 
   const patch = (partial: Partial<CrmConfig>) => {
     setConfig((current) => parseCrmConfig({ ...current, ...partial }));
@@ -134,6 +144,7 @@ export default function CrmSettingsPage() {
       return;
     }
     if (result.data) setConfig(result.data);
+    markSaved(result.data ?? config);
     showSuccess(t("crmSettings.saved"));
   };
 
@@ -152,31 +163,8 @@ export default function CrmSettingsPage() {
     showSuccess(t("crmSettings.sealUploaded"));
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="crm" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-6xl space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                  <KanbanSquare className="h-6 w-6 text-app-accent" />
-                  {t("crmSettings.title")}
-                </h1>
-                <p className="mt-1 text-sm text-app-muted">{t("crmSettings.description")}</p>
-              </div>
-              <button
-                type="button"
-                className="btn-primary inline-flex items-center gap-2"
-                disabled={!canManage || saving || loading}
-                onClick={() => void handleSave()}
-              >
-                <Save className="h-4 w-4" />
-                {saving ? t("common.saving") : t("common.save")}
-              </button>
-            </header>
+  const settingsBody = (
+    <>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="app-card app-card-elevated space-y-4 p-5">
@@ -357,6 +345,44 @@ export default function CrmSettingsPage() {
                 </div>
               </section>
             </div>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="crm">
+        {settingsBody}
+        <SettingsSaveBar dirty={dirty} saving={saving} disabled={!canManage || loading} onSave={() => void handleSave()} onDiscard={() => setConfig(draft.saved)} />
+        {leaveDialog}
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="crm" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-6xl space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                  <KanbanSquare className="h-6 w-6 text-app-accent" />
+                  {t("crmSettings.title")}
+                </h1>
+                <p className="mt-1 text-sm text-app-muted">{t("crmSettings.description")}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary inline-flex items-center gap-2"
+                disabled={!canManage || saving || loading}
+                onClick={() => void handleSave()}
+              >
+                <Save className="h-4 w-4" />
+                {saving ? t("common.saving") : t("common.save")}
+              </button>
+            </header>
+            {settingsBody}
           </div>
         </div>
 

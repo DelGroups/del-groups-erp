@@ -7,10 +7,24 @@ import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import StudioFieldsEditor from "@/components/studio/StudioFieldsEditor";
 import { useI18n } from "@/i18n/I18nProvider";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 export default function StudioSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t } = useI18n();
 
+  const settingsBody = (
+    <>
+            <StudioFieldsEditor />
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="studio">
+        {settingsBody}
+      </SettingsV2Page>
+    );
+  }
   return (
     <PageLayout>
       <PermissionGuard permission="can_manage_settings">
@@ -25,7 +39,7 @@ export default function StudioSettingsPage() {
               </h1>
               <p className="mt-1 text-sm text-app-muted">{t("studio.description")}</p>
             </header>
-            <StudioFieldsEditor />
+            {settingsBody}
           </div>
         </div>
       </PermissionGuard>

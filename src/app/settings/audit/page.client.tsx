@@ -36,6 +36,7 @@ import { Chip, useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import { formatGridDateTime } from "@/lib/dates/localeDate";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 
 const PAGE_SIZE = 50;
 
@@ -77,6 +78,7 @@ function ToggleRow({
 }
 
 export default function AuditSettingsPage() {
+  const settingsV2 = useSettingsV2();
   const { t, formatDateTime } = useI18n();
   // UI_STANDARD (UI-6): the audit log on the grid ("user · IP", "module · table" on one line; diff in the row menu); old table with the flag off.
   const standard = useUiStandard();
@@ -173,42 +175,8 @@ export default function AuditSettingsPage() {
     return t("audit.systemUser");
   };
 
-  return (
-    <PageLayout>
-      <PermissionGuard permission="can_manage_settings">
-        <SettingsTabs activeTab="audit" />
-
-        <div className="bg-app p-6">
-          <div className="mx-auto max-w-7xl space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
-                  <ScrollText className="h-6 w-6 text-app-accent" />
-                  {t("audit.title")}
-                </h1>
-                <p className="mt-1 text-sm text-app-muted">{t("audit.description")}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn-primary inline-flex items-center gap-2"
-                  disabled={!canManage || saving || configLoading}
-                  onClick={() => void handleSaveRules()}
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? t("common.saving") : t("common.save")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void load(offset)}
-                  disabled={loading}
-                  className="btn-ghost inline-flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                  {t("common.refresh")}
-                </button>
-              </div>
-            </header>
+  const settingsBody = (
+    <>
 
             <section className="app-card app-card-elevated space-y-4 p-5">
               <h2 className="text-sm font-bold text-app">{t("auditSettings.rulesTitle")}</h2>
@@ -484,6 +452,83 @@ export default function AuditSettingsPage() {
                 </div>
               </div>
             </section>
+    </>
+  );
+  const settingsActions = (
+    <>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary inline-flex items-center gap-2"
+                  disabled={!canManage || saving || configLoading}
+                  onClick={() => void handleSaveRules()}
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? t("common.saving") : t("common.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void load(offset)}
+                  disabled={loading}
+                  className="btn-ghost inline-flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  {t("common.refresh")}
+                </button>
+              </div>
+    </>
+  );
+  if (settingsV2) {
+    return (
+      <SettingsV2Page id="audit" actions={settingsActions}>
+        {settingsBody}
+        <AuditDiffModal
+        open={Boolean(diffRow)}
+        oldValues={(diffRow?.old_values_json ?? null) as Json | null}
+        newValues={(diffRow?.new_values_json ?? null) as Json | null}
+        onClose={() => setDiffRow(null)}
+        />
+        <ToastMessage message={toastMessage} variant={toastVariant} />
+      </SettingsV2Page>
+    );
+  }
+  return (
+    <PageLayout>
+      <PermissionGuard permission="can_manage_settings">
+        <SettingsTabs activeTab="audit" />
+
+        <div className="bg-app p-6">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-bold text-app">
+                  <ScrollText className="h-6 w-6 text-app-accent" />
+                  {t("audit.title")}
+                </h1>
+                <p className="mt-1 text-sm text-app-muted">{t("audit.description")}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary inline-flex items-center gap-2"
+                  disabled={!canManage || saving || configLoading}
+                  onClick={() => void handleSaveRules()}
+                >
+                  <Save className="h-4 w-4" />
+                  {saving ? t("common.saving") : t("common.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void load(offset)}
+                  disabled={loading}
+                  className="btn-ghost inline-flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  {t("common.refresh")}
+                </button>
+              </div>
+            </header>
+            {settingsBody}
           </div>
         </div>
 
