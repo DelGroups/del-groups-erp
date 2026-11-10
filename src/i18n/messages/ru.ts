@@ -4183,6 +4183,17 @@ export const ruMessages: Messages = {
     kpi_activitiesToday: "Мои дела на сегодня",
   },
   views: {
+    // INV-3: value filters of the search panel (pick people / partners).
+    valueFilters: {
+      notLoaded: "Нет в этом списке",
+      group: "Фильтр по людям",
+      search: "Поиск по имени…",
+      empty: "Ничего не найдено",
+      clear: "Очистить фильтр «{name}»",
+      selected: "выбрано",
+      unknown: "Неизвестно",
+      chip: "{name}: {value}",
+    },
     chatter: {
       title: "Обсуждение",
       sendMessage: "Отправить сообщение",
@@ -6189,6 +6200,13 @@ export const ruMessages: Messages = {
   },
   // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
   invoiceTools: {
+    // INV-3 (INVOICE_TOOLS): person filters of the invoice lists.
+    filters: {
+      seller: "Продавец",
+      createdBy: "Создал документ",
+      supplier: "Поставщик",
+      responsible: "Ответственный",
+    },
     newProduct: "Новый товар",
     newProductNamed: "Новый товар: «{name}»",
     newProductHint: "Нет в списке? Создайте здесь, и он добавится в строки.",

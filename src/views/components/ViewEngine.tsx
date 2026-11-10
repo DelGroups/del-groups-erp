@@ -9,7 +9,7 @@ import { useColumnPrefs } from "@/components/lists/useColumnPrefs";
 import { useListColumnsEnabled } from "@/components/lists/ListColumnsFlag";
 import { exportXlsx } from "@/lib/export/exportXlsx";
 import { clearColumnWidths, setColumnWidth } from "@/lib/lists/columns";
-import { applySearch, defaultFavorite, defaultSearchState, exportColumns, exportFileName, fieldMap, listColumnDefs, listFieldLabel, shownListColumns, sortRecords, type Formatter } from "../logic";
+import { applySearch, withValueFilters, defaultFavorite, defaultSearchState, exportColumns, exportFileName, fieldMap, listColumnDefs, listFieldLabel, shownListColumns, sortRecords, type Formatter } from "../logic";
 import { useFavorites, type ViewData } from "../data";
 import type { FilterContext, SearchState, ViewRecord } from "../types";
 import { SearchPanel } from "./SearchPanel";
@@ -41,6 +41,11 @@ export interface ViewEngineProps<R extends ViewRecord> {
    * and shows the list.
    */
   preset?: { id: number; filters: readonly string[] };
+  /**
+   * INV-3: offer the definition's value filters (pick people / partners). Off (the default) the
+   * engine ignores them, also in saved favourites, so the screen is exactly as before.
+   */
+  valueFilters?: boolean;
 }
 
 /**
@@ -48,8 +53,8 @@ export interface ViewEngineProps<R extends ViewRecord> {
  * graph or calendar), all fed by the same searched and filtered records. The user's default
  * favourite is applied when it loads, unless they already changed the search.
  */
-export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions, preset, rowActions, renderRowActions }: ViewEngineProps<R>) {
-  const def = data.definition;
+export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHref, onMove, actions, preset, rowActions, renderRowActions, valueFilters = false }: ViewEngineProps<R>) {
+  const def = useMemo(() => withValueFilters(data.definition, valueFilters), [data.definition, valueFilters]);
   const favorites = useFavorites(def, data.status === "ready");
   const [touched, setTouched] = useState<SearchState | null>(null);
   const fallback = useMemo(() => defaultFavorite(favorites.favorites)?.state ?? defaultSearchState(def), [favorites.favorites, def]);
@@ -58,7 +63,8 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
   if (preset && preset.id !== presetId) {
     // Adjusting state while rendering (React's pattern for "state from a changed prop").
     setPresetId(preset.id);
-    setTouched({ ...state, filters: [...preset.filters], view: def.views.includes("list") ? "list" : state.view });
+    // A card counts all records: its filters replace the active ones and the person picks (INV-3).
+    setTouched({ ...state, filters: [...preset.filters], values: undefined, view: def.views.includes("list") ? "list" : state.view });
   }
   const filtered = useMemo(() => applySearch(data.records, def, state, ctx, fmt), [data.records, def, state, ctx, fmt]);
   const sorted = useMemo(() => sortRecords(filtered, def, state.sort), [filtered, def, state.sort]);
@@ -138,7 +144,7 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
         icon={SearchX}
         title={fmt.t("views.noMatch")}
         action={
-          <button type="button" className="ds-btn ds-btn-sm" onClick={() => setTouched({ ...state, search: "", filters: [] })}>
+          <button type="button" className="ds-btn ds-btn-sm" onClick={() => setTouched({ ...state, search: "", filters: [], values: undefined })}>
             {fmt.t("views.clearSearch")}
           </button>
         }
@@ -153,7 +159,7 @@ export function ViewEngine<R extends ViewRecord>({ data, title, fmt, ctx, openHr
 
   return (
     <div className="flex flex-col gap-4">
-      <SearchPanel definition={def} title={title} state={panelState} onChange={setTouched} fmt={fmt} count={sorted.length} favorites={favorites} onExport={() => void exportExcel()} actions={actions} />
+      <SearchPanel definition={def} records={data.records} title={title} state={panelState} onChange={setTouched} fmt={fmt} count={sorted.length} favorites={favorites} onExport={() => void exportExcel()} actions={actions} />
       {data.capped ? (
         <p role="note" className="ds-chip self-start" style={{ background: "var(--ds-warning-soft)", color: "var(--ds-text)" }}>
           {fmt.t("views.capped", { count: data.records.length })}

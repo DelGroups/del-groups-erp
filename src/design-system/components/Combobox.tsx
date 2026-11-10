@@ -17,6 +17,8 @@ export interface ComboOption {
   label: string;
   /** Second line / search text (a code, a phone number). */
   hint?: string;
+  /** Short text at the end of the row, e.g. how many records have this value (INV-3). */
+  meta?: string;
   disabled?: boolean;
 }
 
@@ -26,11 +28,24 @@ export interface ComboboxLabels {
   empty: string;
   loading: string;
   clear: string;
+  /** Multiple mode: read after a picked option by screen readers ("selected"). */
+  selected?: string;
+}
+
+/** Several values at once (INV-3 value filters): picking toggles and the list stays open. */
+export interface ComboboxMultiple {
+  values: readonly string[];
+  onChange: (values: string[]) => void;
+  /** Trigger text; the number of picks is shown next to it. */
+  triggerLabel: string;
 }
 
 export interface ComboboxProps {
-  value: string | null;
-  onChange: (value: string | null, option: ComboOption | null) => void;
+  /** Single mode: the value and its change (leave out in multiple mode). */
+  value?: string | null;
+  onChange?: (value: string | null, option: ComboOption | null) => void;
+  /** Multiple mode instead of value/onChange. */
+  multiple?: ComboboxMultiple;
   /** Fixed options, filtered here as the user types. */
   options?: readonly ComboOption[];
   /** Options from the server for what is typed (debounced, the previous request aborted). */
@@ -69,8 +84,9 @@ const DEBOUNCE_MS = 200;
  * closes. Fixed or async options, an empty state, a clear button and an optional footer slot.
  */
 export function Combobox({
-  value,
+  value = null,
   onChange,
+  multiple,
   options,
   loadOptions,
   selectedLabel,
@@ -129,10 +145,18 @@ export function Combobox({
     setOpen(false);
     setQuery("");
   };
+  const picked = multiple ? new Set(multiple.values) : null;
+  const isChecked = (o: ComboOption) => (picked ? picked.has(o.value) : o.value === value);
   const pick = (option: ComboOption) => {
-    onChange(option.value, option);
+    if (multiple) {
+      // Toggle and keep the list open for the next pick.
+      multiple.onChange(picked!.has(option.value) ? multiple.values.filter((v) => v !== option.value) : [...multiple.values, option.value]);
+      return;
+    }
+    onChange?.(option.value, option);
     close();
   };
+  const hasValue = multiple ? multiple.values.length > 0 : !!value;
   const onOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) setQuery("");
@@ -157,7 +181,12 @@ export function Combobox({
               aria-haspopup="listbox"
               aria-invalid={invalid || undefined}
               aria-required={required || undefined}
-              aria-label={aria["aria-label"]}
+              aria-label={
+                // Multiple mode: the name and how many are picked ("Salesperson, 2 selected").
+                multiple && multiple.values.length && labels.selected
+                  ? `${aria["aria-label"] ?? multiple.triggerLabel}, ${multiple.values.length} ${labels.selected}`
+                  : aria["aria-label"]
+              }
               aria-describedby={aria["aria-describedby"]}
               autoFocus={autoFocus}
               className="ds-combobox-trigger"
@@ -173,12 +202,21 @@ export function Combobox({
                 }
               }}
             >
-              {currentLabel ? <Truncate className="min-w-0 flex-1 text-start">{currentLabel}</Truncate> : <span className="ds-combobox-placeholder">{labels.placeholder}</span>}
+              {multiple ? (
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-start">
+                  <Truncate className="min-w-0">{multiple.triggerLabel}</Truncate>
+                  {multiple.values.length ? <span className="ds-chip ds-chip-std ds-mono shrink-0" data-tone="brand">{multiple.values.length}</span> : null}
+                </span>
+              ) : currentLabel ? (
+                <Truncate className="min-w-0 flex-1 text-start">{currentLabel}</Truncate>
+              ) : (
+                <span className="ds-combobox-placeholder">{labels.placeholder}</span>
+              )}
               <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
             </button>
           </Popover.Trigger>
-          {clearable && value && !disabled ? (
-            <IconButton size="sm" label={labels.clear} icon={<X className="h-3.5 w-3.5" />} onClick={() => onChange(null, null)} className="ds-combobox-clear" />
+          {clearable && hasValue && !disabled ? (
+            <IconButton size="sm" label={labels.clear} icon={<X className="h-3.5 w-3.5" />} onClick={() => (multiple ? multiple.onChange([]) : onChange?.(null, null))} className="ds-combobox-clear" />
           ) : null}
         </div>
       </Popover.Anchor>
@@ -225,12 +263,21 @@ export function Combobox({
                 ) : null}
                 {!loading && shown.length === 0 ? <div className="px-3 py-2 ds-muted" role="status">{labels.empty}</div> : null}
                 {shown.map((o) => (
-                  <Command.Item key={o.value} value={o.value} disabled={o.disabled} onSelect={() => pick(o)} className="ds-combobox-item">
-                    <Check className="h-4 w-4 shrink-0" style={{ opacity: o.value === value ? 1 : 0 }} aria-hidden />
+                  <Command.Item
+                    key={o.value}
+                    value={o.value}
+                    disabled={o.disabled}
+                    onSelect={() => pick(o)}
+                    className="ds-combobox-item"
+                    // Multiple mode: picks are "checked"; aria-selected stays the keyboard highlight (cmdk).
+                    aria-checked={multiple ? isChecked(o) : undefined}
+                  >
+                    <Check className="h-4 w-4 shrink-0" style={{ opacity: isChecked(o) ? 1 : 0 }} aria-hidden />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <Truncate>{o.label}</Truncate>
                       {o.hint ? <Truncate className="ds-muted text-[length:var(--ds-text-xs)]">{o.hint}</Truncate> : null}
                     </span>
+                    {o.meta ? <span className="shrink-0 ds-mono ds-muted text-[length:var(--ds-text-xs)]">{o.meta}</span> : null}
                   </Command.Item>
                 ))}
               </Command.List>

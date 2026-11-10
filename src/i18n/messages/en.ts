@@ -4182,6 +4182,17 @@ export const enMessages: Messages = {
     kpi_activitiesToday: "My activities today",
   },
   views: {
+    // INV-3: value filters of the search panel (pick people / partners).
+    valueFilters: {
+      notLoaded: "Not in this list",
+      group: "Filter by person",
+      search: "Search names…",
+      empty: "No matches",
+      clear: "Clear the “{name}” filter",
+      selected: "selected",
+      unknown: "Unknown",
+      chip: "{name}: {value}",
+    },
     chatter: {
       title: "Chatter",
       sendMessage: "Send message",
@@ -6188,6 +6199,13 @@ export const enMessages: Messages = {
   },
   // INV-1 (INVOICE_TOOLS): tools in the sales and purchase invoice forms.
   invoiceTools: {
+    // INV-3 (INVOICE_TOOLS): person filters of the invoice lists.
+    filters: {
+      seller: "Salesperson",
+      createdBy: "Created by",
+      supplier: "Supplier",
+      responsible: "Responsible",
+    },
     newProduct: "New product",
     newProductNamed: "New product: “{name}”",
     newProductHint: "Not in the list? Create it here and it is added to the lines.",

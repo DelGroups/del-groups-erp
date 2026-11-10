@@ -84,6 +84,20 @@ export interface FilterDef {
   conditions: (ctx: FilterContext) => Condition[];
 }
 
+/**
+ * A "pick people/partners" filter (INV-3): the search panel lists the distinct values of `field`
+ * in the loaded records (searchable, several at once). Rows match one of the picked values (OR);
+ * several value filters, the fixed filters and the search are AND'ed.
+ */
+export interface ValueFilterDef {
+  /** Record key matched, an id when the row has one (seller_id, created_by, supplier_id). */
+  field: string;
+  /** Record key with the shown name (seller_name); default `field`. Rows without an id match by it. */
+  labelField?: string;
+  /** i18n key of the filter's name. */
+  labelKey: string;
+}
+
 /** Date grouping granularity, used for date and datetime fields. */
 export type DateGranularity = "day" | "week" | "month" | "quarter" | "year";
 
@@ -207,6 +221,8 @@ export interface ViewDefinition<R extends ViewRecord = ViewRecord> {
   titleKey: string;
   fields: readonly FieldDef[];
   filters?: readonly FilterDef[];
+  /** Value filters (INV-3); a screen turns them on (ViewEngine `valueFilters`). */
+  valueFilters?: readonly ValueFilterDef[];
   /** Fields (or "field:granularity") offered in Group by, in order. */
   groupBys?: readonly GroupBySpec[];
   defaultSort?: SortSpec;
@@ -229,6 +245,8 @@ export interface ViewRecord {
 export interface SearchState {
   search: string;
   filters: string[];
+  /** Picked values of the value filters (INV-3): field → value keys (valueKeyOf). */
+  values?: Record<string, string[]>;
   groupBy: GroupBySpec[];
   sort: SortSpec | null;
   view: Exclude<ViewType, "form">;

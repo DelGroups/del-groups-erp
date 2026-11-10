@@ -42,6 +42,8 @@ export interface SaleListRecord extends ViewRecord {
   created_at: string | null;
   /** Prompt 24c: the profile name of created_by, null when unknown. */
   created_by_name: string | null;
+  /** INV-3: the user who created the document (filter by id). */
+  created_by: string | null;
 }
 
 const num = (v: unknown) => {
@@ -91,6 +93,7 @@ export function saleToRecord(row: Record<string, unknown>): SaleListRecord {
     note: str(row.note),
     created_at: str(row.created_at),
     created_by_name: str(row.created_by_name),
+    created_by: str(row.created_by),
   };
 }
 
@@ -184,6 +187,11 @@ export function salesDefinition(model: ModelDef<SaleListRecord>): ViewDefinition
       { name: "created_by_name", labelKey: "listColumns.createdBy", type: "char", searchable: true, groupable: true, readonly: true },
     ],
     filters: salesFilters(),
+    // INV-3 (INVOICE_TOOLS): pick salespeople / creators; by id, shown by name.
+    valueFilters: [
+      { field: "seller_id", labelField: "seller_name", labelKey: "invoiceTools.filters.seller" },
+      { field: "created_by", labelField: "created_by_name", labelKey: "invoiceTools.filters.createdBy" },
+    ],
     groupBys: ["doc_status", "payment_state", "warehouse_state", "customer_id", "warehouse_name", "seller_name", "payment_type", "is_official", "doc_date:month", "doc_date:week", "doc_date:quarter"],
     views: ["list", "kanban", "pivot", "graph", "calendar"],
     list: {

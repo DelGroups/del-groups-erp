@@ -29,7 +29,7 @@ function SalesBody() {
   const ctx = useFilterContext();
   const client = useQueryClient();
   const data = useViewData(SALES_DEFINITION);
-  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
+  // INVOICE_TOOLS (INV-2, INV-3): export entries in the row menu, person filters in the search panel.
   const exportOn = useInvoiceTools();
   const [preset, setPreset] = useState<{ id: number; filters: string[] } | undefined>(undefined);
 
@@ -51,6 +51,8 @@ function SalesBody() {
         preset={preset}
         openHref={(r) => `/sales/${r.id}`}
         rowActions={(r) => salesRowActions(r, t, can, exportOn)}
+        // INVOICE_TOOLS (INV-3): pick salespeople / creators in the search panel.
+        valueFilters={exportOn}
         actions={
           <>
             {can("can_view_reports") ? (

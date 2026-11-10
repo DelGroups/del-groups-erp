@@ -87,6 +87,8 @@ function InvoicesTab() {
       }
       recordTitle={(r) => r.invoice_number}
       rowActions={(r) => purchaseRowActions(r, t, can, exportOn)}
+      // INVOICE_TOOLS (INV-3): pick suppliers / responsible people / creators.
+      valueFilters={exportOn}
       renderRecord={(r, { close }) => <PurchaseRecordView id={r.id} close={close} />}
     />
   );
