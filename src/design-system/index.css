@@ -7,3 +7,5 @@
 @import "./components.css";
 /* UI_STANDARD (UI-1): token aliases and layout fixes, only under html[data-ui-standard]. */
 @import "./ui-standard.css";
+/* UI_UNIFIED (UI-7): --app-* aliases and one font, only under html[data-ui-unified]. */
+@import "./ui-unified.css";

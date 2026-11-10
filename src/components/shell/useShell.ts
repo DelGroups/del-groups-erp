@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FolderOpen, Inbox, Layers, ListTodo, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -14,6 +14,7 @@ import { getNavItemPermission, getRequiredPermission } from "@/lib/auth/routePer
 import { NAV_SECTIONS, type NavItem, type NavSection } from "@/lib/navigation/navConfig";
 import { buildBreadcrumbsFromPath } from "@/lib/navigation/breadcrumbs";
 import {
+  appCrumbs,
   appForPath,
   bestItem,
   nextTrail,
@@ -37,11 +38,18 @@ export interface ShellApp {
   icon: LucideIcon;
   /** Where the tile opens: the app's first menu item. */
   href: string;
-  items: { path: string; title: string; icon: LucideIcon }[];
+  /** `group`: the settings list's group (Settings); other apps are grouped by path (appMenu.ts). */
+  items: { path: string; title: string; icon: LucideIcon; group?: string }[];
 }
 
 /** The apps this user may open (same rule as the classic sidebar) and the app of the current page. */
-export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; currentItemPath: string | null } {
+export function useShellApps(): {
+  apps: ShellApp[];
+  current: ShellApp | null;
+  currentItemPath: string | null;
+  /** Unified UI (UI-7): App › Page › Record crumbs of any path, from the same page list. */
+  crumbsFor: (path: string) => Crumb[];
+} {
   const { t } = useI18n();
   const { can, isAdmin } = useAuth();
   const { isEnabled } = useEnabledModules();
@@ -79,22 +87,31 @@ export function useShellApps(): { apps: ShellApp[]; current: ShellApp | null; cu
     [can, isAdmin, isEnabled, newCrm, newImports, settingsItems, settingsV2]
   );
 
-  const apps = useMemo<ShellApp[]>(
-    () =>
-      sections.map((s) => ({
-        id: s.id,
-        title: t(s.titleKey),
-        icon: s.icon,
-        href: s.items[0].path,
-        items: s.items.map((i) => ({ path: i.path, title: t(i.titleKey), icon: i.icon })),
-      })),
-    [sections, t]
+  const apps = useMemo<ShellApp[]>(() => {
+    const settingsGroup = new Map(settingsItems.map((i) => [i.path, i.group as string]));
+    return sections.map((s) => ({
+      id: s.id,
+      title: t(s.titleKey),
+      icon: s.icon,
+      href: s.items[0].path,
+      items: s.items.map((i) => ({ path: i.path, title: t(i.titleKey), icon: i.icon, ...(s.id === "settings" && settingsGroup.has(i.path) ? { group: settingsGroup.get(i.path) } : {}) })),
+    }));
+  }, [sections, settingsItems, t]);
+
+  const crumbsFor = useCallback(
+    (path: string): Crumb[] => {
+      const hit = bestItem<NavItem, NavSection>(sections, path);
+      const app = hit ? (apps.find((a) => a.id === hit.section.id) ?? null) : null;
+      const item = hit && app ? (app.items.find((i) => i.path === hit.item.path) ?? null) : null;
+      return appCrumbs({ app, item, pathname: path, t });
+    },
+    [sections, apps, t]
   );
 
   const currentSection = appForPath<NavItem, NavSection>(sections, pathname);
   const current = currentSection ? (apps.find((a) => a.id === currentSection.id) ?? null) : null;
   const currentItemPath = bestItem<NavItem, NavSection>(sections, pathname)?.item.path ?? null;
-  return { apps, current, currentItemPath };
+  return { apps, current, currentItemPath, crumbsFor };
 }
 
 // ── Breadcrumb trail ─────────────────────────────────────────────────────────
@@ -160,13 +177,15 @@ function withRecordLabel(crumbs: Crumb[], path: string): Crumb[] {
  * from customer A shows "Customers › A › B"; going back to A cuts the trail at A; anything
  * opened from the launcher, app tabs, palette or drawer starts fresh.
  */
-export function useBreadcrumbTrail(): Crumb[] {
+export function useBreadcrumbTrail(baseFor?: (path: string) => Crumb[]): Crumb[] {
   const pathname = usePathname();
   const { t } = useI18n();
   const trail = useSyncExternalStore(subscribe, () => trailSnapshot, () => EMPTY);
+  // Unified UI (UI-7): App › Page › Record from the shell's page list; otherwise the path crumbs.
+  const crumbsOf = useCallback((path: string) => (baseFor ? baseFor(path) : buildBreadcrumbsFromPath(path, t)), [baseFor, t]);
 
   useEffect(() => {
-    const base = buildBreadcrumbsFromPath(pathname, t);
+    const base = crumbsOf(pathname);
     const label = recordLabels.get(pathname) ?? base.at(-1)?.label ?? document.title ?? pathname;
     const next = nextTrail(readTrail(), { path: pathname, label }, shellNavigationPending);
     shellNavigationPending = false;
@@ -176,10 +195,10 @@ export function useBreadcrumbTrail(): Crumb[] {
       // storage unavailable: the trail lives only in memory
     }
     publish(next);
-  }, [pathname, t]);
+  }, [pathname, crumbsOf]);
 
   return useMemo(() => {
-    if (!trail.length || trail.at(-1)?.path !== pathname) return withRecordLabel(buildBreadcrumbsFromPath(pathname, t), pathname);
-    return trailCrumbs(trail, withRecordLabel(buildBreadcrumbsFromPath(trail[0].path, t), trail[0].path));
-  }, [trail, pathname, t]);
+    if (!trail.length || trail.at(-1)?.path !== pathname) return withRecordLabel(crumbsOf(pathname), pathname);
+    return trailCrumbs(trail, withRecordLabel(crumbsOf(trail[0].path), trail[0].path));
+  }, [trail, pathname, crumbsOf]);
 }

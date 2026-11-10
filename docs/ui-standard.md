@@ -18,7 +18,7 @@ it; the PR description names the rules it touched (CLAUDE.md, `.github/pull_requ
 - **component**: the shared component makes the right thing the only thing.
 - **review**: the PR checklist.
 
-Each rule says *planned* where the check comes in phase 2.
+Each rule says *planned* where the check is not built yet. Phase 2 (UI-7) built the lint categories, the rulebook page checks of `ui:guard` and the shared components; the checks and their names are in Part B, "Guards".
 
 **Who we design for.** Accountants, sales and warehouse staff, all day, on 1280–1920 px desktops
 (Windows, mouse and keyboard) and on 390 px phones in the warehouse. The UI comes in az, en and ru; ru is up to 40 % longer.
@@ -45,7 +45,7 @@ Each rule says *planned* where the check comes in phase 2.
 - **Enforced by:**
   - component: `AppSideMenu`, one list of pages per app, as `src/lib/settings/items.ts` is for Settings.
   - test: every page belongs to one app item.
-  - guard (planned): no `nav.ds-tabbar` in the shell; side menu has no visible scrollbar.
+  - guard (`shell-tabbar`): no app tab bar in the shell header; the side menu hides its scrollbar (component).
 
 **NAV-2 · Breadcrumbs on every page except Home, in one place and one format.** (UI_UNIFIED)
 - **Rule:**
@@ -60,7 +60,7 @@ Each rule says *planned* where the check comes in phase 2.
 - **Enforced by:**
   - component: `PageHeader` renders `Breadcrumbs` from the route map.
   - test: every route has a label in az, en and ru.
-  - guard (planned): every page except `/` has a breadcrumb nav with ≥ 2 items.
+  - guard (`breadcrumbs`): every page of an app except `/` and `/apps` has a breadcrumb nav with ≥ 2 items.
 
 **NAV-3 · One name per page.**
 - **Rule:**
@@ -87,7 +87,7 @@ Each rule says *planned* where the check comes in phase 2.
   - Segmented controls (2–4 options that filter one view, e.g. "Mənim təqvimim / Komanda") use `SegmentedControl`.
   - There are no other tab or pill styles.
 - **Why:** tabs only for few, grouped items, one row, two selection cues (N9); the APG keyboard model (W4). Today there are six styles (TOK-05).
-- **Enforced by:** component (`Tabs`, `SegmentedControl`); lint (planned): `role="tab"` outside these components.
+- **Enforced by:** component (`Tabs`, `SegmentedControl`); lint (`rawTabRole`): `role="tab"` outside the design system.
 
 **NAV-6 · Our own "not found" page.**
 - **Rule:** an unknown route, or a feature switched off by a flag, shows a translated not-found page inside the shell with a link to the app.
@@ -109,8 +109,8 @@ Each rule says *planned* where the check comes in phase 2.
 - **Don't:** a glass box with an icon and an `<h2>` as the title; the title repeated in a form card (PAGE-04).
 - **Enforced by:**
   - component.
-  - guard (planned): exactly one `h1`, inside `.ds-page-header`.
-  - lint (planned): `<h1` outside `PageHeader`.
+  - guard (`h1-count`, `h1-header`, migrated pages): exactly one `h1`, inside `.ds-page-header`.
+  - lint (`rawH1`): `<h1` outside the design system.
 
 **PAGE-2 · One page frame and one section order.**
 - **Rule:**
@@ -127,7 +127,7 @@ Each rule says *planned* where the check comes in phase 2.
     - text paragraphs are at most 72 ch.
   - Padding: page 24 px on desktop, 16 px on phones; 24 px between sections.
 - **Why:** the user must know where they are before reading numbers (N1 #6, PAGE-02); a two-thirds reading width (G5).
-- **Enforced by:** component (`PageFrame`); guard (planned): the `h1` is above the first `.ds-kpi`.
+- **Enforced by:** component (`PageFrame` renders header, KPIs, toolbar, content and save bar in this order; phones show 2 KPI cards).
 
 **PAGE-3 · The list starts within the first screen.**
 - **Rule:**
@@ -135,7 +135,7 @@ Each rule says *planned* where the check comes in phase 2.
   - Charts and analytics on list pages are folded into a "Göstəricilər" panel (closed on phones; the state is remembered).
   - Phones show at most 2 KPI cards.
 - **Why:** dashboards are for at-a-glance information, lists are for work (N11, N7); MOB-01.
-- **Enforced by:** guard (planned): toolbar top < 0.5 × window height at 1366×768, < 1.0 × at 390×844.
+- **Enforced by:** guard (`toolbar-low`, migrated pages): toolbar top < 0.5 × window height from 1024 px, < 1.0 × below.
 
 **PAGE-4 · One vertical scroller, no empty band, no sideways page scroll.**
 - **Rule:**
@@ -164,14 +164,14 @@ Each rule says *planned* where the check comes in phase 2.
 - **Why:** variant sets in C1, F1, A1. Today there are 5 colours in one header and gradient buttons (ACT-02, ACT-05).
 - **Enforced by:**
   - component (`Button`, `IconButton`).
-  - lint (planned): `btn-primary`, `bg-gradient`/`app-gradient` and raw palette classes on buttons in new code.
+  - lint (`legacyButton`): `btn-primary`, `bg-gradient-to-*` and `app-gradient` classes; (`rawPalette`) Tailwind palette classes.
 
 **ACT-2 · One primary action per screen.**
 - **Rule:**
   - A page has at most one primary button: the action the page exists for. A dialog is its own screen and has one.
   - The shell's quick-actions button is not primary-styled.
 - **Why:** C1, F1, A1 and G4 agree. Today every page has two or more primaries (ACT-01).
-- **Enforced by:** guard (planned): count of `.ds-btn-primary` visible in the page ≤ 1 (dialogs counted separately).
+- **Enforced by:** guard (`primary-count`, migrated pages): visible `.ds-btn-primary` outside dialogs ≤ 1; the shell's quick actions are a secondary button under UI_UNIFIED.
 
 **ACT-3 · Button order and place.**
 - **Rule:**
@@ -197,14 +197,14 @@ Each rule says *planned* where the check comes in phase 2.
   - Never `window.confirm`.
   - Where the action can be undone, offer Undo in the success toast instead of asking.
 - **Why:** confirm consequential actions (N1 #5); warning buttons only for serious actions (G4); confirm destructive actions (P1).
-- **Enforced by:** component; lint (planned): `window.confirm`/`alert`.
+- **Enforced by:** component (`ConfirmDialog`); lint (`windowDialog`): `window.confirm` / `alert` / `prompt`.
 
 **ACT-6 · Labels.**
 - **Rule:**
   - A verb plus an object, sentence case, at most about 3 words ("Yeni faktura", "Ödəniş qəbul et").
   - No technical codes ("XML_ETAXES"), no "+" in the text next to a Plus icon, no "OK".
 - **Why:** explicit verbs (N8, C2, G4); ACT-04, ACT-07.
-- **Enforced by:** review; test (planned): i18n button keys have no upper-case words after the first.
+- **Enforced by:** review; test: the `uiUnified` texts are sentence case (`tests/uiUnified.test.mjs`); each area's texts get the same test when it migrates (planned).
 
 **ACT-7 · At most three visible actions.**
 - **Rule:**
@@ -330,7 +330,7 @@ Each rule says *planned* where the check comes in phase 2.
   - Sizes: sm 400 px (confirm), md 560 px (short forms, < 5 fields), lg 800 px (longer forms).
   - More than 5 fields, or editing a row next to its list: a `Drawer` from the right (480 px). On phones every dialog and drawer is a bottom sheet.
 - **Why:** W3; dialog for fewer than 5 inputs, side panel for more (C2); edit in a side panel (N7); OVL-01, A11Y-03.
-- **Enforced by:** component; lint (planned): `app-modal` and `fixed inset-0` overlays in new code (allowlist shrinks).
+- **Enforced by:** component (`Dialog`, `Drawer`, `ConfirmDialog`); lint (`appModal`, `fixedOverlay`): `.app-modal` and hand-made `fixed inset-0` overlays (allowlist shrinks).
 
 **OVL-2 · Popovers and menus.**
 - **Rule:**
@@ -350,17 +350,17 @@ Each rule says *planned* where the check comes in phase 2.
   - A blocking problem that stops the task uses a dialog.
   - Status messages are announced (`aria-live`).
 - **Why:** toasts after an action (L2); match severity to presentation (N6); W2 4.1.3; OVL-04.
-- **Enforced by:** component; lint (planned): `ToastMessage` in new code.
+- **Enforced by:** component; lint (`toastMessage`): imports of the old `ToastMessage`.
 
 ## 7. Visual tokens
 
 **TOK-1 · One token system: `--ds-*`.**
 - **Rule:**
   - `--ds-*` (`src/design-system/theme.css`) is the only source.
-  - `--erp-*` is already an alias under UI_STANDARD. `--app-*` becomes an alias under UI_UNIFIED, then both go away (final phase).
+  - `--erp-*` is an alias under UI_STANDARD, `--app-*` under UI_UNIFIED (`src/design-system/ui-unified.css`); both go away in the final phase.
   - Components use tokens by meaning (`--ds-text-muted`, `--ds-danger`), never a raw colour, hex value or Tailwind palette class (`text-rose-500`).
 - **Why:** choose tokens by meaning; themes swap values (A4); TOK-01.
-- **Enforced by:** lint (planned): raw palette classes and hex values in `className`/`style` in new code (allowlist with counts, may only shrink).
+- **Enforced by:** lint (`rawPalette`): Tailwind palette classes such as `text-rose-500` (allowlist with counts, may only shrink); hex values in `style` (planned).
 
 **TOK-2 · Type.**
 - **Rule:**
@@ -378,7 +378,7 @@ Each rule says *planned* where the check comes in phase 2.
 
   - Nothing below 12 px. Weights: 400, 500, 600 (700 only for KPI values).
 - **Why:** productive type sets with 14 px body (C8, F3); TOK-02, TOK-03.
-- **Enforced by:** lint (planned): `text-[10px]`, `text-[11px]`, arbitrary font sizes; the body font stack becomes Inter under UI_UNIFIED.
+- **Enforced by:** lint (`tinyText`): `text-[9px]`, `text-[10px]`, `text-[11px]` (other arbitrary sizes planned); under UI_UNIFIED the body font is Inter (`ui-unified.css`).
 
 **TOK-3 · Space, radius, elevation.**
 - **Rule:**
@@ -459,7 +459,7 @@ Each rule says *planned* where the check comes in phase 2.
 **A11Y-3 · Target size.**
 - **Rule:** every pointer target is at least 24×24 px, or has 24 px of spacing around it.
 - **Why:** W1 2.5.8; A11Y-02.
-- **Enforced by:** guard (planned): count of targets < 24 px.
+- **Enforced by:** guard (`small-target`, migrated pages): buttons, tabs, menu items and radios smaller than 24 × 24 px.
 
 **A11Y-4 · Names and labels.**
 - **Rule:**
@@ -485,8 +485,8 @@ Each rule says *planned* where the check comes in phase 2.
   - No `uppercase` styling, except codes and abbreviations (ƏDV, VÖEN).
 - **Why:** sentence case (F3, A2, C2); TXT-04, TXT-05.
 - **Enforced by:**
-  - lint (planned): the `uppercase` class in new code.
-  - test (planned): az/en strings with every word capitalised.
+  - lint (`uppercase`): the `uppercase` class.
+  - test: az/en `uiUnified` texts are sentence case; each area's texts when it migrates (planned).
 
 **TXT-2 · Language.**
 - **Rule:**
@@ -662,7 +662,14 @@ Every editable list of document lines (products, services, costs) is one `LineGr
 | Controls on one line (cost row, filters) | `InlineGroup` (wraps whole units; `ds-grow` for the one that may grow) |
 | Card / section with title and actions | `Section` / `Card` |
 | Bar above a list | `Toolbar`: left = title, filters, search; right = actions, then the settings icon |
-| Page title with actions | `PageHeader` |
+| Page frame: header → KPIs → toolbar → content → save bar | `PageFrame` (`width="form"` for forms and settings) |
+| Page title with crumbs, status and actions | `PageHeader` (`primary`, `secondary` ≤ 2, `more`, `status`; crumbs come from the shell) |
+| Button | `Button` (`variant` primary / secondary / ghost / danger, `size` md / sm, `icon`, `loading`, `asChild` for links); `buttonClass()` for a `Link` |
+| Parts of one record or report | `Tabs` (≤ 6) |
+| 2–4 options that filter one view | `SegmentedControl` |
+| Modal / side panel / question before an action | `Dialog` (sm / md / lg) / `Drawer` / `ConfirmDialog` (`TypeToConfirmDialog` when the name must be typed) |
+| A form's Save | `FormSaveBar` + `useUnsavedChangesGuard` |
+| Nothing yet / load failed / first load | `EmptyState` / `ErrorState` / `LoadingState` |
 | Any one-line text that may be long | `Truncate` (tooltip only when actually cut) |
 | Icon-only button | `IconButton` (`size` md 32 px / sm 28 px) |
 | Status | `Chip` |
@@ -723,6 +730,20 @@ warehouse, account, employee, expense or product category, consignment shop, par
 - **`SETTINGS_V2`** (server env, off by default, new shell only): `/settings` is a hub (search + cards in groups), the company profile moves to `/settings/company`, every settings page gets the side menu (a menu sheet on phones) instead of the app tab bar, and the standard `PageHeader`. Pages wrap their body in `SettingsV2Page`; with the flag off they render their old JSX unchanged.
 - **Settings forms** with `SETTINGS_V2`: design-system fields, two columns from `@md`, section cards, one `SettingsSaveBar` (`erp-sticky-actions`) that shows only while something changed, and `useUnsavedChangesGuard` (browser prompt on reload/close, our dialog on in-app links).
 
+## Unified UI (UI-7 phase 2, `UI_UNIFIED`)
+
+- **Flag.** `UI_UNIFIED` (server env, off by default, new shell only) and `UI_UNIFIED_AUDIENCE` (`admins`, the default, or `all`). `src/lib/features/uiUnified.ts`; the client reads `useUiUnified()`. With it on, the shell puts `data-ui-unified` on `<html>`.
+- **Shell, with the flag on:**
+  - **Side menu (NAV-1):** `AppSideMenu` (desktop, sticky, 15 rem, collapses to an icon rail, remembered in `localStorage`) and `AppMenuSheet` (below 1024 px, a bottom sheet). Pages come from the shell's one page list (`useShellApps`); groups from `src/lib/shell/appMenu.ts` (`APP_MENU_GROUPS`; Settings uses its own groups). A page no group names shows first without a heading, so it is never lost. Not on Home and the launcher; Settings with `SETTINGS_V2` keeps its own menu until phase 3.
+  - **No app tab bar** in the header.
+  - **Breadcrumbs (NAV-2):** App › Page › Record from the same page list (`appCrumbs` in `lib/shell/shell.ts`; record names via `useRecordCrumb`). A page whose `PageHeader` shows them claims them (`PageChromeProvider`), and the shell hides its own row; pages not migrated yet keep the shell's row. Phones show only the parent.
+  - **Back (NAV-4):** the shell button goes to the parent crumb (`parentCrumbHref`), from an app's first page to the launcher.
+  - **Quick actions** is a secondary button (ACT-2).
+  - **Tokens and font:** `--app-*` alias `--ds-*` and the body font is Inter (`src/design-system/ui-unified.css`); every page sits in a design scope.
+  - **Not found (NAV-6):** `src/app/not-found.tsx` shows a translated page with a link to the apps; with the flag off, the same plain page as before.
+- **Migrating a page** (phases 3–N): wrap it in `PageFrame` with one `PageHeader`; use `Button`, `Tabs`, `Dialog` / `Drawer` / `ConfirmDialog`, `FormSaveBar` + `useUnsavedChangesGuard`, and the states. Texts come from `src/i18n/uiUnifiedLabels.ts` (group `uiUnified`). `PageFrame` marks the page (`data-ui-page`), so the rulebook page checks apply to it.
+- **Lab:** `/dev/ui-lab?frame=unified` shows every shared part on one page with the flag on.
+
 ## Guards
 
 - **Lint (`npm run lint`)** fails on a native `<select>`, `<input type="date">`, `<datalist>`, `toLocaleString`, `toLocaleDateString` or `Intl.DateTimeFormat` in `src/`.
@@ -746,4 +767,6 @@ warehouse, account, employee, expense or product category, consignment shop, par
   - Playwright must resolve: install it globally, or set `UI_GUARD_PLAYWRIGHT` to a playwright folder.
   - `UI_LAB_OPEN` works only under `next dev`.
 - **Page checks (UI-5)** run in `ui:guard` on `/dev/ui-lab?frame=page` (a shell, a list with row menus and totals, KPI cards and document lines) at 1440, 1366x768, 768 and 360x740 in az and ru. They fail on a second vertical scroller, a window taller than the screen, the page scrolling sideways, an empty band, a missing or hidden actions column, a numeric column not end-aligned, a grid header gone while its rows show, and a clipped popover (a row menu and a lookup are opened low in the window). With `UI_TEST_EMAIL` and `UI_TEST_PASSWORD` set, the same checks run signed in on the main pages (`MAIN_ROUTES` in `scripts/ui-guard.mjs`; `UI_GUARD_ROUTES` overrides).
-- **Audit:** `docs/ui-audit-2026-11-03.md` lists what the live-site audit found and its status.
+- **UI rulebook lint (UI-7):** the same allowlist mechanism for `windowDialog`, `appModal`, `fixedOverlay`, `tinyText`, `uppercase`, `legacyButton`, `rawPalette`, `toastMessage`, `rawH1` and `rawTabRole` (rules in `scripts/ui-guard-rules.mjs`; the design system and print layouts are exempt where the rule says so). The totals when they were added are ceilings in `tests/uiUnified.test.mjs`.
+- **UI rulebook page checks (UI-7)** run in `ui:guard` whenever `data-ui-unified` is set: on `/dev/ui-lab?frame=unified`, and on signed-in routes for a test account with the flag on. Shell: `shell-tabbar`, `breadcrumbs`. Migrated pages (`data-ui-page`): `h1-count`, `h1-header`, `primary-count`, `toolbar-low`, `small-target` (`findUnifiedIssues` in `scripts/ui-page-checks.mjs`).
+- **Audit:** `docs/ui-audit-2026-11-03.md` lists what the live-site audit found and its status; `docs/ui-system/audit.md` is the UI-7 audit (finding ids such as NAV-01).

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NEW_UI_COOKIE, NEW_UI_COOKIE_MAX_AGE, newShellActive, newShellCanToggle, type NewUiAudience } from "@/lib/shell/shell";
 import { newHomeActive, type NewHomeAudience } from "@/lib/features/newHome";
+import { uiUnifiedActive, type UiUnifiedAudience } from "@/lib/features/uiUnified";
 
 export interface NewUiServerValue {
   /** NEW_UI is on for this deployment (server env). */
@@ -23,6 +24,8 @@ export interface NewUiServerValue {
   settingsV2?: boolean;
   /** NEW_HOME (server env) and NEW_HOME_AUDIENCE: the widget home page (prompt 24b). */
   newHome?: { enabled: boolean; audience: NewHomeAudience };
+  /** UI_UNIFIED (server env) and UI_UNIFIED_AUDIENCE: the UI rulebook's shared parts (UI-7). */
+  uiUnified?: { enabled: boolean; audience: UiUnifiedAudience };
 }
 
 interface NewUiValue {
@@ -42,10 +45,12 @@ interface NewUiValue {
   settingsV2: boolean;
   /** This user gets the widget home (NEW_HOME on, audience admins/all); only while `active`. */
   newHome: boolean;
+  /** This user gets the unified UI (UI_UNIFIED on, audience admins/all); only while `active`. */
+  uiUnified: boolean;
   setPreferred: (on: boolean) => void;
 }
 
-const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, newCrm: false, newImports: false, settingsV2: false, newHome: false, setPreferred: () => undefined };
+const OFF: NewUiValue = { available: false, preferred: false, brand: null, audience: "admins", active: false, canToggle: false, newCrm: false, newImports: false, settingsV2: false, newHome: false, uiUnified: false, setPreferred: () => undefined };
 const NewUiContext = createContext<NewUiValue>(OFF);
 
 /**
@@ -72,24 +77,32 @@ export function NewUiProvider({ value, children }: { value: NewUiServerValue; ch
     if (!value.available) return OFF;
     const audience = value.audience ?? "admins";
     const signedIn = !!user;
+    const authReady = ready && !loading;
+    const active = newShellActive({ available: true, preferred, authReady, isAdmin, audience, signedIn });
     return {
       available: true,
       preferred,
       brand: value.brand,
       audience,
-      active: newShellActive({ available: true, preferred, authReady: ready && !loading, isAdmin, audience, signedIn }),
+      active,
       canToggle: newShellCanToggle({ available: true, isAdmin, audience, signedIn }),
       newCrm: value.newCrm === true,
       newImports: value.newImports === true,
       settingsV2: value.settingsV2 === true,
       newHome: newHomeActive({ enabled: value.newHome?.enabled === true, audience: value.newHome?.audience ?? "admins", isAdmin }),
+      uiUnified: uiUnifiedActive({ enabled: value.uiUnified?.enabled === true, audience: value.uiUnified?.audience ?? "admins", shellActive: active, isAdmin, authReady }),
       setPreferred,
     };
-  }, [value.available, value.brand, value.audience, value.newCrm, value.newImports, value.settingsV2, value.newHome?.enabled, value.newHome?.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
+  }, [value.available, value.brand, value.audience, value.newCrm, value.newImports, value.settingsV2, value.newHome?.enabled, value.newHome?.audience, value.uiUnified?.enabled, value.uiUnified?.audience, preferred, ready, loading, isAdmin, user, setPreferred]);
 
   return <NewUiContext.Provider value={ctx}>{children}</NewUiContext.Provider>;
 }
 
 export function useNewUi(): NewUiValue {
   return useContext(NewUiContext);
+}
+
+/** True while the unified UI (UI_UNIFIED, UI-7) is on for this user. */
+export function useUiUnified(): boolean {
+  return useContext(NewUiContext).uiUnified;
 }

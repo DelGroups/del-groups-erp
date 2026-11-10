@@ -146,6 +146,21 @@ export function shouldShowGlobalBreadcrumbs(pathname: string): boolean {
   return !isAuthPath(pathname);
 }
 
+/**
+ * Label of the crumb at `path` (its last segment is `segment`): the route map's name for the full
+ * path, a record label for an id, the name of a known segment, or the segment itself.
+ */
+export function crumbLabel(
+  path: string,
+  segment: string,
+  t: (key: string, params?: Record<string, string | number>) => string
+): string {
+  if (PATH_I18N[path]) return t(PATH_I18N[path]);
+  if (isDynamicSegment(segment)) return formatDynamicLabel(segment, path.slice(0, path.lastIndexOf("/")), t);
+  if (SEGMENT_I18N[segment]) return t(SEGMENT_I18N[segment]);
+  return humanizeSegment(segment);
+}
+
 export function buildBreadcrumbsFromPath(
   pathname: string,
   t: (key: string, params?: Record<string, string | number>) => string
@@ -161,16 +176,7 @@ export function buildBreadcrumbsFromPath(
     acc += `/${segment}`;
     const isLast = index === segments.length - 1;
 
-    let label: string;
-    if (PATH_I18N[acc]) {
-      label = t(PATH_I18N[acc]);
-    } else if (isDynamicSegment(segment)) {
-      label = formatDynamicLabel(segment, acc.slice(0, acc.lastIndexOf("/")), t);
-    } else if (SEGMENT_I18N[segment]) {
-      label = t(SEGMENT_I18N[segment]);
-    } else {
-      label = humanizeSegment(segment);
-    }
+    const label = crumbLabel(acc, segment, t);
 
     crumbs.push({
       label,

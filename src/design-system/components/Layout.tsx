@@ -165,27 +165,4 @@ export function Toolbar({ start, end, settings, label, className }: ToolbarProps
   );
 }
 
-export interface PageHeaderProps {
-  title: string;
-  description?: string;
-  /** Above the title (breadcrumbs). */
-  eyebrow?: React.ReactNode;
-  actions?: React.ReactNode;
-  className?: string;
-}
-
-/** Title of a page with its main actions; the title is one line (ellipsis + tooltip). */
-export function PageHeader({ title, description, eyebrow, actions, className }: PageHeaderProps) {
-  return (
-    <header className={["ds-page-header", className].filter(Boolean).join(" ")}>
-      <div className="ds-section-heading">
-        {eyebrow ? <div className="ds-page-eyebrow">{eyebrow}</div> : null}
-        <Truncate as="h1" className="ds-page-title">
-          {title}
-        </Truncate>
-        {description ? <p className="ds-section-description">{description}</p> : null}
-      </div>
-      {actions ? <div className="ds-section-actions">{actions}</div> : null}
-    </header>
-  );
-}
+// PageHeader and PageFrame live in ./PageHeader.tsx (UI-7).

@@ -16,6 +16,10 @@
 // Playwright is not a dependency: `require("playwright")` must resolve (a global install), or
 // UI_GUARD_PLAYWRIGHT points at a playwright package folder. No browser is installed here.
 //
+// UI-7: /dev/ui-lab?frame=unified (side menu, PageHeader with crumbs, tabs, states, save bar) runs
+// the same page checks plus the UI rulebook checks of ui-page-checks.mjs (findUnifiedIssues), which
+// also run on any signed-in route while UI_UNIFIED is on for the test account.
+//
 // UI-6: before the browser it counts raw <table> elements and imports of the old
 // src/components/ui/table.tsx per file (outside src/design-system, src/components/print, the line
 // grid and print sheets) and fails when a file has more than scripts/ui-guard-allowlist.json allows
@@ -234,7 +238,8 @@ async function main() {
     // IMP-4: the import form with sample data (lines grid, costs grid, rates) on the same checks.
     // No overlays: the lab's lookups have no database behind them.
     // IMP-5: the stage bar and the payment dialog (?frame=pay) on the same checks.
-    for (const [frame, ready] of [["import", "[data-ui-frame=import] .ds-line-grid"], ["pay", "[data-ui-frame=payment-dialog]"]]) {
+    // UI-7: the unified UI's shared parts (?frame=unified) on the page checks and the rulebook checks.
+    for (const [frame, ready] of [["import", "[data-ui-frame=import] .ds-line-grid"], ["pay", "[data-ui-frame=payment-dialog]"], ["unified", "[data-ui-frame=unified] .ds-page-header"]]) {
     for (const locale of ["az", "ru"]) {
       for (const [width, height] of PAGE_SIZES) {
         const context = await browser.newContext({ viewport: { width, height } });

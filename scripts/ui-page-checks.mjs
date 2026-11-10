@@ -38,7 +38,40 @@ export function findPageIssues(m) {
   for (const p of m.popovers ?? []) {
     if (p.clippedBy) issues.push({ check: "popover-clipped", where: p.where, detail: `clipped by ${p.clippedBy}` });
   }
+  issues.push(...findUnifiedIssues(m));
   return issues;
+}
+
+/** Pages without breadcrumbs (NAV-2): Home and the app launcher. */
+export const NO_CRUMB_PATHS = new Set(["/", "/apps"]);
+/** Smallest pointer target (WCAG 2.2 2.5.8, A11Y-3). */
+export const MIN_TARGET = 24;
+
+/**
+ * UI rulebook checks of the unified UI (UI-7, docs/ui-standard.md), only while UI_UNIFIED is on:
+ * - shell: no app tab bar in the shell header (NAV-1); every page of an app has breadcrumbs with
+ *   at least two crumbs (NAV-2);
+ * - migrated pages (PageFrame, data-ui-page): exactly one <h1>, inside the PageHeader (PAGE-1); at
+ *   most one visible primary button outside dialogs (ACT-2); a list's toolbar starts in the top
+ *   half of the window on desktop and within the first screen on a phone (PAGE-3); no button,
+ *   tab or menu item smaller than 24 × 24 px (A11Y-3).
+ */
+export function findUnifiedIssues(m) {
+  const u = m.unified;
+  if (!u) return [];
+  const out = [];
+  if (u.shellTabbar) out.push({ check: "shell-tabbar", where: "shell", detail: "the shell shows app tabs; the app side menu replaces them (NAV-1)" });
+  if (u.inApp && !NO_CRUMB_PATHS.has(u.path) && u.crumbCount < 2) out.push({ check: "breadcrumbs", where: u.path, detail: `${u.crumbCount} crumb(s); every page of an app has App › Page (NAV-2)` });
+  if (!u.uiPage) return out;
+  if (u.h1Count !== 1) out.push({ check: "h1-count", where: u.path, detail: `${u.h1Count} <h1> on the page (exactly one, in PageHeader: PAGE-1)` });
+  else if (!u.h1InHeader) out.push({ check: "h1-header", where: u.path, detail: "the <h1> is not inside .ds-page-header (PAGE-1)" });
+  if (u.primaryCount > 1) out.push({ check: "primary-count", where: u.path, detail: `${u.primaryCount} primary buttons visible (one per screen: ACT-2)` });
+  if (typeof u.toolbarTop === "number" && typeof m.viewportHeight === "number") {
+    const limit = m.viewportWidth >= 1024 ? 0.5 : 1;
+    if (u.toolbarTop > m.viewportHeight * limit) out.push({ check: "toolbar-low", where: u.path, detail: `toolbar starts at ${Math.round(u.toolbarTop)}px (limit ${Math.round(m.viewportHeight * limit)}px: PAGE-3)` });
+  }
+  for (const t of u.smallTargets ?? []) out.push({ check: "small-target", where: u.path, detail: `${t.what} is ${t.width}×${t.height}px (at least ${MIN_TARGET}×${MIN_TARGET}: A11Y-3)` });
+  return out;
 }
 
 /** Runs in the page (page.evaluate): the measurements findPageIssues needs. */
@@ -107,7 +140,42 @@ export function measurePage() {
     }
     return { where: w.textContent.trim().slice(0, 40), clippedBy };
   });
+  // UI-7: the rulebook checks (findUnifiedIssues), only while the unified UI is on.
+  let unified = null;
+  if (document.documentElement.hasAttribute("data-ui-unified")) {
+    const shown = (el) => {
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && s.visibility !== "hidden";
+    };
+    const crumbNav = [...document.querySelectorAll("nav[data-ds-breadcrumbs]")].find(shown);
+    const uiPage = document.querySelector("[data-ui-page]");
+    const h1s = [...document.querySelectorAll("h1")].filter(shown);
+    const toolbar = uiPage ? [...uiPage.querySelectorAll(".ds-toolbar")].find(shown) : null;
+    const scrollRoot = document.querySelector("[data-scroll-root]");
+    const smallTargets = [];
+    if (uiPage) {
+      for (const el of uiPage.querySelectorAll("button, [role='tab'], [role='menuitem'], [role='radio'], a.ds-btn")) {
+        if (!shown(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 24 || r.height < 24) smallTargets.push({ what: name(el), width: Math.round(r.width), height: Math.round(r.height) });
+      }
+    }
+    unified = {
+      path: location.pathname.replace(/\/+$/, "") || "/",
+      inApp: !!document.querySelector("[data-shell-app]"),
+      shellTabbar: !!document.querySelector(".ds-shell-header .ds-tabbar"),
+      crumbCount: crumbNav ? crumbNav.querySelectorAll("li").length : 0,
+      uiPage: !!uiPage,
+      h1Count: h1s.length,
+      h1InHeader: h1s.length === 1 && !!h1s[0].closest(".ds-page-header"),
+      primaryCount: [...document.querySelectorAll(".ds-btn-primary")].filter((b) => shown(b) && !b.closest("[role='dialog']")).length,
+      toolbarTop: toolbar ? toolbar.getBoundingClientRect().top + (scrollRoot?.scrollTop ?? 0) : null,
+      smallTargets: smallTargets.slice(0, 10),
+    };
+  }
   return {
+    unified,
     viewportWidth: window.innerWidth,
     pageScrollWidth: document.documentElement.scrollWidth,
     // Measured even while the shell locks the window (globals.css): anything that escapes the

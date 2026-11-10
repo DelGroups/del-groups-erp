@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
@@ -38,14 +38,17 @@ import { LOCALES, LOCALE_LABELS } from "@/i18n/types";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useLimitStatus } from "@/components/limits/useLimitStatus";
 import { formatBytesShort, limitState, type LimitKind } from "@/lib/limits/limits";
-import { CommandPalette, DesignScope, useDesignScope, type PaletteAction } from "@/design-system/components";
+import { CommandPalette, DesignScope, PageChromeProvider, useDesignScope, type PageChromeValue, type PaletteAction } from "@/design-system/components";
 import type { PaletteGroup } from "@/design-system/logic";
 import { motionPreset, overlayVariants, transitions } from "@/design-system/motion";
-import { AI_OPEN_EVENT, collapseCrumbs, filterApps, shellBackButton, shortcutModifier, type Crumb } from "@/lib/shell/shell";
+import { AI_OPEN_EVENT, collapseCrumbs, filterApps, parentCrumbHref, shellBackButton, shortcutModifier, type Crumb } from "@/lib/shell/shell";
+import { showsAppMenu } from "@/lib/shell/appMenu";
+import { UI_UNIFIED_ATTR } from "@/lib/features/uiUnified";
 import { useNewUi } from "./NewUiProvider";
 import { markShellNavigation, useBreadcrumbTrail, useShellApps, type ShellApp } from "./useShell";
 import { ShellBackButton } from "./ShellBackButton";
 import { AppTabBar } from "./AppTabBar";
+import { AppMenuSheet, AppSideMenu } from "./AppSideMenu";
 import { MyActivitiesButton } from "./MyActivitiesButton";
 import { ReminderAlerts } from "@/modules/calendar";
 import { ShellHeaderSlotContext } from "./ShellHeaderSlot";
@@ -378,7 +381,7 @@ function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
       </span>
     );
   return (
-    <nav aria-label={t("newShell.breadcrumb")} className="min-w-0">
+    <nav aria-label={t("newShell.breadcrumb")} className="min-w-0" data-ds-breadcrumbs="">
       <ol className="flex min-w-0 items-center gap-1.5 text-[length:var(--ds-text-sm)]">
         {visible.map((c, i) => (
           <React.Fragment key={`${c.href ?? ""}:${c.label}:${i}`}>
@@ -547,10 +550,11 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const router = useRouter();
   const pathname = usePathname();
   const { theme } = useTheme();
-  const { brand, settingsV2 } = useNewUi();
+  const { brand, settingsV2, uiUnified } = useNewUi();
   const { isEnabled } = useEnabledModules();
-  const { apps, current, currentItemPath } = useShellApps();
-  const crumbs = useBreadcrumbTrail();
+  const { apps, current, currentItemPath, crumbsFor } = useShellApps();
+  // UI_UNIFIED (UI-7): crumbs are App › Page › Record from the shell's page list (NAV-2).
+  const crumbs = useBreadcrumbTrail(uiUnified ? crumbsFor : undefined);
   const notifications = useNotifications();
   const quickActions = useQuickActions();
   const mod = useModifierKey();
@@ -561,6 +565,33 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   const dsTheme = theme === "daylight" ? "light" : "dark";
   const aiEnabled = isEnabled("ai");
   const backButton = shellBackButton(pathname, current?.id ?? null);
+  // UI_UNIFIED: back goes to the parent crumb, not the launcher (NAV-4); the app side menu
+  // replaces the app tab bar (NAV-1); a migrated page's PageHeader shows the crumbs (NAV-2).
+  const backHref = uiUnified ? parentCrumbHref(crumbs, pathname) : backButton.href;
+  const backParent = uiUnified ? [...crumbs].reverse().find((c) => c.href === backHref)?.label : undefined;
+  const sideMenu = uiUnified && !!current && showsAppMenu({ appId: current.id, itemCount: current.items.length, pathname, settingsV2 });
+  const [crumbClaims, setCrumbClaims] = useState(0);
+  const claimCrumbs = useCallback(() => {
+    setCrumbClaims((n) => n + 1);
+    return () => setCrumbClaims((n) => n - 1);
+  }, []);
+  const chrome = useMemo<PageChromeValue>(
+    () => ({
+      crumbs,
+      labels: { breadcrumb: t("newShell.breadcrumb"), more: t("newShell.more"), backTo: t("uiUnified.backTo", { page: "{page}" }) },
+      claimCrumbs,
+    }),
+    [crumbs, t, claimCrumbs]
+  );
+  const shellCrumbs = crumbs.length > 1 && !(uiUnified && crumbClaims > 0);
+
+  // The unified tokens and font (ui-unified.css) key off the root element, so portals match too.
+  useEffect(() => {
+    if (!uiUnified) return;
+    const root = document.documentElement;
+    root.setAttribute(UI_UNIFIED_ATTR, "");
+    return () => root.removeAttribute(UI_UNIFIED_ATTR);
+  }, [uiUnified]);
 
   const groups = useMemo<PaletteGroup<PaletteAction>[]>(() => {
     const go = (href: string) => () => {
@@ -594,7 +625,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             <WorkspaceSwitcher />
             <span className="mx-1 hidden h-6 w-px md:block" style={{ background: "var(--ds-border)" }} aria-hidden />
             {current && backButton.show ? (
-              <ShellBackButton app={current} href={backButton.href} />
+              <ShellBackButton app={current} href={backHref} label={backParent ? t("uiUnified.backTo", { page: backParent }) : undefined} />
             ) : (
               <ShellLink href={current?.href ?? "/apps"} className="min-w-0 truncate text-[length:var(--ds-text-base)] font-semibold" style={{ color: "var(--ds-text)" }}>
                 {current?.title ?? t("newShell.apps")}
@@ -624,7 +655,8 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             <div className="hidden md:block">
               <QuickActions
                 trigger={
-                  <button type="button" className="ds-btn ds-btn-primary ds-btn-sm">
+                  // ACT-2 (UI_UNIFIED): the page's own action is the screen's one primary button.
+                  <button type="button" className={uiUnified ? "ds-btn ds-btn-sm" : "ds-btn ds-btn-primary ds-btn-sm"}>
                     <Plus className="h-4 w-4" aria-hidden /> {t("shell.quickActions")}
                   </button>
                 }
@@ -654,7 +686,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
           </div>
 
           {/* SETTINGS_V2: the settings side menu replaces the app tab bar (one navigation). */}
-          {current && current.items.length > 1 && !(settingsV2 && current.id === "settings") ? (
+          {!uiUnified && current && current.items.length > 1 && !(settingsV2 && current.id === "settings") ? (
             <AppTabBar
               label={t("newShell.appMenu", { app: current.title })}
               items={current.items}
@@ -667,7 +699,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             />
           ) : null}
 
-          {crumbs.length > 1 ? (
+          {shellCrumbs ? (
             <div className="flex items-center px-4 py-2" style={{ borderTop: "1px solid var(--ds-border)" }}>
               <Breadcrumbs crumbs={crumbs} />
             </div>
@@ -694,7 +726,19 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
           list chrome and grids never scroll vertically themselves; they stick inside this box. */}
       <div data-scroll-root="" className={`ds-scroll-root ds-scroll-root-tabbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-[var(--erp-content-padding-x)] py-[var(--erp-content-padding-y)] pb-24 md:pb-[var(--erp-content-padding-y)] ${contentClassName ?? ""}`}>
         {pageTitle ? <h3 className="erp-page-title">{pageTitle}</h3> : null}
-        <ShellHeaderSlotContext.Provider value={headerSlot}>{children}</ShellHeaderSlotContext.Provider>
+        {uiUnified ? (
+          <DesignScope theme={dsTheme} brand={brand} className="ds-scope-transparent ds-app-layout">
+            <PageChromeProvider value={chrome}>
+              {sideMenu && current ? <AppSideMenu app={current} currentPath={currentItemPath} /> : null}
+              <div className="ds-app-main" data-side-menu={sideMenu ? "" : undefined} data-shell-app={current?.id}>
+                {sideMenu && current ? <AppMenuSheet app={current} currentPath={currentItemPath} /> : null}
+                <ShellHeaderSlotContext.Provider value={headerSlot}>{children}</ShellHeaderSlotContext.Provider>
+              </div>
+            </PageChromeProvider>
+          </DesignScope>
+        ) : (
+          <ShellHeaderSlotContext.Provider value={headerSlot}>{children}</ShellHeaderSlotContext.Provider>
+        )}
       </div>
 
       <DesignScope theme={dsTheme} brand={brand}>

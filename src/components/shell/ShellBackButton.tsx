@@ -34,7 +34,7 @@ const MORPH = {
  * (200 ms, shared motion tokens); without hover the arrow always shows. It is a plain link, so
  * the browser's own back button keeps its history.
  */
-export function ShellBackButton({ app, href }: { app: ShellApp; href: string }) {
+export function ShellBackButton({ app, href, label: backLabel }: { app: ShellApp; href: string; /** UI_UNIFIED: "Back to {parent}" (the parent crumb), instead of the home menu. */ label?: string }) {
   const { t } = useI18n();
   const { portalContainer } = useDesignScope();
   const reduced = useReducedMotion();
@@ -42,7 +42,7 @@ export function ShellBackButton({ app, href }: { app: ShellApp; href: string }) 
   const [hot, setHot] = useState(false);
   const back = noHover || hot;
   const Icon = back ? ArrowLeft : app.icon;
-  const label = t("newShell.homeMenu");
+  const label = backLabel ?? t("newShell.homeMenu");
 
   return (
     <Tooltip.Provider delayDuration={300}>
@@ -51,7 +51,7 @@ export function ShellBackButton({ app, href }: { app: ShellApp; href: string }) 
           <Link
             href={href}
             onClick={markShellNavigation}
-            aria-label={`${label}: ${app.title}`}
+            aria-label={backLabel ? `${app.title}: ${backLabel}` : `${label}: ${app.title}`}
             data-back={back ? "" : undefined}
             onPointerEnter={() => setHot(true)}
             onPointerLeave={() => setHot(false)}

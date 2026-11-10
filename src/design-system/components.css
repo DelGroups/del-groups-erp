@@ -2324,3 +2324,576 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   color: var(--ds-text);
   box-shadow: var(--ds-elevation-3);
 }
+
+/* ══ Unified UI (UI-7 phase 2, docs/ui-standard.md): shared page parts ═══════════════════ */
+
+/* Phones (< 640 px) hide a page's visible secondaries; the "…" menu holds them (ACT-7). */
+@media (max-width: 639.98px) {
+  [data-ds] .ds-hide-compact {
+    display: none !important;
+  }
+}
+@media (min-width: 640px) {
+  [data-ds] .ds-only-compact {
+    display: none !important;
+  }
+}
+
+/* Page header: crumbs, one-line title with status, description, actions (PAGE-1). */
+[data-ds] .ds-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+[data-ds] .ds-page-status {
+  flex: 0 0 auto;
+}
+[data-ds] .ds-page-description {
+  max-width: 72ch;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-page-actions {
+  gap: 0.5rem;
+}
+[data-ds] .ds-page-eyebrow:has(.ds-crumbs) {
+  color: inherit;
+  font-size: var(--ds-text-sm);
+  margin-bottom: 0.125rem;
+}
+
+/* Breadcrumbs (NAV-2): one line; each crumb ellipsizes; phones show only the parent. */
+[data-ds] .ds-crumbs {
+  min-width: 0;
+}
+[data-ds] .ds-crumbs-list {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-ds] .ds-crumbs-item {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+[data-ds] .ds-crumbs-item:last-child {
+  flex-shrink: 0;
+  max-width: 50%;
+}
+[data-ds] .ds-crumbs-link,
+[data-ds] .ds-crumbs-current {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-crumbs-link {
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  border-radius: var(--ds-radius-xs);
+}
+[data-ds] .ds-crumbs-link:hover {
+  color: var(--ds-text);
+  text-decoration: underline;
+}
+[data-ds] .ds-crumbs-current {
+  color: var(--ds-text);
+  font-weight: 500;
+}
+[data-ds] .ds-crumbs-sep {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-inline: 0.375rem;
+  color: var(--ds-text-subtle);
+}
+[data-ds] .ds-crumbs-more {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+[data-ds] .ds-crumbs-parent {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+  max-width: 100%;
+  color: var(--ds-text-muted);
+  text-decoration: none;
+}
+@media (max-width: 639.98px) {
+  [data-ds] .ds-crumbs-parent {
+    display: inline-flex;
+  }
+  [data-ds] .ds-crumbs-list {
+    display: none;
+  }
+}
+
+/* Page frame (PAGE-2): header, KPIs, toolbar, content, save bar; 24 px apart. */
+[data-ds] .ds-page-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-6);
+  width: 100%;
+  min-width: 0;
+  max-width: 120rem;
+  margin-inline: auto;
+}
+[data-ds] .ds-page-frame[data-width="form"] {
+  max-width: 75rem;
+}
+[data-ds] .ds-page-frame > .ds-page-header {
+  padding-bottom: 0;
+}
+[data-ds] .ds-page-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--ds-space-4);
+}
+@media (max-width: 639.98px) {
+  /* Phones show at most two KPI cards (PAGE-3). */
+  [data-ds] .ds-page-kpis > :nth-child(n + 3) {
+    display: none;
+  }
+}
+
+/* Tabs (NAV-5): one row of underline tabs; the row scrolls without a scrollbar if it must. */
+[data-ds] .ds-tabs-list {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--ds-border);
+  scrollbar-width: none;
+}
+[data-ds] .ds-tabs-list::-webkit-scrollbar {
+  display: none;
+}
+[data-ds] .ds-tabs-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.5rem;
+  margin-bottom: -1px;
+  padding: 0 0.125rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--ds-duration-fast) var(--ds-ease-out), border-color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-tabs-tab:hover:not(:disabled) {
+  color: var(--ds-text);
+}
+[data-ds] .ds-tabs-tab[aria-selected="true"] {
+  color: var(--ds-text);
+  font-weight: 600;
+  border-bottom-color: var(--ds-brand);
+}
+[data-ds] .ds-tabs-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+[data-ds] .ds-tabs-count {
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+[data-ds] .ds-tabs-panel {
+  padding-top: var(--ds-space-4);
+}
+[data-ds] .ds-tabs-panel:focus-visible {
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Segmented control (NAV-5). */
+[data-ds] .ds-segmented {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.1875rem;
+  gap: 0.125rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-sunken);
+}
+[data-ds] .ds-segmented-option {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--ds-control-h) - 0.5rem);
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+[data-ds] .ds-segmented[data-size="sm"] .ds-segmented-option {
+  height: calc(var(--ds-control-h) - 0.875rem);
+  min-height: 1.5rem;
+  font-size: var(--ds-text-xs);
+}
+[data-ds] .ds-segmented-option[aria-checked="true"] {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  box-shadow: var(--ds-elevation-1);
+}
+[data-ds] .ds-segmented-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Dialog and drawer (OVL-1): fixed header and footer, only the body scrolls; bottom sheets on
+   phones. */
+[data-ds] .ds-dialog,
+[data-ds] .ds-drawer,
+[data-ds] .ds-sheet {
+  position: fixed;
+  z-index: var(--ds-z-modal-content);
+  display: flex;
+  flex-direction: column;
+  background: var(--ds-surface-raised);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-elevation-4);
+}
+[data-ds] .ds-dialog {
+  /* Centred without physical offsets: the box is as tall as its content, at most the window. */
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  width: calc(100% - 2rem);
+  max-width: 35rem;
+  max-height: calc(100dvh - 2rem);
+  border-radius: var(--ds-radius-xl);
+}
+[data-ds] .ds-dialog[data-size="sm"] {
+  max-width: 25rem;
+}
+[data-ds] .ds-dialog[data-size="lg"] {
+  max-width: 50rem;
+}
+[data-ds] .ds-drawer {
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  width: min(30rem, 100%);
+  border-start-start-radius: var(--ds-radius-xl);
+  border-end-start-radius: var(--ds-radius-xl);
+}
+[data-ds] .ds-sheet {
+  inset-inline: 0;
+  bottom: 0;
+  max-height: min(85dvh, 40rem);
+  border-top-left-radius: var(--ds-radius-xl);
+  border-top-right-radius: var(--ds-radius-xl);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (max-width: 639.98px) {
+  [data-ds] .ds-dialog,
+  [data-ds] .ds-drawer {
+    inset: auto 0 0;
+    margin: 0;
+    height: auto;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    border-radius: var(--ds-radius-xl) var(--ds-radius-xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+[data-ds] .ds-dialog-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--ds-border);
+}
+[data-ds] .ds-dialog-title {
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+  padding-top: 0.375rem;
+}
+[data-ds] .ds-dialog-description {
+  margin-top: 0.25rem;
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem 1.25rem;
+}
+[data-ds] .ds-dialog-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--ds-border);
+}
+[data-ds] .ds-dialog-warning {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong);
+}
+
+/* Save bar (FORM-5). */
+[data-ds] .ds-savebar {
+  z-index: var(--ds-z-sticky);
+  margin-top: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+[data-ds] .ds-savebar-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-raised);
+  color: var(--ds-text);
+  box-shadow: var(--ds-elevation-3);
+}
+[data-ds] .ds-savebar-dot {
+  position: static;
+  flex-shrink: 0;
+  background: var(--ds-warning);
+}
+
+/* Empty, error and loading states. */
+[data-ds] .ds-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-state-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+}
+[data-ds] .ds-state-icon-danger {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong);
+}
+[data-ds] .ds-state-title {
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+}
+[data-ds] .ds-state-text {
+  max-width: 28rem;
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+[data-ds] .ds-loading .ds-skeleton {
+  border-radius: var(--ds-radius-md);
+}
+[data-ds] .ds-loading-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: 0.75rem;
+}
+
+/* App side menu (NAV-1): 15 rem, sticky in the page scroller, icon rail when collapsed; below
+   1024 px a menu button opens the same menu as a bottom sheet. */
+[data-ds].ds-app-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-6);
+}
+@media (min-width: 1024px) {
+  [data-ds].ds-app-layout:has(> .ds-side-aside) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+  [data-ds].ds-app-layout:has(> .ds-side-aside[data-collapsed]) {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+  }
+}
+[data-ds] .ds-app-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+[data-ds] .ds-side-aside {
+  position: sticky;
+  top: 0;
+  display: none;
+  align-self: start;
+  flex-direction: column;
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* The menu never shows its own scrollbar (NAV-1). */
+  scrollbar-width: none;
+}
+[data-ds] .ds-side-aside::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  [data-ds] .ds-side-aside {
+    display: flex;
+  }
+}
+[data-ds] .ds-side-app {
+  margin: 0 0 0.25rem;
+  padding-inline: 0.75rem;
+  overflow: hidden;
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-side-group {
+  margin-top: 0.75rem;
+}
+[data-ds] .ds-side-group:first-of-type {
+  margin-top: 0.25rem;
+}
+[data-ds] .ds-side-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-ds] .ds-side-group-title {
+  margin: 0 0 0.25rem;
+  padding-inline: 0.75rem;
+  overflow: hidden;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-side-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--ds-duration-fast) var(--ds-ease-out), color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-side-link:hover {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+}
+[data-ds] .ds-side-link[aria-current="page"] {
+  background: var(--ds-brand-soft);
+  color: var(--ds-text);
+  font-weight: 600;
+}
+[data-ds] .ds-side-link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-brand);
+}
+[data-ds] .ds-side-link[aria-current="page"] svg {
+  color: var(--ds-brand);
+}
+[data-ds] .ds-side-aside[data-collapsed] .ds-side-link {
+  justify-content: center;
+  padding-inline: 0;
+}
+[data-ds] .ds-side-rail-sep {
+  display: block;
+  height: 1px;
+  margin: 0.5rem 0.75rem;
+  background: var(--ds-border);
+}
+[data-ds] .ds-side-toggle {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+}
+[data-ds] .ds-side-aside[data-collapsed] .ds-side-toggle {
+  align-self: center;
+}
+[data-ds] .ds-side-sheet-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  cursor: pointer;
+}
+@media (min-width: 1024px) {
+  [data-ds] .ds-side-sheet-trigger {
+    display: none;
+  }
+}
+[data-ds] .ds-side-sheet-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+}
+
+/* Not found (NAV-6): the error code above the title. */
+[data-ds] .ds-not-found-code {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

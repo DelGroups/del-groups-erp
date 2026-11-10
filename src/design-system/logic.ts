@@ -284,3 +284,73 @@ export function filterOptions<T extends { label: string; hint?: string }>(option
     return words.every((w) => text.includes(w));
   });
 }
+
+// ── Unified UI (UI-7 phase 2, docs/ui-standard.md) ──────────────────────────
+
+/**
+ * Keyboard of a tab list or a segmented control (ARIA APG): the index that gets focus (and, with
+ * automatic activation, the selection) after `key`. Arrow keys wrap and skip disabled items, Home
+ * and End go to the first and last enabled item; any other key returns null. `rtl` swaps the
+ * horizontal arrows.
+ */
+export function rovingIndex(current: number, key: string, disabled: readonly boolean[], rtl = false): number | null {
+  const n = disabled.length;
+  if (!n || disabled.every(Boolean)) return null;
+  const step = (from: number, dir: 1 | -1) => {
+    let i = from;
+    for (let k = 0; k < n; k++) {
+      i = (i + dir + n) % n;
+      if (!disabled[i]) return i;
+    }
+    return from;
+  };
+  const next = rtl ? -1 : 1;
+  switch (key) {
+    case "ArrowRight":
+      return step(current, next as 1 | -1);
+    case "ArrowLeft":
+      return step(current, -next as 1 | -1);
+    case "Home":
+      return disabled.findIndex((d) => !d);
+    case "End":
+      return n - 1 - [...disabled].reverse().findIndex((d) => !d);
+    default:
+      return null;
+  }
+}
+
+/** Most visible page-header actions besides the primary (ACT-7); the rest go into the "…" menu. */
+export const MAX_SECONDARY_ACTIONS = 2;
+
+/**
+ * Splits page-header actions (ACT-7): at most MAX_SECONDARY_ACTIONS secondaries stay visible, the
+ * others move to the front of the "…" menu (before the page's own menu items), in their order.
+ * On a phone (`compact`) every secondary goes into the menu, so only the primary and "…" show.
+ */
+export function splitHeaderActions<S, M>(secondary: readonly S[], more: readonly M[], compact = false): { visible: S[]; overflow: S[]; more: M[] } {
+  const keep = compact ? 0 : MAX_SECONDARY_ACTIONS;
+  return { visible: secondary.slice(0, keep), overflow: secondary.slice(keep), more: [...more] };
+}
+
+/**
+ * Where an in-app link click would go while a form has unsaved changes, or null when the guard
+ * must not step in: no link, another window (target, modifier key, middle click), a download, a
+ * different origin, or only a hash change on the same page.
+ */
+export function leaveTarget(
+  anchor: { href: string; target?: string; download?: boolean } | null,
+  click: { button: number; modified: boolean; defaultPrevented: boolean },
+  location: { origin: string; pathname: string; search: string }
+): string | null {
+  if (!anchor || click.defaultPrevented || click.button !== 0 || click.modified) return null;
+  if (anchor.download || (anchor.target && anchor.target !== "_self")) return null;
+  let url: URL;
+  try {
+    url = new URL(anchor.href, location.origin);
+  } catch {
+    return null;
+  }
+  if (url.origin !== location.origin) return null;
+  if (url.pathname === location.pathname && url.search === location.search) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
