@@ -127,8 +127,9 @@ export default function ProductionBomPage() {
         {loading ? (
           <p className="text-sm text-app-muted">{t("common.loading")}</p>
         ) : (
-          <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
-            <section className="rounded-xl border border-app bg-app-surface p-4">
+          // minmax(0, …): a long product name in a select must not widen the page (it scrolled sideways).
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <section className="min-w-0 rounded-xl border border-app bg-app-surface p-4">
               <h3 className="mb-3 font-semibold">{t("production.existingBoms")}</h3>
               <div className="space-y-2">
                 {(lookups?.boms || []).length === 0 && (
@@ -155,13 +156,13 @@ export default function ProductionBomPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-app bg-app-surface p-4">
+            <section className="min-w-0 rounded-xl border border-app bg-app-surface p-4">
               <h3 className="mb-3 font-semibold">{t("production.editBom")}</h3>
               <div className="grid gap-3">
                 <label className="text-xs">
                   {t("production.finishedProduct")}
                   <select
-                    className="mt-1 w-full rounded-lg border border-app bg-app px-3 py-2"
+                    className="mt-1 w-full min-w-0 rounded-lg border border-app bg-app px-3 py-2"
                     value={finishedProductId}
                     onChange={(e) => setFinishedProductId(e.target.value)}
                     disabled={!canManage}
@@ -185,9 +186,9 @@ export default function ProductionBomPage() {
                 </label>
                 <div className="space-y-2">
                   {items.map((item, idx) => (
-                    <div key={idx} className="grid gap-2 rounded-lg border border-app p-2 md:grid-cols-[1.4fr_0.6fr_1fr_auto]">
+                    <div key={idx} className="grid gap-2 rounded-lg border border-app p-2 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]">
                       <select
-                        className="rounded-lg border border-app bg-app px-2 py-2 text-sm"
+                        className="w-full min-w-0 rounded-lg border border-app bg-app px-2 py-2 text-sm"
                         value={item.product_id}
                         disabled={!canManage}
                         onChange={(e) =>
