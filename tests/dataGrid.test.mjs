@@ -30,13 +30,13 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 test("rows have one fixed height per density; dates have fixed widths", () => {
   assert.deepEqual(GRID_ROW_HEIGHT, { compact: 32, comfortable: 40 });
-  assert.equal(TYPE_WIDTH.date, 96);
-  assert.equal(TYPE_WIDTH.datetime, 132);
-  assert.equal(initialColumnWidth({ key: "d", type: "date", header: "Tarix" }), 96);
-  assert.equal(initialColumnWidth({ key: "d", type: "datetime", header: "Yaradılma vaxtı" }), 132);
+  assert.equal(TYPE_WIDTH.date, 108);
+  assert.equal(TYPE_WIDTH.datetime, 148);
+  assert.equal(initialColumnWidth({ key: "d", type: "date", header: "Tarix" }), 108);
+  assert.equal(initialColumnWidth({ key: "d", type: "datetime", header: "Yaradılma vaxtı" }), 148);
   // A date column can never be dragged narrower than its full text.
-  assert.equal(resizeWidth("date", 96, -60), TYPE_MIN_WIDTH.date);
-  assert.equal(resizeWidth("datetime", 132, -200), 132);
+  assert.equal(resizeWidth("date", 108, -60), TYPE_MIN_WIDTH.date);
+  assert.equal(resizeWidth("datetime", 148, -200), 148);
 });
 
 test("money and status columns are sized to their content", () => {
@@ -60,9 +60,11 @@ test("stored widths win over the defaults and are clamped", () => {
     { key: "a", type: "text" },
     { key: "b", type: "date" },
   ];
-  assert.deepEqual(resolveWidths(cols, { a: 300, b: 20 }), { a: 300, b: 96 });
-  assert.deepEqual(resolveWidths(cols, undefined), { a: 180, b: 96 });
-  assert.deepEqual(resolveWidths(cols, { a: -1 }), { a: 180, b: 96 });
+  assert.deepEqual(resolveWidths(cols, { a: 300, b: 20 }), { a: 300, b: 108 });
+  assert.deepEqual(resolveWidths(cols, undefined), { a: 180, b: 108 });
+  assert.deepEqual(resolveWidths(cols, { a: -1 }), { a: 180, b: 108 });
+  // A width saved before the dates got wider (96) is raised to the new minimum: no cut dates.
+  assert.deepEqual(resolveWidths(cols, { b: 96 }), { a: 180, b: 108 });
 });
 
 test("free space goes to text columns only, to the last pixel", () => {
@@ -89,7 +91,7 @@ test("free space goes to text columns only, to the last pixel", () => {
 test("double-click fits the widest cell or the header", () => {
   assert.equal(fitWidth("text", [80, 210, 150], 60), 210 + CELL_PADDING);
   assert.equal(fitWidth("text", [20], 120), 120 + 16 + CELL_PADDING);
-  assert.equal(fitWidth("date", [10], 10), 96);
+  assert.equal(fitWidth("date", [10], 10), 108);
 });
 
 // ── Sticky columns, shadows, scrollbar, wheel ─────────────────────────────────

@@ -20,8 +20,9 @@ export const TYPE_WIDTH: Record<GridColumnType, number> = {
   code: 136,
   number: 96,
   money: 120,
-  date: 96,
-  datetime: 132,
+  // A date needs ~76 px of text in Inter (14 px) plus 24 px of padding; 96 cut it (LIST-01).
+  date: 108,
+  datetime: 148,
   status: 128,
 };
 
@@ -31,8 +32,8 @@ export const TYPE_MIN_WIDTH: Record<GridColumnType, number> = {
   code: 72,
   number: 64,
   money: 80,
-  date: 96,
-  datetime: 132,
+  date: 108,
+  datetime: 148,
   status: 72,
 };
 

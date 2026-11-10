@@ -290,7 +290,7 @@ Each rule says *planned* where the check is not built yet. Phase 2 (UI-7) built 
 
 **LIST-2 · Columns.**
 - **Rule:**
-  - Fixed widths by type: date 96 px, datetime 132 px, code 136 px. A date is never cut.
+  - Fixed widths by type: date 108 px, datetime 148 px, code 136 px. A date is never cut.
   - Text is start-aligned; money and numbers are end-aligned with tabular figures.
   - The first column is the human-readable identifier and is pinned, as is the actions column.
 - **Why:** N7, C3; LIST-01.
@@ -608,8 +608,8 @@ Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach
 
    | Type | Width |
    | --- | --- |
-   | date | 96 px |
-   | datetime | 132 px |
+   | date | 108 px |
+   | datetime | 148 px |
    | money / number | sized to content, right-aligned, tabular figures |
    | status | sized to its longest label |
    | code | 136 px |
