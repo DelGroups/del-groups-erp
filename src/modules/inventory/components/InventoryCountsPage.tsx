@@ -38,6 +38,8 @@ import {
   type WarehouseCategoryPath,
 } from "../lib/inventoryCountTypes";
 import { countToday, isBackdated } from "../lib/inventoryCountDates";
+import { useCountTeam } from "./CountTeamFlag";
+import { CountTeamPicker, useCountEmployeeOptions } from "./CountTeamPicker";
 import { ListGrid } from "@/components/lists/ListGrid";
 
 /** "Backdated · <date>" next to a count whose book quantities are taken at the end of a past day. */
@@ -72,6 +74,10 @@ export function CreateCountModal({
   const [confirmBackdate, setConfirmBackdate] = useState(false);
   const backdated = isBackdated(countDate, today);
   const [responsible, setResponsible] = useState("");
+  // COUNT_TEAM (INV-4): the responsible people from the employee list instead of free text.
+  const countTeam = useCountTeam();
+  const employees = useCountEmployeeOptions(countTeam);
+  const [team, setTeam] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +151,7 @@ export function CreateCountModal({
       warehouse_id: warehouseId,
       category_name: category || null,
       subcategory_name: category ? subcategory || null : null,
-      responsible_name: responsible,
+      ...(countTeam ? { responsible_employee_ids: team } : { responsible_name: responsible }),
       notes,
     });
     setSaving(false);
@@ -240,10 +246,27 @@ export function CreateCountModal({
             </p>
           ) : null}
         </div>
-        <div>
-          <label className="erp-label">{t("inventoryCount.responsible")}</label>
-          <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} />
-        </div>
+        {countTeam ? (
+          <div className="min-w-0 sm:col-span-2">
+            <label className="erp-label" htmlFor="count-team">
+              {t("inventoryCount.responsible")}
+            </label>
+            <CountTeamPicker
+              id="count-team"
+              value={team}
+              onChange={setTeam}
+              options={employees.options}
+              loading={employees.loading}
+              error={employees.error}
+              onEmployeeCreated={employees.add}
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="erp-label">{t("inventoryCount.responsible")}</label>
+            <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} />
+          </div>
+        )}
         <div className="sm:col-span-2">
           <label className="erp-label">{t("inventoryCount.notes")}</label>
           <textarea

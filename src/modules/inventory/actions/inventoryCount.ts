@@ -15,6 +15,7 @@ import type {
 } from "../lib/inventoryCountTypes";
 import { checkCountDate, countToday, type CountDateProblem } from "../lib/inventoryCountDates";
 import { catalogIlikePattern, type InventoryCountProductHit } from "../lib/inventoryCountSearch";
+import { mapEmployeeOptionRows, mapResponsibleRows, MAX_COUNT_TEAM, type CountEmployeeOption } from "../lib/countTeam";
 
 export type InventoryCountActionResult<T = void> =
   | { success: true; data?: T }
@@ -161,12 +162,15 @@ export async function fetchInventoryCountAction(
     if (headerError) return { success: false, error: headerError.message };
     if (!header) return { success: false, error: "İnventarizasiya sənədi tapılmadı" };
 
-    const { data: lines, error: linesError } = await client
-      .from("inventory_count_items")
-      .select("*")
-      .eq("count_id", countId)
-      .order("line_no", { ascending: true })
-      .limit(20000);
+    const [{ data: lines, error: linesError }, responsibles] = await Promise.all([
+      client
+        .from("inventory_count_items")
+        .select("*")
+        .eq("count_id", countId)
+        .order("line_no", { ascending: true })
+        .limit(20000),
+      readResponsibles(client, countId),
+    ]);
     if (linesError) return { success: false, error: linesError.message };
 
     return {
@@ -174,6 +178,7 @@ export async function fetchInventoryCountAction(
       data: {
         ...mapDocument(header as Record<string, unknown>),
         lines: ((lines || []) as Record<string, unknown>[]).map(mapLine),
+        responsibles,
       },
     };
   } catch (err) {
@@ -220,6 +225,59 @@ export async function fetchWarehouseCategoriesAction(
   }
 }
 
+/**
+ * INV-4: the chosen employees of a count, in the chosen order. Only a missing table (the
+ * migration has not run yet) means "none"; any other error fails the read, so a count that has
+ * people never looks like an old free-text one (a save would then replace its people).
+ */
+async function readResponsibles(client: LooseClient, countId: string) {
+  const { data, error } = await client
+    .from("inventory_count_responsibles")
+    .select("employee_id, sort_order, employees(full_name)")
+    .eq("count_id", countId)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw new Error(error.message);
+  }
+  return mapResponsibleRows(data);
+}
+
+/** PostgREST / Postgres "no such table" (or column, before this migration ran). */
+function isMissingTable(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST205" || error.code === "42P01" || error.code === "42703" || /does not exist|could not find the table/i.test(error.message ?? "");
+}
+
+/** INV-4: active employees to choose from (names only), for anyone who may count. */
+export async function fetchInventoryCountEmployeeOptionsAction(): Promise<InventoryCountActionResult<CountEmployeeOption[]>> {
+  try {
+    await requirePermissionAction("can_writeoff_inventory");
+    return { success: true, data: mapEmployeeOptionRows(await callRpc<unknown>("inventory_count_employee_options", {})) };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+function cleanIds(ids: readonly string[] | undefined): string[] {
+  return [...new Set((ids ?? []).filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()))];
+}
+
+/**
+ * INV-4: replaces the people of a count. The database applies the rules (draft and counting:
+ * anyone who may count; review and posted: admins), writes responsible_name and logs the change.
+ */
+export async function setInventoryCountResponsiblesAction(countId: string, employeeIds: string[]): Promise<InventoryCountActionResult<{ responsible_name: string | null }>> {
+  try {
+    const { user } = await requirePermissionAction("can_writeoff_inventory");
+    const ids = cleanIds(employeeIds);
+    if (ids.length > MAX_COUNT_TEAM) return { success: false, error: "inventoryCount.team.tooMany" };
+    const text = await callRpc<string | null>("inventory_count_set_responsibles", { p_count_id: countId, p_employee_ids: ids, p_actor: user.id });
+    return { success: true, data: { responsible_name: text ?? null } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 // ─── Draft ──────────────────────────────────────────────────────────────────
 
 export async function createInventoryCountAction(
@@ -243,6 +301,10 @@ export async function createInventoryCountAction(
       .maybeSingle();
     if (!warehouse) return { success: false, error: "Anbar tapılmadı" };
 
+    // INV-4: the limit is checked before a document number is taken.
+    const team = cleanIds(input.responsible_employee_ids);
+    if (team.length > MAX_COUNT_TEAM) return { success: false, error: "inventoryCount.team.tooMany" };
+
     const documentNumber = await callRpc<string>("next_inventory_count_doc_no", {});
     const { data, error } = await client
       .from("inventory_counts")
@@ -264,6 +326,17 @@ export async function createInventoryCountAction(
       .select("id")
       .single();
     if (error || !data) return { success: false, error: error?.message || "Sənəd yaradılmadı" };
+    // INV-4: chosen people go through the RPC (names, log). A refusal removes the new empty draft;
+    // if even that fails, the user is sent to the draft (people can be set in its header).
+    if (team.length) {
+      try {
+        await callRpc("inventory_count_set_responsibles", { p_count_id: data.id, p_employee_ids: team, p_actor: user.id });
+      } catch (teamError) {
+        const { error: deleteError } = await client.from("inventory_counts").delete().eq("id", data.id);
+        if (deleteError) return { success: true, data: { id: data.id as string } };
+        return fail(teamError);
+      }
+    }
     return { success: true, data: { id: data.id as string } };
   } catch (err) {
     return fail(err);
