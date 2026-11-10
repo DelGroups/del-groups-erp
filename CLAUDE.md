@@ -24,3 +24,5 @@ These rules apply to every task from `docs/claude-code-prompts.md` (plan: `docs/
     components using our design tokens, Radix and the motion library; never paste their vanilla JS.
 11. PR description: what changed in plain words, how it was tested, and any manual step Del must do.
 12. Keep each PR focused on its task. If you find unrelated problems, list them in the PR, don't fix them.
+13. Every UI change follows docs/ui-standard.md (UI rulebook); the PR description says which rules it touched
+    (rule ids such as NAV-2, FORM-5) and any exception with its reason.
