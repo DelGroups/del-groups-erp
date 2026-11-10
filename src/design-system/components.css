@@ -2764,13 +2764,41 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   align-self: start;
   flex-direction: column;
   max-height: calc(100dvh - 8rem);
+  min-height: 0;
+}
+/* App name and the collapse button stay put; only the links scroll (live check, UI-7). */
+[data-ds] .ds-side-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+[data-ds] .ds-side-aside[data-collapsed] .ds-side-head {
+  justify-content: center;
+}
+/* The menu never shows its own scrollbar (NAV-1); fades mark the side that hides links. */
+[data-ds] .ds-side-nav {
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* The menu never shows its own scrollbar (NAV-1). */
   scrollbar-width: none;
 }
-[data-ds] .ds-side-aside::-webkit-scrollbar {
+[data-ds] .ds-side-nav::-webkit-scrollbar,
+[data-ds] .ds-scroll-quiet::-webkit-scrollbar {
   display: none;
+}
+[data-ds] .ds-scroll-quiet {
+  scrollbar-width: none;
+}
+[data-ds] .ds-side-nav[data-fade-end] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent);
+}
+[data-ds] .ds-side-nav[data-fade-start] {
+  mask-image: linear-gradient(to bottom, transparent, #000 2rem);
+}
+[data-ds] .ds-side-nav[data-fade-start][data-fade-end] {
+  mask-image: linear-gradient(to bottom, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
 }
 @media (min-width: 1024px) {
   [data-ds] .ds-side-aside {
@@ -2778,7 +2806,9 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   }
 }
 [data-ds] .ds-side-app {
-  margin: 0 0 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   padding-inline: 0.75rem;
   overflow: hidden;
   color: var(--ds-text);
@@ -2854,13 +2884,9 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   background: var(--ds-border);
 }
 [data-ds] .ds-side-toggle {
-  align-self: flex-start;
-  margin-top: 0.75rem;
+  flex: 0 0 auto;
   width: 2rem;
   height: 2rem;
-}
-[data-ds] .ds-side-aside[data-collapsed] .ds-side-toggle {
-  align-self: center;
 }
 [data-ds] .ds-side-sheet-trigger {
   display: flex;

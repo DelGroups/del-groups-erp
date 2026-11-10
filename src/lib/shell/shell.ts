@@ -287,8 +287,8 @@ export function collapseCrumbs(crumbs: readonly Crumb[], max = 4): { visible: Cr
 /**
  * Crumbs of a page in the unified UI (docs/ui-standard.md NAV-2): the app first (linking to its
  * first page), then the menu page the path belongs to, then every deeper segment (a "new" form, a
- * record) with its route-map label. The last crumb is the current page, without a link. Without an
- * app (the launcher, a page no menu lists) there are no crumbs.
+ * record) with its route-map label. The last crumb is the current page, without a link. Home, the
+ * launcher and a page no menu lists have no crumbs.
  */
 export function appCrumbs(input: {
   app: { title: string; href: string } | null;
@@ -297,8 +297,9 @@ export function appCrumbs(input: {
   t: (key: string, params?: Record<string, string | number>) => string;
 }): Crumb[] {
   const { app, item, t } = input;
-  if (!app || !item) return [];
   const path = input.pathname.replace(/\/+$/, "") || "/";
+  // Home and the launcher have no crumbs (NAV-2; live check, UI-7).
+  if (!app || !item || HOME_PATHS.has(path)) return [];
   const crumbs: Crumb[] = [
     { label: app.title, href: app.href },
     { label: item.title, href: item.path },
