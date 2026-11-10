@@ -32,6 +32,9 @@ import { purchaseKpis, PURCHASES_VIEW_KEY, type PurchaseListRecord } from "../vi
 import PurchaseForm from "./PurchaseForm";
 import PurchasePrintTemplate from "./PurchasePrintTemplate";
 import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
+import { useInvoiceTools } from "@/components/invoices/InvoiceToolsFlag";
+import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
+import { invoiceExportFormActions, invoiceExportRowActions } from "@/components/invoices/invoiceExportActions";
 
 /** Purchases on the view engine (new UI): invoices with a dashboard, and purchase requisitions. */
 export default function PurchasesScreen() {
@@ -68,6 +71,8 @@ function RequisitionsTab() {
 function InvoicesTab() {
   const { t } = useI18n();
   const { can } = useAuth();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
+  const exportOn = useInvoiceTools();
   return (
     <EngineScreen
       definition={PURCHASES_DEFINITION}
@@ -81,7 +86,7 @@ function InvoicesTab() {
         </Link>
       }
       recordTitle={(r) => r.invoice_number}
-      rowActions={(r) => purchaseRowActions(r, t, can)}
+      rowActions={(r) => purchaseRowActions(r, t, can, exportOn)}
       renderRecord={(r, { close }) => <PurchaseRecordView id={r.id} close={close} />}
     />
   );
@@ -91,7 +96,7 @@ function InvoicesTab() {
  * The row "…" menu of the purchase list (UI-5): the classic list's actions, as the row's status
  * allows; PurchaseRecordView's form runs them (?do=).
  */
-function purchaseRowActions(r: PurchaseListRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"]): RowActionSpec[] {
+function purchaseRowActions(r: PurchaseListRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"], exportOn = false): RowActionSpec[] {
   const draft = r.doc_status === "draft";
   const cancelled = r.doc_status === "cancelled";
   const icon = (C: typeof Printer) => <C className="h-4 w-4" />;
@@ -99,6 +104,7 @@ function purchaseRowActions(r: PurchaseListRecord, t: (key: string) => string, c
     { key: "edit", label: draft ? t("sales.engine.actions.editDraft") : t("common.edit"), icon: icon(PencilLine), hidden: cancelled || !(draft ? can("can_edit_purchases") : can("can_edit_posted_purchases")) },
     { key: "pay", label: t("purchases.engine.registerPayment"), icon: icon(Banknote), hidden: cancelled || !(r.remaining > 0) },
     { key: "print", label: t("common.print"), icon: icon(Printer) },
+    ...invoiceExportRowActions(t, exportOn),
     { key: "send", label: t("sales.engine.actions.sendToWarehouse"), icon: icon(Truck), hidden: !(r.doc_status === "posted" && (r.warehouse_state === "not_sent" || r.warehouse_state === "rejected")) },
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: icon(FileCode2), hidden: cancelled },
     { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: icon(FileJson), hidden: cancelled },
@@ -122,6 +128,8 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
   const [paying, setPaying] = useState(false);
   const [voiding, setVoiding] = useState(false);
   const { printData, setPrintData } = useDocumentPrint<PurchaseRecord>();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" next to Print.
+  const invoiceExport = useInvoiceExport();
   const formData = useQuery({ queryKey: ["purchases", "form-data"], queryFn: fetchPurchaseFormData, enabled: mode === "edit" });
   const reload = async () => {
     await invalidateModel(client, PURCHASES_VIEW_KEY);
@@ -171,6 +179,7 @@ function PurchaseRecordView({ id, close }: { id: string; close: () => void }) {
       : []),
     ...(record.remaining > 0 ? [{ key: "pay", label: t("purchases.engine.registerPayment"), primary: !isDraft, icon: <Banknote className="h-4 w-4" aria-hidden />, onClick: () => setPaying(true) }] : []),
     { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => setPrintData(purchase) },
+    ...invoiceExportFormActions(t, invoiceExport.enabled, (format) => void invoiceExport.exportPurchase(purchase, format)),
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: <FileCode2 className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("xml") },
     { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: <FileJson className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("json") },
     ...(send.show

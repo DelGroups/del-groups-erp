@@ -38,6 +38,7 @@ import SalesViewModal from "./SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { fetchSaleById, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "../lib/fetchSales";
 import { recordSalePaymentAction } from "../actions/payments";
 import { sendSaleToWarehouseAction } from "@/lib/actions/sendToWarehouse";
@@ -95,6 +96,8 @@ export default function SalesPage() {
   const [voidTarget, setVoidTarget] = useState<SaleRecord | null>(null);
   const [voiding, setVoiding] = useState(false);
   const invoicePrint = useInvoicePrintSystem();
+  // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
+  const invoiceExport = useInvoiceExport();
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
   const { can } = useAuth();
@@ -305,6 +308,7 @@ export default function SalesPage() {
       <DocumentListActions
         onView={() => void openView(sale)}
         onPrint={() => void openPrint(sale)}
+        onInvoiceExport={invoiceExport.enabled ? (format) => void invoiceExport.exportSale(() => fetchSaleById(sale.id), format) : undefined}
         onEdit={
           canEditSales && isSalesDraft(sale.status)
             ? () => router.push(`/sales/new?draft=${sale.id}`)
@@ -598,6 +602,7 @@ export default function SalesPage() {
         closeModal={invoicePrint.closeModal}
         confirmPrint={invoicePrint.confirmPrint}
       />
+      {invoiceExport.dialog}
 
       {warehouseSend.printSlip && (
         <div className="print-area">

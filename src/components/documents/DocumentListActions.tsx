@@ -7,6 +7,8 @@ import {
   TableRowActionsMenu,
   type TableRowActionItem,
 } from "@/components/ui/table-row-actions-menu";
+import { INVOICE_EXPORT_ACTIONS } from "@/components/invoices/invoiceExportActions";
+import type { InvoiceExportFormat } from "@/lib/export/invoiceExport";
 
 interface DocumentListActionsProps {
   onView?: () => void;
@@ -16,6 +18,8 @@ interface DocumentListActionsProps {
   onPayment?: () => void;
   onSendToWarehouse?: () => void;
   onEQaimeExport?: (format: "xml" | "json") => void | Promise<void>;
+  /** INV-2 (INVOICE_TOOLS): "Download Excel" / "Download PDF" after Print; leave out to hide them. */
+  onInvoiceExport?: (format: InvoiceExportFormat) => void;
   viewTitle?: string;
   printTitle?: string;
   editTitle?: string;
@@ -37,6 +41,7 @@ export default function DocumentListActions({
   onPayment,
   onSendToWarehouse,
   onEQaimeExport,
+  onInvoiceExport,
   viewTitle,
   printTitle,
   editTitle,
@@ -72,6 +77,11 @@ export default function DocumentListActions({
       icon: <Printer className="h-4 w-4" />,
       onClick: onPrint,
     });
+  }
+  if (onInvoiceExport) {
+    for (const a of INVOICE_EXPORT_ACTIONS) {
+      items.push({ key: a.key, label: t(a.labelKey), icon: <a.Icon className="h-4 w-4" />, onClick: () => onInvoiceExport(a.format) });
+    }
   }
   if (showSendToWarehouse && onSendToWarehouse) {
     items.push({
