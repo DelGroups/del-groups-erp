@@ -9,6 +9,8 @@ export const MAX_EMPTY_BAND = 48;
  * Problems of one page:
  * - more than one element that really scrolls vertically (the shell's [data-scroll-root] only);
  * - the page scrolls sideways;
+ * - the window itself is taller than the screen (a second, window scrollbar next to the content
+ *   area's, with an empty band under the shell when it is scrolled; SCROLL-1);
  * - an empty band under the last content (a fixed-height box that is taller than its content);
  * - a DataGrid whose rows have actions but no visible actions column, or whose actions column is
  *   outside the window;
@@ -20,6 +22,9 @@ export function findPageIssues(m) {
   const scrollers = m.verticalScrollers ?? [];
   const extra = scrollers.filter((s) => !s.isRoot);
   if (extra.length) issues.push({ check: "nested-scroll", where: extra.map((s) => s.where).join(", "), detail: `${scrollers.length} vertical scroll containers (only [data-scroll-root] may scroll)` });
+  if (typeof m.pageScrollHeight === "number" && typeof m.viewportHeight === "number" && m.pageScrollHeight - m.viewportHeight > 1) {
+    issues.push({ check: "window-scroll", where: "page", detail: `the window is ${m.pageScrollHeight}px tall on a ${m.viewportHeight}px screen (only [data-scroll-root] may scroll)` });
+  }
   if (m.pageScrollWidth - m.viewportWidth > 1) issues.push({ check: "page-hscroll", where: "page", detail: `page is ${m.pageScrollWidth}px wide in a ${m.viewportWidth}px window` });
   if (m.root && m.root.scrollHeight > m.root.clientHeight + 1 && m.root.emptyBand > MAX_EMPTY_BAND) {
     issues.push({ check: "empty-band", where: "page", detail: `${Math.round(m.root.emptyBand)}px empty under the last content` });
@@ -105,6 +110,10 @@ export function measurePage() {
   return {
     viewportWidth: window.innerWidth,
     pageScrollWidth: document.documentElement.scrollWidth,
+    // Measured even while the shell locks the window (globals.css): anything that escapes the
+    // content area still makes the document taller than the screen.
+    viewportHeight: window.innerHeight,
+    pageScrollHeight: document.documentElement.scrollHeight,
     verticalScrollers,
     root,
     grids,
