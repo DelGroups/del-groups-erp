@@ -1054,7 +1054,7 @@ export default function MixedDimensionalInvoiceForm({
           />
         </label>
 
-        <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-6 py-4">
+        <div className="erp-sticky-actions flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-6 py-4">
           <div className="flex flex-wrap gap-4 text-xs text-app-muted">
             {isOfficial ? (
               <OfficialTotalsBreakdown amounts={officialAmounts} isOfficial={isOfficial} />

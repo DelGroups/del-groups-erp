@@ -106,7 +106,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: supabaseConfigScript }} />
       </head>
-      <body className={`${inter.variable} min-h-screen bg-app font-sans text-app antialiased`}>
+      <body className={`${inter.variable} min-h-dvh bg-app font-sans text-app antialiased`}>
         <ThemeProvider>
           <CompanyInfoProvider value={companyInfo}>
             <EnabledModulesProvider value={enabledModules}>

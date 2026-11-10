@@ -253,7 +253,19 @@ body {
    The shell's content area ([data-scroll-root]) is the one vertical scroller of every page.
    Nothing inside it sets a viewport height or scrolls vertically on its own; headers that must
    stay visible use position: sticky inside it. */
+/* While a shell is on screen the window itself never scrolls (SCROLL-1): the content area is the
+   only vertical scrollbar, even if something is appended to <body> below the shell (an overlay
+   layer, a browser extension, a stray portal). Overlays are position: fixed, so they still show. */
+html:has(body [data-scroll-root]),
+html:has(body [data-scroll-root]) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 .ds-scroll-root {
+  /* Absolutely placed parts (an sr-only label, a resize handle) stay inside the scroller instead of
+     being measured against <body>, where they made the window taller (SCROLL-1). */
+  position: relative;
   /* Sticky parts stick inside the scroller's padding; these offsets move them onto its edges so
      no row shows through the padding above a sticky header or below the sticky totals. */
   --ds-scroll-pad-top: var(--erp-content-padding-y);
@@ -266,13 +278,40 @@ body {
     --ds-sticky-bottom: calc(env(safe-area-inset-bottom) - 2rem);
   }
 }
-/* A list page's title and filters stay visible at the top of the page scroller. */
+/* A form's action bar (Save / Cancel) sticks to the bottom edge of the page scroller, with room
+   on the right for the AI button so it never covers the last action (SCROLL-1). */
+.erp-sticky-actions {
+  position: sticky;
+  bottom: var(--ds-sticky-bottom, 0px);
+}
+@media (min-width: 768px) {
+  .erp-sticky-actions {
+    padding-inline-end: 6rem !important;
+  }
+}
+/* The AI button sits above the phone tab bar of the new shell instead of on top of "Menu". */
+.erp-ai-fab {
+  bottom: 1.5rem;
+}
+@media (max-width: 767.98px) {
+  html:has(.ds-scroll-root-tabbar) .erp-ai-fab {
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+/* A list page's title and filters stay visible at the top of the page scroller (from tablet up;
+   on a phone they would cover half the screen, so they scroll away with the list). */
 .ds-list-chrome-bar {
   position: sticky;
   top: calc(-1 * var(--ds-scroll-pad-top, 0px));
   z-index: var(--ds-z-sticky);
   margin-top: calc(-1 * var(--ds-scroll-pad-top, 0px));
   padding-top: var(--ds-scroll-pad-top, 0px);
+}
+@media (max-width: 767.98px) {
+  .ds-list-chrome-bar {
+    position: relative;
+    top: auto;
+  }
 }
 
 /* Page content density wrapper */
@@ -819,7 +858,13 @@ html[data-theme="daylight"] .alert-danger {
 
 .app-modal {
   width: 100%;
-  overflow: hidden;
+  /* A dialog taller than the window scrolls inside itself, so its title and Save button are always
+     reachable (SCROLL-1). This rule is unlayered, so it wins over Tailwind utilities on the element:
+     the old "overflow: hidden" here silently cancelled every "overflow-y-auto" a dialog asked for. */
+  max-height: calc(100dvh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-radius: 1rem;
   border: 1px solid var(--app-border);
   background-color: var(--app-card);

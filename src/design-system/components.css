@@ -15,6 +15,12 @@
    the scope, no box and no background of its own; its children are fixed-position overlays. */
 [data-ds].ds-layer {
   position: relative;
+  /* Never a box in the page flow: it must not make <body> taller than the window (SCROLL-1). */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  height: 0;
+  min-height: 0;
   color: var(--ds-text);
   font-size: var(--ds-text-sm);
   line-height: 1.5;

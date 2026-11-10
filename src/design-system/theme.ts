@@ -72,8 +72,13 @@ export function zVar(layer: ZLayer): string {
   return `var(--ds-z-${layer.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)})`;
 }
 
-/** Scope classes that also belong on its overlay layer (fonts), not layout or background ones (UI-5). */
+/**
+ * Scope classes that also belong on its overlay layer: only font classes (Tailwind font-*, next/font
+ * __className_* / __variable_*). The layer is a direct child of <body>, so a box class copied from the
+ * scope (p-5, mx-auto, max-w-*, rounded-*) made <body> taller than the window and gave every page a
+ * second, window scrollbar with an empty band under the shell (SCROLL-1).
+ */
 export function layerClassName(className?: string): string {
-  const keep = (className ?? "").split(/\s+/).filter((c) => c && !c.startsWith("ds-scope"));
+  const keep = (className ?? "").split(/\s+/).filter((c) => /^(font-|__className_|__variable_)/.test(c));
   return ["ds-layer", ...keep].join(" ");
 }

@@ -99,7 +99,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-[var(--erp-z-sidebar)] flex h-screen w-[var(--erp-sidebar-width)] shrink-0 flex-col border-r text-[color:var(--erp-text-sidebar)] transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:transition-[width] ${
+      className={`fixed inset-y-0 left-0 z-[var(--erp-z-sidebar)] flex h-dvh w-[var(--erp-sidebar-width)] shrink-0 flex-col border-r text-[color:var(--erp-text-sidebar)] transition-transform duration-300 ease-in-out md:static md:translate-x-0 md:transition-[width] ${
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       } ${desktopExpanded ? "md:w-[var(--erp-sidebar-width)]" : "md:w-[var(--erp-sidebar-width-collapsed)]"}`}
       style={{

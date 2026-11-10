@@ -500,7 +500,7 @@ export default function ConsignmentDispatchNewPage() {
         )}
       </div>
 
-      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-4 py-4 md:px-6">
+      <div className="erp-sticky-actions z-10 flex flex-wrap items-center justify-between gap-4 border-t border-app bg-app-card px-4 py-4 md:px-6">
         <p className="text-sm font-bold">
           {t("common.total")}: {totalValue.toFixed(2)} {t("common.currency")}
         </p>

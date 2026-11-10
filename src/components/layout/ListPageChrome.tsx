@@ -28,7 +28,13 @@ export function ListPageChrome({ header, filters, children, className, contentCl
     if (!el || !host) return;
     // The bar sticks at minus the scroller's padding (globals.css): what is left of it below the
     // scroller's edge is where a grid header sticks.
-    const set = () => host.style.setProperty("--ds-sticky-top", `${Math.round(el.getBoundingClientRect().height + (parseFloat(getComputedStyle(el).top) || 0))}px`);
+    // On a phone the bar does not stick (globals.css): the grid header then sticks to the scroller's
+    // edge, as on a page without this chrome.
+    const set = () => {
+      const style = getComputedStyle(el);
+      if (style.position !== "sticky") host.style.removeProperty("--ds-sticky-top");
+      else host.style.setProperty("--ds-sticky-top", `${Math.round(el.getBoundingClientRect().height + (parseFloat(style.top) || 0))}px`);
+    };
     set();
     const ro = new ResizeObserver(set);
     ro.observe(el);
