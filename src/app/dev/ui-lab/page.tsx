@@ -22,6 +22,6 @@ export default async function UiLabPage({ searchParams }: { searchParams: Promis
   // ?frame=page (UI-5): one page as the app builds it, for the page-scroll checks of ui:guard.
   const { frame } = await searchParams;
   // ?frame=import (IMP-4): the import form with sample data. ?frame=unified (UI-7): the rulebook's
-  // shared parts on one page, with the unified UI on. ?frame=statement (LED-3): the partner statement.
-  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} frame={frame === "page" || frame === "import" || frame === "pay" || frame === "unified" || frame === "statement" ? frame : undefined} />;
+  // shared parts on one page, with the unified UI on. ?frame=statement (LED-3): the partner statement. ?frame=debtors (LED-4).
+  return <UiLab fontClassName={dsFont.variable} standard={isUiStandardEnabled()} frame={frame === "page" || frame === "import" || frame === "pay" || frame === "unified" || frame === "statement" || frame === "debtors" ? frame : undefined} />;
 }

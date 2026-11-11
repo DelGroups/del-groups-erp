@@ -41,7 +41,7 @@ export const APP_MENU_GROUPS: Readonly<Record<string, readonly MenuGroupDef[]>> 
   ],
   reports: [
     { id: "general", titleKey: "uiUnified.menuGroups.reportsGeneral", paths: ["/reports", "/imports/reports"] },
-    { id: "financial", titleKey: "uiUnified.menuGroups.reportsFinancial", paths: ["/dashboard/reports/financial", "/dashboard/reports/osv", "/dashboard/reports/reconciliation", "/dashboard/reports/partner-statement"] },
+    { id: "financial", titleKey: "uiUnified.menuGroups.reportsFinancial", paths: ["/dashboard/reports/financial", "/dashboard/reports/osv", "/dashboard/reports/reconciliation", "/dashboard/reports/partner-statement", "/dashboard/reports/debtors"] },
     { id: "inventory", titleKey: "uiUnified.menuGroups.reportsInventory", paths: ["/dashboard/reports/inventory-turnover"] },
   ],
   settings: SETTINGS_GROUPS.map((g) => ({ id: g.id, titleKey: g.titleKey, paths: [] })),

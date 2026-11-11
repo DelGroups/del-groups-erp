@@ -15,3 +15,7 @@ export { default as PartnerStatementPage } from "./components/partnerStatement/P
 export { default as PartnerStatementPanel } from "./components/partnerStatement/PartnerStatementPanel";
 /** UI lab (?frame=statement): the partner statement with sample data. */
 export { default as PartnerStatementLab } from "./components/partnerStatement/PartnerStatementLab";
+/** PARTNER_LEDGERS (LED-4): debtors, creditors, net and turnover per partner. */
+export { default as DebtorCreditorPage } from "./components/debtorReports/DebtorCreditorPage";
+/** UI lab (?frame=debtors): the debtor report with sample data. */
+export { default as DebtorReportsLab } from "./components/debtorReports/DebtorReportsLab";

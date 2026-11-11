@@ -8,6 +8,7 @@ import { CountUp, DeltaChip, FunnelSteps, GoalProgress, Truncate } from "@/desig
 import { transitions } from "@/design-system/motion";
 import { deltaPercent, type TrendRange } from "@/lib/home/dates";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
 import { reconcileCustomerArBalancesAction } from "@/lib/actions/customerAr";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
 import { WidgetFrame, WidgetState } from "../WidgetFrame";
@@ -235,13 +236,24 @@ export function CashBalancesWidget(props: WidgetProps) {
 
 const AGE_COLORS = ["var(--ds-success)", "var(--ds-warning)", "#f97316", "var(--ds-danger)"];
 
+/** PARTNER_LEDGERS (LED-4): the receivables / payables widgets open the debtor report. */
+function DebtorReportLink({ tab }: { tab: "debtors" | "creditors" }) {
+  const { t } = useFigures();
+  return (
+    <Link href={tab === "debtors" ? "/dashboard/reports/debtors" : "/dashboard/reports/debtors?tab=creditors"} className="ds-btn ds-btn-ghost ds-btn-sm">
+      {t("debtorReports.openReport")}
+    </Link>
+  );
+}
+
 export function ReceivablesWidget(props: WidgetProps) {
   const { t, money } = useFigures();
   const q = useWidgetData<{ total: number; buckets: { bucket: string; amount: number; count: number }[]; top: { customer_id: string | null; name: string; amount: number }[] }>("receivables", {}, !props.preview);
   const d = q.data?.data;
   const total = d?.total ?? 0;
+  const partnerLedgers = usePartnerLedgers();
   return (
-    <WidgetFrame {...frameProps(props)}>
+    <WidgetFrame {...frameProps(props)} action={partnerLedgers ? <DebtorReportLink tab="debtors" /> : undefined}>
       <WidgetState status={status(props, q)} onRetry={() => void q.refetch()} empty={!props.preview && !total} emptyIcon={BadgeCheck} emptyTitle={t("home.empty.receivables")}>
         <span className="text-[length:var(--ds-text-2xl)] font-semibold tracking-tight ds-mono">{money(total)}</span>
         <div className="mt-2 flex h-2.5 overflow-hidden rounded-full" aria-hidden>
@@ -278,8 +290,9 @@ export function PayablesDueWidget(props: WidgetProps) {
   const q = useWidgetData<{ due_total: number; overdue_total: number; items: { id: string; number: string; supplier: string | null; due_date: string; amount: number }[] }>("payables_due", {}, !props.preview);
   const d = q.data?.data;
   const today = new Date().toISOString().slice(0, 10);
+  const partnerLedgers = usePartnerLedgers();
   return (
-    <WidgetFrame {...frameProps(props)}>
+    <WidgetFrame {...frameProps(props)} action={partnerLedgers ? <DebtorReportLink tab="creditors" /> : undefined}>
       <WidgetState status={status(props, q)} onRetry={() => void q.refetch()} empty={!props.preview && !d?.items.length} emptyIcon={BadgeCheck} emptyTitle={t("home.empty.payables")}>
         <dl className="flex flex-wrap gap-x-6">
           <div><dt className="text-[length:var(--ds-text-xs)] ds-muted">{t("home.payables.next14")}</dt><dd className="text-[length:var(--ds-text-xl)] font-semibold ds-mono">{money(d?.due_total ?? 0)}</dd></div>
