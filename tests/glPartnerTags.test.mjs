@@ -65,7 +65,7 @@ test("the backfill fixes exactly the lines the report shows (same rules)", () =>
   const report = read("supabase/scripts/gl_partner_tags_report.sql");
   const backfill = read("supabase/scripts/gl_partner_tags_backfill.sql");
   for (const part of report.split("-- matching rules (begin)").slice(1)) assert.equal("-- matching rules (begin)" + part.slice(0, part.indexOf("-- matching rules (end)")), rules(backfill));
-  assert.match(backfill, /where p\.partners_found = 1;/);
+  assert.match(backfill, /where p\.partners_found = 1\n/);
 });
 
 test("the reports only read; the backfill only sets the partner tag, with an audit row", () => {
@@ -76,8 +76,10 @@ test("the reports only read; the backfill only sets the partner tag, with an aud
   const backfill = code("supabase/scripts/gl_partner_tags_backfill.sql");
   const updates = backfill.match(/update public\.\w+/g) ?? [];
   assert.deepEqual(updates, ["update public.journal_entry_lines"]);
-  assert.match(backfill, /set partner_id = f\.new_partner_id,\s*partner_type = 'partner'\s*from _gl_tag_fix f/);
+  assert.match(backfill, /set partner_id = f\.new_partner_id,\s*partner_type = 'partner'\s*from fix f/);
   assert.doesNotMatch(backfill, /set[^;]*\b(debit|credit|coa_id|account_id|entry_date)\s*=/);
   assert.match(backfill, /insert into public\.audit_logs/);
-  assert.match(backfill.trim(), /^begin;[\s\S]*commit;$/);
+  // One statement: the Supabase SQL Editor keeps no temporary table between statements.
+  assert.doesNotMatch(backfill, /\btemp\b|\bbegin;|\bcommit;/);
+  assert.equal((backfill.match(/;/g) ?? []).length, 1, "exactly one statement");
 });
