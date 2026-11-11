@@ -169,6 +169,9 @@ union all
 select 'pending', '20261111100000_partner_ledger: Partner ledger (read-only view and reports)',
        case when to_regprocedure('public.get_partner_statement(uuid, date, date, text)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261111200000_journal_entry_no_sequence: Journal entry numbers from a sequence (no collisions)',
+       case when to_regclass('public.journal_entry_no_seq') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

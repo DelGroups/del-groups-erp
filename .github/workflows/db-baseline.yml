@@ -134,6 +134,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/inventory_count_responsibles.sql | tee "$RUNNER_TEMP/inventory_count_responsibles.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/inventory_count_responsibles.txt"
+      # Journal entry numbers from a sequence: 2,000 entries on one day, no collision.
+      - name: Journal entry number checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/journal_entry_no.sql | tee "$RUNNER_TEMP/journal_entry_no.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/journal_entry_no.txt"
       # Partner ledger (LED-1): every money flow of a partner, statement, balances, integrity check.
       - name: Partner ledger checks
         run: |
