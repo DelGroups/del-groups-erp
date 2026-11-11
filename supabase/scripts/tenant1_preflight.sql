@@ -172,6 +172,9 @@ union all
 select 'pending', '20261111200000_journal_entry_no_sequence: Journal entry numbers from a sequence (no collisions)',
        case when to_regclass('public.journal_entry_no_seq') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261112100000_gl_partner_tags: Partner on every GL line on 1200 / 2100',
+       case when to_regprocedure('public._gl_partner_for_source(text, uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
