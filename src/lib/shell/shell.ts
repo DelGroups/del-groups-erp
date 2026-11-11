@@ -98,6 +98,8 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "reports", path: "/imports/reports", titleKey: "newShell.extra_importsReports", module: "imports", icon: "BarChart3", flag: "newImports" },
   // Partner statement (LED-3): only while PARTNER_LEDGERS is on for this user; the route needs can_view_financial_reports.
   { section: "reports", path: "/dashboard/reports/partner-statement", titleKey: "nav.items.partnerStatement", module: "accounting", icon: "FileCheck2", flag: "partnerLedgers" },
+  // Debtors and creditors (LED-4): same flag and permission.
+  { section: "reports", path: "/dashboard/reports/debtors", titleKey: "nav.items.debtorReports", module: "accounting", icon: "Scale", flag: "partnerLedgers" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */

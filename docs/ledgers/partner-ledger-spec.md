@@ -128,3 +128,70 @@ existence of partner balances).
 - **Differences:** expected ones should shrink to zero once LED-2 is applied. A difference
   without a known cause is investigated before the month is closed; one older than 60 days goes to
   Del.
+
+## Open items (LED-4, `_partner_open_items`)
+
+What a partner still owes (or we still owe) per document, as of any date, from the ledger only.
+Each side (receivable, payable) is worked out on its own.
+
+1. **Item key.** Every movement up to the date belongs to one item:
+   - a sale or a purchase invoice, with its payments and their reversals (the cash row names the invoice);
+   - a production order, with its advances, its payments and its delivery invoice;
+   - an import shipment, with all its journal lines (goods, costs, prepayments, payments, FX);
+   - an opening balance (its own item, dated the day the customer / supplier record was created,
+     because the ledger dates opening balances 1900-01-01);
+   - anything else is its own item (a partner payment, a refund).
+2. **Net per item.** Amounts are taken in the side's direction (receivable: debit − credit;
+   payable: credit − debit) and summed per item. So a payment linked to an invoice is applied to
+   that invoice first.
+3. **Credit pool, FIFO.** Items that end up negative (partner payments and advances not tied to an
+   invoice, overpaid invoices, the payment of a cancelled invoice) form a pool. It is applied to the
+   positive items oldest first: by due date, then document date.
+4. **Advance.** Whatever the pool does not use is one "advance" line (negative). It is shown, never
+   hidden.
+5. **Due date.** The document's `due_date`; when empty, its date + `partners.payment_terms_days`
+   (0 when not set).
+6. **Foreign currency.** Amounts are in AZN, the booked amounts. `remaining_fc` gives the open part
+   in the document currency, in the same proportion.
+
+Check: for every partner and side, Σ open items + advance = the ledger balance on that date
+(`supabase/tests/partner_debtor_reports.sql` asserts it on several dates for every partner).
+
+## Reports (LED-4)
+
+- **`get_debtor_creditor_report(as_of, tab, filters, sort, dir, limit, offset)`**: one call per view.
+  - **Tabs:**
+    - *debtors*: receivable side > 0;
+    - *creditors*: payable side > 0;
+    - *net*: receivable − payable ≠ 0.
+    - A customer who paid in advance has a negative receivable: it shows under *net* (with its advance), not under *debtors*.
+  - **Columns of the tab's side:**
+    - balance;
+    - of which overdue (open items past their due date);
+    - oldest overdue days;
+    - open documents;
+    - credit limit and % used (receivable, or payable on *creditors*, / limit);
+    - last payment (reversed payments do not count);
+    - payment terms.
+    - On *net*: overdue = receivable overdue − payable overdue.
+  - **Filters** (`filters` jsonb):
+    - `type` (customer / supplier / partner = both);
+    - `min_amount` (|balance| ≥);
+    - `currency` (a movement in that currency up to the date);
+    - `user_id` (creator or salesperson of an open document);
+    - `overdue_only`;
+    - `over_limit_only` (> 100 %);
+    - `search` (name, VÖEN, phone; digits of a phone match without spaces).
+  - **KPIs:** over every partner the filters keep, in all tabs: total receivable, total payable,
+    net, overdue receivable (the page shows % overdue = overdue receivable / total receivable),
+    and the ten biggest debtors.
+- **`get_partner_turnover(from, to, filters, sort, dir, limit, offset)`**: per partner, net side:
+  - opening, debit, credit and closing; equal to `get_partner_statement(p, from, to, 'net')`;
+  - the filters are taken on the closing date.
+  - **DSO** = average receivable / credit sales × days in the period:
+    - average receivable = (receivable on the day before `from` + receivable on `to`) / 2;
+    - credit sales = sales invoices (and production delivery invoices) of the period.
+  - **DPO** = average payable / purchases × days:
+    - purchases = purchase invoices and import payables of the period.
+  - No sales (purchases) in the period: no DSO (DPO).
+  - Overall DSO / DPO use the sums of the partners shown.

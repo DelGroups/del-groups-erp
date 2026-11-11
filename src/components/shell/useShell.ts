@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FileCheck2, FolderOpen, Inbox, Layers, ListTodo, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FileCheck2, FolderOpen, Inbox, Layers, ListTodo, Scale, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
@@ -31,7 +31,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship, "/imports/reports": BarChart3, "/dashboard/reports/partner-statement": FileCheck2 };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship, "/imports/reports": BarChart3, "/dashboard/reports/partner-statement": FileCheck2, "/dashboard/reports/debtors": Scale };
 
 export interface ShellApp {
   id: string;

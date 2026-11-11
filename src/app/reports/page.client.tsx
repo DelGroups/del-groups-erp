@@ -18,6 +18,7 @@ import {
   RefreshCw,
   ShoppingCart,
   Table2,
+  Scale,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
@@ -109,6 +110,13 @@ export default function ReportsHubPage() {
             description: t("partnerStatement.description"),
             href: "/dashboard/reports/partner-statement",
             icon: FileCheck2,
+            accent: AMBER_ACCENT,
+          },
+          {
+            title: t("nav.items.debtorReports"),
+            description: t("debtorReports.description"),
+            href: "/dashboard/reports/debtors",
+            icon: Scale,
             accent: AMBER_ACCENT,
           },
         ]

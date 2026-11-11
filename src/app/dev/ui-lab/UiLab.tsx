@@ -9,7 +9,7 @@ import { LineGridLab } from "./LineGridLab";
 import { PageFrameLab } from "./PageFrameLab";
 import { UnifiedLab } from "./UnifiedLab";
 import { ImportFormLab, ImportPayLab } from "@/modules/imports/pages";
-import { PartnerStatementLab } from "@/modules/accounting/pages";
+import { DebtorReportsLab, PartnerStatementLab } from "@/modules/accounting/pages";
 import { LookupFieldView } from "@/components/lookups";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
@@ -61,7 +61,7 @@ export const LAB_WIDTHS = [280, 360, 768, 1280] as const;
 const DENSITIES: DsDensity[] = ["comfortable", "compact"];
 const THEMES = ["light", "dark"] as const;
 
-export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" | "import" | "pay" | "unified" | "statement" }) {
+export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" | "import" | "pay" | "unified" | "statement" | "debtors" }) {
   const { t } = useI18n();
   if (frame === "pay") {
     return (
@@ -74,6 +74,13 @@ export default function UiLab({ fontClassName, standard, frame }: { fontClassNam
     return (
       <DesignScope theme="light" className={fontClassName}>
         <ImportFormLab />
+      </DesignScope>
+    );
+  }
+  if (frame === "debtors") {
+    return (
+      <DesignScope theme="light" className={fontClassName}>
+        <DebtorReportsLab />
       </DesignScope>
     );
   }

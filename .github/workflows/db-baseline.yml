@@ -154,6 +154,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/partner_statement_details.sql | tee "$RUNNER_TEMP/partner_statement_details.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/partner_statement_details.txt"
+      # Debtor / creditor reports and turnover (LED-4): open items FIFO, filters, paging, turnover = statement.
+      - name: Partner debtor report checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/partner_debtor_reports.sql | tee "$RUNNER_TEMP/partner_debtor_reports.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/partner_debtor_reports.txt"
       # Backdated invoices and payments, admin edit of posted invoices (fix F1).
       - name: Backdated invoices checks
         run: |

@@ -371,6 +371,10 @@
       "permission": "can_view_financial_reports"
     },
     {
+      "prefix": "/dashboard/reports/debtors",
+      "permission": "can_view_financial_reports"
+    },
+    {
       "prefix": "/dashboard/reports/osv",
       "permission": "can_view_financial_reports"
     },

@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   LogOut,
   FileCheck2,
+  Scale,
 } from "lucide-react";
 import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
 
@@ -40,12 +41,15 @@ function initials(name: string): string {
   );
 }
 
-/** The partner statement item, right after the reconciliation act in the reports section. */
+/** The partner ledger pages (statement, debtors), right after the reconciliation act in the reports section. */
 function withPartnerStatement<I extends { path: string }>(sectionId: string, items: I[], on: boolean): I[] {
   if (!on || sectionId !== "reports") return items;
-  const item = { titleKey: "nav.items.partnerStatement", path: "/dashboard/reports/partner-statement", icon: FileCheck2, module: "accounting" } as unknown as I;
+  const added = [
+    { titleKey: "nav.items.partnerStatement", path: "/dashboard/reports/partner-statement", icon: FileCheck2, module: "accounting" },
+    { titleKey: "nav.items.debtorReports", path: "/dashboard/reports/debtors", icon: Scale, module: "accounting" },
+  ] as unknown as I[];
   const at = items.findIndex((i) => i.path === "/dashboard/reports/reconciliation");
-  return at < 0 ? [...items, item] : [...items.slice(0, at + 1), item, ...items.slice(at + 1)];
+  return at < 0 ? [...items, ...added] : [...items.slice(0, at + 1), ...added, ...items.slice(at + 1)];
 }
 
 interface SidebarProps {

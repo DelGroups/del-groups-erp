@@ -178,6 +178,9 @@ union all
 select 'pending', '20261113100000_partner_statement_details: Partner statement: contact fields, document and author per line',
        case when position('created_by_name' in coalesce(pg_get_functiondef(to_regprocedure('public.get_partner_statement(uuid, date, date, text)')), '')) = 0 then 'missing' else 'present' end
 union all
+select 'pending', '20261114100000_partner_debtor_reports: Debtor / creditor reports and turnover per partner',
+       case when to_regprocedure('public.get_debtor_creditor_report(date, text, jsonb, text, text, integer, integer)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
