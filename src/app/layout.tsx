@@ -27,6 +27,8 @@ import { UiStandardProvider } from "@/design-system/components/UiStandard";
 import { isInvoiceToolsEnabled } from "@/lib/features/invoiceTools";
 import { InvoiceToolsProvider } from "@/components/invoices/InvoiceToolsFlag";
 import { isCountTeamEnabled } from "@/lib/features/countTeam";
+import { isPartnerLedgersEnabled, partnerLedgersAudience } from "@/lib/features/partnerLedgers";
+import { PartnerLedgersProvider } from "@/components/reports/PartnerLedgersFlag";
 import { CountTeamProvider } from "@/modules/inventory/components/CountTeamFlag";
 import { NEW_UI_COOKIE, parseNewUiAudience, parseNewUiCookie } from "@/lib/shell/shell";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
@@ -127,6 +129,8 @@ export default async function RootLayout({
                           <InvoiceToolsProvider enabled={isInvoiceToolsEnabled()}>
                           {/* COUNT_TEAM (INV-4): the count's responsible people from the employee list. */}
                           <CountTeamProvider enabled={isCountTeamEnabled()}>
+                          {/* PARTNER_LEDGERS (LED-3): partner statement and debtor reports on the ledger. */}
+                          <PartnerLedgersProvider value={{ enabled: isPartnerLedgersEnabled(), audience: partnerLedgersAudience() }}>
                             {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
                             {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
                             {tenant.status !== null ? <LimitBanner /> : null}
@@ -135,6 +139,7 @@ export default async function RootLayout({
                             {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
                             <LegacyModalEscape />
                             <TableColumnResizer />
+                          </PartnerLedgersProvider>
                           </CountTeamProvider>
                           </InvoiceToolsProvider>
                         </UiStandardProvider>

@@ -25,7 +25,9 @@ import {
   ChevronDown,
   ShieldCheck,
   LogOut,
+  FileCheck2,
 } from "lucide-react";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
 
 function initials(name: string): string {
   return (
@@ -36,6 +38,14 @@ function initials(name: string): string {
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("") || "?"
   );
+}
+
+/** The partner statement item, right after the reconciliation act in the reports section. */
+function withPartnerStatement<I extends { path: string }>(sectionId: string, items: I[], on: boolean): I[] {
+  if (!on || sectionId !== "reports") return items;
+  const item = { titleKey: "nav.items.partnerStatement", path: "/dashboard/reports/partner-statement", icon: FileCheck2, module: "accounting" } as unknown as I;
+  const at = items.findIndex((i) => i.path === "/dashboard/reports/reconciliation");
+  return at < 0 ? [...items, item] : [...items.slice(0, at + 1), item, ...items.slice(at + 1)];
 }
 
 interface SidebarProps {
@@ -54,18 +64,24 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const { t } = useI18n();
 
   const { isEnabled } = useEnabledModules();
+  // PARTNER_LEDGERS (LED-3): the partner statement under the financial reports, for its audience.
+  const partnerLedgers = usePartnerLedgers();
   const visibleSections = useMemo(() => {
     return NAV_SECTIONS.map((section) => ({
       ...section,
-      items: section.items.filter((item) => {
-        if (!isEnabled(item.module)) return false;
-        if (isAdmin) return true;
-        const permission = getNavItemPermission(item.path);
-        if (!permission) return true;
-        return can(permission);
-      }),
+      items: withPartnerStatement(
+        section.id,
+        section.items.filter((item) => {
+          if (!isEnabled(item.module)) return false;
+          if (isAdmin) return true;
+          const permission = getNavItemPermission(item.path);
+          if (!permission) return true;
+          return can(permission);
+        }),
+        partnerLedgers && isEnabled("accounting")
+      ),
     })).filter((section) => section.items.length > 0);
-  }, [can, isAdmin, isEnabled]);
+  }, [can, isAdmin, isEnabled, partnerLedgers]);
 
   const activeSectionId = useMemo(
     () => getActiveSectionId(pathname, visibleSections),

@@ -32,6 +32,7 @@ export default defineModule({
     { prefix: "/dashboard/reports/financial", permission: "can_view_financial_reports" },
     { prefix: "/dashboard/reports/osv", permission: "can_view_financial_reports" },
     { prefix: "/dashboard/reports/reconciliation", permission: "can_view_financial_reports" },
+    { prefix: "/dashboard/reports/partner-statement", permission: "can_view_financial_reports" },
   ],
   aiTools: ["finance_summary", "top_debtors"],
   settings: [],

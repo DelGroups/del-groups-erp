@@ -9,3 +9,9 @@ export { default as TrialBalancePage } from "./components/TrialBalancePage";
 export { default as PartnerReconciliationPage } from "./components/PartnerReconciliationPage";
 /** New UI (NEW_UI): accounting screens on the view engine. */
 export { FinanceLedgerScreen, CashBankScreen, PaymentsScreen } from "./components/AccountingScreens";
+/** PARTNER_LEDGERS (LED-3): the partner statement. */
+export { default as PartnerStatementPage } from "./components/partnerStatement/PartnerStatementPage";
+/** PARTNER_LEDGERS (LED-3): the partner page's Ledger tab. */
+export { default as PartnerStatementPanel } from "./components/partnerStatement/PartnerStatementPanel";
+/** UI lab (?frame=statement): the partner statement with sample data. */
+export { default as PartnerStatementLab } from "./components/partnerStatement/PartnerStatementLab";

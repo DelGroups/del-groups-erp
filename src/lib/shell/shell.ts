@@ -96,13 +96,20 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "trade", path: "/imports", titleKey: "newShell.extra_imports", module: "imports", icon: "Ship", flag: "newImports" },
   { section: "settings", path: "/settings/imports", titleKey: "newShell.extra_importsSettings", module: "imports", icon: "Ship", flag: "newImports" },
   { section: "reports", path: "/imports/reports", titleKey: "newShell.extra_importsReports", module: "imports", icon: "BarChart3", flag: "newImports" },
+  // Partner statement (LED-3): only while PARTNER_LEDGERS is on for this user; the route needs can_view_financial_reports.
+  { section: "reports", path: "/dashboard/reports/partner-statement", titleKey: "nav.items.partnerStatement", module: "accounting", icon: "FileCheck2", flag: "partnerLedgers" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */
-export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean }): E[] {
+export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean; partnerLedgers?: boolean }): E[] {
   return extras.filter((e) => {
     const flag = "flag" in e ? (e as { flag?: string }).flag : undefined;
-    return !flag || (flag === "newCrm" && flags.newCrm) || (flag === "newImports" && flags.newImports === true);
+    return (
+      !flag ||
+      (flag === "newCrm" && flags.newCrm) ||
+      (flag === "newImports" && flags.newImports === true) ||
+      (flag === "partnerLedgers" && flags.partnerLedgers === true)
+    );
   });
 }
 

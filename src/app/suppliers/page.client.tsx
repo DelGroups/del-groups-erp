@@ -19,10 +19,13 @@ import {
   RefreshCw,
   Phone,
   Trash2,
+  FileCheck2,
 } from "lucide-react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { deleteSupplierAction } from "@/lib/actions/entityDelete";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
+import { useRouter } from "next/navigation";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import SupplierFormDrawer from "@/components/suppliers/SupplierFormDrawer";
 import { queryKeys } from "@/lib/query/keys";
@@ -45,6 +48,10 @@ export default function SuppliersPage() {
   const { t, locale } = useI18n();
   const { can } = useAuth();
   const canManageSuppliers = can("can_manage_suppliers");
+  // PARTNER_LEDGERS (LED-3): "Hesab çıxarışı" in the row menu; off = the menu as before.
+  const partnerLedgers = usePartnerLedgers();
+  const router = useRouter();
+  const showRowActions = canManageSuppliers || partnerLedgers;
   const { config: procurementConfig } = useProcurementConfig();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const queryClient = useQueryClient();
@@ -200,6 +207,17 @@ export default function SuppliersPage() {
       <>
         <TableRowActionsMenu
           items={[
+            ...(partnerLedgers
+              ? [
+                  {
+                    key: "statement",
+                    label: t("nav.items.partnerStatement"),
+                    icon: <FileCheck2 className="h-4 w-4" />,
+                    onClick: () => router.push(`/dashboard/reports/partner-statement?supplierId=${encodeURIComponent(s.id)}`),
+                  },
+                ]
+              : []),
+            ...(!canManageSuppliers ? [] : [
             {
               key: "edit",
               label: t("common.edit"),
@@ -211,8 +229,9 @@ export default function SuppliersPage() {
               label: t("common.delete"),
               icon: <Trash2 className="h-4 w-4" />,
               onClick: () => setDeleteTarget(s),
-              variant: "destructive",
+              variant: "destructive" as const,
             },
+            ]),
           ]}
         />
       </>
@@ -270,7 +289,7 @@ export default function SuppliersPage() {
                 label={t("suppliers.title")}
                 loading={isLoading}
                 empty={<p className="text-sm ds-muted">{t("suppliers.emptyHint")}</p>}
-                rowActions={canManageSuppliers ? rowActions : undefined}
+                rowActions={showRowActions ? rowActions : undefined}
               />
             ) : isLoading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
@@ -290,7 +309,7 @@ export default function SuppliersPage() {
                       <Th>{t("purchases.deliverySpeedScore")}</Th>
                       <Th>{t("purchases.totalScore")}</Th>
                       <Th>{t("suppliers.ourDebt")}</Th>
-                      {canManageSuppliers ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
+                      {showRowActions ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
                     </tr>
                   </THead>
                   <tbody>
@@ -336,7 +355,7 @@ export default function SuppliersPage() {
                             <span className="text-emerald-600">{(s.balance ?? 0).toFixed(2)} AZN</span>
                           )}
                         </Td>
-                        {canManageSuppliers ? (
+                        {showRowActions ? (
                           <ActionsTd>{rowActions(s)}</ActionsTd>
                         ) : null}
                       </Tr>

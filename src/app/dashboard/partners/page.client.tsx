@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
+import { partnerStatementHref } from "@/lib/reports/partnerStatement";
 import PageLayout from "@/components/layout/PageLayout";
 import { fetchPartnersWithBalances, partnerDisplayName } from "@/lib/partners/fetchPartners";
 import type { PartnerNetBalance, PartnerRecord } from "@/lib/partners/types";
@@ -22,6 +24,7 @@ import {
   Search,
   Trash2,
   Users,
+  FileCheck2,
 } from "lucide-react";
 import { ListGrid } from "@/components/lists/ListGrid";
 import { useTableColumns, type TableColumn } from "@/components/lists/listTable";
@@ -155,6 +158,8 @@ export default function PartnersPageClient() {
   );
   const gridColumns = useTableColumns("partners", columnDefs);
 
+  // PARTNER_LEDGERS (LED-3): a link to the partner statement; off = the actions as before.
+  const partnerLedgers = usePartnerLedgers();
   const rowActions = (row: PartnerRow) => {
     return (
       <>
@@ -165,6 +170,16 @@ export default function PartnersPageClient() {
         >
           <Eye className="h-4 w-4" />
         </Link>
+        {partnerLedgers ? (
+          <Link
+            href={partnerStatementHref(row.id)}
+            className="rounded-lg p-2 text-app-muted hover:bg-app-card-hover hover:text-app-accent"
+            title={t("nav.items.partnerStatement")}
+            aria-label={t("nav.items.partnerStatement")}
+          >
+            <FileCheck2 className="h-4 w-4" />
+          </Link>
+        ) : null}
         {canManage ? (
           <>
             <button
