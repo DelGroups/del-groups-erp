@@ -166,6 +166,9 @@ union all
 select 'pending', '20261110100000_inventory_count_responsibles: Inventory count responsible people (employees)',
        case when to_regprocedure('public.inventory_count_set_responsibles(uuid, uuid[], uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261111100000_partner_ledger: Partner ledger (read-only view and reports)',
+       case when to_regprocedure('public.get_partner_statement(uuid, date, date, text)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
