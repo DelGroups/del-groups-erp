@@ -44,6 +44,7 @@ const PATH_I18N: Record<string, string> = {
   "/dashboard/reports/financial": "nav.items.glFinancialReports",
   "/dashboard/reports/osv": "nav.items.trialBalance",
   "/dashboard/reports/reconciliation": "nav.items.reconciliationAct",
+  "/dashboard/reports/partner-statement": "nav.items.partnerStatement",
   "/dashboard/reports/inventory-turnover": "nav.items.inventoryTurnover",
   "/dashboard/inventory/polywood/import": "breadcrumb.polywoodImport",
   // Settings pages (SET-1): the names of the one settings list (src/lib/settings/items.ts).

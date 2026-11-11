@@ -149,6 +149,11 @@ jobs:
         run: |
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/gl_partner_tags.sql | tee "$RUNNER_TEMP/gl_partner_tags.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/gl_partner_tags.txt"
+      # Partner statement details (LED-3): contact fields, document and author per line; same totals.
+      - name: Partner statement details checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/partner_statement_details.sql | tee "$RUNNER_TEMP/partner_statement_details.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/partner_statement_details.txt"
       # Backdated invoices and payments, admin edit of posted invoices (fix F1).
       - name: Backdated invoices checks
         run: |

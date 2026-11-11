@@ -21,7 +21,8 @@ function docTypeLabel(type: string, t: (key: string) => string): string {
     case "payment_disbursement":
       return t("reconciliation.docPaymentOut");
     default:
-      return type;
+      // PARTNER_LEDGERS: ledger lines without an old type (opening balance, import, reversal).
+      return type.startsWith("statement:") ? t(`partnerStatement.source.${type.slice("statement:".length)}`) : type;
   }
 }
 

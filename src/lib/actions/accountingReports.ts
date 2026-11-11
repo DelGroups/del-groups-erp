@@ -8,6 +8,8 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { mapInventoryTurnover, type InventoryTurnoverReport } from "@/lib/reports/inventoryTurnover";
 import { mapPartnerReconciliation, type PartnerReconciliationReport } from "@/lib/reports/partnerReconciliation";
 import { mapTrialBalance, type TrialBalanceReport } from "@/lib/reports/trialBalance";
+import { mapPartnerStatement, statementToReconciliation } from "@/lib/reports/partnerStatement";
+import { ledgerClient, partnerLedgersActiveForRequest } from "@/lib/features/partnerLedgersServer";
 
 export type ReportActionResult<T> =
   | { success: true; data: T }
@@ -50,6 +52,20 @@ export async function fetchPartnerReconciliationAction(
     if (!partnerId) return { success: false, error: "Tərəfdaş seçilməlidir" };
     if (!startDate || !endDate) {
       return { success: false, error: "Tarix aralığı tələb olunur" };
+    }
+
+    // PARTNER_LEDGERS (LED-3): the act reads the partner ledger (invoice payments, opening
+    // balances and imports included). Flag off, or a user outside its audience: the old RPC.
+    if (await partnerLedgersActiveForRequest()) {
+      const db = await ledgerClient();
+      const { data, error } = await db.rpc("get_partner_statement", {
+        p_partner_id: partnerId,
+        p_from: startDate,
+        p_to: endDate,
+        p_side: "net",
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: statementToReconciliation(mapPartnerStatement(data), startDate, endDate) };
     }
 
     const admin = await createSupabaseAdminClient();

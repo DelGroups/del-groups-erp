@@ -16,6 +16,8 @@ import { StandardGrid } from "@/components/lists/StandardGrid";
 import { formatGridDate } from "@/lib/dates/localeDate";
 import PaymentFormModal from "@/components/payments/PaymentFormModal";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
+import { PartnerStatementPanel } from "@/modules/accounting/pages";
 import { AlertTriangle, ArrowLeft, Building2, CreditCard, FileCheck2, Landmark, Phone, RefreshCw, Wallet } from "lucide-react";
 
 type TabKey = "sales" | "purchases" | "ledger";
@@ -44,6 +46,8 @@ export default function PartnerDetailPageClient() {
   const standard = useUiStandard();
   const { can } = useAuth();
   const canManageFinance = can("can_manage_finance");
+  // PARTNER_LEDGERS (LED-3): the Ledger tab shows the partner statement; off = the old tab.
+  const partnerLedgers = usePartnerLedgers();
   const [data, setData] = useState<PartnerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("sales");
@@ -213,6 +217,8 @@ export default function PartnerDetailPageClient() {
 
         {!data ? (
           <div className="app-card p-8 text-center text-sm text-app-muted">{t("partners.notFound")}</div>
+        ) : partnerLedgers && tab === "ledger" ? (
+          <PartnerStatementPanel partnerId={partnerId} />
         ) : standard && tab === "sales" ? (
           <StandardGrid<PartnerDashboardData["sales"][number]>
             id="partners-detail-sales"

@@ -175,6 +175,9 @@ union all
 select 'pending', '20261112100000_gl_partner_tags: Partner on every GL line on 1200 / 2100',
        case when to_regprocedure('public._gl_partner_for_source(text, uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261113100000_partner_statement_details: Partner statement: contact fields, document and author per line',
+       case when position('created_by_name' in coalesce(pg_get_functiondef(to_regprocedure('public.get_partner_statement(uuid, date, date, text)')), '')) = 0 then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

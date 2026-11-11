@@ -20,6 +20,7 @@ import {
   Table2,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import PageHeader from "@/components/ui/page-header";
@@ -39,8 +40,13 @@ const emptyDashboard: ExecutiveDashboardData = {
   deadstock: [],
 };
 
+/** The reconciliation act's and the partner statement's card colour. */
+const AMBER_ACCENT =
+  "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
+
 export default function ReportsHubPage() {
   const { t } = useI18n();
+  const partnerLedgers = usePartnerLedgers();
   const [data, setData] = useState<ExecutiveDashboardData>(emptyDashboard);
   const [loading, setLoading] = useState(true);
 
@@ -93,9 +99,20 @@ export default function ReportsHubPage() {
       description: t("reconciliation.pageDescription"),
       href: "/dashboard/reports/reconciliation",
       icon: FileCheck2,
-      accent:
-        "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+      accent: AMBER_ACCENT,
     },
+    // PARTNER_LEDGERS (LED-3): the partner statement on the ledger, for its audience.
+    ...(partnerLedgers
+      ? [
+          {
+            title: t("nav.items.partnerStatement"),
+            description: t("partnerStatement.description"),
+            href: "/dashboard/reports/partner-statement",
+            icon: FileCheck2,
+            accent: AMBER_ACCENT,
+          },
+        ]
+      : []),
     {
       title: t("inventoryTurnover.pageTitle"),
       description: t("inventoryTurnover.pageDescription"),

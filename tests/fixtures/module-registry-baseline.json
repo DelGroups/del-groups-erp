@@ -367,6 +367,10 @@
       "permission": "can_view_financial_reports"
     },
     {
+      "prefix": "/dashboard/reports/partner-statement",
+      "permission": "can_view_financial_reports"
+    },
+    {
       "prefix": "/dashboard/reports/osv",
       "permission": "can_view_financial_reports"
     },

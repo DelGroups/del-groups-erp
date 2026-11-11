@@ -18,10 +18,13 @@ import {
   X,
   Phone,
   Trash2,
+  FileCheck2,
 } from "lucide-react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import { deleteCustomerAction } from "@/lib/actions/entityDelete";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
+import { useRouter } from "next/navigation";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Th, Td, Tr } from "@/components/ui/table";
 import CustomFieldsSection, { draftFromValues, type CustomFieldDraft } from "@/components/studio/CustomFieldsSection";
 import { useStudioFields } from "@/components/studio/useStudioFields";
@@ -36,6 +39,10 @@ export default function CustomersPage() {
   const { t, locale } = useI18n();
   const { can } = useAuth();
   const canManageCustomers = can("can_manage_customers");
+  // PARTNER_LEDGERS (LED-3): "Hesab çıxarışı" in the row menu; off = the menu as before.
+  const partnerLedgers = usePartnerLedgers();
+  const router = useRouter();
+  const showRowActions = canManageCustomers || partnerLedgers;
   const { fields: studioFields } = useStudioFields("customers");
   const listStudioFields = useMemo(() => studioFields.filter((field) => field.show_in_list), [studioFields]);
   const [customDraft, setCustomDraft] = useState<CustomFieldDraft>({});
@@ -307,6 +314,17 @@ export default function CustomersPage() {
       <>
         <TableRowActionsMenu
           items={[
+            ...(partnerLedgers
+              ? [
+                  {
+                    key: "statement",
+                    label: t("nav.items.partnerStatement"),
+                    icon: <FileCheck2 className="h-4 w-4" />,
+                    onClick: () => router.push(`/dashboard/reports/partner-statement?customerId=${encodeURIComponent(c.id)}`),
+                  },
+                ]
+              : []),
+            ...(!canManageCustomers ? [] : [
             {
               key: "edit",
               label: t("common.edit"),
@@ -318,8 +336,9 @@ export default function CustomersPage() {
               label: t("common.delete"),
               icon: <Trash2 className="h-4 w-4" />,
               onClick: () => setDeleteTarget(c),
-              variant: "destructive",
+              variant: "destructive" as const,
             },
+            ]),
           ]}
         />
       </>
@@ -376,7 +395,7 @@ export default function CustomersPage() {
                 label={t("customers.title")}
                 loading={loading}
                 empty={<p className="text-sm ds-muted">{t("customers.emptyHint")}</p>}
-                rowActions={canManageCustomers ? rowActions : undefined}
+                rowActions={showRowActions ? rowActions : undefined}
               />
             ) : loading ? (
               <div className="p-8 text-center text-app-muted text-sm">{t("common.loading")}</div>
@@ -397,7 +416,7 @@ export default function CustomersPage() {
                       {listStudioFields.map((field) => (
                         <Th key={field.name}>{field.label}</Th>
                       ))}
-                      {canManageCustomers ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
+                      {showRowActions ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
                     </tr>
                   </THead>
                   <tbody>
@@ -445,7 +464,7 @@ export default function CustomersPage() {
                               }) || "-"}
                             </Td>
                           ))}
-                          {canManageCustomers ? (
+                          {showRowActions ? (
                             <ActionsTd>{rowActions(c)}</ActionsTd>
                           ) : null}
                         </Tr>
