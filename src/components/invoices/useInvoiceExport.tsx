@@ -6,7 +6,7 @@ import PrintInvoiceModal from "@/components/print/PrintInvoiceModal";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { InvoiceExportDoc, InvoiceExportFormat } from "@/lib/export/invoiceExport";
-import { fetchPartyVoen, resolveBranding } from "@/lib/tax/eQaimeDocuments";
+import { fetchDocumentPeople, fetchPartyVoen, resolveBranding } from "@/lib/tax/eQaimeDocuments";
 import type { PrintMode } from "@/lib/print/types";
 import type { SaleRecord } from "@/modules/sales/lib/fetchSales";
 import type { PurchaseRecord } from "@/types/database.types";
@@ -67,15 +67,25 @@ export function useInvoiceExport() {
   const exportSale = (source: Source<SaleRecord>, format: InvoiceExportFormat) =>
     start(async () => {
       const sale = await resolve(source);
-      const [m, voen, full] = await Promise.all([exporter(), fetchPartyVoen("customers", sale.customer_id), resolveBranding(branding)]);
-      return m.saleToExportDoc(sale, { branding: full, partyVoen: voen });
+      const [m, voen, full, people] = await Promise.all([
+        exporter(),
+        fetchPartyVoen("customers", sale.customer_id),
+        resolveBranding(branding),
+        fetchDocumentPeople({ createdBy: sale.created_by, issuedBy: sale.issued_by }),
+      ]);
+      return m.saleToExportDoc(sale, { branding: full, partyVoen: voen, people });
     }, format);
 
   const exportPurchase = (source: Source<PurchaseRecord>, format: InvoiceExportFormat) =>
     start(async () => {
       const purchase = await resolve(source);
-      const [m, voen, full] = await Promise.all([exporter(), fetchPartyVoen("suppliers", purchase.supplier_id), resolveBranding(branding)]);
-      return m.purchaseToExportDoc(purchase, { branding: full, partyVoen: voen });
+      const [m, voen, full, people] = await Promise.all([
+        exporter(),
+        fetchPartyVoen("suppliers", purchase.supplier_id),
+        resolveBranding(branding),
+        fetchDocumentPeople({ createdBy: purchase.created_by }),
+      ]);
+      return m.purchaseToExportDoc(purchase, { branding: full, partyVoen: voen, people });
     }, format);
 
   const dialog = (

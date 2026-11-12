@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
+import { fetchProfileDisplayNames, profileName, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import type { CompanyBranding } from "@/lib/print/types";
 import type { SaleRecord } from "@/modules/sales";
 import type { PurchaseRecord } from "@/types/database.types";
@@ -28,6 +29,21 @@ export async function fetchPartyVoen(table: "customers" | "suppliers", id: strin
   if (!id) return "";
   const { data } = await supabase.from(table).select("voen").eq("id", id).maybeSingle();
   return (data?.voen as string) || "";
+}
+
+/**
+ * XLS-1: display names of the users behind a document (names only, never an e-mail: the
+ * profile_display_names lookup of the lists). A failed lookup leaves them out; the file then
+ * uses the names stored on the document.
+ */
+export async function fetchDocumentPeople(ids: { createdBy?: string | null; issuedBy?: string | null }): Promise<{ createdBy: string | null; issuedBy: string | null }> {
+  try {
+    const wanted = [ids.createdBy, ids.issuedBy].filter((id): id is string => typeof id === "string" && id.length > 0);
+    const names = wanted.length ? await fetchProfileDisplayNames(supabase as unknown as ProfileNamesClient, wanted) : new Map<string, string>();
+    return { createdBy: profileName(names, ids.createdBy), issuedBy: profileName(names, ids.issuedBy) };
+  } catch {
+    return { createdBy: null, issuedBy: null };
+  }
 }
 
 /** Branding with the VÖEN and names from the settings when the hook has not loaded them yet. */

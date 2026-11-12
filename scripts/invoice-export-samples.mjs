@@ -7,21 +7,21 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import {
   buildInvoicePdfDefinition,
-  buildInvoiceSheet,
   invoiceExportFileName,
   invoiceExportLabels,
   PDF_FONT,
   PDF_FONT_FILES,
   purchaseToExportDoc,
   saleToExportDoc,
-  writeInvoiceXlsxBytes,
 } from "../src/lib/export/invoiceExport.ts";
+import { buildInvoiceLayout } from "../src/lib/export/invoiceLayout.ts";
+import { writeInvoiceXlsx } from "../src/lib/export/invoiceXlsx.ts";
 import { translate } from "../src/i18n/translate.ts";
 import { getMessages } from "../src/i18n/messages/index.ts";
 import { BRANDING, purchaseFixture, saleFixture } from "../tests/fixtures/invoiceExportFixtures.mjs";
 
 const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 const pdfmake = require("pdfmake");
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -43,7 +43,8 @@ const docs = [
 ];
 for (const doc of docs) {
   const xlsxName = invoiceExportFileName(doc, "xlsx");
-  writeFileSync(join(out, xlsxName), writeInvoiceXlsxBytes(XLSX, buildInvoiceSheet(doc, labels)));
+  // Excel asks no layout question (a regular sales invoice leaves out the company).
+  writeFileSync(join(out, xlsxName), await writeInvoiceXlsx(ExcelJS, buildInvoiceLayout(doc, labels, { mode: "unofficial", locale: intl })));
   const pdfName = invoiceExportFileName(doc, "pdf");
   const pdf = await pdfmake.createPdf(buildInvoicePdfDefinition(doc, labels, { mode: "official", locale: intl })).getBuffer();
   writeFileSync(join(out, pdfName), pdf);

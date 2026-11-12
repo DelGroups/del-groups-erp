@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import {
   buildInvoicePdfDefinition,
-  buildInvoiceSheet,
   invoiceExportFileName,
   invoiceExportLabels,
   invoiceSheetName,
@@ -16,15 +15,16 @@ import {
   PDF_FONT_FILES,
   purchaseToExportDoc,
   saleToExportDoc,
-  writeInvoiceXlsxBytes,
 } from "../src/lib/export/invoiceExport.ts";
+import { buildInvoiceLayout, displayDate, isEmailLike, personName } from "../src/lib/export/invoiceLayout.ts";
+import { currencyFormat, writeInvoiceXlsx, XLSX_DATE_FORMAT, XLSX_NUMBER_FORMATS } from "../src/lib/export/invoiceXlsx.ts";
 import { mapSaleToInvoicePrint } from "../src/modules/sales/lib/mapSaleToInvoicePrint.ts";
 import { translate } from "../src/i18n/translate.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
 import { BRANDING, plainSaleFixture, purchaseFixture, saleFixture } from "./fixtures/invoiceExportFixtures.mjs";
 
 const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (p) => readFileSync(join(root, p), "utf8");
 const labelsFor = (messages) => invoiceExportLabels((key, params) => translate(messages, key, params));
@@ -32,15 +32,24 @@ const en = labelsFor(enMessages);
 const az = labelsFor(azMessages);
 const ctx = { branding: BRANDING, partyVoen: "9876543210" };
 
-/** The sheet's cells as { "A1": cell } after writing and reading the real .xlsx bytes. */
-const readBack = (doc, labels = en) => {
-  const book = XLSX.read(writeInvoiceXlsxBytes(XLSX, buildInvoiceSheet(doc, labels)), { type: "array", cellNF: true, cellStyles: true });
-  return { book, sheet: book.Sheets[book.SheetNames[0]] };
+/** The workbook after writing the real .xlsx bytes and reading them back with ExcelJS. */
+const readBack = async (doc, labels = en, options = { mode: "unofficial", locale: "en-GB" }) => {
+  const bytes = await writeInvoiceXlsx(ExcelJS, buildInvoiceLayout(doc, labels, options));
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(Buffer.from(bytes));
+  return { book, sheet: book.worksheets[0], bytes };
 };
-const findRow = (sheet, column, text) => {
-  const range = XLSX.utils.decode_range(sheet["!ref"]);
-  for (let r = range.s.r; r <= range.e.r; r += 1) if (sheet[`${column}${r + 1}`]?.v === text) return r + 1;
+/** The first row (1-based) whose cell in `column` has the text, or -1. */
+const findRow = (sheet, column, text, from = 1) => {
+  for (let r = from; r <= sheet.rowCount; r += 1) if (sheet.getCell(`${column}${r}`).value === text) return r;
   return -1;
+};
+/** The cell to the right of a label in the document-field block. */
+const fieldValue = (sheet, label) => {
+  for (let r = 1; r <= sheet.rowCount; r += 1) {
+    for (const [l, v] of [["A", "C"], ["F", "H"]]) if (sheet.getCell(`${l}${r}`).value === label) return sheet.getCell(`${v}${r}`);
+  }
+  return null;
 };
 
 // ── Sales mapping ───────────────────────────────────────────────────────────
@@ -143,92 +152,236 @@ test("sheet name is the document number (forbidden characters become -)", () => 
   assert.ok(invoiceSheetName("X".repeat(40)).length <= 31);
 });
 
-// ── Excel file ──────────────────────────────────────────────────────────────
+// ── Layout model (shared by PDF and Excel) ──────────────────────────────────
 
-test("xlsx: sheet named by the document, numbers are numeric cells with 2 decimals", () => {
-  const { book, sheet } = readBack(saleToExportDoc(saleFixture(), ctx));
-  assert.deepEqual(book.SheetNames, ["SAT-2026-0042"]);
-  const header = findRow(sheet, "B", en.cols.product);
-  assert.ok(header > 0, "lines header");
-  for (const col of ["A", "E", "F", "G", "H", "I"]) assert.equal(sheet[`${col}${header + 1}`].t, "n", `${col} is a number`);
-  assert.equal(sheet[`I${header + 1}`].v, 807.5);
-  assert.equal(sheet[`F${header + 1}`].z, "#,##0.00");
-  assert.equal(sheet[`E${header + 2}`].v, 120.5);
-  assert.ok(sheet["!cols"]?.length >= 9, "column widths");
+test("layout: the fields, the line order and the totals of the invoice", () => {
+  const layout = buildInvoiceLayout(saleToExportDoc(saleFixture(), ctx), en, { mode: "official", locale: "en-GB" });
+  assert.equal(layout.title, en.title.sale);
+  assert.deepEqual(layout.docFields.map((f) => [f.key, f.value.text]), [["docNo", "SAT-2026/0042"], ["date", "09.11.2026"]]);
+  assert.deepEqual(layout.infoFields.map((f) => f.key), ["party", "warehouse", "partyVoen", "responsible", "currency", "createdBy", "rate", "status"]);
+  assert.equal(layout.infoFields.find((f) => f.key === "partyVoen").value.type, "text", "VÖEN is text (leading zeros)");
+  assert.deepEqual(layout.columns.map((c) => c.key), ["no", "product", "code", "unit", "quantity", "price", "discount", "vat", "total"]);
+  assert.deepEqual(layout.columns.map((c) => c.align), ["center", "left", "left", "left", "right", "right", "right", "right", "right"]);
+  assert.equal(layout.columns.find((c) => c.key === "price").header, "Price, USD");
+  assert.deepEqual(layout.lines.map((l) => l.no.value), [1, 2, 3], "line order kept");
+  assert.deepEqual(layout.lines.map((l) => l.total.value), [807.5, 208.5, 159]);
+  assert.deepEqual(layout.totals.map((t) => [t.key, t.value.value, t.emphasis]), [
+    ["subtotal", 1250, "normal"],
+    ["discount", 75, "normal"],
+    ["vat", 211.5, "normal"],
+    ["extraCosts", 40, "normal"],
+    ["grandTotal", saleFixture().total_amount, "grand"],
+    ["paid", 1000, "normal"],
+    ["remaining", 426.5, "strong"],
+  ]);
+  assert.equal(layout.totals[1].value.text, "-75.00 USD");
+  assert.ok(layout.company?.name === BRANDING.companyName);
 });
 
-test("xlsx: totals are values under the Total column and match the invoice", () => {
+test("layout: a regular sales invoice in the unofficial mode has no company and no VAT line", () => {
+  const layout = buildInvoiceLayout(saleToExportDoc(plainSaleFixture(), ctx), en, { mode: "unofficial", locale: "en-GB" });
+  assert.equal(layout.company, null);
+  assert.ok(!layout.totals.some((t) => t.key === "vat"));
+  assert.ok(buildInvoiceLayout(saleToExportDoc(plainSaleFixture(), ctx), en, { mode: "official", locale: "en-GB" }).company);
+});
+
+test("layout: a purchase with a line in another currency gets a currency column", () => {
+  const layout = buildInvoiceLayout(purchaseToExportDoc(purchaseFixture(), ctx), en, { mode: "unofficial", locale: "en-GB" });
+  assert.equal(layout.columns.at(-1).key, "currency");
+  assert.equal(layout.lines[1].currency.text, "EUR");
+  assert.equal(layout.lines[1].price.text, "2.74 EUR");
+  assert.equal(layout.title, en.title.purchase);
+});
+
+test("dates read dd.mm.yyyy", () => {
+  assert.equal(displayDate("2026-11-09"), "09.11.2026");
+  assert.equal(displayDate("2026-01-02T10:00:00Z"), "02.01.2026");
+});
+
+// ── Names, not e-mails ─────────────────────────────────────────────────────
+
+test("people: the display name wins over an e-mail; an e-mail only when no name is known", () => {
+  assert.equal(personName("omer@del-groups.test", "Ömər Çələbiyev"), "Ömər Çələbiyev");
+  assert.equal(personName(null, "", "sebine@del-groups.test"), "sebine@del-groups.test");
+  assert.equal(personName(null, undefined, " "), "-");
+  assert.equal(isEmailLike("a.b@c.az"), true);
+  assert.equal(isEmailLike("Ömər Çələbiyev"), false);
+
+  // The screenshot's case: the stored seller and creator are e-mails, the profiles have names.
+  const sale = saleFixture({ issued_by_name: "omer@del-groups.test", created_by_name: "sebine@del-groups.test", seller_name: "Ömər Çələbiyev" });
+  const doc = saleToExportDoc(sale, { ...ctx, people: { createdBy: "Səbinə Qasımova", issuedBy: null } });
+  assert.equal(doc.responsible, "Ömər Çələbiyev", "the seller's name, not the issuer's e-mail");
+  assert.equal(doc.createdBy, "Səbinə Qasımova");
+  const issuer = saleToExportDoc(sale, { ...ctx, people: { issuedBy: "Ömər Ç." } });
+  assert.equal(issuer.responsible, "Ömər Ç.", "the issuing user's display name first");
+  const purchase = purchaseToExportDoc(purchaseFixture({ created_by_name: "sebine@del-groups.test" }), { ...ctx, people: { createdBy: "Səbinə Qasımova" } });
+  assert.equal(purchase.createdBy, "Səbinə Qasımova");
+  // The PDF prints the same names.
+  const pdf = JSON.stringify(buildInvoicePdfDefinition(doc, en, { mode: "official", locale: "en-GB" }));
+  assert.ok(!pdf.includes("@del-groups.test"), "no e-mail in the PDF");
+  assert.ok(pdf.includes("Səbinə Qasımova"));
+});
+
+test("people: the export looks up display names (names only) and passes them to the mapping", () => {
+  const hook = read("src/components/invoices/useInvoiceExport.tsx");
+  assert.match(hook, /fetchDocumentPeople\(\{ createdBy: sale\.created_by, issuedBy: sale\.issued_by \}\)/);
+  assert.match(hook, /m\.saleToExportDoc\(sale, \{ branding: full, partyVoen: voen, people \}\)/);
+  assert.match(hook, /m\.purchaseToExportDoc\(purchase, \{ branding: full, partyVoen: voen, people \}\)/);
+  const lookup = read("src/lib/tax/eQaimeDocuments.ts");
+  assert.match(lookup, /fetchProfileDisplayNames\(supabase as unknown as ProfileNamesClient, wanted\)/);
+});
+
+// ── Excel file (ExcelJS) ────────────────────────────────────────────────────
+
+test("xlsx: sheet named by the document; title large and bold across the table", async () => {
+  const { book, sheet } = await readBack(saleToExportDoc(saleFixture(), ctx));
+  assert.deepEqual(book.worksheets.map((w) => w.name), ["SAT-2026-0042"]);
+  const company = sheet.getCell("A1");
+  assert.equal(company.value, BRANDING.companyName);
+  assert.equal(company.font.bold, true);
+  assert.equal(company.font.size, 14);
+  const titleRow = findRow(sheet, "A", en.title.sale);
+  assert.ok(titleRow > 1);
+  assert.equal(sheet.getCell(`A${titleRow}`).font.size, 16);
+  assert.equal(sheet.getCell(`A${titleRow}`).font.bold, true);
+  assert.ok(sheet.model.merges.includes(`A${titleRow}:I${titleRow}`), "title merged across the table");
+  assert.equal(sheet.getCell(`A${titleRow}`).font.name, "Arial");
+});
+
+test("xlsx: document fields with grey labels; date is a real date dd.mm.yyyy; VÖEN is text", async () => {
+  const { sheet } = await readBack(saleToExportDoc(saleFixture(), { ...ctx, partyVoen: "0012345678" }));
+  const date = fieldValue(sheet, en.date);
+  assert.ok(date.value instanceof Date);
+  assert.equal(date.value.toISOString().slice(0, 10), "2026-11-09");
+  assert.equal(date.numFmt, XLSX_DATE_FORMAT);
+  assert.equal(date.alignment.horizontal, "left");
+  const voen = fieldValue(sheet, en.partyVoen);
+  assert.equal(voen.value, "0012345678", "leading zeros kept");
+  assert.equal(voen.numFmt, "@");
+  assert.equal(fieldValue(sheet, en.party.sale).value, "Gülşən Əliyeva — Şüşə Dünyası");
+  assert.equal(fieldValue(sheet, en.rate).value, 1.7);
+  assert.equal(fieldValue(sheet, en.rate).numFmt, XLSX_NUMBER_FORMATS.rate);
+  const labelRow = findRow(sheet, "A", en.party.sale);
+  assert.equal(sheet.getCell(`A${labelRow}`).font.color.argb, "FF64748B", "grey label");
+});
+
+test("xlsx: lines table: bold filled header, thin borders, alignment and number formats", async () => {
+  const { sheet } = await readBack(saleToExportDoc(saleFixture(), ctx));
+  const header = findRow(sheet, "B", en.cols.product);
+  assert.ok(header > 0);
+  const h = sheet.getCell(`F${header}`);
+  assert.equal(h.value, "Price, USD", "currency code in the header");
+  assert.equal(h.font.bold, true);
+  assert.equal(h.fill.fgColor.argb, "FFF1F5F9");
+  assert.equal(h.border.top.style, "thin");
+  const line = header + 1;
+  assert.equal(sheet.getCell(`A${line}`).value, 1);
+  assert.equal(sheet.getCell(`A${line}`).alignment.horizontal, "center");
+  assert.equal(sheet.getCell(`B${line}`).alignment.horizontal, "left");
+  for (const col of ["E", "F", "G", "H", "I"]) {
+    const cell = sheet.getCell(`${col}${line}`);
+    assert.equal(typeof cell.value, "number", `${col} is a number`);
+    assert.equal(cell.alignment.horizontal, "right", `${col} right aligned`);
+    assert.equal(cell.border.bottom.style, "thin");
+  }
+  assert.equal(sheet.getCell(`I${line}`).value, 807.5);
+  assert.equal(sheet.getCell(`F${line}`).numFmt, "#,##0.00");
+  assert.equal(sheet.getCell(`H${line}`).numFmt, "#,##0.00");
+  assert.equal(sheet.getCell(`E${line}`).numFmt, "#,##0.00#", "quantities keep cut lengths (3 decimals)");
+  assert.notEqual(sheet.getCell(`B${line}`).alignment.wrapText, true, "wrap off");
+});
+
+test("xlsx: totals under the table on the right, values not formulas, bold Yekun with a top border", async () => {
   const sale = saleFixture();
-  const { sheet } = readBack(saleToExportDoc(sale, ctx));
+  const { sheet } = await readBack(saleToExportDoc(sale, ctx), en, { mode: "official", locale: "en-GB" });
+  // Totals start under the table (the "Discount" column header is in G too).
+  const below = findRow(sheet, "B", en.cols.product) + saleFixture().items.length + 1;
   const value = (label) => {
-    const r = findRow(sheet, "H", label);
+    const r = findRow(sheet, "G", label, below);
     assert.ok(r > 0, label);
-    assert.equal(sheet[`I${r}`].t, "n", `${label} is a number`);
-    assert.equal(sheet[`I${r}`].f, undefined, `${label} is a value, not a formula`);
-    return sheet[`I${r}`].v;
+    const cell = sheet.getCell(`I${r}`);
+    assert.equal(typeof cell.value, "number", `${label} is a number, not a formula`);
+    assert.equal(cell.numFmt, currencyFormat("USD"));
+    return cell.value;
   };
   assert.equal(value(en.totals.subtotal), 1250);
-  assert.equal(value(en.totals.discount), 75);
+  assert.equal(value(en.totals.discount), -75);
   assert.equal(value(en.totals.vat), 211.5);
   assert.equal(value(en.totals.extraCosts), 40);
   assert.equal(value(en.totals.grandTotal), sale.total_amount);
   assert.equal(value(en.totals.paid), 1000);
   assert.equal(value(en.totals.remaining), 426.5);
-  const lineSum = [807.5, 208.5, 159].reduce((a, b) => a + b, 0);
-  assert.equal(Math.round(lineSum * 100) / 100, value(en.totals.subtotal) - value(en.totals.discount)); // lines are net of discount
+  const grand = findRow(sheet, "G", en.totals.grandTotal, below);
+  assert.equal(sheet.getCell(`G${grand}`).font.bold, true);
+  assert.equal(sheet.getCell(`I${grand}`).font.bold, true);
+  assert.equal(sheet.getCell(`I${grand}`).border.top.style, "thin");
+  assert.equal(sheet.getCell(`I${grand}`).alignment.horizontal, "right");
 });
 
-test("xlsx: the date and the rate are numbers; header fields carry the document data", () => {
-  const { sheet } = readBack(saleToExportDoc(saleFixture(), ctx));
-  const at = (label) => sheet[`B${findRow(sheet, "A", label)}`];
-  assert.equal(at(en.date).t, "n");
-  assert.equal(at(en.date).z, "yyyy-mm-dd");
-  assert.equal(at(en.rate).v, 1.7);
-  assert.equal(at(en.currency).v, "USD");
-  assert.equal(at(en.party.sale).v, "Gülşən Əliyeva — Şüşə Dünyası");
-  assert.equal(at(en.partyVoen).v, "9876543210");
-  assert.equal(at(en.statusLabel).v, "Posted");
-  assert.equal(at(en.voen).v, "1234567890");
-});
-
-test("xlsx: draft and cancelled files carry the mark under the title; posted has none", () => {
-  assert.equal(readBack(saleToExportDoc(saleFixture({ status: "cancelled" }), ctx)).sheet.A2.v, "CANCELLED");
-  assert.equal(readBack(purchaseToExportDoc(purchaseFixture({ status: "draft" }), ctx), az).sheet.A2.v, "QARALAMA");
-  assert.equal(readBack(saleToExportDoc(saleFixture(), ctx)).sheet.A2, undefined);
-});
-
-test("xlsx: purchase file has the supplier, the EUR line and a currency column", () => {
-  const { sheet } = readBack(purchaseToExportDoc(purchaseFixture(), ctx));
+test("xlsx: widths fitted to content, frozen under the header, A4 portrait fit to width, no gridlines", async () => {
+  const { sheet } = await readBack(saleToExportDoc(saleFixture(), ctx));
   const header = findRow(sheet, "B", en.cols.product);
-  assert.equal(sheet[`J${header}`].v, en.cols.currency);
-  assert.equal(sheet[`J${header + 2}`].v, "EUR");
-  assert.equal(sheet[`B${findRow(sheet, "A", en.party.purchase)}`].v, "Şəki Ağac Emalı ASC");
+  // ExcelJS reads Excel's default width (9) back as empty.
+  const widths = sheet.columns.map((c) => c.width ?? 9);
+  assert.equal(widths.length, 9);
+  assert.ok(widths[1] >= 28 && widths[1] === Math.max(...widths), "the product column is the widest");
+  assert.ok(widths[0] <= 6, "№ is narrow");
+  const view = sheet.views[0];
+  assert.equal(view.state, "frozen");
+  assert.equal(view.ySplit, header);
+  assert.equal(view.showGridLines, false);
+  assert.equal(sheet.pageSetup.paperSize, 9);
+  assert.equal(sheet.pageSetup.orientation, "portrait");
+  assert.equal(sheet.pageSetup.fitToPage, true);
+  assert.equal(sheet.pageSetup.fitToWidth, 1);
+  assert.equal(sheet.pageSetup.fitToHeight, 0);
+  assert.match(sheet.headerFooter.oddFooter, /&P.*&N/);
 });
 
-test("xlsx: bold rows style text cells and keep the number formats of number cells", () => {
-  const xml = '<row r="3"><c r="A3" t="s"><v>0</v></c><c r="B3" s="2"><v>5</v></c></row><row r="4"><c r="A4" t="s"><v>1</v></c></row>';
-  const out = patchBoldRows(xml, 7, [3]);
-  assert.match(out, /<c r="A3" s="7" t="s">/);
-  assert.match(out, /<c r="B3" s="2">/);
-  assert.match(out, /<c r="A4" t="s">/);
+test("xlsx: draft and cancelled files carry the mark under the title; posted has none", async () => {
+  const marked = async (doc, labels) => {
+    const { sheet } = await readBack(doc, labels);
+    const title = findRow(sheet, "A", labels.title[doc.kind]);
+    return sheet.getCell(`A${title + 1}`).value;
+  };
+  assert.equal(await marked(saleToExportDoc(saleFixture({ status: "cancelled" }), ctx), en), "CANCELLED");
+  assert.equal(await marked(purchaseToExportDoc(purchaseFixture({ status: "draft" }), ctx), az), "QARALAMA");
+  assert.equal(await marked(saleToExportDoc(saleFixture(), ctx), en), null);
 });
 
-test("xlsx: quantities keep 3 decimals (cut lengths), amounts are rounded to 2", () => {
+test("xlsx: purchase file has the supplier, the EUR line and a currency column", async () => {
+  const { sheet } = await readBack(purchaseToExportDoc(purchaseFixture(), ctx));
+  const header = findRow(sheet, "B", en.cols.product);
+  assert.equal(sheet.getCell(`J${header}`).value, en.cols.currency);
+  assert.equal(sheet.getCell(`J${header + 2}`).value, "EUR");
+  assert.equal(fieldValue(sheet, en.party.purchase).value, "Şəki Ağac Emalı ASC");
+  assert.ok(findRow(sheet, "A", en.title.purchase) > 0);
+});
+
+test("xlsx: quantities keep 3 decimals (cut lengths), amounts are the stored 2-decimal values", async () => {
   const sale = saleFixture({ items: [{ ...saleFixture().items[1], quantity: 2.375, unit_price: 2.005, total: 4.76 }] });
-  const { sheet } = readBack(saleToExportDoc(sale, ctx));
+  const { sheet } = await readBack(saleToExportDoc(sale, ctx));
   const row = findRow(sheet, "B", en.cols.product) + 1;
-  assert.equal(sheet[`E${row}`].v, 2.375);
-  assert.equal(sheet[`E${row}`].z, "#,##0.00#");
-  assert.equal(sheet[`F${row}`].v, 2.01);
+  assert.equal(sheet.getCell(`E${row}`).value, 2.375);
+  assert.equal(sheet.getCell(`F${row}`).value, 2.01, "the price the PDF prints");
+  assert.equal(sheet.getCell(`I${row}`).value, 4.76);
 });
 
-test("xlsx: a regular sales invoice leaves out the company block, as its print does", () => {
-  const { sheet } = readBack(saleToExportDoc(plainSaleFixture(), ctx));
-  assert.equal(findRow(sheet, "A", en.company), -1);
-  assert.equal(findRow(sheet, "A", en.voen), -1);
-  assert.ok(findRow(sheet, "A", en.party.sale) > 0, "the document fields stay");
-  const official = readBack(saleToExportDoc(saleFixture(), ctx)).sheet;
-  assert.ok(findRow(official, "A", en.company) > 0);
+test("xlsx: a regular sales invoice leaves out the company block, as its print does", async () => {
+  const { sheet } = await readBack(saleToExportDoc(plainSaleFixture(), ctx));
+  assert.equal(findRow(sheet, "A", BRANDING.companyName), -1);
+  assert.equal(sheet.getCell("A1").value, en.title.sale, "the title comes first");
+  assert.ok(fieldValue(sheet, en.party.sale), "the document fields stay");
+  assert.equal(findRow(sheet, "G", en.totals.vat), -1, "no VAT line, like the print");
+  const official = (await readBack(saleToExportDoc(saleFixture(), ctx))).sheet;
+  assert.equal(official.getCell("A1").value, BRANDING.companyName);
+});
+
+test("xlsx: Azerbaijani labels and letters survive the round trip", async () => {
+  const { sheet } = await readBack(saleToExportDoc(saleFixture(), ctx), az);
+  assert.ok(findRow(sheet, "A", "Satış fakturası") > 0);
+  assert.ok(findRow(sheet, "G", "Yekun məbləğ") > 0);
+  assert.equal(sheet.getCell(`F${findRow(sheet, "B", "Məhsul")}`).value, "Qiymət, USD");
 });
 
 // ── PDF ─────────────────────────────────────────────────────────────────────
@@ -267,7 +420,7 @@ test("pdf: draft and cancelled get a watermark and a mark; posted has none", () 
 
 test("pdf: totals, payments and foreign currency appear with 2 decimals", () => {
   const text = flat(buildInvoicePdfDefinition(saleToExportDoc(saleFixture(), ctx), en, { mode: "official", locale: "en-GB" }));
-  for (const s of ["1,426.50 USD", "426.50 USD", "40.00 USD", "-75.00 USD", "600.00 USD", "USD · Exchange rate 1.70", "Payments"]) assert.ok(text.includes(s), s);
+  for (const s of ["1,426.50 USD", "426.50 USD", "40.00 USD", "-75.00 USD", "600.00 USD", "Exchange rate", "1.70", "09.11.2026", "Price, USD", "Payments"]) assert.ok(text.includes(s), s);
 });
 
 test("pdf: quantities show 3 decimals; a foreign line names its currency on price and total", () => {
@@ -312,14 +465,15 @@ test("the export texts exist in az, en and ru with the same keys", () => {
 
 test("libraries load only on click (dynamic imports), never in the page bundle", () => {
   const download = read("src/lib/export/invoiceExportDownload.ts");
-  assert.match(download, /await import\("xlsx"\)/);
+  assert.match(download, /import\("exceljs"\)/);
+  assert.doesNotMatch(download, /import\("xlsx"\)/, "the invoice no longer uses SheetJS");
   assert.match(download, /import\("pdfmake\/build\/pdfmake"\)/);
   assert.match(download, /fetch\(`\/fonts\/\$\{file\}`\)/);
   assert.doesNotMatch(download, /https?:\/\//, "no CDN");
   const hook = read("src/components/invoices/useInvoiceExport.tsx");
   assert.match(hook, /import\("@\/lib\/export\/invoiceExportDownload"\)/);
-  for (const p of ["src/lib/export/invoiceExport.ts", "src/components/invoices/useInvoiceExport.tsx", "src/components/invoices/invoiceExportActions.tsx"]) {
-    assert.doesNotMatch(read(p), /from "(xlsx|pdfmake[^"]*)"/, `${p} has no static library import`);
+  for (const p of ["src/lib/export/invoiceExport.ts", "src/lib/export/invoiceLayout.ts", "src/lib/export/invoiceXlsx.ts", "src/components/invoices/useInvoiceExport.tsx", "src/components/invoices/invoiceExportActions.tsx"]) {
+    assert.doesNotMatch(read(p), /^import (?!type )[^\n]*from "(xlsx|exceljs|pdfmake[^"]*)"/m, `${p} has no static library import`);
   }
   // The mapping comes with the click too: the screens only import its types.
   for (const p of ["src/components/invoices/useInvoiceExport.tsx", "src/components/invoices/invoiceExportActions.tsx", "src/components/documents/DocumentListActions.tsx"]) {
@@ -360,4 +514,37 @@ test("the PDF asks for the layout only for a regular sales invoice, in the print
   // A failed or empty load (classic lists fetch on click) ends in the error toast.
   assert.match(hook, /if \(!record\) throw new Error/);
   assert.match(hook, /toast\.error\(t\("invoiceTools\.export\.error"\), \{ id: waiting \}\)/);
+});
+
+test("patchBoldRows stays for the other SheetJS exports (debtor reports, partner statement)", () => {
+  const xml = '<row r="3"><c r="A3" t="s"><v>0</v></c><c r="B3" s="2"><v>5</v></c></row><row r="4"><c r="A4" t="s"><v>1</v></c></row>';
+  const out = patchBoldRows(xml, 7, [3]);
+  assert.match(out, /<c r="A3" s="7" t="s">/);
+  assert.match(out, /<c r="B3" s="2">/);
+  assert.match(out, /<c r="A4" t="s">/);
+});
+
+test("mixed currencies: plain amount headers, each line's currency in its number format; the PDF has no currency column", async () => {
+  const doc = purchaseToExportDoc(purchaseFixture(), ctx);
+  const layout = buildInvoiceLayout(doc, en, { mode: "unofficial", locale: "en-GB" });
+  assert.equal(layout.columns.find((c) => c.key === "price").header, en.cols.price, "no single currency claimed");
+  assert.equal(layout.lines[0].currency.text, "AZN", "a line in the invoice currency names it");
+  const { sheet } = await readBack(doc);
+  const header = findRow(sheet, "B", en.cols.product);
+  assert.equal(sheet.getCell(`F${header + 2}`).numFmt, '#,##0.00" EUR"');
+  assert.equal(typeof sheet.getCell(`F${header + 2}`).value, "number");
+  assert.equal(sheet.getCell(`F${header + 1}`).numFmt, "#,##0.00");
+  const pdf = buildInvoicePdfDefinition(doc, en, { mode: "official", locale: "en-GB" });
+  const table = pdf.content.find((n) => n.table?.headerRows === 1);
+  assert.equal(table.table.widths.length, 9, "the PDF keeps its 9 columns");
+  assert.deepEqual(table.table.widths, [18, "*", 52, 34, 44, 48, 42, 30, 56]);
+});
+
+test("a date that is not yyyy-mm-dd is written as text, never a broken date cell", async () => {
+  const doc = saleToExportDoc(saleFixture(), ctx);
+  const layout = buildInvoiceLayout(doc, en, { mode: "unofficial", locale: "en-GB" });
+  layout.docFields[1].value = { type: "date", iso: "09.11.2026", text: "09.11.2026" };
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(Buffer.from(await writeInvoiceXlsx(ExcelJS, layout)));
+  assert.equal(fieldValue(book.worksheets[0], en.date).value, "09.11.2026");
 });

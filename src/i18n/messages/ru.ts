@@ -6478,6 +6478,7 @@ export const ruMessages: Messages = {
         vat: "НДС %",
         total: "Сумма",
         currency: "Валюта",
+        withCurrency: "{name}, {currency}",
       },
       totals: {
         subtotal: "Подытог",
