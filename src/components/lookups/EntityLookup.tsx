@@ -55,6 +55,11 @@ export interface EntityLookupProps {
    * and picked when one record has it (products, UI-3). Gets the code when none has it.
    */
   onBarcodeMiss?: (code: string) => void;
+  /**
+   * With scanBarcodes: the one record that has the scanned code goes here instead of being
+   * picked in this field (a sales line adds 1 to the line that already has the product).
+   */
+  onBarcodeHit?: (record: LookupRecord) => void;
   scanBarcodes?: boolean;
 }
 
@@ -104,6 +109,7 @@ export function EntityLookup({
   autoOpen,
   scanBarcodes,
   onBarcodeMiss,
+  onBarcodeHit,
   ...aria
 }: EntityLookupProps) {
   const { t } = useI18n();
@@ -189,7 +195,8 @@ export function EntityLookup({
               const hits = rows.filter((row) => String(row.barcode ?? "") === query);
               if (hits.length === 1) {
                 records.current.set(hits[0].id, hits[0]);
-                pick(hits[0].id);
+                if (onBarcodeHit) onBarcodeHit(hits[0]);
+                else pick(hits[0].id);
               } else onBarcodeMiss?.(query);
             })
             .catch(() => onBarcodeMiss?.(query));

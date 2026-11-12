@@ -2852,6 +2852,25 @@ export const ruMessages: Messages = {
       "Предыдущие оплаты: {amount} — ниже добавляйте только новые оплаты.",
   },
   invoice: {
+    // GRID-2: the sales LineGrid (behind UI_STANDARD).
+    salesLines: {
+      product: "Товар",
+      quantity: "Количество",
+      price: "Цена",
+      discount: "Скидка",
+      vat: "НДС %",
+      total: "Сумма",
+      warehouse: "Склад",
+      priceTier: "Тип цены",
+      currency: "Валюта",
+      rate: "Курс",
+      code: "Код",
+      unit: "Единица",
+      discountType: "Тип скидки",
+      note: "Примечание",
+      stock: "На складе: {count} {unit}",
+      noWarehouse: "Выберите склад для этой строки",
+    },
     pastDateNote: "Счёт датирован прошлым числом; бухгалтерские проводки используют эту дату.",
     paymentDate: "Дата оплаты",
     amend: {

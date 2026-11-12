@@ -33,12 +33,15 @@ export function LineNumberCell({
   max,
   disabled,
   placeholder,
+  onCommit,
 }: BaseCellProps & {
   value: number | null;
   onChange: (value: number | null) => void;
   suffix?: string | null;
   min?: number;
   max?: number;
+  /** The cell lost the focus (a rule that runs on the final value, e.g. a metre line's price). */
+  onCommit?: () => void;
 }) {
   const [text, setText] = useState(numberInputText(value));
   const [last, setLast] = useState(value);
@@ -66,6 +69,7 @@ export function LineNumberCell({
         onBlur={() => {
           setBad(false);
           setText(numberInputText(value));
+          if (!readOnly) onCommit?.();
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape" && !readOnly) {
@@ -152,6 +156,7 @@ export function LineProductCell({
   where,
   autoOpen,
   onBarcodeMiss,
+  onBarcodeHit,
   placeholder,
   disabled,
   entity = "product",
@@ -162,6 +167,8 @@ export function LineProductCell({
   where?: LookupWhere;
   autoOpen?: boolean;
   onBarcodeMiss?: (code: string) => void;
+  /** A scanned barcode found one product: the form decides (e.g. add 1 to a line that has it). */
+  onBarcodeHit?: (record: LookupRecord) => void;
   entity?: "product";
 }) {
   if (!ctx.editable && !ctx.inDrawer) {
@@ -185,6 +192,7 @@ export function LineProductCell({
       autoOpen={autoOpen}
       scanBarcodes
       onBarcodeMiss={onBarcodeMiss}
+      onBarcodeHit={onBarcodeHit}
       placeholder={placeholder}
       disabled={disabled || !ctx.editable}
       invalid={ctx.invalid}

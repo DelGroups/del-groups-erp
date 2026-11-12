@@ -2849,6 +2849,25 @@ export const azMessages = {
       "Əvvəlki ödənişlər: {amount} — aşağıda yalnız yeni ödənişlər əlavə edin.",
   },
   invoice: {
+    // GRID-2: the sales LineGrid (behind UI_STANDARD).
+    salesLines: {
+      product: "Məhsul",
+      quantity: "Miqdar",
+      price: "Qiymət",
+      discount: "Endirim",
+      vat: "ƏDV %",
+      total: "Cəmi",
+      warehouse: "Anbar",
+      priceTier: "Qiymət növü",
+      currency: "Valyuta",
+      rate: "Məzənnə",
+      code: "Kod",
+      unit: "Vahid",
+      discountType: "Endirim növü",
+      note: "Qeyd",
+      stock: "Anbarda: {count} {unit}",
+      noWarehouse: "Bu sətir üçün anbar seçin",
+    },
     pastDateNote: "Bu faktura keçmiş tarixlidir; mühasibat yazılışları bu tarixlə yazılır.",
     paymentDate: "Ödəniş tarixi",
     amend: {
