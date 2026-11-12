@@ -21,19 +21,57 @@ export function ViewMenu({ trigger, label, children, align = "start" }: { trigge
   );
 }
 
-/** A toggle in a menu that stays open, so several filters can be picked in a row. */
-export function MenuCheck({ checked, onCheckedChange, children }: { checked: boolean; onCheckedChange: () => void; children: React.ReactNode }) {
+/**
+ * A toggle in a menu that stays open, so several filters can be picked in a row. FLT-2: a person
+ * may carry a muted second line (`hint`) and a row count read as `countLabel` ("9 qeyd").
+ */
+export function MenuCheck({
+  checked,
+  onCheckedChange,
+  children,
+  hint,
+  count,
+  countLabel,
+  onPointerMove,
+}: {
+  checked: boolean;
+  onCheckedChange: () => void;
+  children: React.ReactNode;
+  hint?: string;
+  count?: number;
+  countLabel?: string;
+  onPointerMove?: (e: React.PointerEvent) => void;
+}) {
+  const rich = hint !== undefined || count !== undefined;
   return (
     <Dropdown.CheckboxItem
       checked={checked}
       onCheckedChange={onCheckedChange}
       onSelect={(e) => e.preventDefault()}
+      onPointerMove={onPointerMove}
       className="ds-menu-item"
     >
-      <span className="grid h-4 w-4 place-items-center" aria-hidden>
+      <span className="grid h-4 w-4 shrink-0 place-items-center" aria-hidden>
         {checked ? <Check className="h-4 w-4" /> : null}
       </span>
-      {children}
+      {rich ? (
+        <>
+          <span className="flex min-w-0 flex-1 flex-col py-1">
+            <span className="truncate">{children}</span>
+            {hint ? <span className="truncate text-[length:var(--ds-text-xs)] ds-muted">{hint}</span> : null}
+          </span>
+          {count ? (
+            <>
+              <span className="ms-2 shrink-0 tabular-nums text-[length:var(--ds-text-xs)] ds-muted" aria-hidden>
+                {count}
+              </span>
+              {countLabel ? <span className="sr-only">{countLabel}</span> : null}
+            </>
+          ) : null}
+        </>
+      ) : (
+        children
+      )}
     </Dropdown.CheckboxItem>
   );
 }

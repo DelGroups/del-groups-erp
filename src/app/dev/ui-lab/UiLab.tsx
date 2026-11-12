@@ -1,5 +1,6 @@
 "use client";
 
+import { FiltersLab } from "./FiltersLab";
 import { useState } from "react";
 import { Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -61,8 +62,15 @@ export const LAB_WIDTHS = [280, 360, 768, 1280] as const;
 const DENSITIES: DsDensity[] = ["comfortable", "compact"];
 const THEMES = ["light", "dark"] as const;
 
-export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" | "import" | "pay" | "unified" | "statement" | "debtors" }) {
+export default function UiLab({ fontClassName, standard, frame }: { fontClassName: string; standard: boolean; frame?: "page" | "import" | "pay" | "unified" | "statement" | "debtors" | "filters" }) {
   const { t } = useI18n();
+  if (frame === "filters") {
+    return (
+      <DesignScope theme="light" className={fontClassName}>
+        <FiltersLab />
+      </DesignScope>
+    );
+  }
   if (frame === "pay") {
     return (
       <DesignScope theme="light" className={fontClassName}>

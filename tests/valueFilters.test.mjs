@@ -27,7 +27,7 @@ const ctx = { userId: "u-omer", now: new Date(2026, 10, 11) };
 
 const SALES = salesDefinition(salesModel({ fetchAll: async () => [], fetchOne: async () => null }));
 const PURCHASES = purchasesDefinition(purchasesModel({ fetchAll: async () => [], fetchOne: async () => null }));
-const SELLER = SALES.valueFilters.find((vf) => vf.field === "seller_id");
+const SELLER = SALES.valueFilters.find((vf) => vf.field === "seller_key");
 const CREATOR = SALES.valueFilters.find((vf) => vf.field === "created_by");
 
 const sale = (id, over = {}) =>
@@ -48,7 +48,7 @@ const search = (state) => ids(applySearch(ROWS, SALES, { search: "", filters: []
 
 test("a row's key is its id, else its stored name, else Unknown", () => {
   assert.equal(valueKeyOf(ROWS[0], SELLER), "u-omer");
-  assert.equal(valueKeyOf(ROWS[4], SELLER), "name:Köhnə Satıcı");
+  assert.equal(valueKeyOf(ROWS[4], SELLER), "name:köhnə satici");
   assert.equal(valueKeyOf(ROWS[3], SELLER), UNKNOWN_VALUE);
 });
 
@@ -58,7 +58,7 @@ test("choices: distinct values of the loaded records, with counts, sorted by nam
     options.map((o) => [o.value, o.label, o.count]),
     [
       ["u-aynur", "Aynur Əliyeva", 1],
-      ["name:Köhnə Satıcı", "Köhnə Satıcı", 1],
+      ["name:köhnə satici", "Köhnə Satıcı", 1],
       ["u-omer", "Ömər Çələbiyev", 2],
       [UNKNOWN_VALUE, "Naməlum", 1],
     ]
@@ -75,7 +75,7 @@ test("by id: two people with the same name stay apart; one id is one choice", ()
   ];
   const options = valueFilterOptions(rows, SELLER, "?", "az");
   assert.deepEqual(options.map((o) => [o.value, o.count]).sort(), [["id-1", 2], ["id-2", 1]]);
-  assert.deepEqual(ids(applySearch(rows, SALES, { search: "", filters: [], values: { seller_id: ["id-1"] } }, ctx, fmt)), ["a", "c"]);
+  assert.deepEqual(ids(applySearch(rows, SALES, { search: "", filters: [], values: { seller_key: ["id-1"] } }, ctx, fmt)), ["a", "c"]);
 });
 
 test("an older name-only row joins the one id with that name; a shared name stays apart", () => {
@@ -88,9 +88,9 @@ test("an older name-only row joins the one id with that name; a shared name stay
   ];
   const options = valueFilterOptions(rows, SELLER, "?", "az");
   assert.deepEqual(options.find((o) => o.value === "id-ali"), { value: "id-ali", label: "Əli Həsənov", count: 2 });
-  assert.ok(options.some((o) => o.value === "name:Elvin" && o.count === 1), "two Elvins with ids: the name-only row keeps its own key");
+  assert.ok(options.some((o) => o.value === "name:elvin" && o.count === 1), "two Elvins with ids: the name-only row keeps its own key");
   assert.equal(valueKeyResolver(rows, SELLER)(rows[1]), "id-ali");
-  assert.deepEqual(ids(applySearch(rows, SALES, { search: "", filters: [], values: { seller_id: ["id-ali"] } }, ctx, fmt)), ["n1", "n2"]);
+  assert.deepEqual(ids(applySearch(rows, SALES, { search: "", filters: [], values: { seller_key: ["id-ali"] } }, ctx, fmt)), ["n1", "n2"]);
 });
 
 // ── Matching ────────────────────────────────────────────────────────────────
@@ -98,16 +98,16 @@ test("an older name-only row joins the one id with that name; a shared name stay
 test("no picks: every row; one pick: that person's rows", () => {
   assert.deepEqual(search({}), ["1", "2", "3", "4", "5"]);
   assert.deepEqual(search({ values: {} }), ["1", "2", "3", "4", "5"]);
-  assert.deepEqual(search({ values: { seller_id: ["u-aynur"] } }), ["3"]);
+  assert.deepEqual(search({ values: { seller_key: ["u-aynur"] } }), ["3"]);
 });
 
 test("several picks in one filter are OR'ed", () => {
-  assert.deepEqual(search({ values: { seller_id: ["u-omer", "u-aynur"] } }), ["1", "2", "3"]);
+  assert.deepEqual(search({ values: { seller_key: ["u-omer", "u-aynur"] } }), ["1", "2", "3"]);
 });
 
 test("two value filters are AND'ed", () => {
-  assert.deepEqual(search({ values: { seller_id: ["u-omer"], created_by: ["u-sebine"] } }), ["1"]);
-  assert.deepEqual(search({ values: { seller_id: ["u-aynur"], created_by: ["u-omer"] } }), []);
+  assert.deepEqual(search({ values: { seller_key: ["u-omer"], created_by: ["u-sebine"] } }), ["1"]);
+  assert.deepEqual(search({ values: { seller_key: ["u-aynur"], created_by: ["u-omer"] } }), []);
 });
 
 test("value filters AND with the fixed filters and the search", () => {
@@ -115,17 +115,17 @@ test("value filters AND with the fixed filters and the search", () => {
   assert.deepEqual(search({ filters: ["draft"], values: { created_by: ["u-sebine"] } }), ["1"]);
   assert.deepEqual(search({ filters: ["mine"], values: { created_by: ["u-sebine", "u-omer"] } }), ["1", "2"]);
   assert.deepEqual(search({ search: "şüşə", values: { created_by: ["u-sebine"] } }), ["3"]);
-  assert.deepEqual(search({ search: "şüşə", values: { seller_id: ["u-omer"] } }), []);
+  assert.deepEqual(search({ search: "şüşə", values: { seller_key: ["u-omer"] } }), []);
 });
 
 test("Unknown matches the rows without the person; a name-only row matches by its name", () => {
-  assert.deepEqual(search({ values: { seller_id: [UNKNOWN_VALUE] } }), ["4"]);
+  assert.deepEqual(search({ values: { seller_key: [UNKNOWN_VALUE] } }), ["4"]);
   assert.deepEqual(search({ values: { created_by: [UNKNOWN_VALUE] } }), ["4"]);
-  assert.deepEqual(search({ values: { seller_id: ["name:Köhnə Satıcı", UNKNOWN_VALUE] } }), ["4", "5"]);
+  assert.deepEqual(search({ values: { seller_key: ["name:köhnə satici", UNKNOWN_VALUE] } }), ["4", "5"]);
 });
 
 test("a picked value no row has (person gone) matches nothing; unknown filter fields are ignored", () => {
-  assert.equal(matchesValueFilters(ROWS[0], SALES.valueFilters, { seller_id: ["u-left"] }), false);
+  assert.equal(matchesValueFilters(ROWS[0], SALES.valueFilters, { seller_key: ["u-left"] }), false);
   assert.equal(matchesValueFilters(ROWS[0], SALES.valueFilters, { not_a_filter: ["x"] }), true);
   assert.equal(matchesValueFilters(ROWS[0], SALES.valueFilters, undefined), true);
 });
@@ -139,29 +139,29 @@ test("kanban, pivot, graph and calendar get the same filtered rows (ViewEngine f
 // ── State, favourites, flag ─────────────────────────────────────────────────
 
 test("picks: replacing one filter's values keeps the others; empty drops the filter", () => {
-  const a = setValuePicks(undefined, "seller_id", ["u-omer", "u-omer", "u-aynur"]);
-  assert.deepEqual(a, { seller_id: ["u-omer", "u-aynur"] });
+  const a = setValuePicks(undefined, "seller_key", ["u-omer", "u-omer", "u-aynur"]);
+  assert.deepEqual(a, { seller_key: ["u-omer", "u-aynur"] });
   const b = setValuePicks(a, "created_by", ["u-sebine"]);
-  assert.deepEqual(b, { seller_id: ["u-omer", "u-aynur"], created_by: ["u-sebine"] });
-  assert.deepEqual(setValuePicks(b, "seller_id", []), { created_by: ["u-sebine"] });
+  assert.deepEqual(b, { seller_key: ["u-omer", "u-aynur"], created_by: ["u-sebine"] });
+  assert.deepEqual(setValuePicks(b, "seller_key", []), { created_by: ["u-sebine"] });
 });
 
 test("a saved favourite brings its picks back; junk and unknown filters are dropped", () => {
-  const saved = JSON.parse(JSON.stringify({ search: "", filters: ["draft"], values: { seller_id: ["u-omer", "u-omer", 7, ""], created_by: ["u-sebine"], hacked: ["x"] }, groupBy: [], sort: null, view: "kanban" }));
+  const saved = JSON.parse(JSON.stringify({ search: "", filters: ["draft"], values: { seller_key: ["u-omer", "u-omer", 7, ""], created_by: ["u-sebine"], hacked: ["x"] }, groupBy: [], sort: null, view: "kanban" }));
   const state = sanitizeSearchState(saved, SALES);
-  assert.deepEqual(state.values, { seller_id: ["u-omer"], created_by: ["u-sebine"] });
+  assert.deepEqual(state.values, { seller_key: ["u-omer"], created_by: ["u-sebine"] });
   assert.deepEqual(state.filters, ["draft"]);
   assert.equal(state.view, "kanban");
   assert.equal(sanitizeSearchState({ values: "nope" }, SALES).values, undefined);
-  assert.equal(sanitizeSearchState({ values: { seller_id: [] } }, SALES).values, undefined);
+  assert.equal(sanitizeSearchState({ values: { seller_key: [] } }, SALES).values, undefined);
 });
 
 test("flag off: the definition has no value filters, so saved picks are ignored and the list is as today", () => {
   const off = withValueFilters(SALES, false);
   assert.equal(off.valueFilters, undefined);
   assert.equal(withValueFilters(SALES, true), SALES);
-  assert.equal(sanitizeSearchState({ values: { seller_id: ["u-aynur"] } }, off).values, undefined);
-  assert.deepEqual(ids(applySearch(ROWS, off, { search: "", filters: [], values: { seller_id: ["u-aynur"] } }, ctx, fmt)), ["1", "2", "3", "4", "5"]);
+  assert.equal(sanitizeSearchState({ values: { seller_key: ["u-aynur"] } }, off).values, undefined);
+  assert.deepEqual(ids(applySearch(ROWS, off, { search: "", filters: [], values: { seller_key: ["u-aynur"] } }, ctx, fmt)), ["1", "2", "3", "4", "5"]);
   assert.equal(read("src/views/components/ViewEngine.tsx").includes("valueFilters = false"), true, "off by default");
 });
 
@@ -169,7 +169,7 @@ test("flag off: the definition has no value filters, so saved picks are ignored 
 
 test("sales: seller and creator filters by id; the records carry the ids", () => {
   assert.deepEqual(SALES.valueFilters.map((vf) => [vf.field, vf.labelField, vf.labelKey]), [
-    ["seller_id", "seller_name", "invoiceTools.filters.seller"],
+    ["seller_key", "seller_name", "invoiceTools.filters.seller"],
     ["created_by", "created_by_name", "invoiceTools.filters.createdBy"],
   ]);
   assert.equal(ROWS[0].created_by, "u-sebine");
@@ -188,7 +188,7 @@ test("purchases: supplier, responsible and creator filters by id", () => {
     purchaseToRecord({ id: "p2", invoice_number: "AL-2", supplier_id: "s2", supplier_name: "Gəncə Metal", responsible_id: null, responsible_name: "Köhnə Məsul", created_by: null }),
   ];
   const responsible = PURCHASES.valueFilters[1];
-  assert.deepEqual(valueFilterOptions(rows, responsible, "?", "az").map((o) => o.value), ["name:Köhnə Məsul", "u-reshad"]);
+  assert.deepEqual(valueFilterOptions(rows, responsible, "?", "az").map((o) => o.value), ["name:köhnə məsul", "u-reshad"]);
   assert.deepEqual(ids(applySearch(rows, PURCHASES, { search: "", filters: [], values: { supplier_id: ["s2"] } }, ctx, fmt)), ["p2"]);
   assert.deepEqual(ids(applySearch(rows, PURCHASES, { search: "", filters: [], values: { created_by: [UNKNOWN_VALUE] } }, ctx, fmt)), ["p2"]);
 });
@@ -218,29 +218,17 @@ test("only the new sales and purchase lists turn them on, with INVOICE_TOOLS; cl
   for (const p of ["src/modules/sales/components/SalesPage.tsx", "src/modules/purchases/components/PurchasesPage.tsx"]) assert.doesNotMatch(read(p), /valueFilters/, p);
 });
 
-test("FLT-1: the value filters live in the Filters panel, not in a row of boxes under the search bar", () => {
+test("FLT-2: the value filters are submenus of the Filters menu, not a row of boxes or panel sections", () => {
   const panel = read("src/views/components/SearchPanel.tsx");
   assert.doesNotMatch(panel, /<Combobox/, "no Combobox row under the toolbar (LIST-1)");
-  assert.doesNotMatch(panel, /role="group" aria-label=\{t\("views\.valueFilters\.group"\)\}/);
-  // The button shows with fixed filters OR value filters.
   assert.match(panel, /\{filters\.length \|\| valueFilters\.length \? \(/);
   assert.match(panel, /<FilterPanel definition=\{def\} state=\{state\} onChange=\{onChange\} fmt=\{fmt\} choices=\{choices\} \/>/);
   // Picks still show as chips in the search bar, and Backspace removes the last one.
   assert.match(panel, /views\.valueFilters\.chip/);
   assert.match(panel, /else if \(picks\.length\) \{/);
-  const filterPanel = read("src/views/components/FilterPanel.tsx");
-  assert.match(filterPanel, /import \* as Popover from "@radix-ui\/react-popover"/);
-  assert.match(filterPanel, /<Popover\.Portal container=\{portalContainer \?\? undefined\}>/);
-  // RESP-1: a bottom sheet on phones; OVL-2: never taller than the free space.
-  assert.match(filterPanel, /const PHONE = "\(max-width: 767\.98px\)"/);
-  assert.match(filterPanel, /className="ds-sheet"/);
-  assert.match(filterPanel, /var\(--radix-popover-content-available-height/);
-  // One section per value filter (only those of the definition: withValueFilters drops them with the flag off).
-  assert.match(filterPanel, /const valueFilters = def\.valueFilters \?\? \[\];[\s\S]*?valueFilters\.map\(\(vf, i\)/);
-  // Every list has a name; a tick applies at once (no Apply button).
-  assert.match(filterPanel, /aria-labelledby=\{headingId\}/);
-  assert.match(filterPanel, /role="group"\s+aria-label=\{label\}\s+aria-labelledby=\{labelledBy\}/);
-  assert.doesNotMatch(filterPanel, /apply/i);
+  const menu = read("src/views/components/FilterPanel.tsx");
+  assert.match(menu, /import \* as Dropdown from "@radix-ui\/react-dropdown-menu"/);
+  assert.doesNotMatch(menu, /react-popover|data-check-list|CheckList/, "no FLT-1 panel sections or inner lists");
 });
 
 test("the texts exist in az, en and ru", () => {
