@@ -17,11 +17,11 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { Combobox, useDesignScope } from "@/design-system/components";
-import { fieldLabel, fieldMap, nameOfValueKey, parseGroupBy, setValuePicks, toggleGroupBy, toggleIn, valueFilterOptions, type Formatter } from "../logic";
-import type { ComboOption } from "@/design-system/components/Combobox";
+import { useDesignScope } from "@/design-system/components";
+import { fieldLabel, fieldMap, nameOfValueKey, parseGroupBy, setValuePicks, toggleGroupBy, valueFilterOptions, type Formatter } from "../logic";
 import type { FavoritesApi } from "../data";
 import type { SearchState, ValueFilterDef, ViewDefinition, ViewRecord, ViewType } from "../types";
+import { FilterPanel } from "./FilterPanel";
 import { MenuCheck, MenuItem, MenuLabel, MenuSeparator, ViewMenu } from "./Menu";
 
 const VIEW_ICONS: Record<Exclude<ViewType, "form">, React.ComponentType<{ className?: string }>> = {
@@ -65,15 +65,15 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
   const searchId = useId();
   const set = (patch: Partial<SearchState>) => onChange({ ...state, ...patch });
   const filters = def.filters ?? [];
-  const groups = [...new Set(filters.map((f) => f.group))];
   const groupBys = def.groupBys ?? [];
-  // INV-3: value filters — choices from the loaded records, picks as chips (one per value).
-  const valueFilters = def.valueFilters ?? [];
+  // INV-3: value filters — choices from the loaded records, picks as chips (one per value); the
+  // lists themselves sit in the Filters panel (FLT-1).
+  const valueFilters = useMemo(() => def.valueFilters ?? [], [def.valueFilters]);
   const unknown = t("views.valueFilters.unknown");
   const choices = useMemo(
     () =>
       new Map(
-        valueFilters.map((vf) => [vf.field, valueFilterOptions(records, vf, unknown, fmt.locale).map((o): ComboOption => ({ value: o.value, label: o.label, meta: String(o.count) }))] as const)
+        valueFilters.map((vf) => [vf.field, valueFilterOptions(records, vf, unknown, fmt.locale)] as const)
       ),
     [valueFilters, records, unknown, fmt.locale]
   );
@@ -148,29 +148,9 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
           />
         </div>
 
-        {filters.length ? (
-          <ViewMenu
-            label={t("views.filters")}
-            trigger={
-              <button type="button" className="ds-btn ds-btn-sm" aria-label={t("views.filters")}>
-                <Filter className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">{t("views.filters")}</span>
-              </button>
-            }
-          >
-            {groups.map((g, i) => (
-              <React.Fragment key={g}>
-                {i ? <MenuSeparator /> : null}
-                {filters
-                  .filter((f) => f.group === g)
-                  .map((f) => (
-                    <MenuCheck key={f.key} checked={state.filters.includes(f.key)} onCheckedChange={() => set({ filters: toggleIn(state.filters, f.key) })}>
-                      {t(f.labelKey)}
-                    </MenuCheck>
-                  ))}
-              </React.Fragment>
-            ))}
-          </ViewMenu>
+        {filters.length || valueFilters.length ? (
+          // FLT-1: one panel for the fixed filters and the value filters (LIST-1: no filter row on the page).
+          <FilterPanel definition={def} state={state} onChange={onChange} fmt={fmt} choices={choices} />
         ) : null}
 
         {groupBys.length ? (
@@ -202,32 +182,6 @@ export function SearchPanel({ definition: def, title, state, onChange, fmt, coun
         {def.views.length > 1 ? <ViewSwitcher views={def.views} value={state.view} onChange={(view) => set({ view })} fmt={fmt} /> : null}
       </div>
 
-      {valueFilters.length ? (
-        // INV-3: one searchable multi-select per value filter; full width on phones, then side by side.
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("views.valueFilters.group")}>
-          {valueFilters.map((vf) => {
-            const name = t(vf.labelKey);
-            return (
-              <Combobox
-                key={vf.field}
-                className="min-w-0 basis-full sm:basis-56"
-                multiple={{ values: state.values?.[vf.field] ?? [], onChange: (values) => setPicks(vf, values), triggerLabel: name }}
-                options={choices.get(vf.field) ?? []}
-                labels={{
-                  placeholder: name,
-                  search: t("views.valueFilters.search"),
-                  empty: t("views.valueFilters.empty"),
-                  loading: t("common.loading"),
-                  clear: t("views.valueFilters.clear", { name }),
-                  selected: t("views.valueFilters.selected"),
-                }}
-                locale={fmt.locale}
-                aria-label={name}
-              />
-            );
-          })}
-        </div>
-      ) : null}
     </div>
   );
 }

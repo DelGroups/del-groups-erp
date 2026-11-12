@@ -218,23 +218,34 @@ test("only the new sales and purchase lists turn them on, with INVOICE_TOOLS; cl
   for (const p of ["src/modules/sales/components/SalesPage.tsx", "src/modules/purchases/components/PurchasesPage.tsx"]) assert.doesNotMatch(read(p), /valueFilters/, p);
 });
 
-test("the panel uses the design-system Combobox in multiple mode, wrapping on phones", () => {
+test("FLT-1: the value filters live in the Filters panel, not in a row of boxes under the search bar", () => {
   const panel = read("src/views/components/SearchPanel.tsx");
-  assert.match(panel, /<Combobox[\s\S]*?multiple=\{\{ values: state\.values\?\.\[vf\.field\] \?\? \[\]/);
-  assert.match(panel, /className="flex flex-wrap items-center gap-2" role="group"/);
-  assert.match(panel, /basis-full sm:basis-56/);
-  assert.match(panel, /meta: String\(o\.count\)/);
-  const combo = read("src/design-system/components/Combobox.tsx");
-  // Picks are aria-checked; aria-selected stays the keyboard highlight of cmdk.
-  assert.match(combo, /aria-checked=\{multiple \? isChecked\(o\) : undefined\}/);
-  // Screen readers hear how many are picked, not only the name.
-  assert.match(combo, /\$\{multiple\.values\.length\} \$\{labels\.selected\}/);
-  assert.match(combo, /if \(multiple\) \{[\s\S]*?return;\s*\}\s*onChange\?\.\(option\.value, option\);\s*close\(\);/);
+  assert.doesNotMatch(panel, /<Combobox/, "no Combobox row under the toolbar (LIST-1)");
+  assert.doesNotMatch(panel, /role="group" aria-label=\{t\("views\.valueFilters\.group"\)\}/);
+  // The button shows with fixed filters OR value filters.
+  assert.match(panel, /\{filters\.length \|\| valueFilters\.length \? \(/);
+  assert.match(panel, /<FilterPanel definition=\{def\} state=\{state\} onChange=\{onChange\} fmt=\{fmt\} choices=\{choices\} \/>/);
+  // Picks still show as chips in the search bar, and Backspace removes the last one.
+  assert.match(panel, /views\.valueFilters\.chip/);
+  assert.match(panel, /else if \(picks\.length\) \{/);
+  const filterPanel = read("src/views/components/FilterPanel.tsx");
+  assert.match(filterPanel, /import \* as Popover from "@radix-ui\/react-popover"/);
+  assert.match(filterPanel, /<Popover\.Portal container=\{portalContainer \?\? undefined\}>/);
+  // RESP-1: a bottom sheet on phones; OVL-2: never taller than the free space.
+  assert.match(filterPanel, /const PHONE = "\(max-width: 767\.98px\)"/);
+  assert.match(filterPanel, /className="ds-sheet"/);
+  assert.match(filterPanel, /var\(--radix-popover-content-available-height/);
+  // One section per value filter (only those of the definition: withValueFilters drops them with the flag off).
+  assert.match(filterPanel, /const valueFilters = def\.valueFilters \?\? \[\];[\s\S]*?valueFilters\.map\(\(vf, i\)/);
+  // Every list has a name; a tick applies at once (no Apply button).
+  assert.match(filterPanel, /aria-labelledby=\{headingId\}/);
+  assert.match(filterPanel, /role="group"\s+aria-label=\{label\}\s+aria-labelledby=\{labelledBy\}/);
+  assert.doesNotMatch(filterPanel, /apply/i);
 });
 
 test("the texts exist in az, en and ru", () => {
   for (const m of [azMessages, enMessages, ruMessages]) {
-    for (const k of ["group", "search", "empty", "clear", "selected", "unknown", "chip", "notLoaded"]) assert.ok(m.views.valueFilters[k]?.trim(), `views.valueFilters.${k}`);
+    for (const k of ["search", "searchIn", "empty", "unknown", "chip", "notLoaded"]) assert.ok(m.views.valueFilters[k]?.trim(), `views.valueFilters.${k}`);
     for (const k of ["seller", "createdBy", "supplier", "responsible"]) assert.ok(m.invoiceTools.filters[k]?.trim(), `invoiceTools.filters.${k}`);
     assert.match(m.views.valueFilters.chip, /\{name\}.*\{value\}/);
     assert.match(m.views.valueFilters.clear, /\{name\}/);
