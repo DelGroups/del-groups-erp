@@ -88,7 +88,8 @@ type CreateSaleAtomicItemPayload = {
   exchange_rate: number;
 };
 
-function mapSaleItemToRpcPayload(
+/** One line of the create/amend RPC payload (exported for the GRID-2 payload test). */
+export function mapSaleItemToRpcPayload(
   item: SaleItem,
   decrementStock: boolean
 ): CreateSaleAtomicItemPayload {

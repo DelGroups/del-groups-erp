@@ -2851,6 +2851,25 @@ export const enMessages: Messages = {
       "Previous payments: {amount} — add only new payments below.",
   },
   invoice: {
+    // GRID-2: the sales LineGrid (behind UI_STANDARD).
+    salesLines: {
+      product: "Product",
+      quantity: "Quantity",
+      price: "Price",
+      discount: "Discount",
+      vat: "VAT %",
+      total: "Line total",
+      warehouse: "Warehouse",
+      priceTier: "Price type",
+      currency: "Currency",
+      rate: "Exchange rate",
+      code: "Code",
+      unit: "Unit",
+      discountType: "Discount type",
+      note: "Note",
+      stock: "In stock: {count} {unit}",
+      noWarehouse: "Choose a warehouse for this line",
+    },
     pastDateNote: "This invoice is dated in the past; its accounting entries use this date.",
     paymentDate: "Payment date",
     amend: {

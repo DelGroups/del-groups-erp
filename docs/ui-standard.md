@@ -637,7 +637,7 @@ Every list is one `DataGrid` (`@/design-system/components`). Classic pages reach
 
 ## Line grids
 
-Every editable list of document lines (products, services, costs) is one `LineGrid` (`src/components/line-grid`). Behind `UI_STANDARD`; with the flag off every form keeps its old editor. Migrated so far: import product lines (`ImportLinesGrid`), purchase lines (`PurchaseLinesGrid`).
+Every editable list of document lines (products, services, costs) is one `LineGrid` (`src/components/line-grid`). Behind `UI_STANDARD`; with the flag off every form keeps its old editor. Migrated so far: import product lines (`ImportLinesGrid`), purchase lines (`PurchaseLinesGrid`), sales invoice lines (`SalesLinesGrid`, GRID-2). Not yet: sheet sales (`MixedDimensionalInvoiceForm`).
 
 1. **Same look as `DataGrid`:** one-line rows of a fixed height (compact by default), a sticky one-line header, the grid's own horizontal scroll with edge shadows, a sticky first column (the product) and a sticky actions column, totals that stick to the bottom.
 2. **Cells look like text** until hovered or focused (`LineNumberCell`, `LineTextCell`, `LineSelectCell`, `LineProductCell`; computed values `LineText`).

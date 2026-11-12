@@ -19,6 +19,18 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { submitSale, type SaleSavedHook } from "../lib/submitSale";
 import {
+  addScannedLine,
+  applySaleLinePatch,
+  duplicateSaleLine,
+  isPolywoodMeterLine,
+  isPolywoodProductRow,
+  saleCurrencyPatch,
+  salePriceTierPatch,
+  saleQuantityBlurPatch,
+  saleMetricHint,
+  saleQuantityPatch,
+} from "../lib/saleLineEdits";
+import {
   normalizeSaleItemProductId,
   validateSaleItemsHaveProductIds,
 } from "@/lib/sales/saleItemProductId";
@@ -116,6 +128,8 @@ import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
+import { reorderByKeys } from "@/components/line-grid";
+import { SalesLinesGrid } from "./SalesLinesGrid";
 import Button from "@/components/ui/button";
 import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
 import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
@@ -227,21 +241,8 @@ function isPolywoodWarehouseRow(warehouseId: string, warehouses: Warehouse[]): b
   return (wh?.warehouse_type ?? "general") === POLYWOOD_WAREHOUSE_TYPE;
 }
 
-function isPolywoodProductRow(product: Product | null | undefined): boolean {
-  return (
-    product?.inventory_mode === POLYWOOD_INVENTORY_MODE || product?.is_dimensional === true
-  );
-}
-
 function findPolywoodWarehouse(warehouses: Warehouse[]): Warehouse | undefined {
   return warehouses.find((warehouse) => warehouse.warehouse_type === POLYWOOD_WAREHOUSE_TYPE);
-}
-
-function isPolywoodMeterLine(row: SaleItem, product: Product | null | undefined): boolean {
-  return (
-    isPolywoodProductRow(product) &&
-    (row.polywood_sale_mode === "linear_m" || row.unit === "Metr")
-  );
 }
 
 function filterProductsForWarehouse(
@@ -745,19 +746,26 @@ export default function UniversalInvoiceForm({
 
   const handleItemChange = (id: string, patch: Partial<SaleItem>) => {
     setItems((prev) =>
-      prev.map((row) => {
-        if (row.id !== id) return row;
-        const updated = { ...row, ...patch };
-        updated.total = calcLineTotal(
-          updated.quantity,
-          updated.unit_price,
-          updated.discount_percent,
-          updated.discount_type
-        );
-        return updated;
-      })
+      // GRID-2: the same rule for the old table and the LineGrid (saleLineEdits).
+      prev.map((row) => (row.id === id ? applySaleLinePatch(row, patch) : row))
     );
   };
+
+  // GRID-2: line edits shared by the old table and SalesLinesGrid (rules in saleLineEdits).
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const productOfRow = (row: SaleItem) => productById.get(row.product_id);
+  const handleQuantityChange = (row: SaleItem, nextQuantity: number) =>
+    handleItemChange(row.id, saleQuantityPatch(row, productOfRow(row), nextQuantity));
+  const handleQuantityBlur = (row: SaleItem) => {
+    const patch = saleQuantityBlurPatch(row, productOfRow(row));
+    if (!patch) return;
+    handleItemChange(row.id, patch);
+    void handlePolywoodQuantityBlur(row.id);
+  };
+  const handlePriceTierChange = (row: SaleItem, nextTier: PriceTier) =>
+    handleItemChange(row.id, salePriceTierPatch(row, productOfRow(row), nextTier));
+  const handleCurrencyChange = (row: SaleItem, nextCurrency: InvoiceCurrency) =>
+    handleItemChange(row.id, saleCurrencyPatch(row, nextCurrency));
 
   const handleUnitChange = (rowId: string, nextUnit: string) => {
     const row = items.find((item) => item.id === rowId);
@@ -1152,7 +1160,12 @@ export default function UniversalInvoiceForm({
       showToastError(t("invoice.barcodeNotFound", { barcode }));
       return;
     }
+    await addScannedProduct(product);
+  };
 
+  // A scanned product: one more on the line that already has it, else the first empty line, else
+  // a new line (the scan bar and, GRID-2, a barcode scanned into a grid product cell).
+  const addScannedProduct = async (product: Product, intoRowId?: string) => {
     if (polywoodOnly && !isPolywoodProductRow(product)) {
       showToastError(t("polywood.invoice.onlyPolywoodProducts"));
       return;
@@ -1167,38 +1180,15 @@ export default function UniversalInvoiceForm({
       Number(product.full_sheet_length_m) || 4
     );
 
-    setItems((prev) => {
-      const existing = prev.find((r) => r.product_id === product!.id);
-      if (existing) {
-        return prev.map((row) => {
-          if (row.id !== existing.id) return row;
-          return applyProductToSaleRow(
-            row,
-            product!,
-            row.quantity + 1,
-            stockResult.availableStock
-          );
-        });
-      }
-
-      const emptyRow = prev.find((r) => !r.product_id && !r.product_name.trim());
-      if (emptyRow) {
-        return prev.map((row) =>
-          row.id === emptyRow.id
-            ? applyProductToSaleRow(row, product!, 1, stockResult.availableStock)
-            : row
-        );
-      }
-
-      const newRow = createEmptySaleItem(
-        defaultWarehouse?.id || "",
-        defaultWarehouse?.name || ""
-      );
-      return [
-        ...prev,
-        applyProductToSaleRow(newRow, product!, 1, stockResult.availableStock),
-      ];
-    });
+    setItems((prev) =>
+      addScannedLine(
+        prev,
+        product.id,
+        (row, quantity) => applyProductToSaleRow(row, product, quantity, stockResult.availableStock),
+        () => createEmptySaleItem(defaultWarehouse?.id || "", defaultWarehouse?.name || ""),
+        intoRowId
+      )
+    );
   };
 
   const handleWarehouseSelect = (rowId: string, warehouseId: string) => {
@@ -1232,6 +1222,54 @@ export default function UniversalInvoiceForm({
         : {}),
     });
   };
+
+  // GRID-2 (UI_STANDARD): what SalesLinesGrid needs besides the shared line edits.
+  const handleGridProduct = (rowId: string, record: LookupRecord | null) => {
+    if (!record) {
+      void handleProductSelect(rowId, null);
+      return;
+    }
+    const product = products.find((p) => p.id === record.id) ?? (record as unknown as Product);
+    void applyPickedProduct(rowId, product);
+  };
+  const handleGridBarcodeHit = (rowId: string, record: LookupRecord) => {
+    const product = productById.get(record.id) ?? (record as unknown as Product);
+    if (!productById.has(product.id)) setProducts((prev) => [product, ...prev]);
+    void addScannedProduct(product, rowId);
+  };
+  const duplicateRow = (id: string) =>
+    setItems((prev) => duplicateSaleLine(prev, id, createEmptySaleItem().id));
+  const reorderRows = (ids: string[]) => setItems((prev) => reorderByKeys(prev, ids, (row) => row.id));
+  const gridStockWarning = (row: SaleItem) => {
+    const warning = getSaleLineStockWarning(row, resolveItemAvailableStock(row));
+    return warning ? preflightMessage(t, warning) : null;
+  };
+  const gridCanCut = (row: SaleItem) => {
+    const rowProduct = productOfRow(row);
+    return !polywoodOnly && !!rowProduct && isDimensionalInvoiceProduct(rowProduct) && !!row.warehouse_id;
+  };
+  const gridOpenCut = (row: SaleItem) => {
+    const rowProduct = productOfRow(row);
+    if (!rowProduct) return;
+    setCutPieceModal({
+      rowId: row.id,
+      productId: row.product_id,
+      warehouseId: row.warehouse_id,
+      productName: row.product_name,
+      defaultWidthM: Number(rowProduct.base_width) || 0,
+    });
+  };
+  const gridMetricHint = (row: SaleItem) => saleMetricHint(row, productOfRow(row));
+  // The old list narrowed a Polywood warehouse row to Polywood products (filterProductsForWarehouse).
+  const POLYWOOD_ONLY_WHERE = { inventory_mode: POLYWOOD_INVENTORY_MODE } as const;
+  const gridProductWhere = (row: SaleItem) =>
+    isPolywoodWarehouseRow(row.warehouse_id, warehouses) ? POLYWOOD_ONLY_WHERE : undefined;
+  const gridUnitOptions = (row: SaleItem): readonly string[] => {
+    const rowProduct = productOfRow(row);
+    return rowProduct ? getProductSaleUnitOptions(rowProduct) : [];
+  };
+  // invoiceMode "polywood" (no page uses it today) keeps the old editor with its sheet fields.
+  const salesGrid = uiStandard && !polywoodOnly;
 
   const addRow = () => {
     setItems((prev) => [
@@ -2044,10 +2082,12 @@ export default function UniversalInvoiceForm({
                 {newProductAllowed ? (
                   <InvoiceNewProductButton onCreated={handleNewProductCreated} disabled={saving || documentLocked} />
                 ) : null}
+                {salesGrid ? null : (
                 <Button type="button" variant="secondary" size="sm" className="min-w-0 max-w-full" onClick={addRow}>
                   <Plus className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("forms.addRow")}</span>
                 </Button>
+                )}
               </div>
             </CardHeader>
           ) : (
@@ -2071,6 +2111,7 @@ export default function UniversalInvoiceForm({
                     disabled={saving || documentLocked}
                   />
                 ) : null}
+                {salesGrid ? null : (
                 <button
                   type="button"
                   onClick={addRow}
@@ -2079,6 +2120,7 @@ export default function UniversalInvoiceForm({
                   <Plus className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("forms.addRow")}</span>
                 </button>
+                )}
               </div>
             </div>
           )}
@@ -2090,7 +2132,7 @@ export default function UniversalInvoiceForm({
             </div>
           ) : null}
 
-          {selectedRowIds.size > 0 ? (
+          {!salesGrid && selectedRowIds.size > 0 ? (
             <div className="flex items-center justify-between gap-3 border-b border-rose-200 bg-rose-50 px-4 py-2">
               <span className="text-xs font-semibold text-rose-800">
                 {t("invoice.rowsSelectedCount", { count: selectedRowIds.size })}
@@ -2109,10 +2151,44 @@ export default function UniversalInvoiceForm({
             </div>
           ) : null}
 
+          {/* GRID-2: with the grid a barcode is scanned into a line's product cell (same rule). */}
+          {salesGrid ? null : (
           <div className="relative z-0 overflow-visible border-b border-amber-200 bg-amber-50 px-4 py-3">
             <BarcodeScanField onScan={handleBarcodeScan} disabled={saving} />
           </div>
+          )}
 
+          {salesGrid ? (
+            <div className="p-2">
+              <SalesLinesGrid
+                items={items}
+                warehouses={warehouses}
+                locked={documentLocked}
+                saving={saving}
+                isOfficial={isOfficial}
+                stockWarning={gridStockWarning}
+                productWhere={gridProductWhere}
+                unitOptions={gridUnitOptions}
+                canCut={gridCanCut}
+                metricHint={gridMetricHint}
+                onUpdate={handleItemChange}
+                onProduct={handleGridProduct}
+                onBarcodeHit={handleGridBarcodeHit}
+                onBarcodeMiss={(barcode) => showToastError(t("invoice.barcodeNotFound", { barcode }))}
+                onQuantity={handleQuantityChange}
+                onQuantityCommit={handleQuantityBlur}
+                onPriceTier={handlePriceTierChange}
+                onCurrency={handleCurrencyChange}
+                onWarehouse={handleWarehouseSelect}
+                onUnit={handleUnitChange}
+                onCut={gridOpenCut}
+                onAdd={addRow}
+                onRemove={removeRow}
+                onDuplicate={duplicateRow}
+                onReorder={reorderRows}
+              />
+            </div>
+          ) : (
           <div
             ref={gridContainerRef}
             className={cn(
@@ -2434,54 +2510,8 @@ export default function UniversalInvoiceForm({
                             : "1"
                         }
                         value={row.quantity}
-                        onChange={(e) => {
-                          const nextQuantity = Number(e.target.value) || 0;
-                          const rowProduct = products.find((product) => product.id === row.product_id);
-                          const patch: Partial<SaleItem> = { quantity: nextQuantity };
-                          if (isPolywoodMeterLine(row, rowProduct) || row.unit === "Metr") {
-                            patch.polywood_cut_confirmed = false;
-                            patch.polywood_length_m =
-                              row.unit === "Metr" ? nextQuantity : null;
-                            if (rowProduct && row.unit === "Metr") {
-                              patch.unit_price = resolveInvoiceLineUnitPrice(rowProduct, {
-                                unit: row.unit,
-                                quantity: nextQuantity,
-                                polywood_sale_mode: "linear_m",
-                                polywood_length_m: nextQuantity,
-                                polywood_full_sheet_length_m:
-                                  row.polywood_full_sheet_length_m ||
-                                  Number(rowProduct.full_sheet_length_m) ||
-                                  4,
-                                priceTier: row.price_tier,
-                              });
-                            }
-                          }
-                          handleItemChange(row.id, patch);
-                        }}
-                        onBlur={() => {
-                          const rowProduct = products.find((product) => product.id === row.product_id);
-                          const meterLine =
-                            isPolywoodMeterLine(row, rowProduct) ||
-                            (rowProduct &&
-                              row.unit === "Metr" &&
-                              isDimensionalInvoiceProduct(rowProduct));
-                          if (meterLine) {
-                            handleItemChange(row.id, {
-                              unit_price: resolveInvoiceLineUnitPrice(rowProduct, {
-                                unit: row.unit,
-                                quantity: row.quantity,
-                                polywood_sale_mode: "linear_m",
-                                polywood_length_m: row.polywood_length_m ?? row.quantity,
-                                polywood_full_sheet_length_m:
-                                  row.polywood_full_sheet_length_m ||
-                                  Number(rowProduct?.full_sheet_length_m) ||
-                                  4,
-                                priceTier: row.price_tier,
-                              }),
-                            });
-                            void handlePolywoodQuantityBlur(row.id);
-                          }
-                        }}
+                        onChange={(e) => handleQuantityChange(row, Number(e.target.value) || 0)}
+                        onBlur={() => handleQuantityBlur(row)}
                         className={`${INVOICE_TABLE_INPUT} text-center font-mono`}
                       />
                       {(polywoodOnly && row.polywood_sale_mode) ||
@@ -2577,23 +2607,7 @@ export default function UniversalInvoiceForm({
                         <select
                           value={row.price_tier || "retail"}
                           disabled={documentLocked || isOfficial || !row.product_id}
-                          onChange={(e) => {
-                            const nextTier = e.target.value as PriceTier;
-                            const rowProduct = products.find(
-                              (product) => product.id === row.product_id
-                            );
-                            handleItemChange(row.id, {
-                              price_tier: nextTier,
-                              unit_price: resolveInvoiceLineUnitPrice(rowProduct, {
-                                unit: row.unit,
-                                quantity: row.quantity,
-                                polywood_sale_mode: row.polywood_sale_mode,
-                                polywood_length_m: row.polywood_length_m,
-                                polywood_full_sheet_length_m: row.polywood_full_sheet_length_m,
-                                priceTier: nextTier,
-                              }),
-                            });
-                          }}
+                          onChange={(e) => handlePriceTierChange(row, e.target.value as PriceTier)}
                           className={cn(formTableCompactSelectClass, "w-[110px] min-w-[110px] shrink-0")}
                           title={t("invoice.priceTier")}
                         >
@@ -2604,13 +2618,7 @@ export default function UniversalInvoiceForm({
                         <select
                           value={row.currency || "AZN"}
                           disabled={documentLocked || isOfficial || !row.product_id}
-                          onChange={(e) => {
-                            const nextCurrency = e.target.value as InvoiceCurrency;
-                            handleItemChange(row.id, {
-                              currency: nextCurrency,
-                              exchange_rate: nextCurrency === "AZN" ? 1 : row.exchange_rate || 1,
-                            });
-                          }}
+                          onChange={(e) => handleCurrencyChange(row, e.target.value as InvoiceCurrency)}
                           className={cn(formTableCompactSelectClass, "w-[70px] min-w-[70px] shrink-0")}
                           title={t("invoice.lineCurrency")}
                         >
@@ -2752,6 +2760,7 @@ export default function UniversalInvoiceForm({
               </tbody>
             </table>
           </div>
+          )}
         </ItemsSectionWrap>
 
         <DocumentFooter>
