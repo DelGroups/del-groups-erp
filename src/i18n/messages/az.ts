@@ -6476,6 +6476,7 @@ export const azMessages = {
         vat: "ƏDV %",
         total: "Cəmi",
         currency: "Valyuta",
+        withCurrency: "{name}, {currency}",
       },
       totals: {
         subtotal: "Ara cəm",

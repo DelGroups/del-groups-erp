@@ -6477,6 +6477,7 @@ export const enMessages: Messages = {
         vat: "VAT %",
         total: "Total",
         currency: "Currency",
+        withCurrency: "{name}, {currency}",
       },
       totals: {
         subtotal: "Subtotal",

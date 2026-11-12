@@ -1,23 +1,24 @@
 /**
- * INV-2, browser only: makes the invoice file and downloads it. The Excel library, pdfmake and
+ * INV-2, browser only: makes the invoice file and downloads it. ExcelJS (XLS-1), pdfmake and
  * the font are loaded here with dynamic imports when the user clicks, so no page bundle grows.
  * The hook (useInvoiceExport) imports this module itself dynamically, so the mapping comes too.
  */
 export { invoiceExportFileName, invoiceExportLabels, purchaseToExportDoc, saleToExportDoc } from "./invoiceExport";
 import type { PrintMode } from "@/lib/print/types";
-import { downloadBlob, XLSX_MIME, type XlsxModule } from "./exportXlsx";
+import { downloadBlob, XLSX_MIME } from "./exportXlsx";
 import {
   buildInvoicePdfDefinition,
-  buildInvoiceSheet,
   invoiceExportFileName,
   PDF_FONT,
   PDF_FONT_FILES,
   pdfShowsCompany,
-  writeInvoiceXlsxBytes,
+  showsCompany,
   type InvoiceExportDoc,
   type InvoiceExportFormat,
   type InvoiceExportLabels,
 } from "./invoiceExport";
+import { buildInvoiceLayout } from "./invoiceLayout";
+import { writeInvoiceXlsx, type ExcelJSModule } from "./invoiceXlsx";
 
 interface PdfMakeBrowser {
   addVirtualFileSystem: (vfs: Record<string, string>) => void;
@@ -88,8 +89,16 @@ export async function downloadInvoiceFile(
 ): Promise<void> {
   const fileName = invoiceExportFileName(doc, format);
   if (format === "xlsx") {
-    const XLSX = (await import("xlsx")) as unknown as XlsxModule;
-    const bytes = writeInvoiceXlsxBytes(XLSX, buildInvoiceSheet(doc, labels));
+    // Excel asks no layout question: a regular sales invoice leaves out the company, as its print.
+    const mode: PrintMode = "unofficial";
+    const [mod, logo] = await Promise.all([
+      import("exceljs"),
+      showsCompany(doc, mode) ? logoDataUrl(doc.company.logoUrl) : Promise.resolve(null),
+    ]);
+    // The browser build arrives as the module or wrapped in { default } depending on the bundler.
+    const m = mod as unknown as { default?: ExcelJSModule } & ExcelJSModule;
+    const ExcelJS = (m.Workbook ? m : m.default) as ExcelJSModule;
+    const bytes = await writeInvoiceXlsx(ExcelJS, buildInvoiceLayout(doc, labels, { mode, locale: options.locale }), { logoDataUrl: logo });
     downloadBlob(new Blob([bytes as BlobPart], { type: XLSX_MIME }), fileName);
     return;
   }
