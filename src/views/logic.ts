@@ -366,6 +366,44 @@ export function setValuePicks(picked: Readonly<Record<string, readonly string[]>
   return next;
 }
 
+/**
+ * FLT-1: how many filters are on — the fixed filters the view knows plus every value pick of its
+ * value filters (so with INVOICE_TOOLS off, stray picks from a URL do not count).
+ */
+export function activeFilterCount(def: Pick<ViewDefinition, "filters" | "valueFilters">, state: Pick<SearchState, "filters" | "values">): number {
+  const known = new Set((def.filters ?? []).map((f) => f.key));
+  const fixed = state.filters.filter((k) => known.has(k)).length;
+  const picks = (def.valueFilters ?? []).reduce((n, vf) => n + (state.values?.[vf.field]?.length ?? 0), 0);
+  return fixed + picks;
+}
+
+/** FLT-1 "Clear filters": no fixed filters, no value picks; search, grouping and the rest stay. */
+export function clearAllFilters<S extends Pick<SearchState, "filters" | "values">>(state: S): S {
+  return { ...state, filters: [], values: undefined };
+}
+
+/**
+ * FLT-1: the next item of a checkbox list for a key (roving focus): arrows move and wrap,
+ * Home/End jump; null for any other key.
+ */
+export function rovingIndex(key: string, index: number, length: number): number | null {
+  if (length <= 0) return null;
+  switch (key) {
+    case "ArrowDown":
+    case "ArrowRight":
+      return (index + 1) % length;
+    case "ArrowUp":
+    case "ArrowLeft":
+      return (index - 1 + length) % length;
+    case "Home":
+      return 0;
+    case "End":
+      return length - 1;
+    default:
+      return null;
+  }
+}
+
 /** The definition with its value filters, or without them while the screen has them off. */
 export function withValueFilters<R extends ViewRecord>(def: ViewDefinition<R>, enabled: boolean): ViewDefinition<R> {
   if (enabled || !def.valueFilters) return def;
