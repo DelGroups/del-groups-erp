@@ -4401,6 +4401,10 @@ export const enMessages: Messages = {
     // INV-3: value filters of the search panel (pick people / partners).
     valueFilters: {
       notLoaded: "Not in this list",
+      clearAll: "Clear all",
+      back: "Back",
+      itemCount: "{name} ({count})",
+      menu: "{name}: choose",
       group: "Filter by person",
       search: "Search names…",
       searchIn: "Search in “{name}”",

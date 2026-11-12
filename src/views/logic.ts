@@ -274,7 +274,16 @@ export function valueKeyOf(record: ViewRecord, vf: ValueFilterDef): string {
   const id = record[vf.field];
   if (present(id)) return String(id);
   const name = vf.labelField ? record[vf.labelField] : undefined;
-  return present(name) ? `${NAME_KEY}${String(name).trim()}` : UNKNOWN_VALUE;
+  return present(name) ? `${NAME_KEY}${personNameKey(String(name))}` : UNKNOWN_VALUE;
+}
+
+/**
+ * FLT-2: one spelling of a person's name for matching: no outer spaces, single inner spaces,
+ * lower case ("Ulviyya  Shahbazova " and "ulviyya shahbazova" are the same person's name).
+ */
+export function personNameKey(name: string): string {
+  // I, İ, ı and i are one letter here: "ULVIYYA" (typed on a Latin keyboard) is "Ulviyya".
+  return name.trim().replace(/\s+/g, " ").replace(/[Iİı]/g, "i").toLowerCase();
 }
 
 /**
@@ -290,7 +299,7 @@ export function valueKeyResolver(records: readonly ViewRecord[], vf: ValueFilter
     const id = r[vf.field];
     const name = r[labelField];
     if (!present(id) || !present(name)) continue;
-    const key = String(name).trim();
+    const key = personNameKey(String(name));
     idsByName.set(key, (idsByName.get(key) ?? new Set<string>()).add(String(id)));
   }
   return (r) => {
@@ -316,6 +325,11 @@ export interface ValueFilterOption {
   value: string;
   label: string;
   count: number;
+  /**
+   * FLT-2: a muted second line when another choice has the same name (two different users):
+   * the end of the id, so the two can be told apart.
+   */
+  hint?: string;
 }
 
 /**
@@ -336,7 +350,25 @@ export function valueFilterOptions(records: readonly ViewRecord[], vf: ValueFilt
     byKey.set(key, { value: key, label: key === UNKNOWN_VALUE ? unknownLabel : (valueLabelOf(r, vf) ?? unknownLabel), count: 1 });
   }
   const collator = new Intl.Collator(locale, { sensitivity: "base", numeric: true });
-  return [...byKey.values()].sort((a, b) => (a.value === UNKNOWN_VALUE ? 1 : 0) - (b.value === UNKNOWN_VALUE ? 1 : 0) || collator.compare(a.label, b.label));
+  const options = [...byKey.values()];
+  // The same name on two different ids: two people (or two accounts) — keep them apart, marked.
+  const byName = new Map<string, ValueFilterOption[]>();
+  for (const o of options) {
+    if (o.value === UNKNOWN_VALUE) continue;
+    const k = personNameKey(o.label);
+    byName.set(k, [...(byName.get(k) ?? []), o]);
+  }
+  for (const same of byName.values()) {
+    if (same.length < 2) continue;
+    for (const o of same) if (!o.value.startsWith(NAME_KEY)) o.hint = `#${o.value.replace(/-/g, "").slice(-6)}`;
+  }
+  return options.sort((a, b) => (a.value === UNKNOWN_VALUE ? 1 : 0) - (b.value === UNKNOWN_VALUE ? 1 : 0) || collator.compare(a.label, b.label));
+}
+
+/** FLT-2: a submenu's people: the picked ones first, then the rest, each part in name order. */
+export function pickedFirst(options: readonly ValueFilterOption[], picked: readonly string[]): ValueFilterOption[] {
+  const set = new Set(picked);
+  return [...options.filter((o) => set.has(o.value)), ...options.filter((o) => !set.has(o.value))];
 }
 
 /**
@@ -380,28 +412,6 @@ export function activeFilterCount(def: Pick<ViewDefinition, "filters" | "valueFi
 /** FLT-1 "Clear filters": no fixed filters, no value picks; search, grouping and the rest stay. */
 export function clearAllFilters<S extends Pick<SearchState, "filters" | "values">>(state: S): S {
   return { ...state, filters: [], values: undefined };
-}
-
-/**
- * FLT-1: the next item of a checkbox list for a key (roving focus): arrows move and wrap,
- * Home/End jump; null for any other key.
- */
-export function rovingIndex(key: string, index: number, length: number): number | null {
-  if (length <= 0) return null;
-  switch (key) {
-    case "ArrowDown":
-    case "ArrowRight":
-      return (index + 1) % length;
-    case "ArrowUp":
-    case "ArrowLeft":
-      return (index - 1 + length) % length;
-    case "Home":
-      return 0;
-    case "End":
-      return length - 1;
-    default:
-      return null;
-  }
 }
 
 /** The definition with its value filters, or without them while the screen has them off. */
@@ -873,14 +883,26 @@ const MAX_VALUE_PICKS = 200;
 
 function sanitizeValues(raw: unknown, def: Pick<ViewDefinition, "valueFilters">): { values?: Record<string, string[]> } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const known = new Set((def.valueFilters ?? []).map((vf) => vf.field));
+  const saved = raw as Record<string, unknown>;
   const out: Record<string, string[]> = {};
-  for (const [field, list] of Object.entries(raw as Record<string, unknown>)) {
-    if (!known.has(field) || !Array.isArray(list)) continue;
-    const values = [...new Set(list.filter((v): v is string => typeof v === "string" && v.length > 0 && v.length <= 300))].slice(0, MAX_VALUE_PICKS);
-    if (values.length) out[field] = values;
+  for (const vf of def.valueFilters ?? []) {
+    // FLT-2: picks saved under an older field name (seller_id) or an older spelling of a name
+    // key ("name:Köhnə Məsul") still pick the same people.
+    const lists = [vf.field, ...(vf.legacyFields ?? [])].map((f) => saved[f]).filter(Array.isArray) as unknown[][];
+    const picks = lists
+      .flat()
+      .filter((v): v is string => typeof v === "string" && v.length > 0 && v.length <= 300)
+      .map((v) => (v.startsWith(NAME_KEY) ? `${NAME_KEY}${personNameKey(v.slice(NAME_KEY.length))}` : v));
+    const values = [...new Set(picks)].slice(0, MAX_VALUE_PICKS);
+    if (values.length) out[vf.field] = values;
   }
   return Object.keys(out).length ? { values: out } : {};
+}
+
+/** FLT-2: one person ticked or unticked in a value filter (the other filters' picks kept). */
+export function togglePick(picked: Readonly<Record<string, readonly string[]>> | undefined, field: string, value: string): Record<string, string[]> {
+  const current = picked?.[field] ?? [];
+  return setValuePicks(picked, field, current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
 }
 
 /** Toggle a value in a list (filters, group by levels). Group by keeps its order of choice. */

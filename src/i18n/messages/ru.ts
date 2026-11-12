@@ -4402,6 +4402,10 @@ export const ruMessages: Messages = {
     // INV-3: value filters of the search panel (pick people / partners).
     valueFilters: {
       notLoaded: "Нет в этом списке",
+      clearAll: "Очистить всё",
+      back: "Назад",
+      itemCount: "{name} ({count})",
+      menu: "{name}: выбор",
       group: "Фильтр по людям",
       search: "Поиск по имени…",
       searchIn: "Поиск в «{name}»",

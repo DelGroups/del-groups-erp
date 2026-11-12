@@ -7,3 +7,5 @@ export { default as SalesReportPage } from "./components/SalesReportPage";
 export { default as SalesScreen } from "./components/SalesScreen";
 export { default as SaleFormScreen } from "./components/SaleFormScreen";
 export { default as SalesReportScreen } from "./components/SalesReportScreen";
+/** UI lab (FLT-2, dev only): the sales toolbar with the Filters menu on sample data. */
+export { default as SalesFiltersLab } from "./components/SalesFiltersLab";

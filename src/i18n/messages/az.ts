@@ -4400,6 +4400,10 @@ export const azMessages = {
     // INV-3: value filters of the search panel (pick people / partners).
     valueFilters: {
       notLoaded: "Bu siyahıda yoxdur",
+      clearAll: "Hamısını təmizlə",
+      back: "Geri",
+      itemCount: "{name} ({count})",
+      menu: "{name}: seçim",
       group: "Şəxslərə görə filtr",
       search: "Ad axtarın…",
       searchIn: "“{name}” üzrə axtar",

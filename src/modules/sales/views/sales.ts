@@ -26,6 +26,11 @@ export interface SaleListRecord extends ViewRecord {
   customer_name: string | null;
   seller_id: string | null;
   seller_name: string | null;
+  /**
+   * FLT-2: who the "Satıcı" column names: the issuing user (issued_by), else the stored seller.
+   * The person filter keys on this, so its key and its label describe the same person.
+   */
+  seller_key: string | null;
   warehouse_name: string | null;
   total_amount: number;
   paid_amount: number;
@@ -78,6 +83,8 @@ export function saleToRecord(row: Record<string, unknown>): SaleListRecord {
     customer_name: str(row.customer_name),
     seller_id: str(row.seller_id),
     seller_name: str(row.issued_by_name) ?? str(row.seller_name),
+    // The id of the person seller_name names: the issuer when their name is shown, else the seller.
+    seller_key: str(row.issued_by_name) ? str(row.issued_by) ?? str(row.seller_id) : str(row.seller_id),
     warehouse_name: str(row.warehouse_name),
     total_amount: total,
     paid_amount: paid,
@@ -189,7 +196,9 @@ export function salesDefinition(model: ModelDef<SaleListRecord>): ViewDefinition
     filters: salesFilters(),
     // INV-3 (INVOICE_TOOLS): pick salespeople / creators; by id, shown by name.
     valueFilters: [
-      { field: "seller_id", labelField: "seller_name", labelKey: "invoiceTools.filters.seller" },
+      // FLT-2: by the same person the column shows (issued_by), not seller_id: an issuer selling
+      // for several sellers showed up as several rows with the same name.
+      { field: "seller_key", labelField: "seller_name", labelKey: "invoiceTools.filters.seller", legacyFields: ["seller_id"] },
       { field: "created_by", labelField: "created_by_name", labelKey: "invoiceTools.filters.createdBy" },
     ],
     groupBys: ["doc_status", "payment_state", "warehouse_state", "customer_id", "warehouse_name", "seller_name", "payment_type", "is_official", "doc_date:month", "doc_date:week", "doc_date:quarter"],

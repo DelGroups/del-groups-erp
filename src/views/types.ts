@@ -96,6 +96,8 @@ export interface ValueFilterDef {
   labelField?: string;
   /** i18n key of the filter's name. */
   labelKey: string;
+  /** Older field names whose saved picks (favourites, URLs) still count for this filter. */
+  legacyFields?: readonly string[];
 }
 
 /** Date grouping granularity, used for date and datetime fields. */
