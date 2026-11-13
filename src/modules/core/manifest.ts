@@ -68,6 +68,7 @@ export default defineModule({
     { prefix: "/dashboard/partners", permission: "can_view_customers" },
     { prefix: "/reports", permission: "can_view_reports" },
     { prefix: "/settings/audit", permission: "can_manage_settings" },
+    { prefix: "/settings/date-changes", permission: "can_manage_settings" },
     { prefix: "/settings/backup", permission: "can_manage_settings" },
     { prefix: "/settings/initial-setup", permission: "can_manage_settings" },
     { prefix: "/settings/roles", permission: "can_manage_roles" },

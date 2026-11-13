@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Banknote, Edit, Eye, FileCode2, Package, Printer, Trash2 } from "lucide-react";
+import { Banknote, CalendarClock, Edit, Eye, FileCode2, Package, Printer, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   TableRowActionsMenu,
@@ -20,6 +20,8 @@ interface DocumentListActionsProps {
   onEQaimeExport?: (format: "xml" | "json") => void | Promise<void>;
   /** INV-2 (INVOICE_TOOLS): "Download Excel" / "Download PDF" after Print; leave out to hide them. */
   onInvoiceExport?: (format: InvoiceExportFormat) => void;
+  /** DATE-1 (DOC_DATE_CHANGE, admins, posted only): "Tarixi dəyiş"; leave out to hide it. */
+  onDateChange?: () => void;
   viewTitle?: string;
   printTitle?: string;
   editTitle?: string;
@@ -42,6 +44,7 @@ export default function DocumentListActions({
   onSendToWarehouse,
   onEQaimeExport,
   onInvoiceExport,
+  onDateChange,
   viewTitle,
   printTitle,
   editTitle,
@@ -100,6 +103,9 @@ export default function DocumentListActions({
       onClick: onPayment,
       disabled: paymentDisabled,
     });
+  }
+  if (onDateChange) {
+    items.push({ key: "change_date", label: t("dateChange.action"), icon: <CalendarClock className="h-4 w-4" />, onClick: onDateChange });
   }
   if (onEQaimeExport) {
     items.push(

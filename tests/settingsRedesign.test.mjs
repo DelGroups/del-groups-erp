@@ -28,7 +28,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(`${root}${path}`, "utf8");
 const lookup = (messages, key) => key.split(".").reduce((node, part) => (node && typeof node === "object" ? node[part] : undefined), messages);
 
-const ALL_FLAGS = { barcode: true, billing: true, newImports: true };
+const ALL_FLAGS = { barcode: true, billing: true, newImports: true, docDateChange: true };
 const admin = { can: () => true, isAdmin: true, isEnabled: () => true, newUi: true, flags: ALL_FLAGS };
 const ids = (access) => visibleSettingsItems(access).map((i) => i.id);
 

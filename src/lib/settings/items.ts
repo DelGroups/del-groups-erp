@@ -21,7 +21,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
 ];
 
 /** Feature switches an item depends on, besides its module. */
-export type SettingsItemFlag = "barcode" | "billing" | "newImports";
+export type SettingsItemFlag = "barcode" | "billing" | "newImports" | "docDateChange";
 
 export interface SettingsItem {
   id: string;
@@ -61,6 +61,8 @@ export const SETTINGS_ITEMS: readonly SettingsItem[] = [
   { id: "users", path: "/users", ...t("users"), icon: "Users", group: "access", permission: "can_manage_users" },
   { id: "roles", path: "/settings/roles", ...t("roles"), icon: "ShieldCheck", group: "access", permission: "can_manage_roles" },
   { id: "audit", path: "/settings/audit", ...t("audit"), icon: "ScrollText", group: "access", permission: "can_manage_settings" },
+  // DATE-1 (DOC_DATE_CHANGE): who changed the date of which posted invoice, and why.
+  { id: "date-changes", path: "/settings/date-changes", ...t("dateChanges"), icon: "CalendarClock", group: "access", permission: "can_manage_settings", adminOnly: true, flag: "docDateChange" },
   // Sales and purchasing
   { id: "commissions", path: "/settings/commissions", ...t("commissions"), icon: "Percent", group: "trade", permission: "can_manage_commissions", module: "commissions" },
   { id: "procurement", path: "/settings/procurement", ...t("procurement"), icon: "ShoppingBag", group: "trade", permission: "can_manage_settings", module: "purchases" },

@@ -26,6 +26,8 @@ import { isUiLabOpen, isUiStandardEnabled } from "@/lib/features/uiStandard";
 import { UiStandardProvider } from "@/design-system/components/UiStandard";
 import { isInvoiceToolsEnabled } from "@/lib/features/invoiceTools";
 import { InvoiceToolsProvider } from "@/components/invoices/InvoiceToolsFlag";
+import { isDocDateChangeEnabled } from "@/lib/features/docDateChange";
+import { DocDateChangeProvider } from "@/components/documents/DocDateChangeFlag";
 import { isCountTeamEnabled } from "@/lib/features/countTeam";
 import { isPartnerLedgersEnabled, partnerLedgersAudience } from "@/lib/features/partnerLedgers";
 import { PartnerLedgersProvider } from "@/components/reports/PartnerLedgersFlag";
@@ -127,6 +129,8 @@ export default async function RootLayout({
                         <UiStandardProvider enabled={uiStandard}>
                           {/* INVOICE_TOOLS (INV-1): "New product" in the invoice forms. */}
                           <InvoiceToolsProvider enabled={isInvoiceToolsEnabled()}>
+                          {/* DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place. */}
+                          <DocDateChangeProvider enabled={isDocDateChangeEnabled()}>
                           {/* COUNT_TEAM (INV-4): the count's responsible people from the employee list. */}
                           <CountTeamProvider enabled={isCountTeamEnabled()}>
                           {/* PARTNER_LEDGERS (LED-3): partner statement and debtor reports on the ledger. */}
@@ -141,6 +145,7 @@ export default async function RootLayout({
                             <TableColumnResizer />
                           </PartnerLedgersProvider>
                           </CountTeamProvider>
+                          </DocDateChangeProvider>
                           </InvoiceToolsProvider>
                         </UiStandardProvider>
                       </ListColumnsFlagProvider>

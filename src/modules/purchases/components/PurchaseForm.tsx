@@ -24,6 +24,8 @@ import {
 } from "@/lib/purchases/helpers";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { onlyDateChanged } from "@/lib/documents/dateChange";
 import { amendPurchase, submitPurchase } from "../lib/submitPurchase";
 import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
 import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
@@ -187,6 +189,8 @@ export default function PurchaseForm({
   const [amendReason, setAmendReason] = useState<string | null>(null);
   const amending = amendReason !== null;
   const documentLocked = documentStatus === "posted" && !amending;
+  /** DATE-1: what the invoice was when the amendment started (fingerprint and date). */
+  const [amendBaseline, setAmendBaseline] = useState<{ fp: string; date: string } | null>(null);
   // Payments already booked stay as they are; nothing new is paid while amending.
   const paymentsLocked = documentStatus === "posted";
   const today = todayLocalDate();
@@ -388,6 +392,21 @@ export default function PurchaseForm({
   const newPaymentsTotal = useMemo(() => calcPurchasePaymentsTotal(payments), [payments]);
   const totalPaid = existingPaid + newPaymentsTotal;
   const debt = Math.max(0, grandTotal - totalPaid);
+  // DATE-1 (DOC_DATE_CHANGE, admins): an amendment that changes only the date is a date change in
+  // place. The fingerprint is everything the amendment saves except the date (persistDocument's
+  // header and payload values).
+  const dateChange = useDocumentDateChange(() => {
+    setAmendReason(null);
+    setAmendBaseline(null);
+    onSuccess?.();
+  });
+  const amendFingerprint = JSON.stringify({
+    invoiceNumber, supplierId, warehouseId, dueDate, effectiveResponsibleId, effectiveResponsibleName, grandTotal, totalPaid, debt, notes,
+    isOfficial, contractId, vatMode, voenVerification, officialAmounts, defaultVatRate, additionalExpensesTotal, items, payments, additionalExpenses,
+  });
+  const dateOnlyAmend =
+    amending && dateChange.allowed && amendBaseline !== null &&
+    onlyDateChanged({ fp: amendBaseline.fp, date: amendBaseline.date }, { fp: amendFingerprint, date: docDate }, "date");
   const purchasePreflightIssue = useMemo(
     () =>
       collectPurchaseSubmitPreflightIssues({
@@ -854,16 +873,21 @@ export default function PurchaseForm({
       {amending ? (
         <>
           <p role="status" className="me-auto text-xs font-medium text-amber-600">
-            {t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
+            {dateOnlyAmend ? t("dateChange.formRoute") : t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
           </p>
           <Button
             type="button"
             disabled={saving || Boolean(purchasePreflightIssue)}
             title={purchasePreflightHint}
-            onClick={() => void persistDocument("amend")}
+            onClick={() =>
+              dateOnlyAmend && savedPurchaseId && amendBaseline
+                ? dateChange.open({ type: "purchase", id: savedPurchaseId, label: invoiceNumber, date: amendBaseline.date, initialDate: docDate })
+                : void persistDocument("amend")
+            }
+            data-date-only-amend={dateOnlyAmend ? "" : undefined}
           >
             <CheckCircle2 className="h-4 w-4" />
-            {saving ? t("common.saving") : t("invoice.amend.save")}
+            {saving ? t("common.saving") : dateOnlyAmend ? t("dateChange.action") : t("invoice.amend.save")}
           </Button>
         </>
       ) : documentLocked && savedPurchaseId && canEditPosted ? (
@@ -1580,9 +1604,11 @@ export default function PurchaseForm({
           onConfirm={(reason) => {
             setAmendDialogOpen(false);
             setAmendReason(reason);
+            setAmendBaseline({ fp: amendFingerprint, date: docDate });
           }}
         />
       ) : null}
+      {dateChange.dialog}
       <ToastMessage message={toastMessage} variant={toastVariant} />
 
       {ratingTarget ? (

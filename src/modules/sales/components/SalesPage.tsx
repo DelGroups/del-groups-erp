@@ -38,6 +38,7 @@ import SalesViewModal from "./SalesViewModal";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { fetchSaleById, formatSaleAmount, getSaleRemaining, getSaleWarehouseLabel, type SaleRecord } from "../lib/fetchSales";
 import { recordSalePaymentAction } from "../actions/payments";
@@ -98,6 +99,8 @@ export default function SalesPage() {
   const invoicePrint = useInvoicePrintSystem();
   // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
   const invoiceExport = useInvoiceExport();
+  // DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place.
+  const dateChange = useDocumentDateChange(() => void refetch());
   const vatAccountIds = useVatAccountIds();
   const branding = useCompanyBranding();
   const { can } = useAuth();
@@ -309,6 +312,11 @@ export default function SalesPage() {
         onView={() => void openView(sale)}
         onPrint={() => void openPrint(sale)}
         onInvoiceExport={invoiceExport.enabled ? (format) => void invoiceExport.exportSale(() => fetchSaleById(sale.id), format) : undefined}
+        onDateChange={
+          dateChange.allowed && isSalesPosted(sale.status)
+            ? () => dateChange.open({ type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null })
+            : undefined
+        }
         onEdit={
           canEditSales && isSalesDraft(sale.status)
             ? () => router.push(`/sales/new?draft=${sale.id}`)
@@ -603,6 +611,7 @@ export default function SalesPage() {
         confirmPrint={invoicePrint.confirmPrint}
       />
       {invoiceExport.dialog}
+      {dateChange.dialog}
 
       {warehouseSend.printSlip && (
         <div className="print-area">
