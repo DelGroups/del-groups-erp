@@ -14,6 +14,8 @@ export default defineModule({
     "can_view_warehouse_slips",
     "can_approve_warehouse_slips",
     "can_send_to_warehouse",
+    "can_view_lots",
+    "can_manage_lots",
   ],
   matrix: [
     { group: "inventory", key: "manage_warehouses", label: "Anbarları idarə etmək", legacyKey: "can_manage_warehouses", order: 40 },
@@ -24,6 +26,9 @@ export default defineModule({
     { group: "inventory", key: "view_slips", label: "Anbar qaimələrini görmək", legacyKey: "can_view_warehouse_slips", order: 90 },
     { group: "inventory", key: "approve_slips", label: "Anbar qaimələrini təsdiqləmək", legacyKey: "can_approve_warehouse_slips", order: 100 },
     { group: "inventory", key: "send_to_warehouse", label: "Fakturanı anbara göndərmək", legacyKey: "can_send_to_warehouse", order: 110 },
+    // LOT-1: lots.view / lots.manage (lots_can in 20261115100000_lot_core.sql); admins have both.
+    { group: "inventory", key: "view_lots", label: "Lotları görmək", labelKey: "lots.permissions.view", legacyKey: "can_view_lots", order: 120 },
+    { group: "inventory", key: "manage_lots", label: "Lotları idarə etmək", labelKey: "lots.permissions.manage", legacyKey: "can_manage_lots", order: 130 },
   ],
   menus: [
     { path: "/inventory", label: "nav.items.warehouseStock", icon: "Boxes", section: "inventory", order: 20 },

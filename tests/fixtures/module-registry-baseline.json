@@ -789,6 +789,18 @@
           "key": "send_to_warehouse",
           "label": "Fakturanı anbara göndərmək",
           "legacyKey": "can_send_to_warehouse"
+        },
+        {
+          "key": "view_lots",
+          "label": "Lotları görmək",
+          "labelKey": "lots.permissions.view",
+          "legacyKey": "can_view_lots"
+        },
+        {
+          "key": "manage_lots",
+          "label": "Lotları idarə etmək",
+          "labelKey": "lots.permissions.manage",
+          "legacyKey": "can_manage_lots"
         }
       ]
     },

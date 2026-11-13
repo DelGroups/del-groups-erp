@@ -971,6 +971,9 @@ export const PERMISSION_MODULES = [
       { key: "can_view_warehouse_slips", label: "Anbar qaimələrini görmək" },
       { key: "can_approve_warehouse_slips", label: "Anbar qaimələrini təsdiqləmək" },
       { key: "can_send_to_warehouse", label: "Fakturanı anbara göndərmək" },
+      // LOT-1: lot tracking (lots_can in 20261115100000_lot_core.sql); admins have both.
+      { key: "can_view_lots", label: "Lotları görmək" },
+      { key: "can_manage_lots", label: "Lotları idarə etmək" },
     ],
   },
   {

@@ -4285,6 +4285,7 @@ export const enMessages: Messages = {
       import_before_confirm: "The receipt would be dated before the import was confirmed:",
       import_payment_before_payable: "The payment would be dated before the payable was booked:",
       fx_rate_kept: "Exchange rates do not change: the document keeps the rate it was booked with.",
+      lot_negative: "With this date, a lot balance would go below zero:",
       other_month: "The document moves to another month: the reports of both months change.",
       payments_move: "{count} payment(s) made on the document's day move to the new date as well.",
       far_back: "The new date is more than 90 days ago.",
@@ -4335,6 +4336,12 @@ export const enMessages: Messages = {
         polywood_pieces: "Polywood piece",
         payments: "Payment",
       },
+    },
+  },
+  lots: {
+    permissions: {
+      view: "View lots",
+      manage: "Manage lots",
     },
   },
   settingsNav: {
