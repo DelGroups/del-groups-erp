@@ -11,6 +11,7 @@ import type { PermissionKey } from "@/types/database.types";
 import { draftIssues, isUuid, landedCostOf, parseShipmentDraft, type DraftIssue, type ImportProduct, type ShipmentDraft } from "../lib/shipment";
 import { shipmentFromRows, shipmentListRows, type ShipmentListRow } from "../lib/rows";
 import { splitStockQuantities } from "../lib/lineWarehouses";
+import { lotPayloadKeys } from "@/modules/inventory";
 
 /**
  * Server side of the Imports module (IMP-1). Every action checks NEW_IMPORTS, the module and the
@@ -286,6 +287,8 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
         hs_code: l.hsCode,
         duty_rate_pct: l.dutyRatePct,
         warehouse_id: l.warehouseId,
+        // LOT-2: the planned lot (lot_no_planned, supplier_batch_no, mfg_date, exp_date); none when empty.
+        ...lotPayloadKeys(l.lot, "planned"),
         // IMP-4: the planned split ([] = the whole line into warehouse_id, else the default).
         warehouses: (() => {
           const stock = splitStockQuantities(l, l.warehouses, sheetLengths.get(l.productId) ?? null);
@@ -326,6 +329,10 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
       if (error.message.includes("imports_warehouse_split")) return { success: false, error: "imports.errors.invalid", issues: ["line_warehouse_split"] };
       // IMP-5: a cost paid in the draft keeps its amount, currency, rate, VAT, flag and partner.
       if (error.message.includes("imports_cost_paid_locked")) return { success: false, error: "imports.errors.costPaidLocked" };
+      // LOT-2: planned lot numbers (unique in the shipment, not taken) and dates.
+      if (error.message.includes("lot_no_duplicate")) return { success: false, error: "imports.errors.lotNoDuplicate" };
+      if (error.message.includes("lot_no_taken")) return { success: false, error: "imports.errors.lotNoTaken" };
+      if (error.message.includes("lot_dates_invalid")) return { success: false, error: "imports.errors.lotDatesInvalid" };
       throw new Error(error.message);
     }
     const saved = data as { id: string; number: string };

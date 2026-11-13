@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { lotFromRow } from "@/modules/inventory";
 import { withProfileNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { isInvoiceCancelled } from "@/lib/invoices/invoiceStatus";
 import type {
@@ -20,6 +21,11 @@ function mapItemRow(row: {
   unit_price: number;
   total_price: number;
   id?: string;
+  /** LOT-2 columns (20261115110000). */
+  lot_no?: string | null;
+  supplier_batch_no?: string | null;
+  mfg_date?: string | null;
+  exp_date?: string | null;
 }): PurchaseLineItem {
   return {
     id: row.id || `${row.product_id}-${row.quantity}`,
@@ -30,6 +36,7 @@ function mapItemRow(row: {
     unit: row.unit || "Ədəd",
     unit_price: Number(row.unit_price) || 0,
     total: Number(row.total_price) || 0,
+    lot: lotFromRow(row),
   };
 }
 

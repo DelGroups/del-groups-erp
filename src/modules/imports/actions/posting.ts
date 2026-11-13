@@ -83,7 +83,29 @@ export interface ReceivePayloadLine {
   shipment_line_id: string;
   warehouse_id: string;
   qty_stock_unit: number;
-  expected_qty_stock_unit: number;
+  expected_qty_stock_unit?: number | null;
+  /** LOT-2: the row's lots (only with lot tracking on). */
+  lots?: Record<string, string | number>[];
+}
+
+/** LOT-2: a receipt row's lots, cleaned ({qty_stock_unit, lot_no?, supplier_batch_no?, mfg_date?, exp_date?}). */
+function cleanLots(lots: unknown): Record<string, string | number>[] | null {
+  if (!Array.isArray(lots) || lots.length === 0) return null;
+  const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
+  const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+  return lots.slice(0, 50).map((raw) => {
+    const x = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const out: Record<string, string | number> = { qty_stock_unit: Number(x.qty_stock_unit) || 0 };
+    const no = text(x.lot_no, 60);
+    const batch = text(x.supplier_batch_no, 80);
+    const mfg = day(x.mfg_date);
+    const exp = day(x.exp_date);
+    if (no) out.lot_no = no;
+    if (batch) out.supplier_batch_no = batch;
+    if (mfg) out.mfg_date = mfg;
+    if (exp) out.exp_date = exp;
+    return out;
+  });
 }
 
 export async function receiveShipmentAction(id: string, lines: ReceivePayloadLine[], onDate: string | null, note: string | null, idempotencyKey: string): Promise<PostingResult<Row>> {
@@ -93,7 +115,16 @@ export async function receiveShipmentAction(id: string, lines: ReceivePayloadLin
     const clean = lines
       .slice(0, 500)
       .filter((l) => isUuid(l?.shipment_line_id) && isUuid(l?.warehouse_id) && Number(l?.qty_stock_unit) > 0)
-      .map((l) => ({ shipment_line_id: l.shipment_line_id, warehouse_id: l.warehouse_id, qty_stock_unit: Number(l.qty_stock_unit), expected_qty_stock_unit: Number(l.expected_qty_stock_unit) || null }));
+      .map((l) => {
+        const lots = cleanLots(l.lots);
+        return {
+          shipment_line_id: l.shipment_line_id,
+          warehouse_id: l.warehouse_id,
+          qty_stock_unit: Number(l.qty_stock_unit),
+          expected_qty_stock_unit: Number(l.expected_qty_stock_unit) || null,
+          ...(lots ? { lots } : {}),
+        };
+      });
     return await rpc("receive_import_shipment", {
       p_id: id,
       p_lines: clean,
@@ -396,7 +427,15 @@ export interface ReceiptView {
   receiptDate: string;
   note: string | null;
   createdByName: string | null;
-  lines: { id: string; shipmentLineId: string; warehouseId: string; qtyStockUnit: number; expectedQtyStockUnit: number | null; valueAzn: number }[];
+  lines: { id: string; shipmentLineId: string; warehouseId: string; qtyStockUnit: number; expectedQtyStockUnit: number | null; valueAzn: number; lotId?: string | null }[];
+}
+
+/** LOT-2: a received lot (number, supplier batch, expiry), for the chips and the labels. */
+export interface ReceivedLotView {
+  id: string;
+  lotNo: string;
+  supplierBatchNo: string | null;
+  expDate: string | null;
 }
 
 export interface JournalLineView {
@@ -435,6 +474,8 @@ export interface PostingView {
   }[];
   prepayments: PrepaymentView[];
   receipts: ReceiptView[];
+  /** LOT-2: the received lots by id (empty before 20261115110000). */
+  lots: Record<string, ReceivedLotView>;
   journal: JournalEntryView[];
   transitBalance: number;
   /** IMP-5: the timeline (empty before migration 20261105100000). */
@@ -468,6 +509,10 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
       receiptIds.length ? rows(admin.from("import_receipt_lines").select("*").in("receipt_id", receiptIds)) : Promise.resolve([] as Row[]),
       entryIds.length ? rows(admin.from("journal_entry_lines").select("journal_entry_id, coa_id, debit, credit, line_memo, partner_id").in("journal_entry_id", entryIds)) : Promise.resolve([] as Row[]),
     ]);
+    // LOT-2: the received lots; import_receipt_lines.lot_id and stock_lots come with the lot migrations.
+    const lotIds = [...new Set(receiptLines.map((l) => l.lot_id).filter((id): id is string => isUuid(id)))];
+    const lotsRes = lotIds.length ? await admin.from("stock_lots").select("id, lot_no, supplier_batch_no, exp_date").in("id", lotIds) : null;
+    const lotRows = lotsRes && !lotsRes.error ? ((lotsRes.data as Row[] | null) ?? []) : [];
     const coaIds = [...new Set(journalLines.map((l) => l.coa_id).filter(isUuid))];
     const partnerIds = [...new Set(journalLines.map((l) => l.partner_id).filter(isUuid))];
     const supplierIds = [...new Set(payables.map((p) => p.partner_id).filter(isUuid))];
@@ -535,8 +580,15 @@ export async function getPostingViewAction(shipmentId: string): Promise<PostingR
               qtyStockUnit: num(l.qty_stock_unit),
               expectedQtyStockUnit: l.expected_qty_stock_unit === null || l.expected_qty_stock_unit === undefined ? null : num(l.expected_qty_stock_unit),
               valueAzn: num(l.value_azn),
+              lotId: isUuid(l.lot_id) ? l.lot_id : null,
             })),
         })),
+        lots: Object.fromEntries(
+          lotRows.map((x) => [
+            String(x.id),
+            { id: String(x.id), lotNo: String(x.lot_no), supplierBatchNo: (x.supplier_batch_no as string | null) ?? null, expDate: (x.exp_date as string | null) ?? null },
+          ])
+        ),
         journal: entries.map((e) => ({
           id: String(e.id),
           entryNo: String(e.entry_no),

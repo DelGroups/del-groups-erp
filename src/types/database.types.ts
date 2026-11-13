@@ -824,6 +824,8 @@ export interface PurchaseLineItem {
   currency?: InvoiceCurrency;
   /** Rate to convert this line into AZN for the invoice's blended total; undefined = 1 */
   exchange_rate?: number;
+  /** LOT-2 (LOT_TRACKING): the line's lot (same shape as LotFieldsValue in @/modules/inventory); undefined = none. */
+  lot?: { lotNo: string | null; supplierBatchNo: string | null; mfgDate: string | null; expDate: string | null };
 }
 
 export interface PurchaseItemRow {

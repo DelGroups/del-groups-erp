@@ -1,3 +1,4 @@
+import { lotPayloadKeys } from "@/modules/inventory";
 import { validateCashPaymentsRequireAccount } from "@/lib/finance/accountLedger";
 import { purchaseReceiptIdempotencyKey } from "@/lib/finance/erpEvents";
 import {
@@ -81,6 +82,8 @@ function buildDraftRpcPayload(payload: SubmitPurchasePayload, validItems: Purcha
       total_price: item.total,
       currency: item.currency || "AZN",
       exchange_rate: item.exchange_rate || 1,
+      // LOT-2: the line's lot fields; none when empty (saved exactly as before).
+      ...lotPayloadKeys(item.lot),
     })),
     payments,
     additional_expenses: documentExpensesToRpcPayload(payload.additionalExpenses || []),
@@ -112,6 +115,7 @@ function buildCreatePurchasePayload(payload: SubmitPurchasePayload, validItems: 
       unit: item.unit || "Ədəd",
       unit_price: item.unit_price,
       total_price: item.total,
+      ...lotPayloadKeys(item.lot),
     })),
     payments: (payload.payments || []).map((pay) => ({
       account_id: pay.account_id || null,

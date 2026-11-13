@@ -5,6 +5,7 @@ import { adjustProductStockAtWarehouse } from "@/lib/inventory/warehouseProductS
 import { isFullSheetLength } from "@/lib/polywood/constants";
 import { isMetricProduct, resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import { recordStockMovement } from "@/lib/inventory/stockMovements";
+import { lotFromRow, lotPayloadKeys } from "../lib/lotFields";
 import { generatePieceBarcode } from "@/lib/products/generateBarcode";
 import type {
   SaveInitialBalanceInput,
@@ -125,6 +126,7 @@ export async function fetchInitialBalanceByIdAction(
         is_metric: Boolean(row.is_metric),
         metric_total_meters: Number(row.metric_total_meters) || 0,
         piece_lengths_input: toNumberArray(row.piece_lengths).join(", "),
+        lot: lotFromRow(row as Record<string, unknown>),
       })) || [];
 
     return {
@@ -227,6 +229,8 @@ export async function saveInitialBalanceDraftAction(
       is_metric: item.is_metric,
       metric_total_meters: item.is_metric ? item.metric_total_meters : null,
       piece_lengths: item.is_metric ? item.piece_lengths : null,
+      // LOT-2: the line's lot fields (columns from 20261115110000); none when empty.
+      ...lotPayloadKeys(item.lot),
     }));
 
     const { error: itemsError } = await admin.from("inventory_initial_balance_items").insert(rows);
@@ -256,7 +260,9 @@ async function insertMetricPieces(
   warehouseId: string,
   pieceLengths: number[],
   fullSheetLengthM: number,
-  sourceDocumentId: string
+  sourceDocumentId: string,
+  lotDoc?: Record<string, string>,
+  lotFields?: Record<string, string>
 ): Promise<number> {
   const now = new Date().toISOString();
   const rows = pieceLengths.map((length) => {
@@ -277,9 +283,52 @@ async function insertMetricPieces(
   });
 
   if (rows.length === 0) return 0;
+  // LOT-2: the pieces on the line's lot (lot_insert_inbound_pieces); before the migration as before.
+  if (lotDoc) {
+    const { error: lotError } = await lotRpc(admin, "lot_insert_inbound_pieces", { p_doc: lotDoc, p_fields: lotFields ?? {}, p_rows: rows });
+    if (!lotError) return pieceLengths.reduce((sum, length) => sum + length, 0);
+    if (!isMissingFunction(lotError)) throw new Error(lotError.message);
+  }
   const { error } = await admin.from("polywood_pieces").insert(rows);
   if (error) throw new Error(error.message);
   return pieceLengths.reduce((sum, length) => sum + length, 0);
+}
+
+type LotRpcError = { code?: string; message: string } | null;
+
+/** An RPC that may not exist yet (the lot migrations run after this code is deployed). */
+function lotRpc(
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
+  fn: string,
+  args: Record<string, unknown>
+): PromiseLike<{ error: LotRpcError }> {
+  const rpc = admin.rpc as unknown as (name: string, params: Record<string, unknown>) => PromiseLike<{ error: LotRpcError }>;
+  return rpc.call(admin, fn, args);
+}
+
+function isMissingFunction(error: LotRpcError): boolean {
+  return Boolean(error && (error.code === "PGRST202" || /could not find the function/i.test(error.message || "")));
+}
+
+/** LOT-2: a stock increase on the line's lot in one transaction; before the migration as before. */
+async function adjustStockOnLot(
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
+  lotDoc: Record<string, string>,
+  lotFields: Record<string, string>,
+  productId: string,
+  warehouseId: string,
+  qty: number
+): Promise<void> {
+  const { error } = await lotRpc(admin, "lot_post_inbound_line", {
+    p_doc: lotDoc,
+    p_product: productId,
+    p_warehouse: warehouseId,
+    p_qty: qty,
+    p_fields: lotFields,
+  });
+  if (!error) return;
+  if (!isMissingFunction(error)) throw new Error(error.message);
+  await adjustProductStockAtWarehouse(admin, productId, warehouseId, qty);
 }
 
 export async function postInitialBalanceDocumentAction(
@@ -331,6 +380,13 @@ export async function postInitialBalanceDocumentAction(
     const warehouseId = header.warehouse_id as string;
     const entryType = (header.entry_type as InitialBalanceEntryType) || "opening_balance";
     const referenceType = REFERENCE_TYPE[entryType];
+    // LOT-2: the lot context of this document's lines.
+    const lotDoc: Record<string, string> = {
+      doc_type: "inventory_initial_balance",
+      doc_id: documentId,
+      doc_no: String((header as Record<string, unknown>).document_number ?? ""),
+      origin_type: entryType === "receipt" ? "manual" : "opening",
+    };
 
     for (const item of items) {
       const productId = item.product_id as string;
@@ -371,7 +427,9 @@ export async function postInitialBalanceDocumentAction(
           warehouseId,
           pieceLengths,
           barLengthM,
-          documentId
+          documentId,
+          { ...lotDoc, doc_line_id: String((item as Record<string, unknown>).id ?? "") },
+          lotPayloadKeys(lotFromRow(item as Record<string, unknown>))
         );
         const newStock = await syncPolywoodProductStockFromPieces(admin, productId, warehouseId);
         const newBuy = calcWeightedBuyPrice(oldStock, oldBuy, addedQty, unitCost, newStock);
@@ -436,7 +494,15 @@ export async function postInitialBalanceDocumentAction(
         const newBuy = calcWeightedBuyPrice(oldStock, oldBuy, qty, unitCost, newStock);
 
         // The warehouse row and the product total move together; the row used to get the total.
-        await adjustProductStockAtWarehouse(admin, productId, warehouseId, qty);
+        // LOT-2: on the line's lot in the same transaction (lot_post_inbound_line), else as before.
+        await adjustStockOnLot(
+          admin,
+          { ...lotDoc, doc_line_id: String((item as Record<string, unknown>).id ?? "") },
+          lotPayloadKeys(lotFromRow(item as Record<string, unknown>)),
+          productId,
+          warehouseId,
+          qty
+        );
         await admin.from("products").update({ buy_price: newBuy }).eq("id", productId);
 
         await recordStockMovement(admin, {
