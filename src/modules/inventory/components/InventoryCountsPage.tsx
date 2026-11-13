@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardCheck, Eye, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, ClipboardCheck, Eye, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import PageLayout from "@/components/layout/PageLayout";
@@ -17,6 +17,7 @@ import { Modal } from "@/components/ui/modal";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import { ActionsTd, ActionsTh, Table, TableWrap, THead, Tr } from "@/components/ui/table";
 import { InventoryCountStatusBadge, VarianceAmount } from "./InventoryCountStatusBadge";
 import { useToast } from "@/hooks/useToast";
@@ -329,6 +330,8 @@ export default function InventoryCountsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  // DOC_DATE_CHANGE (DATE-3): admins change a posted count's date in place.
+  const dateChange = useDocumentDateChange(() => void load());
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: rows.length };
@@ -408,6 +411,13 @@ export default function InventoryCountsPage() {
               label: t("common.view"),
               icon: <Eye className="h-4 w-4" />,
               onClick: () => openCount(row.id),
+            },
+            {
+              key: "change_date",
+              label: t("dateChange.action"),
+              icon: <CalendarClock className="h-4 w-4" />,
+              hidden: !(dateChange.allowed && row.status === "posted"),
+              onClick: () => dateChange.open({ type: "inventory_count", id: row.id, label: row.document_number, date: row.count_date ?? null }),
             },
             {
               key: "delete",
@@ -530,6 +540,7 @@ export default function InventoryCountsPage() {
         onCancel={() => setDeleteTarget(null)}
       />
       <ToastMessage message={toastMessage} variant={toastVariant} />
+      {dateChange.dialog}
     </PageLayout>
   );
 }

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import PageHeader from "@/components/ui/page-header";
+import { DateChangeButton, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -379,6 +380,9 @@ export default function InventoryCountDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  // DOC_DATE_CHANGE (DATE-3): admins change a posted count's date in place (posted counts only;
+  // a draft's date is edited in the header as before, F2).
+  const dateChange = useDocumentDateChange(() => void load());
 
   const patchLine = useCallback((line: InventoryCountLine) => {
     setDoc((prev) => {
@@ -781,6 +785,12 @@ export default function InventoryCountDetailPage() {
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
+      {dateChange.allowed && isPosted ? (
+        <DateChangeButton
+          disabled={busy}
+          onClick={() => dateChange.open({ type: "inventory_count", id: doc.id, label: doc.document_number, date: doc.count_date ?? null })}
+        />
+      ) : null}
       {canEditHeader || canEditTeam ? (
         <Button
           appearance="outline"
@@ -1440,6 +1450,7 @@ export default function InventoryCountDetailPage() {
         onCancel={() => setDeleteOpen(false)}
       />
       <ToastMessage message={toastMessage} variant={toastVariant} />
+      {dateChange.dialog}
     </PageLayout>
   );
 }
