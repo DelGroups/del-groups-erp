@@ -8,6 +8,8 @@ import PageLayout from "@/components/layout/PageLayout";
 import { InvoicePrintSystem, useInvoicePrintSystem } from "@/components/print/InvoicePrintSystem";
 import { fetchSaleById, getSaleRemaining, type SaleRecord } from "../lib/fetchSales";
 import { mapSaleToInvoicePrint } from "../lib/mapSaleToInvoicePrint";
+import { DateChangeButton, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { isSalesPosted } from "@/lib/invoices/invoiceStatus";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { InvoiceExportButtons } from "@/components/invoices/invoiceExportActions";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -39,6 +41,8 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const [sale, setSale] = useState<SaleRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  // DOC_DATE_CHANGE (DATE-1): "Tarixi dəyiş" for admins on a posted invoice.
+  const dateChange = useDocumentDateChange(() => void fetchSaleById(saleId).then(setSale));
 
   useEffect(() => {
     void fetchSaleById(saleId).then((row) => {
@@ -83,6 +87,9 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
             />
             {invoiceExport.enabled ? (
               <InvoiceExportButtons t={t} disabled={!sale} onExport={(format) => sale && void invoiceExport.exportSale(sale, format)} />
+            ) : null}
+            {dateChange.allowed && sale && isSalesPosted(sale.status) ? (
+              <DateChangeButton onClick={() => dateChange.open({ type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null })} />
             ) : null}
             <button
               type="button"
@@ -217,6 +224,7 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
         confirmPrint={invoicePrint.confirmPrint}
       />
       {invoiceExport.dialog}
+      {dateChange.dialog}
       <ToastMessage message={toastMessage} variant={toastVariant} />
     </PageLayout>
   );

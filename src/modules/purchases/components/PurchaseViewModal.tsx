@@ -11,19 +11,30 @@ import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { InvoiceExportButtons } from "@/components/invoices/invoiceExportActions";
+import { DateChangeButton, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { normalizePurchaseDocumentStatus } from "@/lib/invoices/invoiceStatus";
+import { purchaseDocumentDate } from "../lib/purchaseDates";
 
 interface PurchaseViewModalProps {
   purchase: PurchaseRecord;
   onClose: () => void;
+  /** After a date change (DATE-1): the list reloads. */
+  onChanged?: () => void;
 }
 
-export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewModalProps) {
+export default function PurchaseViewModal({ purchase, onClose, onChanged }: PurchaseViewModalProps) {
   const { t } = useI18n();
   // UI_STANDARD (UI-6): the purchase lines on the grid; old table with the flag off.
   const standard = useUiStandard();
   const branding = useCompanyBranding();
   // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" next to the e-qaimə export.
   const invoiceExport = useInvoiceExport();
+  // DOC_DATE_CHANGE (DATE-1): "Tarixi dəyiş" for admins on a posted invoice; the list reloads.
+  const dateChange = useDocumentDateChange(() => {
+    onChanged?.();
+    onClose();
+  });
+  const datePosted = normalizePurchaseDocumentStatus(purchase.status) === "posted";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center app-scrim p-4">
@@ -93,6 +104,9 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
               <span className="text-emerald-600">{t("print.paid")}: {purchase.paid_amount.toFixed(2)}</span>
               <span className="text-rose-600">{t("modals.purchaseView.debt")}: {purchase.debt_amount.toFixed(2)}</span>
             </div>
+            {dateChange.allowed && datePosted ? (
+              <DateChangeButton onClick={() => dateChange.open({ type: "purchase", id: purchase.id, label: purchase.invoice_number || purchase.id, date: purchaseDocumentDate(purchase) })} />
+            ) : null}
             {invoiceExport.enabled ? (
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <InvoiceExportButtons t={t} onExport={(format) => void invoiceExport.exportPurchase(purchase, format)} />
@@ -106,6 +120,7 @@ export default function PurchaseViewModal({ purchase, onClose }: PurchaseViewMod
           </div>
         </div>
       </div>
+      {dateChange.dialog}
     </div>
   );
 }

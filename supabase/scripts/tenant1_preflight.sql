@@ -181,6 +181,9 @@ union all
 select 'pending', '20261114100000_partner_debtor_reports: Debtor / creditor reports and turnover per partner',
        case when to_regprocedure('public.get_debtor_creditor_report(date, text, jsonb, text, text, integer, integer)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261110150000_document_date_change_core: change the date of a posted invoice in place (DATE-1)',
+       case when to_regclass('public.document_date_changes') is null or to_regprocedure('public.apply_document_date_change(text, uuid, date, text, jsonb, text[])') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

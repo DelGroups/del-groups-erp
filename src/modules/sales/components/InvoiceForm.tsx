@@ -127,6 +127,8 @@ import {
 import { productCode } from "@/lib/products/productOptionLabel";
 import ProductCombobox from "@/components/products/ProductCombobox";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { onlyDateChanged } from "@/lib/documents/dateChange";
 import { useUiStandard } from "@/design-system/components";
 import { reorderByKeys } from "@/components/line-grid";
 import { SalesLinesGrid } from "./SalesLinesGrid";
@@ -451,6 +453,8 @@ export default function UniversalInvoiceForm({
   const [amendDialogOpen, setAmendDialogOpen] = useState(false);
   /** Reason of the admin change in progress; null = not amending. */
   const [amendReason, setAmendReason] = useState<string | null>(null);
+  /** DATE-1: what the invoice was when the amendment started (fingerprint and date). */
+  const [amendBaseline, setAmendBaseline] = useState<{ fp: string; date: string } | null>(null);
   const { t } = useI18n();
   // UI_STANDARD (UI-2 lookups): customer and payment accounts through EntityLookup.
   const uiStandard = useUiStandard();
@@ -1490,6 +1494,21 @@ export default function UniversalInvoiceForm({
 
   const amending = amendReason !== null;
   const documentLocked = Boolean(savedSaleId) && documentStatus === "posted" && !amending;
+  // DATE-1 (DOC_DATE_CHANGE, admins): an amendment that changes only the date is a date change in
+  // place (the rows move, nothing is reversed or posted again). The fingerprint is everything the
+  // amendment saves except the date (the values persistDocument builds the payload from).
+  const dateChange = useDocumentDateChange(() => {
+    setAmendReason(null);
+    setAmendBaseline(null);
+    onSuccess?.();
+  });
+  const amendFingerprint = JSON.stringify({
+    items, payments, selectedCustomerId, effectiveSellerId, effectiveSellerName, totals, displayTotals, officialAmounts,
+    deliveryAddress, deliveryType, notes, additionalExpenses, paymentType, dueDate, isOfficial, vatMode, contractId, voenVerification,
+  });
+  const dateOnlyAmend =
+    amending && dateChange.allowed && amendBaseline !== null &&
+    onlyDateChanged({ fp: amendBaseline.fp, date: amendBaseline.date }, { fp: amendFingerprint, date: docDate }, "date");
   // Payments already booked stay as they are during an admin change.
   const paymentsLocked = documentLocked || amending;
   const today = todayLocalDate();
@@ -1714,7 +1733,7 @@ export default function UniversalInvoiceForm({
   const actionButtons = amending ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <p role="status" className="me-auto text-xs font-medium text-amber-600">
-        {t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
+        {dateOnlyAmend ? t("dateChange.formRoute") : t("invoice.amend.inProgress", { reason: amendReason ?? "" })}
       </p>
       <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => setAmendReason(null)}>
         {t("common.cancel")}
@@ -1726,10 +1745,15 @@ export default function UniversalInvoiceForm({
         disabled={saving || Boolean(salePreflightIssue)}
         title={salePreflightHint}
         loading={saving}
-        onClick={() => void persistDocument("amend")}
+        onClick={() =>
+          dateOnlyAmend && savedSaleId && amendBaseline
+            ? dateChange.open({ type: "sale", id: savedSaleId, label: docNo, date: amendBaseline.date, initialDate: docDate })
+            : void persistDocument("amend")
+        }
+        data-date-only-amend={dateOnlyAmend ? "" : undefined}
       >
         <CheckCircle2 className="h-4 w-4" />
-        {saving ? t("common.saving") : t("invoice.amend.save")}
+        {saving ? t("common.saving") : dateOnlyAmend ? t("dateChange.action") : t("invoice.amend.save")}
       </Button>
     </div>
   ) : (
@@ -3313,9 +3337,11 @@ export default function UniversalInvoiceForm({
         onConfirm={(reason) => {
           setAmendDialogOpen(false);
           setAmendReason(reason);
+          setAmendBaseline({ fp: amendFingerprint, date: docDate });
         }}
       />
     ) : null}
+    {dateChange.dialog}
     <ToastMessage message={toastMessage} variant={toastVariant} />
     <InvoicePrintSystem
       branding={invoicePrint.branding}

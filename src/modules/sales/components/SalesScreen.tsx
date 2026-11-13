@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Ban, Banknote, BarChart3, FileCode2, FileJson, PencilLine, Plus, Printer, Truck } from "lucide-react";
+import { Ban, Banknote, BarChart3, CalendarClock, FileCode2, FileJson, PencilLine, Plus, Printer, Truck } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { invalidateModel, useFilterContext, useFormatter, useViewData, ViewEngine, ViewScope, type RowActionSpec, type ViewRecord } from "@/views";
@@ -12,6 +12,8 @@ import { SALES_DEFINITION } from "../hooks/useSalesDefinition";
 import { SalesDashboard } from "./SalesDashboard";
 import { useInvoiceTools } from "@/components/invoices/InvoiceToolsFlag";
 import { invoiceExportRowActions } from "@/components/invoices/invoiceExportActions";
+import { DATE_CHANGE_ACTION_KEY } from "@/components/documents/DocumentDateChange";
+import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
 
 /** Sales invoices on the view engine (new UI): dashboard, then list, kanban, pivot, graph, calendar. */
 export default function SalesScreen() {
@@ -31,6 +33,8 @@ function SalesBody() {
   const data = useViewData(SALES_DEFINITION);
   // INVOICE_TOOLS (INV-2, INV-3): export entries in the row menu, person filters in the search panel.
   const exportOn = useInvoiceTools();
+  // DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place.
+  const dateChangeOn = useDocDateChangeAllowed();
   const [preset, setPreset] = useState<{ id: number; filters: string[] } | undefined>(undefined);
 
   // Invoices are saved in the invoice form; always show the latest when the list opens.
@@ -50,7 +54,7 @@ function SalesBody() {
         ctx={ctx}
         preset={preset}
         openHref={(r) => `/sales/${r.id}`}
-        rowActions={(r) => salesRowActions(r, t, can, exportOn)}
+        rowActions={(r) => salesRowActions(r, t, can, exportOn, dateChangeOn)}
         // INVOICE_TOOLS (INV-3): pick salespeople / creators in the search panel.
         valueFilters={exportOn}
         actions={
@@ -78,12 +82,13 @@ function SalesBody() {
  * The row "…" menu of the invoice list (UI-5): the same actions as the classic list and the
  * invoice form (SaleFormScreen), shown as the row's status allows; the form runs them (?do=).
  */
-function salesRowActions(r: ViewRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"], exportOn = false): RowActionSpec[] {
+function salesRowActions(r: ViewRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"], exportOn = false, dateChangeOn = false): RowActionSpec[] {
   const status = String(r.doc_status ?? "");
   const icon = (C: typeof Printer) => <C className="h-4 w-4" />;
   return [
     { key: "edit", label: t("sales.engine.actions.editDraft"), icon: icon(PencilLine), hidden: !(status === "draft" && can("can_edit_sales")) },
     { key: "amend", label: t("invoice.amend.edit"), icon: icon(PencilLine), hidden: !(status === "posted" && can("can_edit_posted_sales")) },
+    { key: DATE_CHANGE_ACTION_KEY, label: t("dateChange.action"), icon: icon(CalendarClock), hidden: !(dateChangeOn && status === "posted") },
     { key: "pay", label: t("sales.engine.actions.registerPayment"), icon: icon(Banknote), hidden: !(Number(r.remaining ?? 0) > 0) || status === "cancelled" },
     { key: "print", label: t("common.print"), icon: icon(Printer) },
     ...invoiceExportRowActions(t, exportOn),

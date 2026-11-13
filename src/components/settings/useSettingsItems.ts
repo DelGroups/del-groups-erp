@@ -1,5 +1,6 @@
 "use client";
 
+import { useDocDateChangeFlag } from "@/components/documents/DocDateChangeFlag";
 import { useMemo } from "react";
 import {
   Barcode,
@@ -77,6 +78,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
   const { can, isAdmin } = useAuth();
   const { isEnabled } = useEnabledModules();
   const { active: newUi, newImports, settingsV2 } = useNewUi();
+  const docDateChange = useDocDateChangeFlag();
   const { t } = useI18n();
   const v2 = newUi && settingsV2;
 
@@ -87,7 +89,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       isAdmin,
       isEnabled: (m) => isEnabled(m as ModuleId | undefined),
       newUi,
-      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports },
+      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports, docDateChange },
       v2,
     }).map((item) => ({
       ...item,
@@ -96,7 +98,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       groupTitle: groupTitle.get(item.group) ?? "",
       Icon: settingsIcon(item.icon),
     }));
-  }, [can, isAdmin, isEnabled, newUi, newImports, v2, t]);
+  }, [can, isAdmin, isEnabled, newUi, newImports, docDateChange, v2, t]);
 
   return { items, v2 };
 }

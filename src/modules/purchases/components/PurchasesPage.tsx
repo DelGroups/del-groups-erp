@@ -11,10 +11,11 @@ import PurchaseForm from "./PurchaseForm";
 import PurchaseDocumentStatusBadge from "./PurchaseDocumentStatusBadge";
 import { isPurchaseDraft, normalizePurchaseDocumentStatus } from "@/lib/invoices/invoiceStatus";
 import PurchaseViewModal from "./PurchaseViewModal";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { purchaseDocumentDate } from "../lib/purchaseDates";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import PurchaseRequisitionsPanel from "./PurchaseRequisitionsPanel";
 import DocumentPaymentModal from "@/components/documents/DocumentPaymentModal";
-import { purchaseDocumentDate } from "../lib/purchaseDates";
 import {
   fetchPurchaseById,
   fetchPurchaseFormData,
@@ -102,6 +103,8 @@ export default function PurchasesPage() {
     setWarehouses(formData.warehouses);
     setLoading(false);
   }, []);
+  // DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place.
+  const dateChange = useDocumentDateChange(() => void loadData());
 
   const warehouseSend = useWarehouseDocumentSend(sendPurchaseToWarehouseAction, loadData);
 
@@ -283,6 +286,11 @@ export default function PurchasesPage() {
           onView={() => void openView(row)}
           onPrint={() => void openPrint(row)}
           onInvoiceExport={invoiceExport.enabled ? (format) => void invoiceExport.exportPurchase(() => fetchPurchaseById(row.id), format) : undefined}
+          onDateChange={
+            dateChange.allowed && normalizePurchaseDocumentStatus(row.status) === "posted"
+              ? () => dateChange.open({ type: "purchase", id: row.id, label: row.invoice_number || row.id, date: purchaseDocumentDate(row) })
+              : undefined
+          }
           onPayment={() => void openPayment(row)}
           onEQaimeExport={(format) => exportEQaime(row, format)}
           paymentDisabled={debtBreakdown.totalRemaining <= 0}
@@ -474,6 +482,7 @@ export default function PurchasesPage() {
           </div>
             </>
           )}
+        {dateChange.dialog}
       </ListPageChrome>
 
       {isFormOpen && (
@@ -494,7 +503,7 @@ export default function PurchasesPage() {
       )}
 
       {viewingPurchase && (
-        <PurchaseViewModal purchase={viewingPurchase} onClose={() => setViewingPurchase(null)} />
+        <PurchaseViewModal purchase={viewingPurchase} onClose={() => setViewingPurchase(null)} onChanged={() => void loadData()} />
       )}
 
       {paymentPurchase && (

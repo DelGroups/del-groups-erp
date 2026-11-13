@@ -33,6 +33,7 @@ import { SALES_DEFINITION } from "../hooks/useSalesDefinition";
 import { SALES_VIEW_KEY } from "../views/sales";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { invoiceExportFormActions } from "@/components/invoices/invoiceExportActions";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 
 /** One sales invoice in the view engine's form (new UI), read-only like the classic detail page. */
 export default function SaleFormScreen({ id }: { id: string }) {
@@ -57,6 +58,8 @@ function SaleForm({ id }: { id: string }) {
   const invoicePrint = useInvoicePrintSystem();
   // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" next to Print.
   const invoiceExport = useInvoiceExport();
+  // DOC_DATE_CHANGE (DATE-1): "Tarixi dəyiş" for admins on a posted invoice.
+  const dateChange = useDocumentDateChange(() => void invalidateModel(client, SALES_VIEW_KEY));
   const data = useViewRecord(SALES_DEFINITION, id);
   const sale = data.row as unknown as SaleRecord | null;
   const [paying, setPaying] = useState(false);
@@ -129,6 +132,7 @@ function SaleForm({ id }: { id: string }) {
     ...(debt.totalRemaining > 0 ? [{ key: "pay", label: t("sales.engine.actions.registerPayment"), primary: !isDraft, icon: <Banknote className="h-4 w-4" aria-hidden />, onClick: () => setPaying(true) }] : []),
     { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => invoicePrint.requestPrint(mapSaleToInvoicePrint(sale)) },
     ...invoiceExportFormActions(t, invoiceExport.enabled, (format) => void invoiceExport.exportSale(sale, format)),
+    ...dateChange.formActions(record.doc_status === "posted", { type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null }),
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: <FileCode2 className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("xml") },
     { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: <FileJson className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("json") },
     ...(send.show
@@ -361,6 +365,7 @@ function SaleForm({ id }: { id: string }) {
         confirmPrint={invoicePrint.confirmPrint}
       />
       {invoiceExport.dialog}
+      {dateChange.dialog}
       {warehouseSend.printSlip ? (
         <div className="print-area">
           <WarehouseSlipPrintTemplate slip={warehouseSend.printSlip} />
