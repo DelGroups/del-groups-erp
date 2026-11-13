@@ -86,7 +86,17 @@ type CreateSaleAtomicItemPayload = {
   price_tier: string;
   currency: string;
   exchange_rate: number;
+  /** LOT-3: only when lots were chosen (LOT_TRACKING); a single lot follows the line quantity. */
+  lots?: { lot_id: string; qty: number }[];
 };
+
+/** The chosen lots of a line for the payload, or undefined (automatic: no key is sent). */
+export function saleLineLots(item: Pick<SaleItem, "lots" | "quantity" | "polywood_sale_mode">): { lot_id: string; qty: number }[] | undefined {
+  const lots = (item.lots ?? []).filter((l) => l && typeof l.lot_id === "string" && Number(l.qty) > 0);
+  if (!lots.length || item.polywood_sale_mode) return undefined;
+  if (lots.length === 1) return [{ lot_id: lots[0].lot_id, qty: Math.round(Number(item.quantity) * 1000) / 1000 }];
+  return lots.map((l) => ({ lot_id: l.lot_id, qty: Math.round(Number(l.qty) * 1000) / 1000 }));
+}
 
 /** One line of the create/amend RPC payload (exported for the GRID-2 payload test). */
 export function mapSaleItemToRpcPayload(
@@ -114,7 +124,8 @@ export function mapSaleItemToRpcPayload(
   };
 
   if (!item.polywood_sale_mode) {
-    return base;
+    const lots = saleLineLots(item);
+    return lots ? { ...base, lots } : base;
   }
 
   const polywoodLengthM =

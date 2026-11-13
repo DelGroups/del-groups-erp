@@ -66,6 +66,8 @@ export interface AddProductionMaterialInput {
   issue_now?: boolean;
   /** User confirmed creating a purchase request for the stock deficit. */
   confirm_deficit_purchase?: boolean;
+  /** LOT-3 (LOT_TRACKING): the lots chosen for the issue ([{lot_id, qty}]); none = automatic (FEFO). */
+  lots?: { lot_id: string; qty: number }[] | null;
 }
 
 /** Remove leaked UI keys from a raw object (e.g. after `{ ...formRow }` spreads). */
@@ -206,7 +208,16 @@ export function sanitizeAddProductionMaterialInput(input: AddProductionMaterialI
     notes: input.notes?.trim() || null,
     issue_now: Boolean(input.issue_now),
     confirm_deficit_purchase: Boolean(input.confirm_deficit_purchase),
+    ...materialLots(input.lots),
   };
+}
+
+/** LOT-3: chosen lots as stored in production_materials.lots; no key when none (automatic). */
+function materialLots(lots: AddProductionMaterialInput["lots"]): { lots?: { lot_id: string; qty: number }[] } {
+  const clean = (Array.isArray(lots) ? lots : [])
+    .filter((l) => l && typeof l.lot_id === "string" && /^[0-9a-f-]{36}$/i.test(l.lot_id) && Number(l.qty) > 0)
+    .map((l) => ({ lot_id: l.lot_id, qty: Math.round(Number(l.qty) * 1000) / 1000 }));
+  return clean.length ? { lots: clean } : {};
 }
 
 /** @deprecated Use sanitizeMaterialPayload */

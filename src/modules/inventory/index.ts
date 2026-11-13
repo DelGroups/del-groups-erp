@@ -32,3 +32,25 @@ export type { LotFieldsValue, LotIssue, LotPolicy, LotSplitIssue, LotSplitRow } 
 export { LotChip, LotDateCell, LotFieldsEditor, LotLabelsSheet, LotSplitEditor, lotLineColumns } from "./components/LotFields";
 export type { LotLabelData } from "./components/LotFields";
 export { LotTrackingProvider, useLotTracking } from "./components/LotTrackingFlag";
+
+// LOT-3: choosing the lots of outbound lines, the lots a posted document took, the transfer path.
+export {
+  NEAR_EXPIRY_DAYS,
+  addSplitRow,
+  chooseSingle,
+  choiceFromPayload,
+  choiceSummary,
+  followQuantity,
+  lotChoiceErrorCode,
+  lotChoiceIssue,
+  lotExpiry,
+  lotsOfLine,
+  lotsPayload,
+  sortLotsFefo,
+  suggestFefo,
+} from "./lib/lotPicker";
+export type { DocumentLotRow, LotChoice, LotChoiceIssue, LotExpiry, LotOption, LotStatus } from "./lib/lotPicker";
+export { DocumentLotChips, LotAutoText, LotPicker, LotStatusBadge, useDocumentLots, useProductLots } from "./components/LotPicker";
+export type { LotPickerProps } from "./components/LotPicker";
+export { getLotPrintOnInvoice, listDocumentLots } from "./actions/lots";
+export { transferPath } from "./lib/stockTransferRpc";

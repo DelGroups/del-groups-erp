@@ -9,6 +9,7 @@ import { lineGridLabels } from "@/i18n/uiStandardLabels";
 import { formatMoney, formatQuantity } from "@/lib/dates/localeDate";
 import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
 import type { DiscountType, InvoiceCurrency, PriceTier, SaleItem } from "@/types/database.types";
+import { LotAutoText, LotPicker, useLotTracking } from "@/modules/inventory";
 
 const CURRENCIES: readonly InvoiceCurrency[] = ["AZN", "USD", "EUR"];
 const PRICE_TIERS: readonly PriceTier[] = ["retail", "wholesale", "distributor"];
@@ -65,6 +66,8 @@ export function SalesLinesGrid(props: SalesLinesGridProps) {
   const singleCurrency = new Set(items.map((r) => r.currency || "AZN")).size <= 1;
   const currency = items[0]?.currency || "AZN";
   const noProduct = (row: SaleItem) => !row.product_id;
+  // LOT-3: the line's lots (LOT_TRACKING); with the flag off the column is not there.
+  const lotsOn = useLotTracking();
 
   const columns: LineColumn<SaleItem>[] = [
     {
@@ -81,7 +84,10 @@ export function SalesLinesGrid(props: SalesLinesGridProps) {
           where={props.productWhere(row)}
           onBarcodeHit={(record) => props.onBarcodeHit(row.id, record)}
           onBarcodeMiss={props.onBarcodeMiss}
-          onChange={(_id, record) => props.onProduct(row.id, record)}
+          onChange={(_id, record) => {
+            if (row.lots?.length) onUpdate(row.id, { lots: null });
+            props.onProduct(row.id, record);
+          }}
         />
       ),
     },
@@ -102,6 +108,31 @@ export function SalesLinesGrid(props: SalesLinesGridProps) {
         />
       ),
     },
+    ...(lotsOn
+      ? [
+          {
+            key: "lots",
+            header: k("lots"),
+            type: "text",
+            width: 220,
+            cell: (row, ctx) =>
+              row.product_id && row.warehouse_id && !row.polywood_sale_mode && ctx.editable && !locked ? (
+                <LotPicker
+                  productId={row.product_id}
+                  warehouseId={row.warehouse_id}
+                  quantity={Number(row.quantity) || 0}
+                  unit={row.unit}
+                  value={(row.lots ?? []).map((l) => ({ lotId: l.lot_id, qty: Number(l.qty) || 0 }))}
+                  onChange={(next) => onUpdate(row.id, { lots: next ? next.map((c) => ({ lot_id: c.lotId, qty: c.qty })) : null })}
+                  label={ctx.label}
+                  invalid={ctx.invalid}
+                />
+              ) : (
+                <LotAutoText />
+              ),
+          } satisfies LineColumn<SaleItem>,
+        ]
+      : []),
     {
       key: "unit_price",
       header: k("price"),
@@ -148,7 +179,11 @@ export function SalesLinesGrid(props: SalesLinesGridProps) {
       width: 140,
       optional: true,
       error: (row) => (row.product_id && !row.warehouse_id ? k("noWarehouse") : null),
-      cell: (row, ctx) => <LineSelectCell ctx={ctx} value={row.warehouse_id || null} options={warehouseOptions} disabled={locked} onChange={(id) => props.onWarehouse(row.id, id)} />,
+      cell: (row, ctx) => <LineSelectCell ctx={ctx} value={row.warehouse_id || null} options={warehouseOptions} disabled={locked} onChange={(id) => {
+        // Chosen lots belong to the old warehouse (LOT-3).
+        if (row.lots?.length) onUpdate(row.id, { lots: null });
+        props.onWarehouse(row.id, id);
+      }} />,
     },
     {
       key: "price_tier",

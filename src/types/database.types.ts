@@ -63,6 +63,8 @@ export interface SaleItem {
   sale_item_type?: "standard" | "dimensional" | "accessory" | "service";
   /** Number of identical cuts/pieces requested (meter-mode dimensional lines) */
   piece_count?: number;
+  /** LOT-3 (LOT_TRACKING): the lots chosen for the line, as stored (sale_items.lots); none = automatic (FEFO). */
+  lots?: { lot_id: string; qty: number }[] | null;
 }
 
 /** Payment row stored in sales.payments JSONB */
@@ -379,6 +381,8 @@ export interface DamagedGoodsItem {
   unit: string;
   issue_description: string;
   available_stock: number;
+  /** LOT-3 (LOT_TRACKING): the lots chosen for the line; none = automatic (FEFO). */
+  lots?: { lot_id: string; qty: number }[] | null;
 }
 
 export interface InventoryWriteoff {

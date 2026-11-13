@@ -2599,6 +2599,7 @@ export const azMessages = {
     },
   },
   print: {
+    lotNumbers: "Lot: {lots}",
     salesInvoice: "Satış fakturası",
     invoiceTitle: "SATIŞ FAKTURASI",
     officialInvoiceTitle: "SATIŞ FAKTURASI",
@@ -2851,6 +2852,7 @@ export const azMessages = {
   invoice: {
     // GRID-2: the sales LineGrid (behind UI_STANDARD).
     salesLines: {
+      lots: "Lot",
       product: "Məhsul",
       quantity: "Miqdar",
       price: "Qiymət",
@@ -4338,6 +4340,45 @@ export const azMessages = {
     },
   },
   lots: {
+    picker: {
+      column: "Lot",
+      auto: "Avtomatik (FEFO)",
+      fefoTakes: "FEFO götürəcək: {lots}",
+      noLots: "Bu anbarda lot yoxdur",
+      expShort: "SİT {date}",
+      quarantine: "Karantin",
+      closed: "Bağlı",
+      expired: "Vaxtı keçib",
+      nearExpiry: "Vaxtı yaxınlaşır",
+      split: "{name}: lotlara böl",
+      splitTitle: "{name}: lotlar",
+      rowLot: "{n}-ci lot",
+      rowQty: "{n}-ci lotun miqdarı {lot}",
+      removeRow: "{n}-ci lotu sil",
+      addRow: "Lot əlavə et",
+      fillFefo: "FEFO ilə doldur",
+      sum: "Cəmi {sum} / {total} {unit}",
+      useAuto: "Avtomatik seçim",
+      apply: "Tətbiq et",
+      expiredWarning: "Vaxtı keçmiş lot seçilib. Bunu yalnız lotları idarə etmə icazəsi olan edə bilər.",
+      labelFor: "Lot: {name}",
+    },
+    pickerIssues: {
+      sumMismatch: "Lotların cəmi sətirin miqdarına bərabər deyil.",
+      emptyQty: "Hər lotun miqdarı olmalıdır.",
+      short: "Bu anbarda lotda bu qədər yoxdur.",
+      blocked: "Karantindəki və ya bağlı lot seçilə bilməz.",
+      expired: "Vaxtı keçmiş lotu yalnız lotları idarə etmə icazəsi olan seçə bilər.",
+      unknown: "Lot bu anbarda tapılmadı. Başqa lot seçin.",
+      duplicate: "Eyni lot iki dəfə seçilib.",
+    },
+    settings: {
+      invoiceSection: "Satış fakturası",
+      printOnInvoice: "Lot nömrələrini fakturada çap et",
+      printOnInvoiceHint: "Hər sətirin altında satışın götürdüyü lotlar çap olunur.",
+      saved: "Yadda saxlanıldı",
+      saveFailed: "Yadda saxlanılmadı: {message}",
+    },
     auto: "Avtomatik",
     chip: "Lot {lot}",
     chipUnknown: "lot",
@@ -4440,6 +4481,10 @@ export const azMessages = {
     barcode: {
       title: "Barkod etiketləri",
       description: "Stiker ölçüsü, barkod növü və etiketdə çap olunan sahələr.",
+    },
+    lotTracking: {
+      title: "Lotlar",
+      description: "Lot izləmə ayarları: fakturada lot nömrələri.",
     },
     stockIntegrity: {
       title: "Stok yoxlanışı",

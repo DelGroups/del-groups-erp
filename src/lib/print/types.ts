@@ -18,6 +18,8 @@ export interface InvoicePrintLine {
   unit: string;
   unitPrice: number;
   lineTotal: number;
+  /** LOT-3: lot numbers printed under the line (setting lot_tracking.print_on_invoice). */
+  lotNumbers?: string[] | null;
 }
 
 export interface InvoicePrintData {

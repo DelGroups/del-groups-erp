@@ -22,6 +22,7 @@ import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { canDelegateInvoiceIssuer } from "@/types/database.types";
+import { DocumentLotChips, getLotPrintOnInvoice, lotsOfLine, useDocumentLots, useLotTracking } from "@/modules/inventory";
 
 interface SaleDetailPageClientProps {
   saleId: string;
@@ -43,6 +44,19 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
   const [loading, setLoading] = useState(true);
   // DOC_DATE_CHANGE (DATE-1): "Tarixi dəyiş" for admins on a posted invoice.
   const dateChange = useDocumentDateChange(() => void fetchSaleById(saleId).then(setSale));
+  // LOT-3 (LOT_TRACKING): the lots the posted sale took, as chips per line and, with the setting
+  // lot_tracking.print_on_invoice, under each line of the printed invoice.
+  const lotsOn = useLotTracking();
+  const saleLots = useDocumentLots("sale", sale?.id, lotsOn && Boolean(sale && isSalesPosted(sale.status)));
+  const [printLots, setPrintLots] = useState(false);
+  useEffect(() => {
+    if (!lotsOn) return;
+    let alive = true;
+    void getLotPrintOnInvoice().then((v) => alive && setPrintLots(v)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [lotsOn]);
 
   useEffect(() => {
     void fetchSaleById(saleId).then((row) => {
@@ -54,7 +68,14 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
 
   const handlePrint = () => {
     if (!sale) return;
-    invoicePrint.requestPrint(mapSaleToInvoicePrint(sale));
+    invoicePrint.requestPrint(
+      mapSaleToInvoicePrint(
+        sale,
+        lotsOn && printLots && saleLots.length
+          ? { lotNumbers: (lineId, productId) => lotsOfLine(saleLots, { lineId, productId }).map((l) => l.lotNo) }
+          : undefined
+      )
+    );
   };
 
   return (
@@ -143,7 +164,16 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
               <DocumentLinesGrid
                 id="sales-detail-lines"
                 label={t("dashboard.product")}
-                lines={(sale.items ?? []).map((item, idx) => ({ key: item.id || String(idx), name: item.product_name, quantity: item.quantity, unit: item.unit, price: item.unit_price, total: item.total }))}
+                lines={(sale.items ?? []).map((item, idx) => ({
+                  key: item.id || String(idx),
+                  name: item.product_name,
+                  quantity: item.quantity,
+                  unit: item.unit,
+                  price: item.unit_price,
+                  total: item.total,
+                  lots: lotsOn ? <DocumentLotChips rows={saleLots} lineId={item.id} productId={item.product_id} linkable /> : undefined,
+                }))}
+                lotsHeader={lotsOn && saleLots.length ? t("lots.picker.column") : undefined}
                 headers={{ product: t("dashboard.product"), quantity: t("modals.salesView.quantity"), price: t("modals.salesView.price"), total: t("modals.salesView.lineTotal") }}
               />
             ) : (
@@ -159,7 +189,10 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
               <tbody className="divide-y divide-app">
                 {(sale.items ?? []).map((item, idx) => (
                   <tr key={item.id || idx}>
-                    <td className="p-2">{item.product_name}</td>
+                    <td className="p-2">
+                      {item.product_name}
+                      {lotsOn ? <DocumentLotChips rows={saleLots} lineId={item.id} productId={item.product_id} linkable /> : null}
+                    </td>
                     <td className="p-2">{item.quantity} {item.unit}</td>
                     <td className="p-2 text-right font-mono">{item.unit_price.toFixed(2)}</td>
                     <td className="p-2 text-right font-mono font-bold">{item.total.toFixed(2)}</td>

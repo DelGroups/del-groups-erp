@@ -2601,6 +2601,7 @@ export const ruMessages: Messages = {
     },
   },
   print: {
+    lotNumbers: "Партия: {lots}",
     salesInvoice: "Счёт продажи",
     invoiceTitle: "СЧЁТ ПРОДАЖИ",
     officialInvoiceTitle: "СЧЁТ ПРОДАЖИ",
@@ -2854,6 +2855,7 @@ export const ruMessages: Messages = {
   invoice: {
     // GRID-2: the sales LineGrid (behind UI_STANDARD).
     salesLines: {
+      lots: "Партия",
       product: "Товар",
       quantity: "Количество",
       price: "Цена",
@@ -4340,6 +4342,45 @@ export const ruMessages: Messages = {
     },
   },
   lots: {
+    picker: {
+      column: "Партия",
+      auto: "Автоматически (FEFO)",
+      fefoTakes: "FEFO возьмёт: {lots}",
+      noLots: "На этом складе нет партий",
+      expShort: "Годен до {date}",
+      quarantine: "Карантин",
+      closed: "Закрыта",
+      expired: "Просрочена",
+      nearExpiry: "Скоро истекает",
+      split: "{name}: разбить по партиям",
+      splitTitle: "{name}: партии",
+      rowLot: "Партия {n}",
+      rowQty: "Количество партии {n} {lot}",
+      removeRow: "Удалить партию {n}",
+      addRow: "Добавить партию",
+      fillFefo: "Заполнить по FEFO",
+      sum: "Итого {sum} / {total} {unit}",
+      useAuto: "Выбирать автоматически",
+      apply: "Применить",
+      expiredWarning: "Выбрана просроченная партия. Это может сделать только тот, кто управляет партиями.",
+      labelFor: "Партия: {name}",
+    },
+    pickerIssues: {
+      sumMismatch: "Сумма партий не равна количеству строки.",
+      emptyQty: "У каждой партии должно быть количество.",
+      short: "На этом складе в партии меньше.",
+      blocked: "Партию на карантине или закрытую выбрать нельзя.",
+      expired: "Просроченную партию может выбрать только тот, кто управляет партиями.",
+      unknown: "Партии нет на этом складе. Выберите другую.",
+      duplicate: "Одна партия выбрана дважды.",
+    },
+    settings: {
+      invoiceSection: "Счёт на продажу",
+      printOnInvoice: "Печатать номера партий в счёте",
+      printOnInvoiceHint: "Под каждой строкой печатаются партии, взятые продажей.",
+      saved: "Сохранено",
+      saveFailed: "Не сохранено: {message}",
+    },
     auto: "Автоматически",
     chip: "Лот {lot}",
     chipUnknown: "лот",
@@ -4442,6 +4483,10 @@ export const ruMessages: Messages = {
     barcode: {
       title: "Этикетки со штрихкодом",
       description: "Размер наклейки, тип штрихкода и поля на этикетке.",
+    },
+    lotTracking: {
+      title: "Партии",
+      description: "Настройки партий: номера партий в счёте.",
     },
     stockIntegrity: {
       title: "Проверка остатков",

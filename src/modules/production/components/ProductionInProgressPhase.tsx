@@ -19,6 +19,7 @@ import {
 } from "../actions/production";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useUiStandard } from "@/design-system/components";
+import { DocumentLotChips, LotPicker, followQuantity, lotsPayload, useDocumentLots, useLotTracking, type LotChoice } from "@/modules/inventory";
 import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import { formatMoney as gridMoney, formatQuantity } from "@/lib/dates/localeDate";
@@ -116,6 +117,12 @@ export default function ProductionInProgressPhase({
   const [materialSelection, setMaterialSelection] = useState<MaterialLineSelection | null>(null);
   const [materialWarehouseId, setMaterialWarehouseId] = useState("");
   const [materialQty, setMaterialQty] = useState(1);
+  // LOT-3: the lots the new material takes (LOT_TRACKING); null = automatic (FEFO).
+  const lotsOn = useLotTracking();
+  const [materialLots, setMaterialLots] = useState<LotChoice[] | null>(null);
+  const chosenMaterialLots = lotsOn ? lotsPayload(followQuantity(materialLots, materialQty)) : undefined;
+  // Refreshed when the materials change (a new issue).
+  const orderLots = useDocumentLots("production_order", lotsOn ? `${order.id}` : null, lotsOn && (order.materials?.length ?? 0) > 0, "out", order.materials?.length ?? 0);
   const [warehouseProducts, setWarehouseProducts] = useState<WarehouseProductOption[]>([]);
   const [loadingWarehouseProducts, setLoadingWarehouseProducts] = useState(false);
   const [shortageConfirmOpen, setShortageConfirmOpen] = useState(false);
@@ -226,11 +233,13 @@ export default function ProductionInProgressPhase({
     setMaterialOptionValue(value);
     const decoded = decodeMaterialLineSelection(value, materialWarehouseId, catalogForOrder);
     setMaterialSelection(decoded);
+    setMaterialLots(null);
   };
 
   const clearMaterialProduct = () => {
     setMaterialOptionValue("");
     setMaterialSelection(null);
+    setMaterialLots(null);
   };
 
   const expenseCategories = useMemo(
@@ -344,6 +353,7 @@ export default function ProductionInProgressPhase({
           quantity: materialQty,
           issue_now: true,
           confirm_deficit_purchase: confirmDeficitPurchase,
+          ...(chosenMaterialLots ? { lots: chosenMaterialLots } : {}),
         }),
       (data) => {
         applyOrder(mergeProductionOrder(order, data));
@@ -710,6 +720,23 @@ export default function ProductionInProgressPhase({
                   disabled={!materialSelection?.productId}
                 />
               </label>
+              {lotsOn && materialSelection?.productId && (materialSelection.warehouseId || materialWarehouseId) ? (
+                <div className="block text-sm">
+                  <span className="text-app-muted">{t("lots.picker.column")}</span>
+                  <div className="mt-1">
+                    <LotPicker
+                      key={`${materialSelection.productId}:${materialSelection.warehouseId || materialWarehouseId}`}
+                      productId={materialSelection.productId}
+                      warehouseId={materialSelection.warehouseId || materialWarehouseId}
+                      quantity={Number(materialQty) || 0}
+                      unit={productUnit}
+                      value={materialLots}
+                      onChange={setMaterialLots}
+                      label={t("lots.picker.labelFor", { name: materialSelection.productName || "" })}
+                    />
+                  </div>
+                </div>
+              ) : null}
               {showFinancials ? (
                 <>
                   <div className="rounded-lg border border-app bg-app-surface px-3 py-2 text-sm">
@@ -818,6 +845,10 @@ export default function ProductionInProgressPhase({
                 { key: "product", header: t("forms.selectProduct"), width: 240, className: "font-medium", cell: (row) => row.product_name, sortValue: (row) => row.product_name },
                 { key: "warehouse", header: t("production.warehouse"), cell: (row) => row.warehouse_name || "—", sortValue: (row) => row.warehouse_name },
                 { key: "qty", header: t("forms.quantity"), type: "number", cell: (row) => `${formatQuantity(row.quantity, locale)} ${row.unit}`, sortValue: (row) => row.quantity },
+                // LOT-3 (LOT_TRACKING): the lots each issued material took.
+                ...(lotsOn && orderLots.length
+                  ? ([{ key: "lots", header: t("lots.picker.column"), width: 220, cell: (row) => <DocumentLotChips rows={orderLots} lineId={row.id} linkable /> }] satisfies StandardColumn<MaterialRow>[])
+                  : []),
                 ...(showFinancials
                   ? ([
                       { key: "unitCost", header: t("production.unitCost"), type: "money", cell: (row) => fig(Number(row.unit_cost) || 0), sortValue: (row) => Number(row.unit_cost) || 0 },

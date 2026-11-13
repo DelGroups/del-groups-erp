@@ -208,6 +208,11 @@ function InvoiceItemRow({
             {line.productCode}
           </div>
         ) : null}
+        {line.lotNumbers?.length ? (
+          <div style={{ fontSize: "11px", color: SLATE, marginTop: "3px", lineHeight: 1.35 }} data-print-lots="">
+            {t("print.lotNumbers", { lots: line.lotNumbers.join(", ") })}
+          </div>
+        ) : null}
       </td>
       <td style={{ ...cellStyle(index, "center"), width: "110px" }}>{renderSizeType(line, t)}</td>
       <td style={{ ...cellStyle(index, "center"), width: "90px" }}>{renderQuantityUnit(line, t)}</td>

@@ -24,7 +24,10 @@ import type { Warehouse } from "@/types/database.types";
 import { generateStockTransferDocumentNumber } from "@/types/database.types";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
-import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { LineGrid, LineNumberCell, LineText, type LineCellContext } from "@/components/line-grid";
+import { LotAutoText, LotPicker } from "./LotPicker";
+import { useLotTracking } from "./LotTrackingFlag";
+import { followQuantity, lotsPayload } from "../lib/lotPicker";
 import { lineGridLabels } from "@/i18n/uiStandardLabels";
 import { codeName } from "@/components/lists/standardGridLogic";
 import { formatQuantity } from "@/lib/dates/localeDate";
@@ -56,6 +59,8 @@ export default function StockTransferNewPage() {
 
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [fromWarehouseId, setFromWarehouseId] = useState("");
+  // LOT-3: lots per line (LOT_TRACKING); off = no column and no "lots" key.
+  const lotsOn = useLotTracking();
   const [toWarehouseId, setToWarehouseId] = useState("");
   const [transferDate, setTransferDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
@@ -80,6 +85,12 @@ export default function StockTransferNewPage() {
     () => warehouses.map((w) => ({ value: w.id, label: w.name })),
     [warehouses]
   );
+
+  // A new source warehouse: chosen lots belong to the old one (LOT-3).
+  const changeFromWarehouse = (id: string) => {
+    setFromWarehouseId(id);
+    setLines((prev) => (prev.some((l) => l.lots) ? prev.map((l) => (l.lots ? { ...l, lots: undefined } : l)) : prev));
+  };
 
   const updateLine = (id: string, patch: Partial<StockTransferLineInput>) => {
     setLines((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
@@ -179,7 +190,13 @@ export default function StockTransferNewPage() {
           to_warehouse_id: toWarehouseId,
           transfer_date: transferDate,
           notes,
-          items: validLines,
+          items: validLines.map((line) => {
+            // A single chosen lot takes the whole line; automatic lines send no "lots" key.
+            if (!line.lots) return line;
+            const { lots: chosen, ...rest } = line;
+            const lots = line.offcut_id ? undefined : lotsPayload(followQuantity(chosen.map((l) => ({ lotId: l.lot_id, qty: l.qty })), line.quantity));
+            return lots ? { ...rest, lots } : rest;
+          }),
         }),
       });
 
@@ -225,12 +242,12 @@ export default function StockTransferNewPage() {
                     clearable={false}
                     aria-label={t("stockTransfer.sourceWarehouse")}
                     onCreated={(row) => setWarehouses((prev) => mergeRecord(prev, row as unknown as Warehouse))}
-                    onChange={(id) => setFromWarehouseId(id ?? "")}
+                    onChange={(id) => changeFromWarehouse(id ?? "")}
                   />
                 ) : (
                 <Select
                   value={fromWarehouseId}
-                  onChange={(event) => setFromWarehouseId(event.target.value)}
+                  onChange={(event) => changeFromWarehouse(event.target.value)}
                 >
                   {warehouseOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -342,6 +359,30 @@ export default function StockTransferNewPage() {
                     error: (line) => (line.quantity > line.available_stock ? t("stockTransfer.qtyExceedsStock", { name: line.product_name }) : null),
                     cell: (line, ctx) => <LineNumberCell ctx={ctx} value={line.quantity} max={line.available_stock} onChange={(value) => updateLine(line.id, { quantity: value ?? 0 })} />,
                   },
+                  ...(lotsOn
+                    ? [
+                        {
+                          key: "lots",
+                          header: t("lots.picker.column"),
+                          width: 220,
+                          cell: (line: StockTransferLineInput, ctx: LineCellContext) =>
+                            line.product_id && fromWarehouseId && !line.offcut_id ? (
+                              <LotPicker
+                                productId={line.product_id}
+                                warehouseId={fromWarehouseId}
+                                quantity={Number(line.quantity) || 0}
+                                unit={line.unit}
+                                value={(line.lots ?? []).map((l) => ({ lotId: l.lot_id, qty: Number(l.qty) || 0 }))}
+                                onChange={(next) => updateLine(line.id, { lots: next ? next.map((c) => ({ lot_id: c.lotId, qty: c.qty })) : undefined })}
+                                label={ctx.label}
+                                invalid={ctx.invalid}
+                              />
+                            ) : (
+                              <LotAutoText />
+                            ),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             ) : (

@@ -29,7 +29,8 @@ import { ArrowLeft, PackageMinus, Trash2 } from "lucide-react";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { EntityLookup } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
-import { LineGrid, LineNumberCell, LineText } from "@/components/line-grid";
+import { LineGrid, LineNumberCell, LineText, type LineCellContext } from "@/components/line-grid";
+import { LotAutoText, LotPicker, followQuantity, lotsPayload, useLotTracking, type LotChoice } from "@/modules/inventory";
 import { lineGridLabels } from "@/i18n/uiStandardLabels";
 import { formatQuantity } from "@/lib/dates/localeDate";
 
@@ -43,6 +44,8 @@ interface DispatchLine {
   unit_price: number;
   quantity: number;
   available_stock: number;
+  /** LOT-3: chosen lots (LOT_TRACKING); null = automatic (FEFO). */
+  lots?: LotChoice[] | null;
 }
 
 function createLineId(): string {
@@ -87,6 +90,8 @@ export default function ConsignmentDispatchNewPage() {
   const [dispatchDate, setDispatchDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DispatchLine[]>([createEmptyLine()]);
+  // LOT-3: lots per line (LOT_TRACKING); off = no column and no "lots" key.
+  const lotsOn = useLotTracking();
 
   useEffect(() => {
     void (async () => {
@@ -127,7 +132,7 @@ export default function ConsignmentDispatchNewPage() {
       setLines((prev) =>
         prev.map((row) => {
           const found = updates.find((u) => u.id === row.id);
-          return found ? { ...row, available_stock: found.stock } : row;
+          return found ? { ...row, available_stock: found.stock, lots: null } : row;
         })
       );
     })();
@@ -152,7 +157,7 @@ export default function ConsignmentDispatchNewPage() {
         if (lineId) {
           return prev.map((row) =>
             row.id === lineId
-              ? { ...row, ...fields, quantity: Math.min(available, addQty || 1), available_stock: available }
+              ? { ...row, ...fields, quantity: Math.min(available, addQty || 1), available_stock: available, lots: null }
               : row
           );
         }
@@ -249,6 +254,10 @@ export default function ConsignmentDispatchNewPage() {
         unit: line.unit,
         quantity: line.quantity,
         unit_price: line.unit_price,
+        ...(() => {
+          const lots = lotsOn ? lotsPayload(followQuantity(line.lots, line.quantity)) : undefined;
+          return lots ? { lots } : {};
+        })(),
       })),
     });
     setSubmitting(false);
@@ -430,6 +439,30 @@ export default function ConsignmentDispatchNewPage() {
                         <LineNumberCell ctx={ctx} value={line.quantity} max={line.available_stock} onChange={(value) => updateLine(line.id, { quantity: value ?? 0 })} />
                       ),
                     },
+                    ...(lotsOn
+                      ? [
+                          {
+                            key: "lots",
+                            header: t("lots.picker.column"),
+                            width: 220,
+                            cell: (line: DispatchLine, ctx: LineCellContext) =>
+                              line.product_id && warehouseId ? (
+                                <LotPicker
+                                  productId={line.product_id}
+                                  warehouseId={warehouseId}
+                                  quantity={Number(line.quantity) || 0}
+                                  unit={line.unit}
+                                  value={line.lots ?? null}
+                                  onChange={(next) => updateLine(line.id, { lots: next })}
+                                  label={ctx.label}
+                                  invalid={ctx.invalid}
+                                />
+                              ) : (
+                                <LotAutoText />
+                              ),
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               ) : (

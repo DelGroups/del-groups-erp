@@ -9,9 +9,17 @@ import {
   type SubmitStockTransferPayload,
   type SubmitStockTransferResult,
 } from "./stockTransfer";
+import { isMissingRpc, transferIdFromRpc, transferRpcPayload } from "./stockTransferRpc";
 
+type RpcClient = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }> };
+
+/**
+ * Writes a transfer. `atomic` (LOT_TRACKING on): post_stock_transfer does it in one transaction
+ * with the chosen lots; before that SQL runs, or with `atomic` off, the old path below.
+ */
 export async function submitStockTransfer(
-  payload: SubmitStockTransferPayload
+  payload: SubmitStockTransferPayload,
+  options: { atomic?: boolean } = {}
 ): Promise<SubmitStockTransferResult> {
   if (!payload.from_warehouse_id || !payload.to_warehouse_id) {
     return { success: false, error: "Anbarları seçin" };
@@ -36,6 +44,17 @@ export async function submitStockTransfer(
 
   const admin = await createSupabaseAdminClient();
   const referenceNumber = payload.reference_number?.trim() || generateStockTransferDocumentNumber();
+
+  if (options.atomic) {
+    const rpc = admin as unknown as RpcClient;
+    const { data, error } = await rpc.rpc("post_stock_transfer", { p_payload: transferRpcPayload(payload, lines, referenceNumber) });
+    if (!error) {
+      const id = transferIdFromRpc(data);
+      if (!id) return { success: false, error: "Transfer sənədi yaradılmadı" };
+      return { success: true, transferId: id, print: await transferPrint(admin, payload, lines, referenceNumber) };
+    }
+    if (!isMissingRpc(error)) return { success: false, error: error.message };
+  }
 
   const { data: header, error: headerError } = await admin
     .from("stock_transfers")
@@ -134,27 +153,32 @@ export async function submitStockTransfer(
     };
   }
 
+  return { success: true, transferId, print: await transferPrint(admin, payload, lines, referenceNumber) };
+}
+
+async function transferPrint(
+  admin: Awaited<ReturnType<typeof createSupabaseAdminClient>>,
+  payload: SubmitStockTransferPayload,
+  lines: SubmitStockTransferPayload["items"],
+  referenceNumber: string
+): Promise<SubmitStockTransferResult["print"]> {
   const [{ data: fromWh }, { data: toWh }] = await Promise.all([
     admin.from("warehouses").select("name").eq("id", payload.from_warehouse_id).maybeSingle(),
     admin.from("warehouses").select("name").eq("id", payload.to_warehouse_id).maybeSingle(),
   ]);
 
   return {
-    success: true,
-    transferId,
-    print: {
-      reference_number: referenceNumber,
-      transfer_date: payload.transfer_date,
-      from_warehouse_name: fromWh?.name || "—",
-      to_warehouse_name: toWh?.name || "—",
-      notes: payload.notes,
-      items: lines.map((line) => ({
-        product_code: line.product_code,
-        product_name: line.product_name,
-        barcode: line.barcode,
-        unit: line.unit,
-        quantity: line.quantity,
-      })),
-    },
+    reference_number: referenceNumber,
+    transfer_date: payload.transfer_date,
+    from_warehouse_name: fromWh?.name || "—",
+    to_warehouse_name: toWh?.name || "—",
+    notes: payload.notes,
+    items: lines.map((line) => ({
+      product_code: line.product_code,
+      product_name: line.product_name,
+      barcode: line.barcode,
+      unit: line.unit,
+      quantity: line.quantity,
+    })),
   };
 }

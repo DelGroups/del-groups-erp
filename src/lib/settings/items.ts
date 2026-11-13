@@ -21,7 +21,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
 ];
 
 /** Feature switches an item depends on, besides its module. */
-export type SettingsItemFlag = "barcode" | "billing" | "newImports" | "docDateChange";
+export type SettingsItemFlag = "barcode" | "billing" | "newImports" | "docDateChange" | "lotTracking";
 
 export interface SettingsItem {
   id: string;
@@ -72,6 +72,7 @@ export const SETTINGS_ITEMS: readonly SettingsItem[] = [
   // Inventory
   { id: "barcode", path: "/settings/barcode", ...t("barcode"), icon: "Barcode", group: "inventory", permission: "can_manage_settings", module: "barcode", flag: "barcode" },
   { id: "stock-integrity", path: "/settings/stock-integrity", ...t("stockIntegrity"), icon: "ClipboardCheck", group: "inventory", permission: "can_manage_settings", module: "inventory", adminOnly: true },
+  { id: "lot-tracking", path: "/settings/lot-tracking", ...t("lotTracking"), icon: "Layers", group: "inventory", permission: "can_manage_settings", module: "inventory", adminOnly: true, flag: "lotTracking" },
   // System
   { id: "modules", path: "/settings/modules", ...t("modules"), icon: "Boxes", group: "system", permission: "can_manage_settings", adminOnly: true },
   { id: "studio", path: "/settings/studio", ...t("studio"), icon: "Blocks", group: "system", permission: "can_manage_settings", module: "studio" },
