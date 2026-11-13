@@ -3,13 +3,28 @@
  * (preview_document_date_change / apply_document_date_change, migration 20261110150000).
  * DATE-2 (migration 20261110151000): the same for cash documents: a payment booked on an
  * invoice, a partner payment, a manual cash row and an expense.
+ * DATE-3 (migration 20261110152000): inventory and import documents: a stock transfer, a write-off,
+ * an initial balance or stock receipt, a posted count, an import receipt and an import payment.
  * Pure: the dialog's steps and rules, so `node --test` covers them. The RPC calls live in
  * dateChangeApi.ts.
  */
 
 import { formatGridDate } from "../dates/localeDate";
 
-export const DATE_CHANGE_DOCUMENT_TYPES = ["sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"] as const;
+export const DATE_CHANGE_DOCUMENT_TYPES = [
+  "sale",
+  "purchase",
+  "invoice_payment",
+  "partner_payment",
+  "cash_transaction",
+  "expense",
+  "stock_transfer",
+  "inventory_writeoff",
+  "inventory_initial_balance",
+  "inventory_count",
+  "import_receipt",
+  "import_payment",
+] as const;
 export type DateChangeDocumentType = (typeof DATE_CHANGE_DOCUMENT_TYPES)[number];
 
 export function isDateChangeDocumentType(value: unknown): value is DateChangeDocumentType {
@@ -29,7 +44,9 @@ export function dateChangePaymentsOption(type: DateChangeDocumentType): "invoice
 /** The counts the dialog lists for a document type (invoices move stock too; cash documents do not). */
 export function dateChangeAffectedKeys(type: DateChangeDocumentType): ReadonlyArray<"journals" | "cash" | "stock_moves" | "batches" | "pieces" | "payments"> {
   if (type === "sale" || type === "purchase") return ["journals", "cash", "stock_moves", "batches", "pieces", "payments"];
-  if (type === "partner_payment") return ["journals", "cash", "payments"];
+  if (type === "partner_payment" || type === "import_payment") return ["journals", "cash", "payments"];
+  if (type === "stock_transfer" || type === "inventory_writeoff") return ["stock_moves"];
+  if (type === "inventory_initial_balance" || type === "inventory_count" || type === "import_receipt") return ["journals", "stock_moves", "batches"];
   return ["journals", "cash"];
 }
 
@@ -173,6 +190,11 @@ export const DATE_CHANGE_CODES = [
   "payment_before_its_invoice",
   "reimbursement_before_expense",
   "expense_before_source",
+  "reposted_document",
+  "count_polywood_switch",
+  "import_before_confirm",
+  "import_payment_before_payable",
+  "fx_rate_kept",
   "other_month",
   "payments_move",
   "far_back",

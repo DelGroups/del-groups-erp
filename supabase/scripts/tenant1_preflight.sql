@@ -187,6 +187,9 @@ union all
 select 'pending', '20261110151000_document_date_change_cash: change the date of payments, cash rows and expenses in place (DATE-2)',
        case when to_regprocedure('public.resolve_date_change_document(uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261110152000_document_date_change_inventory: change the date of inventory and import documents in place (DATE-3)',
+       case when to_regprocedure('public._date_change_extra_warnings(text, uuid, date, date)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, HandCoins, Lock, PackageCheck, Plus, Printer, RefreshCw, RotateCcw, Split, Trash2, Wallet } from "lucide-react";
 import { Chip, RowActionsMenu, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import { codeName } from "@/components/lists/standardGridLogic";
@@ -59,6 +59,7 @@ import { newCost, suggestedVat, type CostLineDraft, type ImportProduct, type Shi
 import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { DialogField, ImportDialog } from "./ImportDialog";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { useDocumentDateChange, type DateChangeTarget } from "@/components/documents/DocumentDateChange";
 import { ImportStageBar, type StageBarFact } from "./ImportStageBar";
 import { ImportTimeline } from "./ImportTimeline";
 import { ClearDialog, MilestoneDialog, TrackingDialog } from "./ImportStageDialogs";
@@ -150,6 +151,9 @@ export function PostingPanel({
       invalidateModel(client, IMPORTS_VIEW_KEY),
     ]);
   };
+  // DOC_DATE_CHANGE (DATE-3): admins change a receipt's or a payment's date in place.
+  const dateChange = useDocumentDateChange(() => void refresh());
+  const changeDate = dateChange.allowed ? (target: DateChangeTarget) => dateChange.open(target) : undefined;
   /** Runs a posting action; a database error shows its translated reason and detail. */
   const run = async (work: () => Promise<PostingResult<Record<string, unknown>>>, done: string) => {
     setBusy(true);
@@ -333,7 +337,7 @@ export function PostingPanel({
                 </ul>
               ) : null}
               {view.data && posted ? (
-                <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} />
+                <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} onChangeDate={changeDate} />
               ) : !posted ? (
                 <p className="ds-muted text-[length:var(--ds-text-sm)]">{t("imports.costPay.draftHint")}</p>
               ) : null}
@@ -352,7 +356,7 @@ export function PostingPanel({
               </div>
               {draft.status === "confirmed" && actions.includes("receive") ? <p className="text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-warning)" }}>{t("imports.stages.notClearedWarning")}</p> : null}
               {view.data && posted ? (
-                <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
+                <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
               ) : (
                 <p className="ds-muted text-[length:var(--ds-text-sm)]">{t("imports.stages.receiptAfterConfirm")}</p>
               )}
@@ -385,6 +389,7 @@ export function PostingPanel({
           ) : null}
         </div>
         {dialogs}
+        {dateChange.dialog}
       </div>
     );
   }
@@ -720,10 +725,10 @@ export function PostingPanel({
             {view.isLoading ? <p className="ds-muted">{t("common.loading")}</p> : null}
             {view.error ? <p className="ds-muted">{t("imports.errors.failed")}</p> : null}
             {view.data && tab === "payables" ? (
-              <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} />
+              <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} onChangeDate={changeDate} />
             ) : null}
             {view.data && tab === "receipts" ? (
-              <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
+              <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
             ) : null}
             {view.data && tab === "journal" ? <JournalTab view={view.data} money={money} formatDate={formatDate} /> : null}
           </div>
@@ -731,13 +736,14 @@ export function PostingPanel({
       ) : null}
 
       {dialogs}
+      {dateChange.dialog}
     </section>
   );
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
 
-function PayablesTab({ view, money, config, canPay, onPay, formatDate }: { view: PostingView; money: (n: number) => string; config: ImportsConfig; canPay: boolean; onPay: (p: PayableView) => void; formatDate: (d: string) => string }) {
+function PayablesTab({ view, money, config, canPay, onPay, formatDate, onChangeDate }: { view: PostingView; money: (n: number) => string; config: ImportsConfig; canPay: boolean; onPay: (p: PayableView) => void; formatDate: (d: string) => string; onChangeDate?: (target: DateChangeTarget) => void }) {
   const { t } = useI18n();
   // UI_STANDARD (UI-6): the payables on the grid, Pay in the row menu; old table with the flag off.
   const standard = useUiStandard();
@@ -771,6 +777,7 @@ function PayablesTab({ view, money, config, canPay, onPay, formatDate }: { view:
           }
         />
         {view.payments.length ? <p className="text-[length:var(--ds-text-xs)] ds-muted">{t("importPosting.paymentsCount", { count: view.payments.length })}</p> : null}
+        {onChangeDate ? <PaymentDates view={view} money={money} formatDate={formatDate} onChangeDate={onChangeDate} /> : null}
       </div>
     );
   }
@@ -811,7 +818,34 @@ function PayablesTab({ view, money, config, canPay, onPay, formatDate }: { view:
       {view.payments.length ? (
         <p className="mt-2 text-[length:var(--ds-text-xs)] ds-muted">{t("importPosting.paymentsCount", { count: view.payments.length })}</p>
       ) : null}
+      {onChangeDate ? <PaymentDates view={view} money={money} formatDate={formatDate} onChangeDate={onChangeDate} /> : null}
     </div>
+  );
+}
+
+/** DATE-3 (admins, DOC_DATE_CHANGE): each payment of the shipment with "Tarixi dəyiş". */
+function PaymentDates({ view, money, formatDate, onChangeDate }: { view: PostingView; money: (n: number) => string; formatDate: (d: string) => string; onChangeDate: (target: DateChangeTarget) => void }) {
+  const { t } = useI18n();
+  if (!view.payments.length) return null;
+  return (
+    <ul className="mt-2 flex flex-col gap-1 text-[length:var(--ds-text-sm)]" aria-label={t("dateChange.importPayments")}>
+      {view.payments.map((p) => (
+        <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
+          <span className="tabular-nums">
+            {formatDate(p.paymentDate)} · {money(p.amountAzn)}
+            {p.note ? <span className="ds-muted"> · {p.note}</span> : null}
+          </span>
+          <button
+            type="button"
+            className="ds-btn ds-btn-sm"
+            onClick={() => onChangeDate({ type: "import_payment", id: p.id, label: `${formatDate(p.paymentDate)} · ${money(p.amountAzn)}`, date: p.paymentDate.slice(0, 10) })}
+          >
+            <CalendarClock className="h-4 w-4" aria-hidden />
+            {t("dateChange.action")}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -822,6 +856,7 @@ function ReceiptsTab({
   warehouseNames,
   formatDate,
   onPrint,
+  onChangeDate,
 }: {
   view: PostingView;
   draft: ShipmentDraft;
@@ -829,6 +864,8 @@ function ReceiptsTab({
   warehouseNames: Readonly<Record<string, string>>;
   formatDate: (d: string) => string;
   onPrint: (r: PostingView["receipts"][number]) => void;
+  /** DATE-3: admins with DOC_DATE_CHANGE change a receipt's date in place. */
+  onChangeDate?: (target: DateChangeTarget) => void;
 }) {
   const { t } = useI18n();
   if (!view.receipts.length) return <p className="ds-muted">{t("importPosting.noReceipts")}</p>;
@@ -838,10 +875,18 @@ function ReceiptsTab({
         <li key={r.id} className="flex flex-col gap-1 p-2" style={{ border: "1px solid var(--ds-border)", borderRadius: "var(--ds-radius-md)" }}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold">{r.number} · {formatDate(r.receiptDate)}{r.createdByName ? ` · ${r.createdByName}` : ""}</span>
-            <button type="button" className="ds-btn ds-btn-sm" onClick={() => onPrint(r)}>
-              <Printer className="h-4 w-4" aria-hidden />
-              {t("importPosting.printSheet")}
-            </button>
+            <span className="flex flex-wrap gap-2">
+              {onChangeDate ? (
+                <button type="button" className="ds-btn ds-btn-sm" onClick={() => onChangeDate({ type: "import_receipt", id: r.id, label: r.number, date: r.receiptDate.slice(0, 10) })}>
+                  <CalendarClock className="h-4 w-4" aria-hidden />
+                  {t("dateChange.action")}
+                </button>
+              ) : null}
+              <button type="button" className="ds-btn ds-btn-sm" onClick={() => onPrint(r)}>
+                <Printer className="h-4 w-4" aria-hidden />
+                {t("importPosting.printSheet")}
+              </button>
+            </span>
           </div>
           <ul className="text-[length:var(--ds-text-sm)]">
             {r.lines.map((l) => {

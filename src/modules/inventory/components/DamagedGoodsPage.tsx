@@ -24,6 +24,7 @@ import Button from "@/components/ui/button";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { ListGrid } from "@/components/lists/ListGrid";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 
 /** Column choice key of this list (prompt 24c). */
 const WRITEOFFS_LIST_KEY = "inventory.writeoffs";
@@ -70,6 +71,8 @@ export default function DamagedGoodsPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+  // DOC_DATE_CHANGE (DATE-3): admins change a write-off's date in place.
+  const dateChange = useDocumentDateChange(() => void loadData());
 
   const filteredWriteoffs = writeoffs.filter(
     (row) =>
@@ -131,6 +134,11 @@ export default function DamagedGoodsPage() {
           onView={() => setViewingWriteoff(row)}
           onPrint={() => handlePrint(row)}
           onEdit={() => openEditForm(row)}
+          onDateChange={
+            dateChange.allowed
+              ? () => dateChange.open({ type: "inventory_writeoff", id: row.id, label: row.document_number, date: row.writeoff_date || null })
+              : undefined
+          }
         />
       </>
     );
@@ -252,6 +260,7 @@ export default function DamagedGoodsPage() {
           <DamagedGoodsPrintTemplate writeoff={printWriteoff} />
         </div>
       )}
+      {dateChange.dialog}
     </PageLayout>
   );
 }

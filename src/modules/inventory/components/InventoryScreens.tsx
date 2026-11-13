@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRightLeft, CheckCircle2, ExternalLink, History, PencilLine, Plus, Printer, Trash2, Undo2, XCircle } from "lucide-react";
+import { ArrowRightLeft, CalendarClock, CheckCircle2, ExternalLink, History, PencilLine, Plus, Printer, Trash2, Undo2, XCircle } from "lucide-react";
 import { TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
 import { codeName } from "@/components/lists/standardGridLogic";
@@ -24,6 +24,8 @@ import { deleteInventoryCountAction, fetchInventoryCountsAction } from "../actio
 import { deleteInitialBalanceDraftAction, fetchInitialBalanceListAction, unpostInitialBalanceDocumentAction } from "../actions/initialBalance";
 import { fetchInventoryWriteoffs, type WriteoffRecord } from "../lib/writeoff";
 import DamagedGoodsForm from "./DamagedGoodsForm";
+import { DATE_CHANGE_ACTION_KEY, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
 import { CreateCountModal } from "./InventoryCountsPage";
 import DamagedGoodsPrintTemplate, { type DamagedGoodsPrintData } from "./DamagedGoodsPrintTemplate";
 import {
@@ -251,6 +253,8 @@ function SlipRecordView({ record }: { record: SlipRecord }) {
 export function InventoryCountsScreen() {
   const { t } = useI18n();
   const router = useRouter();
+  // DOC_DATE_CHANGE (DATE-3): admins change a posted document's date in place (the form runs it).
+  const dateChangeOn = useDocDateChangeAllowed();
   const [creating, setCreating] = useState(false);
   return (
     <EngineScreen
@@ -278,6 +282,7 @@ export function InventoryCountsScreen() {
       recordTitle={(r) => r.document_number}
       rowActions={(r): RowActionSpec[] => [
         { key: "open", label: t("inventory.engine.openCount"), icon: <ExternalLink className="h-4 w-4" /> },
+        { key: DATE_CHANGE_ACTION_KEY, label: t("dateChange.action"), icon: <CalendarClock className="h-4 w-4" />, hidden: !(dateChangeOn && r.status === "posted") },
         { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: r.status === "posted" },
       ]}
       renderRecord={(r, { close }) => <CountRecordView record={r} close={close} />}
@@ -292,13 +297,16 @@ function CountRecordView({ record, close }: { record: CountRecord; close: () => 
   const client = useQueryClient();
   const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
+  const dateChange = useDocumentDateChange(() => void invalidateModel(client, COUNTS_VIEW_KEY));
   const actions: FormAction[] = [
+    ...dateChange.formActions(record.status === "posted", { type: "inventory_count", id: record.id, label: record.document_number, date: record.count_date ?? null }),
     { key: "open", label: t("inventory.engine.openCount"), primary: true, icon: <ExternalLink className="h-4 w-4" aria-hidden />, onClick: () => router.push(`/inventory/counts/${record.id}`) },
     ...(record.status !== "posted" ? [{ key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" aria-hidden />, onClick: () => setDeleting(true) }] : []),
   ];
   return (
     <>
       <FormView definition={COUNTS} record={record} canWrite={false} fmt={fmt} actions={actions} />
+      {dateChange.dialog}
       <TypeToConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}
@@ -335,6 +343,7 @@ const intakeHref = (id: string) => `/warehouse/initial-balance/new?draft=${id}`;
 export function InitialBalanceScreen() {
   const { t } = useI18n();
   const { can } = useAuth();
+  const dateChangeOn = useDocDateChangeAllowed();
   return (
     <EngineScreen
       definition={INTAKE}
@@ -360,6 +369,7 @@ export function InitialBalanceScreen() {
         const manage = can("can_manage_products");
         return [
           { key: "open", label: draft && manage ? t("common.edit") : t("common.view"), icon: draft && manage ? <PencilLine className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" /> },
+          { key: DATE_CHANGE_ACTION_KEY, label: t("dateChange.action"), icon: <CalendarClock className="h-4 w-4" />, hidden: !(dateChangeOn && r.status === "posted") },
           { key: "unpost", label: t("initialBalance.revertToDraft"), icon: <Undo2 className="h-4 w-4" />, hidden: !(r.status === "posted" && can("can_unpost_inventory")) },
           { key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" />, destructive: true, hidden: !(draft && manage) },
         ];
@@ -387,14 +397,17 @@ function IntakeRecordView({ record, close }: { record: IntakeRecord; close: () =
     await invalidateModel(client, INTAKE_VIEW_KEY);
     close();
   };
+  const dateChange = useDocumentDateChange(() => void invalidateModel(client, INTAKE_VIEW_KEY));
   const actions: FormAction[] = [
     { key: "open", label: isDraft && canManage ? t("common.edit") : t("common.view"), primary: true, icon: isDraft && canManage ? <PencilLine className="h-4 w-4" aria-hidden /> : <ExternalLink className="h-4 w-4" aria-hidden />, onClick: () => router.push(intakeHref(record.id)) },
+    ...dateChange.formActions(isPosted, { type: "inventory_initial_balance", id: record.id, label: record.document_number, date: record.doc_date ?? null }),
     ...(isPosted && can("can_unpost_inventory") ? [{ key: "unpost", label: t("initialBalance.revertToDraft"), icon: <Undo2 className="h-4 w-4" aria-hidden />, onClick: () => setUnposting(true) }] : []),
     ...(isDraft && canManage ? [{ key: "delete", label: t("common.delete"), icon: <Trash2 className="h-4 w-4" aria-hidden />, onClick: () => setDeleting(true) }] : []),
   ];
   return (
     <>
       <FormView definition={INTAKE} record={record} canWrite={false} fmt={fmt} actions={actions} />
+      {dateChange.dialog}
       {unposting ? (
         <form
           className="ds-card ds-card-pad mt-4 flex flex-col gap-3"
@@ -460,6 +473,7 @@ function IntakeRecordView({ record, close }: { record: IntakeRecord; close: () =
 export function DamagedGoodsScreen() {
   const { t } = useI18n();
   const client = useQueryClient();
+  const dateChangeOn = useDocDateChangeAllowed();
   const [creating, setCreating] = useState(false);
   const catalog = useQuery({ queryKey: ["inventory", "catalog"], queryFn: fetchProductsCatalog });
   const warehouses = catalog.data?.warehouses ?? [];
@@ -491,6 +505,7 @@ export function DamagedGoodsScreen() {
       rowActions={(): RowActionSpec[] => [
         { key: "edit", label: t("common.edit"), icon: <PencilLine className="h-4 w-4" /> },
         { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" /> },
+        { key: DATE_CHANGE_ACTION_KEY, label: t("dateChange.action"), icon: <CalendarClock className="h-4 w-4" />, hidden: !dateChangeOn },
       ]}
       renderRecord={(r) => <WriteoffRecordView record={r} />}
     />
@@ -502,6 +517,7 @@ function WriteoffRecordView({ record }: { record: WriteoffViewRecord }) {
   const fmt = useFormatter();
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const dateChange = useDocumentDateChange(() => void invalidateModel(client, WRITEOFFS_VIEW_KEY));
   const { printData, setPrintData } = useDocumentPrint<DamagedGoodsPrintData>();
   const catalog = useQuery({ queryKey: ["inventory", "catalog"], queryFn: fetchProductsCatalog });
   const full = useQuery({ queryKey: ["views", WRITEOFFS_VIEW_KEY, "full"], queryFn: fetchInventoryWriteoffs });
@@ -531,6 +547,7 @@ function WriteoffRecordView({ record }: { record: WriteoffViewRecord }) {
           icon: <Printer className="h-4 w-4" aria-hidden />,
           onClick: () => setPrintData({ document_number: writeoff.document_number, writeoff_date: writeoff.writeoff_date || "-", warehouse_name: record.warehouse_name || "-", checker_name: writeoff.checker_name, items: writeoff.items, notes: writeoff.notes }),
         },
+        ...dateChange.formActions(true, { type: "inventory_writeoff", id: writeoff.id, label: writeoff.document_number, date: writeoff.writeoff_date || null }),
       ]
     : [];
   return (
@@ -543,6 +560,7 @@ function WriteoffRecordView({ record }: { record: WriteoffViewRecord }) {
         actions={actions}
         extraTabs={[{ key: "lines", label: t("sales.engine.tabs.lines", { count: items.length }), content: <Lines items={items} extra={(i) => items[i].issue_description} /> }]}
       />
+      {dateChange.dialog}
       {printData ? createPortal(<div className="print-area"><DamagedGoodsPrintTemplate writeoff={printData} /></div>, document.body) : null}
     </>
   );

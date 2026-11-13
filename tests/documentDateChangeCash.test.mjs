@@ -20,8 +20,8 @@ import { translate } from "../src/i18n/translate.ts";
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 const MIGRATION = "supabase/migrations/20261110151000_document_date_change_cash.sql";
 
-test("document types: the invoices and the four cash documents, nothing else", () => {
-  assert.deepEqual([...DATE_CHANGE_DOCUMENT_TYPES], ["sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"]);
+test("document types: the invoices and the four cash documents (DATE-3 adds the inventory ones)", () => {
+  assert.deepEqual(DATE_CHANGE_DOCUMENT_TYPES.slice(0, 6), ["sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"]);
   assert.equal(isDateChangeDocumentType("expense"), true);
   assert.equal(isDateChangeDocumentType("transfer"), false, "transfers are not covered");
   assert.equal(isDateChangeDocumentType(null), false);

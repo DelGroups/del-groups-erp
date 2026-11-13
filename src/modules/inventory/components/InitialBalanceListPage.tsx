@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Eye, FileSpreadsheet, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, Eye, FileSpreadsheet, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 
@@ -15,6 +15,7 @@ import Button from "@/components/ui/button";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import ToastMessage from "@/components/ui/ToastMessage";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -129,6 +130,8 @@ export default function InitialBalanceListPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  // DOC_DATE_CHANGE (DATE-3): admins change a posted document's date in place.
+  const dateChange = useDocumentDateChange(() => void load());
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -213,6 +216,13 @@ export default function InitialBalanceListPage() {
               label: t("common.view"),
               icon: <Eye className="h-4 w-4" />,
               onClick: () => router.push(documentHref(row.id)),
+            },
+            {
+              key: "change_date",
+              label: t("dateChange.action"),
+              icon: <CalendarClock className="h-4 w-4" />,
+              hidden: !(dateChange.allowed && isPosted),
+              onClick: () => dateChange.open({ type: "inventory_initial_balance", id: row.id, label: row.document_number, date: row.doc_date ?? null }),
             },
             {
               key: "edit",
@@ -348,6 +358,7 @@ export default function InitialBalanceListPage() {
         onCancel={() => setUnpostTarget(null)}
       />
       <ToastMessage message={toastMessage} variant={toastVariant} />
+      {dateChange.dialog}
     </PageLayout>
   );
 }

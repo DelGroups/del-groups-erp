@@ -14,7 +14,7 @@ import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGr
 import { useI18n } from "@/i18n/I18nProvider";
 import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import { formatGridDateTime } from "@/lib/dates/localeDate";
-import { isoToDots, type DateChangeDocumentType } from "@/lib/documents/dateChange";
+import { DATE_CHANGE_DOCUMENT_TYPES, isoToDots, type DateChangeDocumentType } from "@/lib/documents/dateChange";
 import { getSupabaseClient } from "@/lib/supabase";
 import { RECORD_PARAM } from "@/views";
 
@@ -41,11 +41,12 @@ interface DateChangeRow {
 }
 
 type TypeFilter = "all" | DateChangeDocumentType;
-const TYPE_FILTERS: TypeFilter[] = ["all", "sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"];
+const TYPE_FILTERS: TypeFilter[] = ["all", ...DATE_CHANGE_DOCUMENT_TYPES];
 
 /**
  * Where a document opens: the sale page, the purchase or expense list with the record panel, the
- * partner payments list, or the cash ledger (a payment booked on an invoice, a manual cash row).
+ * partner payments list, the cash ledger (a payment booked on an invoice, a manual cash row), the
+ * count or intake page, or the list of write-offs, stock or imports (no own page for those rows).
  */
 export function documentHref(row: Pick<DateChangeRow, "document_type" | "document_id">): string {
   const id = encodeURIComponent(row.document_id);
@@ -58,6 +59,17 @@ export function documentHref(row: Pick<DateChangeRow, "document_type" | "documen
       return `/expenses?${RECORD_PARAM}=${id}`;
     case "partner_payment":
       return "/dashboard/payments";
+    case "inventory_count":
+      return `/inventory/counts/${row.document_id}`;
+    case "inventory_initial_balance":
+      return `/warehouse/initial-balance/new?draft=${id}`;
+    case "inventory_writeoff":
+      return "/products/damaged-goods";
+    case "stock_transfer":
+      return "/inventory";
+    case "import_receipt":
+    case "import_payment":
+      return "/imports";
     default:
       return "/finance";
   }
