@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, Check, CheckCircle2, Paperclip, PencilLine, Plus, Send, Wallet, XCircle } from "lucide-react";
+import { Ban, CalendarClock, Check, CheckCircle2, Paperclip, PencilLine, Plus, Send, Wallet, XCircle } from "lucide-react";
 import { useToast, useUiStandard } from "@/design-system/components";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -25,6 +25,8 @@ import { isOwedToEmployee, todayIsoDate, type ExpenseDocument, type ExpenseSaveI
 import { expenseKpis, expensesDefinition, EXPENSES_VIEW_KEY, type ExpenseRecord } from "../views/expenses";
 import ExpenseAttachmentsModal from "./ExpenseAttachmentsModal";
 import ExpenseFormModal from "./ExpenseFormModal";
+import { DATE_CHANGE_ACTION_KEY, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
 
 const ROWS_KEY = ["views", EXPENSES_VIEW_KEY, "rows"] as const;
 const fetchAll = async () => {
@@ -50,6 +52,8 @@ function ExpensesScreenBody() {
   const { can } = useAuth();
   const { toast } = useToast();
   const client = useQueryClient();
+  // DOC_DATE_CHANGE (DATE-2): admins change a booked expense's date in place.
+  const dateChangeOn = useDocDateChangeAllowed();
   const options = useQuery({
     queryKey: ["expenses", "form-options"],
     queryFn: async () => {
@@ -90,7 +94,7 @@ function ExpensesScreenBody() {
           ) : null
         }
         recordTitle={(r) => r.code}
-        rowActions={(r) => expenseRowActions(r, t, can)}
+        rowActions={(r) => expenseRowActions(r, t, can, dateChangeOn)}
         renderRecord={(r, { close }) => (
           <ExpenseRecordView
             record={r}
@@ -112,7 +116,7 @@ function ExpensesScreenBody() {
  * ExpenseRecordView's form, which runs the picked action (?do=). Reimbursing needs the full
  * document, so the form decides that one (it is offered while the expense is approved or posted).
  */
-function expenseRowActions(r: ExpenseRecord, t: (key: string, params?: Record<string, string | number>) => string, can: ReturnType<typeof useAuth>["can"]): RowActionSpec[] {
+function expenseRowActions(r: ExpenseRecord, t: (key: string, params?: Record<string, string | number>) => string, can: ReturnType<typeof useAuth>["can"], dateChangeOn = false): RowActionSpec[] {
   const canManage = can("can_manage_expenses");
   const canFinance = can("can_manage_finance");
   const byEmployee = r.payment_mode === "employee";
@@ -126,6 +130,7 @@ function expenseRowActions(r: ExpenseRecord, t: (key: string, params?: Record<st
     { key: "reject", label: t("expenses.doc.reject"), icon: icon(XCircle), hidden: !(r.status === "submitted" && canFinance) },
     { key: "reimburse", label: t("expenses.doc.reimburse"), icon: icon(Wallet), hidden: !(byEmployee && canFinance && (r.status === "approved" || r.status === "posted")) },
     { key: "attachments", label: t("expenses.doc.attachmentsAction", { count: r.attachment_count }), icon: icon(Paperclip) },
+    { key: DATE_CHANGE_ACTION_KEY, label: t("dateChange.action"), icon: icon(CalendarClock), hidden: !(dateChangeOn && expenseIsBooked(r.status)) },
     {
       key: "cancel",
       label: t("expenses.doc.cancelExpense"),
@@ -134,6 +139,11 @@ function expenseRowActions(r: ExpenseRecord, t: (key: string, params?: Record<st
       hidden: !(r.status !== "cancelled" && !r.is_production && canManage && !((r.status === "approved" || (r.status === "posted" && byEmployee)) && !canFinance)),
     },
   ];
+}
+
+/** Booked (approved or posted): its date can be changed in place (DATE-2). */
+function expenseIsBooked(status: string): boolean {
+  return status === "approved" || status === "posted";
 }
 
 type Step = "reject" | "cancel" | "reimburse" | null;
@@ -153,6 +163,7 @@ function ExpenseRecordView({ record, options, onEdit }: { record: ExpenseRecord;
   const [payDate, setPayDate] = useState(() => todayIsoDate());
   const [attachments, setAttachments] = useState(false);
   const uiStandard = useUiStandard();
+  const dateChange = useDocumentDateChange(() => void invalidateModel(client, EXPENSES_VIEW_KEY));
   const canManage = can("can_manage_expenses");
   const canFinance = can("can_manage_finance");
   const byEmployee = record.payment_mode === "employee";
@@ -189,6 +200,7 @@ function ExpenseRecordView({ record, options, onEdit }: { record: ExpenseRecord;
     ...(record.status !== "cancelled" && !record.is_production && canManage && !((record.status === "approved" || (record.status === "posted" && byEmployee)) && !canFinance)
       ? [{ key: "cancel", label: t("expenses.doc.cancelExpense"), disabled: busy, icon: <Ban className="h-4 w-4" aria-hidden />, onClick: () => setStep("cancel") }]
       : []),
+    ...dateChange.formActions(expenseIsBooked(record.status), { type: "expense", id: record.id, label: record.code, date: record.expense_date ?? null }),
   ];
 
   const stepForm =
@@ -294,6 +306,7 @@ function ExpenseRecordView({ record, options, onEdit }: { record: ExpenseRecord;
     <>
       <FormView definition={DEFINITION} record={record} canWrite={false} fmt={fmt} actions={actions} />
       {stepForm}
+      {dateChange.dialog}
       {attachments && doc ? (
         <ExpenseAttachmentsModal
           expense={doc}

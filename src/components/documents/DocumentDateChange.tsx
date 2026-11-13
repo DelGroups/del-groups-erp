@@ -10,6 +10,8 @@ import { dateFieldLabels } from "@/i18n/uiStandardLabels";
 import {
   canApply,
   checkBlockedReason,
+  dateChangeAffectedKeys,
+  dateChangePaymentsOption,
   dateChangeReducer,
   initialDateChangeState,
   isoToDots,
@@ -24,7 +26,7 @@ import { useDocDateChangeAllowed } from "./DocDateChangeFlag";
 export interface DateChangeTarget {
   type: DateChangeDocumentType;
   id: string;
-  /** Document number for the title. */
+  /** Document number (or a payment's "number · amount") for the title. */
   label: string;
   /** The current document date (yyyy-mm-dd). */
   date: string | null;
@@ -36,7 +38,7 @@ export interface DateChangeTarget {
 export const DATE_CHANGE_ACTION_KEY = "change_date";
 
 /**
- * DATE-1: "Tarixi dəyiş" for posted invoices, shown only while DOC_DATE_CHANGE is on and the user
+ * DATE-1/2: "Tarixi dəyiş" for posted invoices and cash documents, shown only while DOC_DATE_CHANGE is on and the user
  * is an admin. One hook for every list and form: menu entries, open(), and the dialog to render.
  */
 export function useDocumentDateChange(onChanged?: (target: DateChangeTarget) => void) {
@@ -74,6 +76,7 @@ function DocumentDateChangeDialog({ target, onClose, onChanged }: { target: Date
   const blockedKey = checkBlockedReason(state, target.date);
   const busy = state.step === "checking" || state.step === "applying";
   const preview = state.preview;
+  const paymentsOption = dateChangePaymentsOption(target.type);
 
   const check = async () => {
     if (blockedKey || !state.newDate) return;
@@ -137,18 +140,22 @@ function DocumentDateChangeDialog({ target, onClose, onChanged }: { target: Date
         <Field label={t("dateChange.reason")} htmlFor={reasonId} hint={t("dateChange.reasonHint")} required>
           <textarea id={reasonId} className="ds-input min-h-20" value={state.reason} maxLength={500} onChange={(e) => dispatch({ type: "reason", value: e.target.value })} />
         </Field>
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4"
-            checked={state.options.move_same_day_payments}
-            onChange={(e) => dispatch({ type: "option", key: "move_same_day_payments", value: e.target.checked })}
-          />
-          <span>
-            {t("dateChange.moveSameDayPayments")}
-            <span className="block text-[length:var(--ds-text-xs)] ds-muted">{t("dateChange.moveSameDayPaymentsHint")}</span>
-          </span>
-        </label>
+        {paymentsOption ? (
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4"
+              checked={state.options.move_same_day_payments}
+              onChange={(e) => dispatch({ type: "option", key: "move_same_day_payments", value: e.target.checked })}
+            />
+            <span>
+              {paymentsOption === "expense" ? t("dateChange.moveSameDayReimbursement") : t("dateChange.moveSameDayPayments")}
+              <span className="block text-[length:var(--ds-text-xs)] ds-muted">
+                {paymentsOption === "expense" ? t("dateChange.moveSameDayReimbursementHint") : t("dateChange.moveSameDayPaymentsHint")}
+              </span>
+            </span>
+          </label>
+        ) : null}
 
         {state.error ? (
           <p role="alert" className="text-[length:var(--ds-text-sm)]" style={{ color: "var(--ds-danger-strong)" }}>
@@ -186,7 +193,7 @@ function DocumentDateChangeDialog({ target, onClose, onChanged }: { target: Date
             ) : null}
             {preview.ok ? (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-[length:var(--ds-text-sm)] sm:grid-cols-3" data-date-change-affected="">
-                {(["journals", "cash", "stock_moves", "batches", "pieces", "payments"] as const).map((k) => (
+                {dateChangeAffectedKeys(target.type).map((k) => (
                   <div key={k} className="flex justify-between gap-2">
                     <dt className="ds-muted">{t(`dateChange.affected.${k}`)}</dt>
                     <dd className="tabular-nums">{preview.affected[k] ?? 0}</dd>

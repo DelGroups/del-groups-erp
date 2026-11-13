@@ -45,6 +45,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import {
   Ban,
+  CalendarClock,
   CheckCircle2,
   Download,
   FolderTree,
@@ -60,6 +61,7 @@ import {
   X,
 } from "lucide-react";
 import { ListGrid } from "@/components/lists/ListGrid";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 
 type ExpensesTab = "records" | "report" | "categories";
 
@@ -195,6 +197,8 @@ export default function ExpensesPage() {
     void loadRows();
     void loadOptions();
   };
+  // DOC_DATE_CHANGE (DATE-2): admins change a booked expense's date in place.
+  const dateChange = useDocumentDateChange(() => refreshAll());
 
   const handleSave = async (input: ExpenseSaveInput) => {
     setSaving(true);
@@ -492,6 +496,13 @@ export default function ExpensesPage() {
                 setReimburseDate(todayIsoDate());
                 setReimburseTarget(r);
               },
+            },
+            {
+              key: "change_date",
+              label: t("dateChange.action"),
+              icon: <CalendarClock className="h-4 w-4" />,
+              hidden: !(dateChange.allowed && (r.status === "approved" || r.status === "posted")),
+              onClick: () => dateChange.open({ type: "expense", id: r.id, label: r.code, date: r.expense_date ?? null }),
             },
             {
               key: "cancel",
@@ -832,6 +843,7 @@ export default function ExpensesPage() {
         />
       ) : null}
 
+      {dateChange.dialog}
       {attachTarget ? (
         <ExpenseAttachmentsModal
           expense={attachTarget}
