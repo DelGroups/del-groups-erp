@@ -755,10 +755,10 @@ Branch: `saas/doc-date-change-cash`. Depends on DATE-1 being merged (start from 
 
 Do:
 
-1. Migration `supabase/migrations/20261110151000_document_date_change_cash.sql` (re-check the prefix). Add handlers to the engine for: invoice payments made from the three-dot menu (`process_invoice_payment_event` rows), partner payments (`create_partner_payment`), manual cash/bank transactions and transfers between accounts (both legs move together), expenses (`expense_documents`, including the VAT split rows and employee-paid expenses). For each: R1, R2, R6 on every account touched, R7 (payment not before its invoice, expense not before its source document), W2.
+1. Migration `supabase/migrations/20261110151000_document_date_change_cash.sql` (re-check the prefix). Add handlers to the engine for: invoice payments made from the three-dot menu (`process_invoice_payment_event` rows), partner payments (`create_partner_payment`), manual cash/bank transactions (transfers between accounts are left to prompt TR-2 in docs/prompts/TRANSFERS-CASH-AND-STOCK-2026-11-13.md), expenses (`expense_documents`, including the VAT split rows and employee-paid expenses). For each: R1, R2, R6 on every account touched, R7 (payment not before its invoice, expense not before its source document), W2.
 2. Read the existing balance checks (`insufficient_balance` in `20261107100000_gl_partner_cash_account.sql`, `20261005200000_expense_documents.sql`) and use the same balance rule in the timeline check; do not invent a second definition of "balance".
 3. Add the menu item / form action in the lists and forms of these documents (flag + admin only).
-4. Tests: one pass and one block per document type, plus a transfer whose destination would go negative.
+4. Tests: one pass and one block per document type.
 5. `npm run lint`, `npm test`, `npm run build`.
 
 PR as in DATE-1.
@@ -821,7 +821,7 @@ Branch: `saas/doc-date-change-inventory`. Depends on DATE-1 (and DATE-2 for impo
 
 Do:
 
-1. Migration `supabase/migrations/20261110152000_document_date_change_inventory.sql` (re-check the prefix). Handlers for: stock transfers (out and in legs, R3 on both warehouses), inventory write-offs, initial balances and stock receipts (`inventory_initial_balances`), import documents (`imports_*`: receipts, payments, cost postings, late postings; stage order R7, W3 for FX: keep the original rate by default, option to re-rate is OUT of scope, only warn), production orders if they post stock.
+1. Migration `supabase/migrations/20261110152000_document_date_change_inventory.sql` (re-check the prefix). Handlers for: stock transfers (out and in legs, R3 on both warehouses), inventory write-offs, initial balances and stock receipts (`inventory_initial_balances`), import documents (`imports_*`: receipts, payments, cost postings, late postings; stage order R7, W3 for FX: keep the original rate by default, option to re-rate is OUT of scope, only warn), production orders if they post stock. (Note 2026-11-13: if STK-1 from docs/prompts/TRANSFERS-CASH-AND-STOCK-2026-11-13.md is merged, the stock transfer handler must also refuse status 'cancelled' and move the TRANSFER_CANCEL_* rows only with their cancel.)
 2. Inventory counts: F2 already lets admins change a count's date (`inventory_count_date_changed`, `inventory_count_unpost`). Route posted counts through the same engine so the change is logged in `document_date_changes` and checked with R3/R8; keep F2's behaviour for drafts.
 3. Menu item / form action for each (flag + admin only).
 4. Tests: pass/block per document type; a transfer moved before the stock arrived in the source warehouse; an import receipt moved after a sale of its goods (R4).
@@ -1073,6 +1073,9 @@ src/modules/inventory/lib/stockTransferServer.ts (not atomic).
    - Kits: the component lines pick automatically.
    - Cancel / void / reverse / unpost / material return / consignment return: mode reverse with
      reverse_of = the original document (and line when known).
+   - (Note 2026-11-13: if STK-1 from docs/prompts/TRANSFERS-CASH-AND-STOCK-2026-11-13.md is merged,
+     post_stock_transfer already exists: CREATE OR REPLACE it adding lots, and give this
+     migration a prefix after 20261201110000.)
    - New RPC post_stock_transfer(p_payload jsonb): header + lines in one transaction (same
      tables and numbering the TS code uses today), out of the source with optional chosen lots,
      in to the target with mode mirror; polywood offcuts move their pieces (lot follows). The API
