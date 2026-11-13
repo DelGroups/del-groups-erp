@@ -199,6 +199,9 @@ union all
 select 'pending', '20261115120000_lot_outbound: outbound and moving documents record their lots (LOT-3)',
        case when to_regprocedure('public._lot_check_choice(uuid, uuid, numeric, jsonb, uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261115130000_lot_ui: reads of the lot screens (LOT-4)',
+       case when to_regprocedure('public.lot_movements_page(uuid, integer, integer)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

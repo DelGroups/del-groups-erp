@@ -31,6 +31,8 @@ export interface CommandPaletteProps {
   labels: CommandPaletteLabels;
   /** Open with ⌘K / Ctrl-K while mounted (default true). */
   hotkey?: boolean;
+  /** The typed text, for groups whose results come from a search (LOT-4: lots by number). */
+  onQueryChange?: (query: string) => void;
 }
 
 /**
@@ -39,11 +41,14 @@ export interface CommandPaletteProps {
  * runs the highlighted command, Esc or a click outside closes, ⌘K / Ctrl-K reopens with an
  * empty query. Radix Dialog traps focus; cmdk keeps hover and keyboard selection in step.
  */
-export function CommandPalette({ groups, open, onOpenChange, labels, hotkey = true }: CommandPaletteProps) {
+export function CommandPalette({ groups, open, onOpenChange, labels, hotkey = true, onQueryChange }: CommandPaletteProps) {
   const { portalContainer } = useDesignScope();
   const reduced = useReducedMotion();
   const [query, setQuery] = useState("");
   const visible = useMemo(() => filterPalette(groups, query), [groups, query]);
+  useEffect(() => {
+    onQueryChange?.(query);
+  }, [query, onQueryChange]);
 
   useEffect(() => {
     if (!hotkey) return;

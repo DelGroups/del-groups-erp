@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FileCheck2, FolderOpen, Inbox, Layers, ListTodo, Scale, Ship, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, ChartColumn, FileBarChart, FileCheck2, FolderOpen, Inbox, Layers, ListTodo, Scale, Ship, SlidersHorizontal, Tags, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { usePartnerLedgers } from "@/components/reports/PartnerLedgersFlag";
+import { useLotTracking } from "@/modules/inventory";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useSettingsItems } from "@/components/settings/useSettingsItems";
 import { SETTINGS_HOME } from "@/lib/settings/items";
@@ -31,7 +32,7 @@ import {
   type TrailEntry,
 } from "@/lib/shell/shell";
 
-const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship, "/imports/reports": BarChart3, "/dashboard/reports/partner-statement": FileCheck2, "/dashboard/reports/debtors": Scale };
+const EXTRA_ICONS: Record<string, LucideIcon> = { "/polywood": Layers, "/comissions/report": FileBarChart, "/calendar": CalendarDays, "/todo": ListTodo, "/documents": FolderOpen, "/crm/leads": Inbox, "/crm/reports": ChartColumn, "/crm/config": SlidersHorizontal, "/imports": Ship, "/settings/imports": Ship, "/imports/reports": BarChart3, "/dashboard/reports/partner-statement": FileCheck2, "/dashboard/reports/debtors": Scale, "/inventory/lots": Tags };
 
 export interface ShellApp {
   id: string;
@@ -57,13 +58,14 @@ export function useShellApps(): {
   const pathname = usePathname();
   const { newCrm, newImports } = useNewUi();
   const partnerLedgers = usePartnerLedgers();
+  const lotTracking = useLotTracking();
 
   const { items: settingsItems, v2: settingsV2 } = useSettingsItems();
 
   const sections = useMemo(
     () => {
       const visible = visibleSections<NavItem, NavSection>(
-        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm, newImports, partnerLedgers }), (e) => ({
+        withExtraItems<NavItem, NavSection>(NAV_SECTIONS, extraItemsFor(SHELL_EXTRA_ITEMS, { newCrm, newImports, partnerLedgers, lotTracking }), (e) => ({
           path: e.path,
           titleKey: e.titleKey,
           module: e.module as NavItem["module"],
@@ -86,7 +88,7 @@ export function useShellApps(): {
       if (settingsV2 && items.length) items.unshift({ path: SETTINGS_HOME, titleKey: "settingsNav.allSettings", icon: settings.icon, module: "core" as ModuleId });
       return replaceSectionItems<NavItem, NavSection>(visible, NAV_SECTIONS.map((s) => s.id), settings, items);
     },
-    [can, isAdmin, isEnabled, newCrm, newImports, partnerLedgers, settingsItems, settingsV2]
+    [can, isAdmin, isEnabled, newCrm, newImports, partnerLedgers, lotTracking, settingsItems, settingsV2]
   );
 
   const apps = useMemo<ShellApp[]>(() => {

@@ -53,7 +53,7 @@ test("the client's chatter tables are exactly the migration's, and every one exi
     ...readdirSync(join(root, "supabase/modules"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => read(`supabase/modules/${d.name}/install.sql`)),
     ...migrations.map((f) => read(`supabase/migrations/${f}`)),
   ].join("\n");
-  for (const table of CHATTER_MODELS) assert.match(schema, new RegExp(`create table if not exists public\\.${table} \\(\\s*id uuid (not null|primary key)`), table);
+  for (const table of CHATTER_MODELS) assert.match(schema, new RegExp(`create table if not exists public\\.${table} \\(\\s*id\\s+uuid\\s+(not null|primary key)`, "i"), table);
 });
 
 test("only one migration for chatter, RLS on every table, visibility follows the record", () => {

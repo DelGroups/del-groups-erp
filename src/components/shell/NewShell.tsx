@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useLotPaletteGroup } from "@/modules/inventory";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
@@ -593,6 +594,17 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
     return () => root.removeAttribute(UI_UNIFIED_ATTR);
   }, [uiUnified]);
 
+  // LOT-4: lots found by the typed lot / supplier batch number (LOT_TRACKING).
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const navigateTo = useCallback(
+    (href: string) => {
+      markShellNavigation();
+      router.push(href);
+    },
+    [router]
+  );
+  const lotGroup = useLotPaletteGroup(paletteQuery, navigateTo);
+
   const groups = useMemo<PaletteGroup<PaletteAction>[]>(() => {
     const go = (href: string) => () => {
       markShellNavigation();
@@ -609,8 +621,9 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
         heading: t("shell.quickActions"),
         commands: quickActions.map((a) => ({ id: `action:${a.id}`, label: a.label, icon: a.icon, onSelect: go(a.href) })),
       },
+      ...(lotGroup ? [lotGroup] : []),
     ];
-  }, [apps, quickActions, router, t]);
+  }, [apps, quickActions, router, t, lotGroup]);
 
   const openAi = () => window.dispatchEvent(new CustomEvent(AI_OPEN_EVENT));
 
@@ -710,6 +723,7 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
           groups={groups}
           open={paletteOpen}
           onOpenChange={setPaletteOpen}
+          onQueryChange={setPaletteQuery}
           labels={{
             title: t("newShell.search"),
             placeholder: t("newShell.searchHint"),
