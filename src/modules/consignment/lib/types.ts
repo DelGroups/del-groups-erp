@@ -49,6 +49,8 @@ export interface ConsignmentDispatchItem {
   unit: string | null;
   quantity: number;
   unit_price: number;
+  /** LOT-3 (LOT_TRACKING): the lots chosen for the line; left out = automatic (FEFO). */
+  lots?: { lot_id: string; qty: number }[];
 }
 
 export interface ConsignmentDispatch {

@@ -20,6 +20,8 @@ export interface StockTransferLineInput {
   offcut_id?: string | null;
   quantity: number;
   available_stock: number;
+  /** LOT-3: the lots chosen for the line ([{lot_id, qty}]); left out = automatic (FEFO). */
+  lots?: { lot_id: string; qty: number }[];
 }
 
 export interface SubmitStockTransferPayload {

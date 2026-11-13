@@ -3,6 +3,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
 import { isValidUuid } from "@/lib/auth/validate";
+import { isLotTrackingEnabled } from "@/lib/features/lotTracking";
 import { userHasPermission } from "@/lib/auth/routePermissions";
 import {
   filterAccountsByScope,
@@ -544,6 +545,7 @@ async function updateMaterialOmittingMissingColumns(
   if (patch.total_price !== undefined) payload.total_price = patch.total_price;
   if (patch.unit_cost !== undefined) payload.unit_cost = patch.unit_cost;
   if (patch.line_cost !== undefined) payload.line_cost = patch.line_cost;
+  if (patch.lots !== undefined) payload.lots = patch.lots;
 
   for (let attempt = 0; attempt < 8; attempt++) {
     const { error } = await admin.from("production_materials").update(payload as never).eq("id", materialId);
@@ -2113,6 +2115,11 @@ export async function addProductionMaterialAction(
         };
       }
       material = insertedMaterial.material;
+      // LOT-3: the lots chosen for this new line; the issue event reads them (a new material is
+      // issued whole). Skipped while LOT_TRACKING is off or before the column exists.
+      if (safeInput.lots?.length && isLotTrackingEnabled()) {
+        await updateMaterialOmittingMissingColumns(admin, material.id, { lots: safeInput.lots });
+      }
     }
 
     const reservationResult = await syncProductionReservations(admin, orderId);

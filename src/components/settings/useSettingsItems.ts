@@ -1,6 +1,7 @@
 "use client";
 
 import { useDocDateChangeFlag } from "@/components/documents/DocDateChangeFlag";
+import { useLotTracking } from "@/modules/inventory";
 import { useMemo } from "react";
 import {
   Barcode,
@@ -13,6 +14,7 @@ import {
   Database,
   KanbanSquare,
   Landmark,
+  Layers,
   Percent,
   Scale,
   ScrollText,
@@ -45,6 +47,7 @@ const ICONS: Record<string, LucideIcon> = {
   Database,
   KanbanSquare,
   Landmark,
+  Layers,
   Percent,
   Scale,
   ScrollText,
@@ -79,6 +82,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
   const { isEnabled } = useEnabledModules();
   const { active: newUi, newImports, settingsV2 } = useNewUi();
   const docDateChange = useDocDateChangeFlag();
+  const lotTracking = useLotTracking();
   const { t } = useI18n();
   const v2 = newUi && settingsV2;
 
@@ -89,7 +93,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       isAdmin,
       isEnabled: (m) => isEnabled(m as ModuleId | undefined),
       newUi,
-      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports, docDateChange },
+      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports, docDateChange, lotTracking },
       v2,
     }).map((item) => ({
       ...item,
@@ -98,7 +102,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       groupTitle: groupTitle.get(item.group) ?? "",
       Icon: settingsIcon(item.icon),
     }));
-  }, [can, isAdmin, isEnabled, newUi, newImports, docDateChange, v2, t]);
+  }, [can, isAdmin, isEnabled, newUi, newImports, docDateChange, lotTracking, v2, t]);
 
   return { items, v2 };
 }

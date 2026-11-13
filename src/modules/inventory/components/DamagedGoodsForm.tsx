@@ -20,7 +20,9 @@ import { FormActionsBar } from "@/components/ui/form-sticky-actions";
 import Button from "@/components/ui/button";
 import { EntityLookup, mergeRecord } from "@/components/lookups";
 import { useUiStandard } from "@/design-system/components";
-import { LineGrid, LineNumberCell, LineSelectCell, LineText, LineTextCell } from "@/components/line-grid";
+import { LineGrid, LineNumberCell, LineSelectCell, LineText, LineTextCell, type LineCellContext } from "@/components/line-grid";
+import { LotAutoText, LotPicker } from "./LotPicker";
+import { useLotTracking } from "./LotTrackingFlag";
 import { lineGridLabels } from "@/i18n/uiStandardLabels";
 import { formatQuantity } from "@/lib/dates/localeDate";
 import { useToast } from "@/hooks/useToast";
@@ -46,6 +48,7 @@ export default function DamagedGoodsForm({
   const { t, locale } = useI18n();
   // UI_STANDARD (UI-2 lookups): the warehouse through EntityLookup (role scope + any created here).
   const uiStandard = useUiStandard();
+  const lotsOn = useLotTracking();
   const [createdWarehouses, setCreatedWarehouses] = useState<Warehouse[]>([]);
   const { message: toastMessage, variant: toastVariant, showError: showToastError } = useToast();
   const lockChecker = !authLoading && !isAdmin;
@@ -83,7 +86,7 @@ export default function DamagedGoodsForm({
       setItems((prev) =>
         prev.map((row) =>
           row.product_id
-            ? { ...row, available_stock: Number(list.find((p) => p.id === row.product_id)?.stock) || 0 }
+            ? { ...row, available_stock: Number(list.find((p) => p.id === row.product_id)?.stock) || 0, lots: null }
             : row
         )
       );
@@ -105,6 +108,7 @@ export default function DamagedGoodsForm({
         product_name: "",
         unit: "Ədəd",
         available_stock: 0,
+        lots: null,
       });
       return;
     }
@@ -115,6 +119,7 @@ export default function DamagedGoodsForm({
       product_name: product.name,
       unit: product.unit || "Ədəd",
       available_stock: Number(product.stock) || 0,
+      lots: null,
     });
   };
 
@@ -295,6 +300,31 @@ export default function DamagedGoodsForm({
                 ),
               },
               { key: "quantity", header: t("forms.quantity"), type: "number", width: 112, cell: (row, ctx) => <LineNumberCell ctx={ctx} value={row.quantity} onChange={(value) => updateItem(row.id, { quantity: value ?? 0 })} /> },
+              // LOT-3: the line's lots (LOT_TRACKING); with the flag off the column is not there.
+              ...(lotsOn
+                ? [
+                    {
+                      key: "lots",
+                      header: t("lots.picker.column"),
+                      width: 220,
+                      cell: (row: DamagedGoodsItem, ctx: LineCellContext) =>
+                        row.product_id && warehouseId ? (
+                          <LotPicker
+                            productId={row.product_id}
+                            warehouseId={warehouseId}
+                            quantity={Number(row.quantity) || 0}
+                            unit={row.unit}
+                            value={(row.lots ?? []).map((l) => ({ lotId: l.lot_id, qty: Number(l.qty) || 0 }))}
+                            onChange={(next) => updateItem(row.id, { lots: next ? next.map((c) => ({ lot_id: c.lotId, qty: c.qty })) : null })}
+                            label={ctx.label}
+                            invalid={ctx.invalid}
+                          />
+                        ) : (
+                          <LotAutoText />
+                        ),
+                    },
+                  ]
+                : []),
               { key: "stock", header: t("forms.stockCol"), type: "number", cell: (row) => <LineText muted suffix={row.unit}>{formatQuantity(row.available_stock, locale)}</LineText> },
               {
                 key: "reason",

@@ -9,6 +9,8 @@ import { useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import { codeName } from "@/components/lists/standardGridLogic";
 import { formatQuantity } from "@/lib/dates/localeDate";
+import { DocumentLotChips, useDocumentLots } from "./LotPicker";
+import { useLotTracking } from "./LotTrackingFlag";
 
 interface DamagedGoodsViewModalProps {
   writeoff: WriteoffRecord;
@@ -24,6 +26,9 @@ export default function DamagedGoodsViewModal({
   const { t, locale } = useI18n();
   // UI_STANDARD (UI-6): the written-off lines on the grid; old table with the flag off.
   const standard = useUiStandard();
+  // LOT-3 (LOT_TRACKING): the lots each line took.
+  const lotsOn = useLotTracking();
+  const docLots = useDocumentLots("inventory_writeoff", writeoff.id, lotsOn);
   const warehouseName =
     warehouses.find((w) => w.id === writeoff.warehouse_id)?.name || "-";
   const totalQty = writeoff.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -75,6 +80,9 @@ export default function DamagedGoodsViewModal({
                 { key: "no", header: t("print.rowNo"), type: "number", width: 56, className: "ds-muted", cell: (item) => writeoff.items.indexOf(item) + 1 },
                 { key: "product", header: t("dashboard.product"), width: 240, className: "font-medium", cell: (item) => codeName(item.product_code, item.product_name), sortValue: (item) => item.product_name },
                 { key: "qty", header: t("forms.quantity"), type: "number", cell: (item) => `${formatQuantity(item.quantity, locale)} ${item.unit}`, sortValue: (item) => item.quantity },
+                ...(lotsOn && docLots.length
+                  ? [{ key: "lots", header: t("lots.picker.column"), width: 220, cell: (item: (typeof writeoff.items)[number]) => <DocumentLotChips rows={docLots} lineId={item.id} productId={item.product_id} linkable /> }]
+                  : []),
                 { key: "problem", header: t("modals.damagedGoodsView.problem"), className: "ds-muted", cell: (item) => item.issue_description || "—" },
               ]}
             />
@@ -98,6 +106,7 @@ export default function DamagedGoodsViewModal({
                       <span className="ml-1 font-mono text-[10px] text-app-muted">
                         ({item.product_code})
                       </span>
+                      {lotsOn ? <DocumentLotChips rows={docLots} lineId={item.id} productId={item.product_id} linkable /> : null}
                     </td>
                     <td className="p-2.5">
                       {item.quantity} {item.unit}

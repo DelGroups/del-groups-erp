@@ -2601,6 +2601,7 @@ export const enMessages: Messages = {
     },
   },
   print: {
+    lotNumbers: "Lot: {lots}",
     salesInvoice: "Sales invoice",
     invoiceTitle: "SALES INVOICE",
     officialInvoiceTitle: "SALES INVOICE",
@@ -2853,6 +2854,7 @@ export const enMessages: Messages = {
   invoice: {
     // GRID-2: the sales LineGrid (behind UI_STANDARD).
     salesLines: {
+      lots: "Lot",
       product: "Product",
       quantity: "Quantity",
       price: "Price",
@@ -4339,6 +4341,45 @@ export const enMessages: Messages = {
     },
   },
   lots: {
+    picker: {
+      column: "Lot",
+      auto: "Automatic (FEFO)",
+      fefoTakes: "FEFO takes: {lots}",
+      noLots: "No lots in this warehouse",
+      expShort: "Exp {date}",
+      quarantine: "Quarantine",
+      closed: "Closed",
+      expired: "Expired",
+      nearExpiry: "Expires soon",
+      split: "{name}: split into lots",
+      splitTitle: "{name}: lots",
+      rowLot: "Lot {n}",
+      rowQty: "Quantity of lot {n} {lot}",
+      removeRow: "Remove lot {n}",
+      addRow: "Add lot",
+      fillFefo: "Fill by FEFO",
+      sum: "Total {sum} / {total} {unit}",
+      useAuto: "Use automatic",
+      apply: "Apply",
+      expiredWarning: "An expired lot is chosen. Only users who can manage lots may do this.",
+      labelFor: "Lot: {name}",
+    },
+    pickerIssues: {
+      sumMismatch: "The lots do not add up to the line quantity.",
+      emptyQty: "Every lot needs a quantity.",
+      short: "The lot has less than that in this warehouse.",
+      blocked: "A quarantined or closed lot cannot be chosen.",
+      expired: "Only users who can manage lots may choose an expired lot.",
+      unknown: "The lot is not in this warehouse. Choose another lot.",
+      duplicate: "The same lot is chosen twice.",
+    },
+    settings: {
+      invoiceSection: "Sales invoice",
+      printOnInvoice: "Print lot numbers on the invoice",
+      printOnInvoiceHint: "The lots the sale took are printed under each line.",
+      saved: "Saved",
+      saveFailed: "Not saved: {message}",
+    },
     auto: "Automatic",
     chip: "Lot {lot}",
     chipUnknown: "lot",
@@ -4441,6 +4482,10 @@ export const enMessages: Messages = {
     barcode: {
       title: "Barcode labels",
       description: "Sticker size, barcode type and the fields printed on a label.",
+    },
+    lotTracking: {
+      title: "Lots",
+      description: "Lot tracking settings: lot numbers on the invoice.",
     },
     stockIntegrity: {
       title: "Stock integrity",

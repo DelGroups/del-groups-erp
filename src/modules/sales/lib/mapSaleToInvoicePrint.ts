@@ -72,7 +72,12 @@ function detectVariant(items: SaleItemWithMeta[]): InvoicePrintData["variant"] {
 
 export function mapSaleToInvoicePrint(
   sale: SaleRecord,
-  options?: { variant?: InvoicePrintData["variant"]; additionalExpenses?: number }
+  options?: {
+    variant?: InvoicePrintData["variant"];
+    additionalExpenses?: number;
+    /** LOT-3: the lot numbers of a line (by sale_items.id), printed under it when given. */
+    lotNumbers?: (lineId: string, productId: string) => string[];
+  }
 ): InvoicePrintData {
   const items = (sale.items ?? []) as SaleItemWithMeta[];
   const remaining = getSaleRemaining(sale);
@@ -92,7 +97,11 @@ export function mapSaleToInvoicePrint(
     paidAmount: Number(sale.paid_amount) || 0,
     remainingBalance: remaining,
     currency: "AZN",
-    lines: items.map(mapLine),
+    lines: items.map((item, index) => {
+      const line = mapLine(item, index);
+      const lots = options?.lotNumbers?.(item.id, item.product_id) ?? [];
+      return lots.length ? { ...line, lotNumbers: lots } : line;
+    }),
     notes: sale.note,
     variant: options?.variant ?? detectVariant(items),
     isOfficial: sale.is_official === true,

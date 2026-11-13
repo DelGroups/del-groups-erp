@@ -4,6 +4,16 @@ import type { DamagedGoodsItem, Product, WarehouseSlipItem } from "@/types/datab
 import { toDamagedGoodsItemsJson } from "@/types/database.types";
 import { createWarehouseSlip } from "@/lib/warehouse/warehouseSlips";
 import { warehouseStockMap, writeoffCandidates, type WarehouseStockRow } from "./warehouseStockMap";
+import { followQuantity, lotsPayload } from "./lotPicker";
+
+/** LOT-3: the line JSON with its chosen lots (a single lot takes the whole line); no key when automatic. */
+export function writeoffItemsJson(items: DamagedGoodsItem[]) {
+  const json = toDamagedGoodsItemsJson(items) as Record<string, unknown>[];
+  return json.map((row, i) => {
+    const lots = lotsPayload(followQuantity((items[i].lots ?? []).map((l) => ({ lotId: l.lot_id, qty: Number(l.qty) || 0 })), items[i].quantity));
+    return lots ? { ...row, lots } : row;
+  });
+}
 
 export interface SubmitWriteoffPayload {
   document_number: string;
@@ -38,7 +48,7 @@ function writeoffRpcPayload(payload: SubmitWriteoffPayload, items: DamagedGoodsI
     warehouse_id: payload.warehouse_id || null,
     checker_name: payload.checker_name.trim(),
     notes: payload.notes?.trim() || null,
-    items: toDamagedGoodsItemsJson(items),
+    items: writeoffItemsJson(items),
   };
 }
 
