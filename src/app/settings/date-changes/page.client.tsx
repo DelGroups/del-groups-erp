@@ -9,12 +9,12 @@ import PermissionGuard from "@/components/auth/PermissionGuard";
 import SettingsTabs from "@/components/settings/SettingsTabs";
 import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Button, DateField, Drawer, Field, PageHeader, SegmentedControl } from "@/design-system/components";
+import { Button, Combobox, DateField, Drawer, Field, PageHeader } from "@/design-system/components";
 import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
 import { useI18n } from "@/i18n/I18nProvider";
-import { dateFieldLabels } from "@/i18n/uiStandardLabels";
+import { comboboxLabels, dateFieldLabels } from "@/i18n/uiStandardLabels";
 import { formatGridDateTime } from "@/lib/dates/localeDate";
-import { isoToDots } from "@/lib/documents/dateChange";
+import { isoToDots, type DateChangeDocumentType } from "@/lib/documents/dateChange";
 import { getSupabaseClient } from "@/lib/supabase";
 import { RECORD_PARAM } from "@/views";
 
@@ -29,7 +29,7 @@ interface MovedRow {
 
 interface DateChangeRow {
   id: string;
-  document_type: "sale" | "purchase";
+  document_type: DateChangeDocumentType;
   document_id: string;
   document_label: string | null;
   old_date: string;
@@ -40,11 +40,27 @@ interface DateChangeRow {
   changed_at: string;
 }
 
-type TypeFilter = "all" | "sale" | "purchase";
+type TypeFilter = "all" | DateChangeDocumentType;
+const TYPE_FILTERS: TypeFilter[] = ["all", "sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"];
 
-/** Where a document opens: the sale page, or the purchase list with the record panel. */
+/**
+ * Where a document opens: the sale page, the purchase or expense list with the record panel, the
+ * partner payments list, or the cash ledger (a payment booked on an invoice, a manual cash row).
+ */
 export function documentHref(row: Pick<DateChangeRow, "document_type" | "document_id">): string {
-  return row.document_type === "sale" ? `/sales/${row.document_id}` : `/purchases?${RECORD_PARAM}=${encodeURIComponent(row.document_id)}`;
+  const id = encodeURIComponent(row.document_id);
+  switch (row.document_type) {
+    case "sale":
+      return `/sales/${row.document_id}`;
+    case "purchase":
+      return `/purchases?${RECORD_PARAM}=${id}`;
+    case "expense":
+      return `/expenses?${RECORD_PARAM}=${id}`;
+    case "partner_payment":
+      return "/dashboard/payments";
+    default:
+      return "/finance";
+  }
 }
 
 /**
@@ -60,6 +76,7 @@ export default function DateChangesPage() {
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
   const [open, setOpen] = useState<DateChangeRow | null>(null);
+  const typeId = useId();
   const userId = useId();
   const fromId = useId();
   const toId = useId();
@@ -113,16 +130,18 @@ export default function DateChangesPage() {
 
   const filters = (
     <div className="flex flex-wrap items-end gap-3">
-      <SegmentedControl
-        label={t("dateChange.history.type")}
-        value={type}
-        onValueChange={(id) => setType(id as TypeFilter)}
-        options={[
-          { id: "all", label: t("dateChange.history.types.all") },
-          { id: "sale", label: t("dateChange.history.types.sale") },
-          { id: "purchase", label: t("dateChange.history.types.purchase") },
-        ]}
-      />
+      {/* Seven types: a combobox, so the filter row fits a phone (a segmented control would not). */}
+      <Field label={t("dateChange.history.type")} htmlFor={typeId}>
+        <Combobox
+          id={typeId}
+          value={type}
+          onChange={(value) => setType((value ?? "all") as TypeFilter)}
+          options={TYPE_FILTERS.map((id) => ({ value: id, label: t(`dateChange.history.types.${id}`) }))}
+          labels={comboboxLabels(t)}
+          locale={locale}
+          width="md"
+        />
+      </Field>
       <Field label={t("dateChange.history.who")} htmlFor={userId}>
         <input id={userId} className="ds-input" value={user} onChange={(e) => setUser(e.target.value)} />
       </Field>

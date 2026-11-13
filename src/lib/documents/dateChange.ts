@@ -1,13 +1,52 @@
 /**
  * DATE-1: change the date of a posted sales or purchase invoice in place
  * (preview_document_date_change / apply_document_date_change, migration 20261110150000).
+ * DATE-2 (migration 20261110151000): the same for cash documents: a payment booked on an
+ * invoice, a partner payment, a manual cash row and an expense.
  * Pure: the dialog's steps and rules, so `node --test` covers them. The RPC calls live in
  * dateChangeApi.ts.
  */
 
 import { formatGridDate } from "../dates/localeDate";
 
-export type DateChangeDocumentType = "sale" | "purchase";
+export const DATE_CHANGE_DOCUMENT_TYPES = ["sale", "purchase", "invoice_payment", "partner_payment", "cash_transaction", "expense"] as const;
+export type DateChangeDocumentType = (typeof DATE_CHANGE_DOCUMENT_TYPES)[number];
+
+export function isDateChangeDocumentType(value: unknown): value is DateChangeDocumentType {
+  return typeof value === "string" && (DATE_CHANGE_DOCUMENT_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * The "also move payments made on the same day" option: invoices (their payments) and expenses
+ * (an employee's reimbursement). A payment or a cash row is itself the payment: no option.
+ */
+export function dateChangePaymentsOption(type: DateChangeDocumentType): "invoice" | "expense" | null {
+  if (type === "sale" || type === "purchase") return "invoice";
+  if (type === "expense") return "expense";
+  return null;
+}
+
+/** The counts the dialog lists for a document type (invoices move stock too; cash documents do not). */
+export function dateChangeAffectedKeys(type: DateChangeDocumentType): ReadonlyArray<"journals" | "cash" | "stock_moves" | "batches" | "pieces" | "payments"> {
+  if (type === "sale" || type === "purchase") return ["journals", "cash", "stock_moves", "batches", "pieces", "payments"];
+  if (type === "partner_payment") return ["journals", "cash", "payments"];
+  return ["journals", "cash"];
+}
+
+/** resolve_date_change_document: which document a cash row belongs to. */
+export interface ResolvedDateChangeDocument {
+  type: DateChangeDocumentType;
+  id: string;
+  label: string;
+  date: string | null;
+}
+
+export function parseResolvedDocument(data: unknown): ResolvedDateChangeDocument | null {
+  if (!data || typeof data !== "object") return null;
+  const r = data as Record<string, unknown>;
+  if (!isDateChangeDocumentType(r.type) || typeof r.id !== "string" || !r.id) return null;
+  return { type: r.type, id: r.id, label: typeof r.label === "string" && r.label ? r.label : r.id, date: typeof r.date === "string" ? r.date.slice(0, 10) : null };
+}
 
 export interface DateChangeIssue {
   code: string;
@@ -93,6 +132,12 @@ export function bakuToday(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/** yyyy-mm-dd in Baku of a moment (a payment's timestamp); null when it does not parse. */
+export function bakuIsoDate(value: string | Date): string | null {
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : bakuToday(d);
+}
+
 /** Why "Check" is not possible yet (an i18n key), or null. */
 export function checkBlockedReason(state: DateChangeState, currentDate: string | null, today: string = bakuToday()): string | null {
   if (!state.newDate) return "dateChange.errors.dateRequired";
@@ -125,6 +170,9 @@ export const DATE_CHANGE_CODES = [
   "payment_before_invoice",
   "slip_before_invoice",
   "inventory_count_between",
+  "payment_before_its_invoice",
+  "reimbursement_before_expense",
+  "expense_before_source",
   "other_month",
   "payments_move",
   "far_back",

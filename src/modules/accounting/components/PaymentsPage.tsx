@@ -7,11 +7,14 @@ import { fetchPartnerPayments } from "@/lib/payments/fetchPayments";
 import type { PartnerPaymentRecord } from "@/lib/payments/types";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
-import { FileSpreadsheet, Plus, RefreshCw, Search, Wallet } from "lucide-react";
+import { CalendarClock, FileSpreadsheet, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { dash, useTableColumns, type TableColumn } from "@/components/lists/listTable";
 import { exportXlsx, xlsxFileName } from "@/lib/export/exportXlsx";
 import { formatGridDateTime, toDateValue } from "@/lib/dates/localeDate";
 import { ListGrid } from "@/components/lists/ListGrid";
+import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { bakuIsoDate } from "@/lib/documents/dateChange";
 
 /** Column choice key of this list (prompt 24c). */
 const PAYMENTS_LIST_KEY = "accounting.payments";
@@ -45,6 +48,27 @@ export default function PaymentsPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  // DOC_DATE_CHANGE (DATE-2): admins change a payment's date in place (a "…" menu on each row).
+  const dateChange = useDocumentDateChange(() => void load());
+  const rowActions = (row: PartnerPaymentRecord) => (
+    <TableRowActionsMenu
+      items={[
+        {
+          key: "change_date",
+          label: t("dateChange.action"),
+          icon: <CalendarClock className="h-4 w-4" />,
+          onClick: () =>
+            dateChange.open({
+              type: "partner_payment",
+              id: row.id,
+              label: `${row.partner_name} · ${formatMoney(row.amount)}`,
+              date: row.payment_date ? bakuIsoDate(row.payment_date) : null,
+            }),
+        },
+      ]}
+    />
+  );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -142,6 +166,7 @@ export default function PaymentsPage() {
             loading={loading}
             empty={<p className="text-sm ds-muted">{t("payments.empty")}</p>}
             onExport={columns.enabled ? handleExport : undefined}
+            rowActions={dateChange.allowed ? rowActions : undefined}
           />
         ) : (
         <div className="app-card overflow-hidden">
@@ -153,16 +178,17 @@ export default function PaymentsPage() {
                     {c.label}
                   </th>
                 ))}
+                {dateChange.allowed ? <th className="w-12 p-3"><span className="sr-only">{t("common.actions")}</span></th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-app">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.visible.length} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
+                  <td colSpan={columns.visible.length + (dateChange.allowed ? 1 : 0)} className="p-6 text-center text-app-muted">{t("common.loading")}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.visible.length} className="p-6 text-center text-app-muted">{t("payments.empty")}</td>
+                  <td colSpan={columns.visible.length + (dateChange.allowed ? 1 : 0)} className="p-6 text-center text-app-muted">{t("payments.empty")}</td>
                 </tr>
               ) : (
                 filtered.map((row) => (
@@ -172,6 +198,7 @@ export default function PaymentsPage() {
                         {c.cell(row)}
                       </td>
                     ))}
+                    {dateChange.allowed ? <td className="p-3 text-right">{rowActions(row)}</td> : null}
                   </tr>
                 ))
               )}
@@ -180,6 +207,8 @@ export default function PaymentsPage() {
         </div>
         )}
       </div>
+
+      {dateChange.dialog}
 
       <PaymentFormModal
         open={formOpen}

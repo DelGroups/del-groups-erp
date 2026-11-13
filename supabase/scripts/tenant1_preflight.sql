@@ -184,6 +184,9 @@ union all
 select 'pending', '20261110150000_document_date_change_core: change the date of a posted invoice in place (DATE-1)',
        case when to_regclass('public.document_date_changes') is null or to_regprocedure('public.apply_document_date_change(text, uuid, date, text, jsonb, text[])') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261110151000_document_date_change_cash: change the date of payments, cash rows and expenses in place (DATE-2)',
+       case when to_regprocedure('public.resolve_date_change_document(uuid)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

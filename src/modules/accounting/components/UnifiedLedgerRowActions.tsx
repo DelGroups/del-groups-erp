@@ -22,8 +22,9 @@ import {
   type UnifiedLedgerTransaction,
 } from "@/lib/finance/unifiedLedger";
 import { formatRpcError } from "@/lib/forms/rpcErrors";
-import { Eye, Pencil, Printer, Trash2, X } from "lucide-react";
+import { CalendarClock, Eye, Pencil, Printer, Trash2, X } from "lucide-react";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
+import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 
 interface AccountOption {
   id: string;
@@ -68,6 +69,29 @@ export default function UnifiedLedgerRowActions({
     description: transaction.description || transaction.notes || "",
     account_id: transaction.account_id || "",
   });
+
+  // DOC_DATE_CHANGE (DATE-2): admins change the date of the document this cash row belongs to.
+  const dateChange = useDocumentDateChange(() => {
+    onSuccess(t("dateChange.ledgerDone"));
+    onChanged();
+  });
+  const [resolving, setResolving] = useState(false);
+  const openDateChange = async () => {
+    setResolving(true);
+    try {
+      const { resolveDateChangeDocument } = await import("@/lib/documents/dateChangeApi");
+      const doc = await resolveDateChangeDocument(transaction.id);
+      if (!doc) {
+        onError(t("dateChange.notResolvable"));
+        return;
+      }
+      dateChange.open(doc);
+    } catch (e) {
+      onError(formatRpcError(e instanceof Error ? e.message : null, t));
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const editable = canManage && canEditLedgerTransaction(transaction);
   const deletable = canManage && canDeleteLedgerTransaction(transaction);
@@ -182,6 +206,14 @@ export default function UnifiedLedgerRowActions({
             icon: <Printer className="h-4 w-4" />,
             onClick: () =>
               printLedgerReceipt(transaction, { title: t("finance.receiptTitle"), companyName }),
+          },
+          {
+            key: "change_date",
+            label: t("dateChange.action"),
+            icon: <CalendarClock className="h-4 w-4" />,
+            onClick: () => void openDateChange(),
+            hidden: !dateChange.allowed,
+            disabled: resolving,
           },
           {
             key: "delete",
@@ -327,6 +359,8 @@ export default function UnifiedLedgerRowActions({
           </div>
         </div>
       ) : null}
+
+      {dateChange.dialog}
 
       <ConfirmDeleteModal
         open={deleteOpen}

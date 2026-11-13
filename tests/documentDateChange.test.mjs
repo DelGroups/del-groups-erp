@@ -119,7 +119,7 @@ test("every issue code and dialog text exists in az, en and ru, in sentence case
 
 test("issue text: translated for known codes (with counts), the server's message otherwise; item lines", () => {
   const t = (k, p) => translate(enMessages, k, p);
-  assert.equal(issueText({ code: "payments_move", message: "x", details: { count: 2 } }, t), "2 payment(s) made on the invoice day move to the new date as well.");
+  assert.equal(issueText({ code: "payments_move", message: "x", details: { count: 2 } }, t), "2 payment(s) made on the document's day move to the new date as well.");
   assert.equal(issueText({ code: "something_new", message: "Server text" }, t), "Server text");
   assert.deepEqual(issueItems({ code: "stock_negative", message: "", details: { items: [{ product: "MDF", warehouse: "Main", date: "2026-11-01", shortfall: 3 }] } }), ["MDF · Main · 01.11.2026 · −3"]);
   assert.equal(isoToDots("2026-11-01"), "01.11.2026");

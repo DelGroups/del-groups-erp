@@ -1,8 +1,8 @@
 /**
- * DATE-1: the two RPCs of the date change (admin only; the server checks). Browser side.
+ * DATE-1/2: the RPCs of the date change (admin only; the server checks). Browser side.
  */
 import { getSupabaseClient } from "@/lib/supabase";
-import type { DateChangeDocumentType, DateChangeOptions, DateChangePreview } from "./dateChange";
+import { parseResolvedDocument, type DateChangeDocumentType, type DateChangeOptions, type DateChangePreview, type ResolvedDateChangeDocument } from "./dateChange";
 
 export async function previewDocumentDateChange(type: DateChangeDocumentType, id: string, newDate: string, options: DateChangeOptions): Promise<DateChangePreview> {
   const { data, error } = await getSupabaseClient().rpc("preview_document_date_change" as never, {
@@ -35,4 +35,11 @@ export async function applyDocumentDateChange(
   if (error) throw new Error(error.message);
   const r = (data ?? {}) as { change_id?: string; moved?: number };
   return { changeId: String(r.change_id ?? ""), moved: Number(r.moved ?? 0) };
+}
+
+/** DATE-2: the document a cash row belongs to (an invoice payment, a partner payment, a manual row, an expense, an invoice), or null. */
+export async function resolveDateChangeDocument(transactionId: string): Promise<ResolvedDateChangeDocument | null> {
+  const { data, error } = await getSupabaseClient().rpc("resolve_date_change_document" as never, { p_transaction_id: transactionId } as never);
+  if (error) throw new Error(error.message);
+  return parseResolvedDocument(data);
 }
