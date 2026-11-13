@@ -195,6 +195,7 @@ export const DATE_CHANGE_CODES = [
   "import_before_confirm",
   "import_payment_before_payable",
   "fx_rate_kept",
+  "lot_negative",
   "other_month",
   "payments_move",
   "far_back",
@@ -211,7 +212,7 @@ export function issueText(issue: DateChangeIssue, t: (key: string, params?: Reco
 export function issueItems(issue: DateChangeIssue): string[] {
   const items = Array.isArray(issue.details?.items) ? (issue.details.items as Record<string, unknown>[]) : [];
   return items.map((i) =>
-    [i.product, i.account, i.warehouse, i.doc_no, i.slip_number, i.document_number, i.date ? isoToDots(String(i.date)) : null, i.shortfall != null ? `−${i.shortfall}` : null, i.amount != null ? String(i.amount) : null]
+    [i.product, i.lot_no, i.account, i.warehouse, i.doc_no, i.slip_number, i.document_number, i.date ? isoToDots(String(i.date)) : null, i.shortfall != null ? `−${i.shortfall}` : null, i.amount != null ? String(i.amount) : null]
       .filter((x) => x !== null && x !== undefined && x !== "")
       .join(" · ")
   );

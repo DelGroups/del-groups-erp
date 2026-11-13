@@ -190,6 +190,9 @@ union all
 select 'pending', '20261110152000_document_date_change_inventory: change the date of inventory and import documents in place (DATE-3)',
        case when to_regprocedure('public._date_change_extra_warnings(text, uuid, date, date)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261115100000_lot_core: lot tracking core, backfill and integrity (LOT-1)',
+       case when to_regclass('public.stock_lots') is null or to_regprocedure('public.lot_integrity_report(integer)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

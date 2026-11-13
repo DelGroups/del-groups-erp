@@ -4284,6 +4284,7 @@ export const azMessages = {
       import_before_confirm: "Qəbul idxalın təsdiq tarixindən əvvələ düşür:",
       import_payment_before_payable: "Ödəniş borcun yarandığı tarixdən əvvələ düşür:",
       fx_rate_kept: "Məzənnələr dəyişmir: sənəd yazıldığı məzənnədə qalır.",
+      lot_negative: "Bu tarixlə lot qalığı mənfiyə düşür:",
       other_month: "Sənəd başqa aya keçir: hər iki ayın hesabatları dəyişəcək.",
       payments_move: "Sənədlə eyni gündə olan {count} ödəniş də yeni tarixə keçəcək.",
       far_back: "Yeni tarix 90 gündən çox əvvəldir.",
@@ -4334,6 +4335,12 @@ export const azMessages = {
         polywood_pieces: "Polywood parçası",
         payments: "Ödəniş",
       },
+    },
+  },
+  lots: {
+    permissions: {
+      view: "Lotları görmək",
+      manage: "Lotları idarə etmək",
     },
   },
   settingsNav: {

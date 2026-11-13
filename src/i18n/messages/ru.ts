@@ -4286,6 +4286,7 @@ export const ruMessages: Messages = {
       import_before_confirm: "Приёмка окажется раньше подтверждения импорта:",
       import_payment_before_payable: "Оплата окажется раньше возникновения долга:",
       fx_rate_kept: "Курсы не меняются: документ остаётся по курсу, с которым он был записан.",
+      lot_negative: "С этой датой остаток лота станет отрицательным:",
       other_month: "Документ переходит в другой месяц: отчёты обоих месяцев изменятся.",
       payments_move: "Оплаты того же дня ({count}) тоже перейдут на новую дату.",
       far_back: "Новая дата больше чем 90 дней назад.",
@@ -4336,6 +4337,12 @@ export const ruMessages: Messages = {
         polywood_pieces: "Кусок Polywood",
         payments: "Платёж",
       },
+    },
+  },
+  lots: {
+    permissions: {
+      view: "Просмотр лотов",
+      manage: "Управление лотами",
     },
   },
   settingsNav: {

@@ -46,7 +46,7 @@ test("the new checks and type names exist in az, en and ru", () => {
 
 test("menus: counts, initial balances, write-offs and imports, only while allowed and posted", () => {
   const screens = read("src/modules/inventory/components/InventoryScreens.tsx");
-  assert.match(screens, /hidden: !\(dateChangeOn && r\.status === "posted"\) \},\n\s+\{ key: "delete"/, "counts row menu");
+  assert.match(screens, /hidden: !\(dateChangeOn && r\.status === "posted"\) \},\r?\n\s+\{ key: "delete"/, "counts row menu");
   assert.match(screens, /dateChange\.formActions\(record\.status === "posted", \{ type: "inventory_count"/);
   assert.match(screens, /dateChange\.formActions\(isPosted, \{ type: "inventory_initial_balance"/);
   assert.match(screens, /dateChange\.formActions\(true, \{ type: "inventory_writeoff"/);
