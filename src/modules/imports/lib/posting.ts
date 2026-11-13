@@ -169,7 +169,7 @@ export interface ReceiveCheck {
 
 /**
  * LOT-2: checks a row's lots and builds their payload (given by the dialog from the inventory
- * module's lot helpers, so this file stays free of them): null = fine.
+ * module's lot helpers, so this file stays free of them); ok false = the row shows an issue.
  */
 export type ReceiptLotCheck = (lots: readonly LotSplitRow[], qty: number, line: ReceiveLine) => { ok: boolean; payload: Record<string, string | number>[] };
 
@@ -353,12 +353,21 @@ export function parsePostingError(message: string | null | undefined): { code: s
   const text = String(message ?? "");
   const m = /imports_([a-z_]+):\s*([\s\S]*)$/.exec(text);
   if (m) return { code: m[1], detail: m[2].trim() };
+  // LOT-2: lot checks of a receipt (lot_split_sum, lot_batch_required, ...).
+  const lot = /\b(lot_[a-z_]+):\s*([\s\S]*)$/.exec(text);
+  if (lot) return { code: lot[1], detail: lot[2].trim() };
   if (/bağlı maliyyə dövrünə/.test(text)) return { code: "period_closed", detail: text };
   if (/balansı kifayət etmir/.test(text)) return { code: "insufficient_balance", detail: text };
   return { code: null, detail: text };
 }
 
 export const POSTING_ERROR_CODES = [
+  "lot_split_sum",
+  "lot_batch_required",
+  "lot_exp_required",
+  "lot_dates_invalid",
+  "lot_no_taken",
+  "lot_no_duplicate",
   "forbidden",
   "not_found",
   "not_draft",

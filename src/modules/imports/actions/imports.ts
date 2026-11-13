@@ -329,6 +329,10 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
       if (error.message.includes("imports_warehouse_split")) return { success: false, error: "imports.errors.invalid", issues: ["line_warehouse_split"] };
       // IMP-5: a cost paid in the draft keeps its amount, currency, rate, VAT, flag and partner.
       if (error.message.includes("imports_cost_paid_locked")) return { success: false, error: "imports.errors.costPaidLocked" };
+      // LOT-2: planned lot numbers (unique in the shipment, not taken) and dates.
+      if (error.message.includes("lot_no_duplicate")) return { success: false, error: "imports.errors.lotNoDuplicate" };
+      if (error.message.includes("lot_no_taken")) return { success: false, error: "imports.errors.lotNoTaken" };
+      if (error.message.includes("lot_dates_invalid")) return { success: false, error: "imports.errors.lotDatesInvalid" };
       throw new Error(error.message);
     }
     const saved = data as { id: string; number: string };

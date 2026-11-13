@@ -1,6 +1,8 @@
 export type InitialBalanceStatus = "draft" | "posted" | "cancelled";
 export type InitialBalanceEntryType = "opening_balance" | "receipt";
 
+import type { LotFieldsValue } from "./lotFields";
+
 export interface InitialBalanceLineItem {
   id: string;
   product_id: string;
@@ -13,6 +15,8 @@ export interface InitialBalanceLineItem {
   is_metric: boolean;
   metric_total_meters: number;
   piece_lengths_input: string;
+  /** LOT-2 (LOT_TRACKING): the line's lot; undefined = an automatic "opening" lot. */
+  lot?: LotFieldsValue;
 }
 
 export interface InitialBalanceDocument {
@@ -49,5 +53,6 @@ export interface SaveInitialBalanceInput {
     is_metric: boolean;
     metric_total_meters: number | null;
     piece_lengths: number[] | null;
+    lot?: LotFieldsValue;
   }>;
 }

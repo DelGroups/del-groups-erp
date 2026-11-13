@@ -11,6 +11,7 @@ import MetricLinePriceHint from "@/components/polywood/MetricLinePriceHint";
 import MetricStockIntakeFields, { type MetricIntakeValue } from "@/components/polywood/MetricStockIntakeFields";
 import { isMetricProduct, resolveStandardBarLengthM } from "@/lib/polywood/metricReceive";
 import type { InvoiceCurrency, Product, PurchaseLineItem } from "@/types/database.types";
+import { lotLineColumns, useLotTracking } from "@/modules/inventory";
 
 const CURRENCIES: readonly InvoiceCurrency[] = ["AZN", "USD", "EUR"];
 
@@ -51,6 +52,8 @@ export function PurchaseLinesGrid({
   onBarcodeMiss: (code: string) => void;
 }) {
   const { t, locale } = useI18n();
+  // LOT_TRACKING (LOT-2): optional lot fields per line (empty = an automatic lot when posted).
+  const lotOn = useLotTracking();
   const products = useMemo(() => new Map(productList.map((p) => [p.id, p])), [productList]);
   const metricOf = (row: PurchaseLineItem) => {
     const product = products.get(row.product_id);
@@ -142,6 +145,7 @@ export function PurchaseLinesGrid({
       cell: (row) => <LineText className="font-semibold">{formatMoney(row.total, locale, { currency: row.currency || "AZN" })}</LineText>,
       total: singleCurrency ? <LineText>{formatMoney(sumLines(items, (r) => r.total), locale, { currency })}</LineText> : undefined,
     },
+    ...(lotOn ? lotLineColumns<PurchaseLineItem>({ t, get: (r) => r.lot, set: (r, lot) => onUpdate(r.id, { lot }), optional: true }) : []),
   ];
 
   return (

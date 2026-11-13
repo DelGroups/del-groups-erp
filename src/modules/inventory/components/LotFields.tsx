@@ -292,7 +292,7 @@ export function LotSplitEditor({
         </button>
         {issue ? (
           <span role="alert" className="text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-danger, #e11d48)" }}>
-            {t(`lots.split.issues.${issue}`, { total, sum: qty.reduce((s, q) => s + q, 0) })}
+            {t(`lots.splitIssues.${issue}`, { total, sum: qty.reduce((s, q) => s + q, 0) })}
           </span>
         ) : null}
       </div>

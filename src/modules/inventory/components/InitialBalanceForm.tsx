@@ -1,5 +1,7 @@
 "use client";
 
+import { lotLineColumns } from "./LotFields";
+import { useLotTracking } from "./LotTrackingFlag";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, FileText, Layers, Plus, Save, Trash2 } from "lucide-react";
 import ProductCombobox from "@/components/products/ProductCombobox";
@@ -72,6 +74,8 @@ export default function InitialBalanceForm({
   );
   const [warehouseId, setWarehouseId] = useState(initialDocument?.warehouse_id || warehouses[0]?.id || "");
   const [notes, setNotes] = useState(initialDocument?.notes || "");
+  // LOT_TRACKING (LOT-2): optional lot fields per line.
+  const lotOn = useLotTracking();
   const [items, setItems] = useState<InitialBalanceLineItem[]>(
     initialDocument?.items?.length
       ? initialDocument.items
@@ -243,6 +247,7 @@ export default function InitialBalanceForm({
         is_metric: row.is_metric,
         metric_total_meters: row.is_metric ? row.metric_total_meters : null,
         piece_lengths: row.is_metric ? parsePieceLengthsInput(row.piece_lengths_input) : null,
+        lot: row.lot,
       })),
   });
 
@@ -499,6 +504,7 @@ export default function InitialBalanceForm({
                 cell: (row, ctx) => <LineNumberCell ctx={ctx} value={row.unit_cost || null} placeholder="0.00" onChange={(value) => updateItem(row.id, { unit_cost: value ?? 0 })} />,
               },
               { key: "lineTotal", header: t("initialBalance.lineTotal"), type: "money", cell: (row) => <LineText className="font-semibold">{formatFigure(row.line_total, 2, locale)}</LineText> },
+              ...(lotOn ? lotLineColumns<InitialBalanceLineItem>({ t, get: (row) => row.lot, set: (row, lot) => updateItem(row.id, { lot }), optional: true }) : []),
             ]}
             details={(row) =>
               row.is_metric && row.unit_cost > 0 ? (
