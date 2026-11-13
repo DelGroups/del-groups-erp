@@ -11,6 +11,7 @@ import type { PermissionKey } from "@/types/database.types";
 import { draftIssues, isUuid, landedCostOf, parseShipmentDraft, type DraftIssue, type ImportProduct, type ShipmentDraft } from "../lib/shipment";
 import { shipmentFromRows, shipmentListRows, type ShipmentListRow } from "../lib/rows";
 import { splitStockQuantities } from "../lib/lineWarehouses";
+import { lotPayloadKeys } from "@/modules/inventory";
 
 /**
  * Server side of the Imports module (IMP-1). Every action checks NEW_IMPORTS, the module and the
@@ -286,6 +287,8 @@ export async function saveShipmentDraftAction(input: unknown): Promise<ImportsRe
         hs_code: l.hsCode,
         duty_rate_pct: l.dutyRatePct,
         warehouse_id: l.warehouseId,
+        // LOT-2: the planned lot (lot_no_planned, supplier_batch_no, mfg_date, exp_date); none when empty.
+        ...lotPayloadKeys(l.lot, "planned"),
         // IMP-4: the planned split ([] = the whole line into warehouse_id, else the default).
         warehouses: (() => {
           const stock = splitStockQuantities(l, l.warehouses, sheetLengths.get(l.productId) ?? null);

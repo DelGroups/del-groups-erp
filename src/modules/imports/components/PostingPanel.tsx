@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +60,7 @@ import { IMPORTS_VIEW_KEY } from "../views/imports";
 import { DialogField, ImportDialog } from "./ImportDialog";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
 import { useDocumentDateChange, type DateChangeTarget } from "@/components/documents/DocumentDateChange";
+import { LotChip, LotLabelsSheet, LotSplitEditor, lotSplitIssue, receiptLotsPayload, singleLot, useLotTracking, type LotLabelData } from "@/modules/inventory";
 import { ImportStageBar, type StageBarFact } from "./ImportStageBar";
 import { ImportTimeline } from "./ImportTimeline";
 import { ClearDialog, MilestoneDialog, TrackingDialog } from "./ImportStageDialogs";
@@ -134,6 +135,9 @@ export function PostingPanel({
   const [milestone, setMilestone] = useState<"departed" | "arrived_customs" | "note" | null>(null);
   const uiStandard = useUiStandard();
   const { printData, setPrintData } = useDocumentPrint<ReceivingSheetData>(700);
+  // LOT_TRACKING (LOT-2): received lots as chips, and their labels to print.
+  const lotOn = useLotTracking();
+  const { printData: lotLabels, setPrintData: setLotLabels } = useDocumentPrint<LotLabelData[]>(500);
 
   const products = useMemo(() => new Map(lookups.products.map((p) => [p.id, p])), [lookups.products]);
   const warehouseNames = useMemo(() => Object.fromEntries(lookups.warehouses.map((w) => [w.id, w.name])), [lookups.warehouses]);
@@ -356,7 +360,7 @@ export function PostingPanel({
               </div>
               {draft.status === "confirmed" && actions.includes("receive") ? <p className="text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-warning)" }}>{t("imports.stages.notClearedWarning")}</p> : null}
               {view.data && posted ? (
-                <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
+                <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} lotOn={lotOn} onPrintLots={(r) => setLotLabels(receiptLotLabels(r, view.data!, draft, products))} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
               ) : (
                 <p className="ds-muted text-[length:var(--ds-text-sm)]">{t("imports.stages.receiptAfterConfirm")}</p>
               )}
@@ -452,6 +456,7 @@ export function PostingPanel({
       {dialog === "receive" && view.data ? (
         <ReceiveDialog
           busy={busy}
+          lotOn={lotOn}
           lines={lines}
           products={products}
           warehouses={lookups.warehouses}
@@ -575,6 +580,7 @@ export function PostingPanel({
       <CancelDialog open={dialog === "cancel"} busy={busy} onOpenChange={(o) => setDialog(o ? "cancel" : null)} onSubmit={(reason) => run(() => cancelShipmentAction(id, reason, opKey), t("importPosting.cancelled"))} />
 
       {printData ? createPortal(<div className="print-area"><ReceivingSheet data={printData} /></div>, document.body) : null}
+      {lotLabels ? createPortal(<div className="print-area"><LotLabelsSheet labels={lotLabels} /></div>, document.body) : null}
       {trackingOpen && stage?.tracking ? (
         <TrackingDialog
           draft={draft}
@@ -728,7 +734,7 @@ export function PostingPanel({
               <PayablesTab view={view.data} money={money} config={config} canPay={actions.includes("pay")} onPay={(p) => { setOpKey(newKey()); setPaying(p); }} formatDate={formatDate} onChangeDate={changeDate} />
             ) : null}
             {view.data && tab === "receipts" ? (
-              <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
+              <ReceiptsTab view={view.data} draft={draft} products={products} warehouseNames={warehouseNames} formatDate={formatDate} onChangeDate={changeDate} lotOn={lotOn} onPrintLots={(r) => setLotLabels(receiptLotLabels(r, view.data!, draft, products))} onPrint={(r) => printSheet(r.lines.map((l) => ({ shipmentLineId: l.shipmentLineId, warehouseId: l.warehouseId, qtyStock: l.qtyStockUnit })), r.number, r.receiptDate)} />
             ) : null}
             {view.data && tab === "journal" ? <JournalTab view={view.data} money={money} formatDate={formatDate} /> : null}
           </div>
@@ -739,6 +745,41 @@ export function PostingPanel({
       {dateChange.dialog}
     </section>
   );
+}
+
+// ── Lot labels (LOT-2) ──────────────────────────────────────────────────────
+
+/** One label per lot of the receipt, or one per sheet for sheet products (Polywood). */
+function receiptLotLabels(
+  r: PostingView["receipts"][number],
+  view: PostingView,
+  draft: ShipmentDraft,
+  products: ReadonlyMap<string, ImportProduct>
+): LotLabelData[] {
+  const labels: LotLabelData[] = [];
+  const seen = new Set<string>();
+  for (const l of r.lines) {
+    const lot = l.lotId ? view.lots[l.lotId] : undefined;
+    if (!lot) continue;
+    const line = draft.lines.find((x) => x.key === l.shipmentLineId);
+    const p = line ? products.get(line.productId) : undefined;
+    const base: LotLabelData = {
+      lotNo: lot.lotNo,
+      productName: p?.name ?? "",
+      productCode: p?.code ?? null,
+      supplierBatchNo: lot.supplierBatchNo,
+      expDate: lot.expDate,
+      receiptNo: r.number,
+    };
+    if (p?.sheetLengthM) {
+      const sheets = Math.round(l.qtyStockUnit / p.sheetLengthM);
+      for (let i = 0; i < sheets; i += 1) labels.push({ ...base, lengthM: p.sheetLengthM });
+    } else if (!seen.has(lot.id)) {
+      seen.add(lot.id);
+      labels.push(base);
+    }
+  }
+  return labels;
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
@@ -857,6 +898,8 @@ function ReceiptsTab({
   formatDate,
   onPrint,
   onChangeDate,
+  lotOn = false,
+  onPrintLots,
 }: {
   view: PostingView;
   draft: ShipmentDraft;
@@ -866,6 +909,9 @@ function ReceiptsTab({
   onPrint: (r: PostingView["receipts"][number]) => void;
   /** DATE-3: admins with DOC_DATE_CHANGE change a receipt's date in place. */
   onChangeDate?: (target: DateChangeTarget) => void;
+  /** LOT-2 (LOT_TRACKING): lot chips linking to the lot card, and "Print lot labels". */
+  lotOn?: boolean;
+  onPrintLots?: (r: PostingView["receipts"][number]) => void;
 }) {
   const { t } = useI18n();
   if (!view.receipts.length) return <p className="ds-muted">{t("importPosting.noReceipts")}</p>;
@@ -886,6 +932,12 @@ function ReceiptsTab({
                 <Printer className="h-4 w-4" aria-hidden />
                 {t("importPosting.printSheet")}
               </button>
+              {lotOn && onPrintLots && r.lines.some((l) => l.lotId && view.lots[l.lotId]) ? (
+                <button type="button" className="ds-btn ds-btn-sm" onClick={() => onPrintLots(r)} data-print-lot-labels="">
+                  <Printer className="h-4 w-4" aria-hidden />
+                  {t("lots.labels.print")}
+                </button>
+              ) : null}
             </span>
           </div>
           <ul className="text-[length:var(--ds-text-sm)]">
@@ -897,6 +949,11 @@ function ReceiptsTab({
               return (
                 <li key={l.id} className="tabular-nums">
                   {p?.code} {p?.name} → {warehouseNames[l.warehouseId] ?? "—"}: {l.qtyStockUnit}
+                  {l.lotId ? (
+                    <span className="ms-2 inline-flex align-middle">
+                      <LotChip lotId={l.lotId} lotNo={view.lots[l.lotId]?.lotNo ?? null} linkable={lotOn} />
+                    </span>
+                  ) : null}
                   {p?.sheetLengthM ? ` ${t("imports.units.metre")} (${sheets} ${line?.purchaseUnit ?? ""})` : ""}
                   {diff !== 0 ? <span className="ms-2 ds-muted">{t("importPosting.differenceShort", { diff: diff > 0 ? `+${diff}` : String(diff) })}</span> : null}
                 </li>
@@ -1018,6 +1075,7 @@ function CancelDialog({ open, busy, onOpenChange, onSubmit }: { open: boolean; b
 
 function ReceiveDialog({
   busy,
+  lotOn,
   lines,
   products,
   warehouses,
@@ -1026,6 +1084,8 @@ function ReceiveDialog({
   onSubmit,
 }: {
   busy: boolean;
+  /** LOT-2: each row's lots (prefilled from the line's plan, "Split into lots"). */
+  lotOn: boolean;
   lines: ReturnType<typeof receiveLines>;
   products: ReadonlyMap<string, ImportProduct>;
   warehouses: ImportLookups["warehouses"];
@@ -1035,12 +1095,15 @@ function ReceiveDialog({
 }) {
   const { t } = useI18n();
   const uiStandard = useUiStandard();
-  const [rows, setRows] = useState<ReceiveRow[]>(() => initialReceiveRows(lines));
+  const withLots = (rs: ReceiveRow[]): ReceiveRow[] =>
+    lotOn ? rs.map((r) => (r.lots ? r : { ...r, lots: singleLot(lines.find((l) => l.shipmentLineId === r.shipmentLineId)?.lot) })) : rs;
+  const [rows, setRowsRaw] = useState<ReceiveRow[]>(() => withLots(initialReceiveRows(lines)));
+  const setRows = (update: (rs: ReceiveRow[]) => ReceiveRow[]) => setRowsRaw((rs) => withLots(update(rs)));
   const [day, setDay] = useState(today);
   const [note, setNote] = useState("");
   const [reviewed, setReviewed] = useState(false);
   const byLine = new Map(lines.map((l) => [l.shipmentLineId, l]));
-  const check = checkReceipt(rows, lines);
+  const check = checkReceipt(rows, lines, lotOn ? (lots, qty, line) => ({ ok: !lotSplitIssue(lots, qty, line.sheetLengthM), payload: receiptLotsPayload(lots, qty) }) : undefined);
   const set = (key: string, patch: Partial<ReceiveRow>) => {
     setReviewed(false);
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -1104,7 +1167,8 @@ function ReceiveDialog({
               const rowIssues = check.issues.filter((i) => i.rowKey === row.key || (i.shipmentLineId === row.shipmentLineId && i.code === "over"));
               const diff = check.differences.find((d) => d.rowKey === row.key);
               return (
-                <tr key={row.key} style={{ borderTop: "1px solid var(--ds-border)" }}>
+                <Fragment key={row.key}>
+                <tr style={{ borderTop: "1px solid var(--ds-border)" }}>
                   <th scope="row" className="px-2 py-1.5 text-start font-medium">
                     {name}
                     {rowIssues.map((i) => (
@@ -1160,6 +1224,21 @@ function ReceiveDialog({
                     ) : null}
                   </td>
                 </tr>
+                {lotOn && row.lots ? (
+                  <tr>
+                    <td colSpan={6} className="px-2 pb-2" aria-label={t("lots.rowLots", { name })}>
+                      <LotSplitEditor
+                        rows={row.lots}
+                        total={row.actual ?? row.expected}
+                        unitLabel={line.sheetLengthM ? t("imports.units.metre") : line.purchaseUnit}
+                        sheetLengthM={line.sheetLengthM}
+                        name={name}
+                        onChange={(lots) => set(row.key, { lots })}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               );
             })}
           </tbody>

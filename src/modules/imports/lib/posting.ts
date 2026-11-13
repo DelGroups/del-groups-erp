@@ -7,6 +7,7 @@ import type { ImportsConfig } from "@/lib/imports/config";
 import { round2, toCents } from "@/lib/imports/landedCost";
 import { effectiveWarehouses, receivePrefill } from "./lineWarehouses";
 import { landedCostOf, newRowKey, type CostLineDraft, type ImportProduct, type ShipmentDraft, type ShipmentStatus } from "./shipment";
+import type { LotFieldsValue, LotSplitRow } from "@/modules/inventory";
 
 const EPS = 0.0005;
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -68,6 +69,8 @@ export interface ReceiveLine {
   plan?: { warehouseId: string | null; qtyStock: number }[];
   /** What was received so far, per warehouse (for what is left of the plan). */
   receivedInto?: { warehouseId: string | null; qtyStockUnit: number }[];
+  /** LOT-2: the line's planned lot (prefills the receipt's lot fields). */
+  lot?: LotFieldsValue;
 }
 
 /** Every product line with what is still to receive. */
@@ -86,6 +89,7 @@ export function receiveLines(draft: ShipmentDraft, products: ReadonlyMap<string,
       defaultWarehouseId: l.warehouseId ?? draft.defaultWarehouseId,
       plan: effectiveWarehouses(l, draft.defaultWarehouseId, product?.sheetLengthM ?? null).map((w) => ({ warehouseId: w.warehouseId, qtyStock: w.qtyStock })),
       receivedInto: received.filter((r) => r.shipmentLineId === l.key).map((r) => ({ warehouseId: r.warehouseId ?? null, qtyStockUnit: r.qtyStockUnit })),
+      lot: l.lot,
     };
   });
 }
@@ -102,6 +106,8 @@ export interface ReceiveRow {
   /** IMP-4: the row's planned warehouse and quantity (null: a row the user added, not in the plan). */
   plannedWarehouseId?: string | null;
   plannedQty?: number | null;
+  /** LOT-2 (LOT_TRACKING): the row's lots; undefined = no lot keys sent (the line's plan, one lot). */
+  lots?: LotSplitRow[];
 }
 
 /**
@@ -151,18 +157,24 @@ export function sheetsOf(qtyStock: number, sheetLengthM: number | null): number 
   return sheetLengthM && sheetLengthM > 0 ? r3(qtyStock / sheetLengthM) : null;
 }
 
-export type ReceiveIssue = "nothing" | "warehouse" | "whole_sheets" | "over" | "negative";
+export type ReceiveIssue = "nothing" | "warehouse" | "whole_sheets" | "over" | "negative" | "lots";
 
 export interface ReceiveCheck {
   issues: { code: ReceiveIssue; shipmentLineId?: string; rowKey?: string }[];
   /** Counted − expected per row where they differ (shown before posting). */
   differences: { rowKey: string; shipmentLineId: string; expected: number; actual: number; difference: number }[];
   /** The RPC payload. */
-  payload: { shipment_line_id: string; warehouse_id: string; qty_stock_unit: number; expected_qty_stock_unit: number }[];
+  payload: { shipment_line_id: string; warehouse_id: string; qty_stock_unit: number; expected_qty_stock_unit: number; lots?: Record<string, string | number>[] }[];
 }
 
+/**
+ * LOT-2: checks a row's lots and builds their payload (given by the dialog from the inventory
+ * module's lot helpers, so this file stays free of them): null = fine.
+ */
+export type ReceiptLotCheck = (lots: readonly LotSplitRow[], qty: number, line: ReceiveLine) => { ok: boolean; payload: Record<string, string | number>[] };
+
 /** Checks the counted quantities and builds what receive_import_shipment gets. */
-export function checkReceipt(rows: readonly ReceiveRow[], lines: readonly ReceiveLine[]): ReceiveCheck {
+export function checkReceipt(rows: readonly ReceiveRow[], lines: readonly ReceiveLine[], checkLots?: ReceiptLotCheck): ReceiveCheck {
   const issues: ReceiveCheck["issues"] = [];
   const differences: ReceiveCheck["differences"] = [];
   const payload: ReceiveCheck["payload"] = [];
@@ -186,7 +198,18 @@ export function checkReceipt(rows: readonly ReceiveRow[], lines: readonly Receiv
       if (Math.abs(sheets - Math.round(sheets)) > 0.001) issues.push({ code: "whole_sheets", rowKey: row.key, shipmentLineId: row.shipmentLineId });
     }
     perLine.set(row.shipmentLineId, (perLine.get(row.shipmentLineId) ?? 0) + qty);
-    if (row.warehouseId) payload.push({ shipment_line_id: row.shipmentLineId, warehouse_id: row.warehouseId, qty_stock_unit: r3(qty), expected_qty_stock_unit: r3(row.expected) });
+    // LOT-2: the row's lots (only when the dialog has them: lot tracking on).
+    const lots = row.lots && checkLots ? checkLots(row.lots, r3(qty), line) : null;
+    if (lots && !lots.ok) issues.push({ code: "lots", rowKey: row.key });
+    if (row.warehouseId) {
+      payload.push({
+        shipment_line_id: row.shipmentLineId,
+        warehouse_id: row.warehouseId,
+        qty_stock_unit: r3(qty),
+        expected_qty_stock_unit: r3(row.expected),
+        ...(lots ? { lots: lots.payload } : {}),
+      });
+    }
   }
   for (const [lineId, qty] of perLine) {
     const line = byLine.get(lineId);

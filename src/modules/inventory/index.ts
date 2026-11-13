@@ -9,3 +9,26 @@
  */
 export { submitStockTransfer } from "./lib/stockTransferServer";
 export type { SubmitStockTransferPayload } from "./lib/stockTransfer";
+
+// LOT-2: the lot fields of inbound lines (imports, purchases, initial balance) and the lot flag.
+export {
+  EMPTY_LOT,
+  addLot,
+  defaultExpiry,
+  isEmptyLot,
+  lotFromRow,
+  lotHref,
+  lotIssues,
+  lotPayloadKeys,
+  lotQuantities,
+  lotSplitIssue,
+  lotSummary,
+  normalizeLot,
+  receiptLotsPayload,
+  removeLot,
+  singleLot,
+} from "./lib/lotFields";
+export type { LotFieldsValue, LotIssue, LotPolicy, LotSplitIssue, LotSplitRow } from "./lib/lotFields";
+export { LotChip, LotDateCell, LotFieldsEditor, LotLabelsSheet, LotSplitEditor, lotLineColumns } from "./components/LotFields";
+export type { LotLabelData } from "./components/LotFields";
+export { LotTrackingProvider, useLotTracking } from "./components/LotTrackingFlag";

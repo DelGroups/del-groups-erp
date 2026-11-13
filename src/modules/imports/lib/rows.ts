@@ -4,7 +4,7 @@
  */
 import { isImportCurrency } from "@/lib/imports/cbar";
 import { COST_TYPES, SPLIT_METHODS, type CostType, type SplitMethod } from "@/lib/imports/landedCost";
-import { INCOTERMS, SHIPMENT_STATUSES, type Incoterm, type ShipmentDraft, type ShipmentStatus } from "./shipment";
+import { INCOTERMS, parseLineLot, SHIPMENT_STATUSES, type Incoterm, type ShipmentDraft, type ShipmentStatus } from "./shipment";
 
 type Row = Record<string, unknown>;
 
@@ -65,6 +65,8 @@ export function shipmentFromRows(
         dutyRatePct: num(l.duty_rate_pct),
         warehouseId: str(l.warehouse_id),
         warehouses: splitsFor(String(l.id)),
+        // LOT-2: the planned lot (columns from 20261115110000; absent before it).
+        lot: parseLineLot(l),
       })),
     costs: [...costs]
       .sort((a, b) => num(a.position) - num(b.position))

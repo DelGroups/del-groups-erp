@@ -115,6 +115,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/lot_core.sql | tee "$RUNNER_TEMP/lot_core.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/lot_core.txt"
 
+      # LOT-2: inbound documents create named lots (imports, purchases, initial balance, production, counts).
+      - name: Lot inbound checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/lot_inbound.sql | tee "$RUNNER_TEMP/lot_inbound.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/lot_inbound.txt"
+
       # Activities and chatter (phase 19): RLS follows the record, authors and logs protected.
       - name: Activities and chatter checks
         run: |

@@ -13,6 +13,7 @@ import type { ImportLookups } from "../actions/imports";
 import { applySplit, effectiveWarehouses, followLineQuantity, removeSplit } from "../lib/lineWarehouses";
 import { changeLineProduct, duplicateLine, newLine, setLineQtyPurchase, type ImportProduct, type ShipmentDraft, type ShipmentLineDraft } from "../lib/shipment";
 import { WarehouseSplitDrawer } from "./WarehouseSplitDrawer";
+import { lotLineColumns, useLotTracking } from "@/modules/inventory";
 
 const WEIGHT_METHODS: readonly SplitMethod[] = ["by_weight", "chargeable_weight"];
 const VOLUME_METHODS: readonly SplitMethod[] = ["by_volume"];
@@ -54,6 +55,8 @@ export function ImportLinesGrid({
   const { t, locale } = useI18n();
   const { toast } = useToast();
   const [splitting, setSplitting] = useState<string | null>(null);
+  // LOT_TRACKING (LOT-2): the planned lot of each line (number, supplier batch, dates).
+  const lotOn = useLotTracking();
   const label = (key: string) => t(`imports.fields.${key}`);
   const issue = (key: string) => (showIssues ? t(`imports.draftIssues.${key}`) : null);
   const warehouseName = (id: string | null) => lookups.warehouses.find((w) => w.id === id)?.name ?? null;
@@ -256,10 +259,17 @@ export function ImportLinesGrid({
         optional: true,
         cell: (l, ctx) => <LineTextCell ctx={ctx} mono maxLength={20} value={l.hsCode} onChange={(v) => setLine(l.key, (line) => ({ ...line, hsCode: v }))} />,
       },
+      ...(lotOn
+        ? lotLineColumns<ShipmentLineDraft>({
+            t,
+            get: (l) => l.lot,
+            set: (l, lot) => setLine(l.key, (line) => ({ ...line, lot })),
+          })
+        : []),
     ];
     // The columns are rebuilt with the draft; the helpers above only close over stable values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.lines, draft.currencyCode, draft.defaultWarehouseId, products, lookups.warehouses, showIssues, result, needs, t, locale]);
+  }, [draft.lines, draft.currencyCode, draft.defaultWarehouseId, products, lookups.warehouses, showIssues, result, needs, t, locale, lotOn]);
 
   function splitIssueText(l: ShipmentLineDraft): string | null {
     return l.warehouses.some((s) => !s.warehouseId) || Math.abs(l.warehouses.reduce((s, x) => s + x.qtyPurchase, 0) - l.qtyPurchase) > 0.0005

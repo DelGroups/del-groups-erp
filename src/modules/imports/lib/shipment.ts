@@ -14,6 +14,7 @@ import {
   type SplitMethod,
 } from "@/lib/imports/landedCost";
 import { checkSplit, parseSplits, type LineWarehouseSplit } from "./lineWarehouses";
+import type { LotFieldsValue } from "@/modules/inventory";
 
 export const SHIPMENT_STATUSES = ["draft", "confirmed", "cleared", "partially_received", "received", "closed", "cancelled"] as const;
 export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
@@ -50,6 +51,18 @@ export interface ShipmentLineDraft {
   warehouseId: string | null;
   /** IMP-4: the line split over several warehouses (empty = one warehouse, warehouseId or the default). */
   warehouses: LineWarehouseSplit[];
+  /** LOT-2 (LOT_TRACKING): the planned lot of the line; undefined = none (saved exactly as before). */
+  lot?: LotFieldsValue;
+}
+
+/** A stored or typed planned lot; undefined when it is empty. */
+export function parseLineLot(raw: unknown): LotFieldsValue | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const s = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  const d = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
+  const lot = { lotNo: s(r.lotNo ?? r.lot_no_planned, 60), supplierBatchNo: s(r.supplierBatchNo ?? r.supplier_batch_no, 80), mfgDate: d(r.mfgDate ?? r.mfg_date), expDate: d(r.expDate ?? r.exp_date) };
+  return lot.lotNo || lot.supplierBatchNo || lot.mfgDate || lot.expDate ? lot : undefined;
 }
 
 export interface CostLineDraft {
@@ -324,6 +337,7 @@ export function parseShipmentDraft(value: unknown): ShipmentDraft {
         dutyRatePct: numOr(l.dutyRatePct, 0),
         warehouseId: uuidOrNull(l.warehouseId),
         warehouses: parseSplits(l.warehouses),
+        lot: parseLineLot(l.lot),
       };
     }),
     costs: costs.map((x, i) => {
