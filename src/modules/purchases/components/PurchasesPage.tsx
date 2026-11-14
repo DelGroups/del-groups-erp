@@ -61,6 +61,7 @@ import { useVatAccountIds } from "@/hooks/useVatAccountIds";
 import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { exportPurchaseEQaime } from "@/lib/tax/eQaimeDocuments";
 import { ListGrid } from "@/components/lists/ListGrid";
+import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
 
 /** Column choice key of this list (prompt 24c). */
 const PURCHASES_LIST_KEY = "purchases.invoices";
@@ -334,6 +335,8 @@ export default function PurchasesPage() {
             description={t("purchases.description")}
             extraActions={
               <>
+                {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+                <FindSuspiciousButton entity="purchase" />
                 {columns.enabled && !columns.grid ? (
                   <Button type="button" variant="secondary" onClick={() => handleExport()}>
                     <FileSpreadsheet className="h-4 w-4 text-emerald-600" />

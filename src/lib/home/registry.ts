@@ -35,7 +35,7 @@ export interface WidgetDef {
   /** Always on the page: may be moved and resized, never removed (the apps grid). */
   pinned?: boolean;
   /** Feature that must be on; until then the widget is registered but never shown. */
-  requires?: "newCrm";
+  requires?: "newCrm" | "accountingGuard";
   /** Loads its data from /api/home/widgets/[id] (false: computed in the browser, e.g. the clock). */
   remote: boolean;
   /** Refresh interval in ms (on focus as well); none = load once. */
@@ -87,6 +87,8 @@ export const WIDGETS: readonly WidgetDef[] = [
   w({ id: "ar_discrepancy", category: "management", sizes: ["M", "L"], defaultSize: "M", module: "sales", permission: "sales.view", financial: true, defaultColumn: "end", defaultOrder: 140, remote: true, refreshMs: LIVE }),
   // Targets and pipeline value need the new CRM (prompt 21, NEW_CRM): hidden until it is on.
   w({ id: "sales_target", category: "management", sizes: ["M", "L"], defaultSize: "M", module: "crm", permission: "crm.view_pipeline", financial: true, defaultColumn: "end", defaultOrder: 150, requires: "newCrm", remote: true, refreshMs: LIVE }),
+  // Accounting Guard (GUARD-3): admins, only while ACCOUNTING_GUARD is on; it loads its own figures (server action).
+  w({ id: "accounting_guard", category: "operations", sizes: ["S", "M"], defaultSize: "M", financial: false, defaultColumn: "end", defaultOrder: 170, requires: "accountingGuard", remote: false }),
   w({ id: "pipeline_value", category: "management", sizes: ["M", "L"], defaultSize: "M", module: "crm", permission: "crm.view_pipeline", financial: true, defaultColumn: "end", defaultOrder: 160, requires: "newCrm", remote: true, refreshMs: LIVE }),
 ];
 
@@ -102,12 +104,14 @@ export interface HomeContext {
   /** Role matrix path (admins: always true). */
   can: (path: string) => boolean;
   financials: boolean;
-  flags: { newCrm: boolean };
+  /** accountingGuard: ACCOUNTING_GUARD is on and the user is an admin. */
+  flags: { newCrm: boolean; accountingGuard?: boolean };
 }
 
 /** May this user see (and add) this widget? */
 export function visibleTo(def: WidgetDef, ctx: HomeContext): boolean {
   if (def.requires === "newCrm" && !ctx.flags.newCrm) return false;
+  if (def.requires === "accountingGuard" && ctx.flags.accountingGuard !== true) return false;
   if (def.module && !ctx.isEnabled(def.module)) return false;
   if (def.permission && !ctx.can(def.permission)) return false;
   if (def.financial && !ctx.financials) return false;

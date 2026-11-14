@@ -37,7 +37,7 @@ export const APP_MENU_GROUPS: Readonly<Record<string, readonly MenuGroupDef[]>> 
   ],
   finance: [
     { id: "money", titleKey: "uiUnified.menuGroups.financeMoney", paths: ["/cash-bank", "/dashboard/payments", "/expenses"] },
-    { id: "accounting", titleKey: "uiUnified.menuGroups.financeAccounting", paths: ["/finance", "/finance/opening-balances"] },
+    { id: "accounting", titleKey: "uiUnified.menuGroups.financeAccounting", paths: ["/finance", "/finance/opening-balances", "/finance/guard"] },
   ],
   reports: [
     { id: "general", titleKey: "uiUnified.menuGroups.reportsGeneral", paths: ["/reports", "/imports/reports"] },

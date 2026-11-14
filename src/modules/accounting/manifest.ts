@@ -27,6 +27,8 @@ export default defineModule({
     { prefix: "/cash-bank", permission: "can_view_finance" },
     { prefix: "/dashboard/payments", permission: "can_view_finance" },
     { prefix: "/finance/opening-balances", permission: "can_manage_settings" },
+    // Accounting Guard (GUARD-3): admins; the page is a 404 while ACCOUNTING_GUARD is off.
+    { prefix: "/finance/guard", permission: "can_manage_settings" },
     { prefix: "/finance", permission: "can_view_finance" },
     { prefix: "/reports/financial", permission: "can_view_financial_reports" },
     { prefix: "/dashboard/reports/financial", permission: "can_view_financial_reports" },

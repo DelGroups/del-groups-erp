@@ -37,6 +37,7 @@ import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { invoiceExportFormActions, invoiceExportRowActions } from "@/components/invoices/invoiceExportActions";
 import { DATE_CHANGE_ACTION_KEY, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
+import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
 
 /** Purchases on the view engine (new UI): invoices with a dashboard, and purchase requisitions. */
 export default function PurchasesScreen() {
@@ -84,10 +85,14 @@ function InvoicesTab() {
       header={<Tabs active="invoices" />}
       kpis={(records, fmt, ctx) => purchaseKpis(records, fmt, ctx.now)}
       actions={
-        <Link href="/purchases/new" className="ds-btn ds-btn-sm ds-btn-primary">
-          <Plus className="h-4 w-4" aria-hidden />
-          {t("purchases.createLabel")}
-        </Link>
+        <>
+          {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+          <FindSuspiciousButton entity="purchase" />
+          <Link href="/purchases/new" className="ds-btn ds-btn-sm ds-btn-primary">
+            <Plus className="h-4 w-4" aria-hidden />
+            {t("purchases.createLabel")}
+          </Link>
+        </>
       }
       recordTitle={(r) => r.invoice_number}
       rowActions={(r) => purchaseRowActions(r, t, can, exportOn, dateChangeOn)}

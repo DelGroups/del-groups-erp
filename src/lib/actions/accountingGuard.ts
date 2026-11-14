@@ -1,11 +1,9 @@
 "use server";
 
-import { ActionAuthError, mapRpcError, requirePermissionAction } from "@/lib/auth/serverActionAuth";
+import { mapRpcError } from "@/lib/auth/serverActionAuth";
 import { isValidUuid } from "@/lib/auth/validate";
-import { isAccountingGuardEnabled } from "@/lib/features/accountingGuard";
 import { NAME_OPEN_STATUSES, NAME_RULES, normalizeReason, openNameFindings, type NameFinding } from "@/lib/guard/nameFindings";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { isAdminRole } from "@/types/database.types";
+import { guardDb, guardFail, requireGuardAdmin, type GuardActionResult } from "@/lib/guard/server";
 
 /**
  * GUARD-2: server actions of the "Find duplicate or wrong names" drawer. Admin only and only with
@@ -15,38 +13,8 @@ import { isAdminRole } from "@/types/database.types";
  * The guard only reads business data; "Not a duplicate" changes the finding, never a product.
  */
 
-export type GuardActionResult<T> = { success: true; data: T } | { success: false; error: string };
-
-type Q = PromiseLike<{ data: unknown; error: { message: string } | null }> & {
-  in: (column: string, values: unknown[]) => Q;
-  eq: (column: string, value: unknown) => Q;
-  order: (column: string, options?: { ascending?: boolean }) => Q;
-  limit: (count: number) => Q;
-  maybeSingle: () => PromiseLike<{ data: unknown; error: { message: string } | null }>;
-};
-type Db = {
-  from: (table: string) => { select: (columns: string) => Q };
-  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
-};
-
 /** The most findings one drawer lists; more means "narrow it in the Accounting Guard". */
 const NAME_FINDINGS_LIMIT = 500;
-
-async function requireGuardAdmin() {
-  if (!isAccountingGuardEnabled()) throw new ActionAuthError("accountingGuard.errors.disabled");
-  const ctx = await requirePermissionAction("can_manage_settings");
-  if (!isAdminRole(ctx.profile?.role)) throw new ActionAuthError("accountingGuard.errors.adminOnly");
-  return ctx;
-}
-
-function fail(err: unknown): { success: false; error: string } {
-  if (err instanceof ActionAuthError) return { success: false, error: err.message };
-  return { success: false, error: err instanceof Error ? mapRpcError(err.message) : "Failed" };
-}
-
-async function userDb(): Promise<Db> {
-  return (await createSupabaseServerClient()) as unknown as Db;
-}
 
 export interface ProductNameScan {
   runId: string;
@@ -65,7 +33,7 @@ export interface ProductNameScan {
 export async function scanProductNamesAction(): Promise<GuardActionResult<ProductNameScan>> {
   try {
     await requireGuardAdmin();
-    const db = await userDb();
+    const db = await guardDb();
     const { data: runId, error } = await db.rpc("guard_scan", { p_scope: ["products"], p_trigger: "button" });
     if (error) return { success: false, error: mapRpcError(error.message) };
     if (typeof runId !== "string" || !isValidUuid(runId)) return { success: false, error: "Failed" };
@@ -94,7 +62,7 @@ export async function scanProductNamesAction(): Promise<GuardActionResult<Produc
       },
     };
   } catch (err) {
-    return fail(err);
+    return guardFail(err);
   }
 }
 
@@ -108,11 +76,11 @@ export async function markNotDuplicateAction(findingId: string, reason: string):
     if (!isValidUuid(findingId)) return { success: false, error: "accountingGuard.errors.invalidFinding" };
     const note = normalizeReason(reason);
     if (!note) return { success: false, error: "accountingGuard.names.reasonRequired" };
-    const db = await userDb();
+    const db = await guardDb();
     const { error } = await db.rpc("guard_set_finding_status", { p_id: findingId, p_status: "false_positive", p_note: note });
     if (error) return { success: false, error: mapRpcError(error.message) };
     return { success: true, data: { id: findingId } };
   } catch (err) {
-    return fail(err);
+    return guardFail(err);
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import DocumentFindingsChip from "@/components/guard/DocumentFindingsChip";
 import React from "react";
 import { X } from "lucide-react";
 import type { PurchaseRecord } from "@/types/database.types";
@@ -42,7 +43,11 @@ export default function PurchaseViewModal({ purchase, onClose, onChanged }: Purc
         <div className="flex items-center justify-between border-b border-app px-5 py-4">
           <div>
             <h3 className="text-sm font-bold text-app">{t("modals.purchaseView.title")}</h3>
-            <p className="font-mono text-xs text-emerald-600">{purchase.invoice_number}</p>
+            <p className="flex flex-wrap items-center gap-2 font-mono text-xs text-emerald-600">
+              {purchase.invoice_number}
+              {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+              <DocumentFindingsChip entity="purchase" id={purchase.id} docNo={purchase.invoice_number} />
+            </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-app-muted hover:bg-app-card-hover">
             <X className="h-5 w-5" />

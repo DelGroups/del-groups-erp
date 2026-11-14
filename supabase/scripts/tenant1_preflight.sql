@@ -208,6 +208,9 @@ union all
 select 'pending', '20261120110000_accounting_guard_products: product data and stock rules of the Accounting Guard (GUARD-2)',
        case when to_regprocedure('public.guard_normalize_name(text)') is null or to_regprocedure('public.guard_check_f2(jsonb, timestamp with time zone)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261120120000_accounting_guard_ui: Accounting Guard section, reports and bell (GUARD-3)',
+       case when to_regclass('public.guard_reports') is null or to_regprocedure('public.guard_dashboard()') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

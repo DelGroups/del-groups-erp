@@ -515,6 +515,10 @@
       "permission": "can_manage_settings"
     },
     {
+      "prefix": "/finance/guard",
+      "permission": "can_manage_settings"
+    },
+    {
       "prefix": "/finance",
       "permission": "can_view_finance"
     },
