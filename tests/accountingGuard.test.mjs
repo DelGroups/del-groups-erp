@@ -83,3 +83,27 @@ test("access: RLS on, admins read, writes only through the functions", () => {
 test("the SQL checks run in CI", () => {
   assert.match(read(".github/workflows/db-baseline.yml"), /supabase\/tests\/accounting_guard\.sql/);
 });
+
+test("the migration applies without the partner-ledger migrations; those rules fail inside a scan instead", () => {
+  const full = read(MIGRATION)
+    .split(/\r?\n/)
+    .filter((l) => !l.trim().startsWith("--"))
+    .join("\n");
+  // The existence check and its message name the function; only real calls are checked below.
+  const sql = full
+    .split("\n")
+    .filter((l) => !/to_regprocedure|RAISE EXCEPTION/.test(l))
+    .join("\n");
+  // No static reference to the LED-1 / LED-4 functions: a real call appears only inside dynamic SQL.
+  for (const fn of ["get_partner_balances", "_partner_open_items"]) {
+    const needle = "public." + fn + "(";
+    let at = sql.indexOf(needle);
+    assert.ok(at >= 0, fn + " is used");
+    while (at >= 0) {
+      const before = sql.slice(0, at);
+      assert.ok(before.lastIndexOf("RETURN QUERY EXECUTE $q$") > before.lastIndexOf("$$;"), fn + " must be called through dynamic SQL");
+      at = sql.indexOf(needle, at + 1);
+    }
+    assert.ok(full.includes("to_regprocedure('public." + fn + "("), fn + " is checked first");
+  }
+});

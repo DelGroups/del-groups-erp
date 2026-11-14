@@ -566,33 +566,43 @@ $$;
 CREATE OR REPLACE FUNCTION public.guard_check_a10(p_params JSONB, p_since TIMESTAMPTZ)
 RETURNS TABLE (fingerprint TEXT, severity TEXT, entity_type TEXT, entity_id UUID, doc_no TEXT, doc_date DATE,
                partner_type TEXT, partner_id UUID, amount NUMERIC, details JSONB)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SET search_path = public
 AS $$
+BEGIN
+  -- Dynamic SQL: this migration must apply on a database where the partner-ledger migration
+  -- is not applied yet; the rule then fails with a clear message inside guard_scan (logged in
+  -- the run, the other rules go on).
+  IF to_regprocedure('public.get_partner_balances(date)') IS NULL THEN
+    RAISE EXCEPTION 'Run supabase/migrations/20261111100000_partner_ledger.sql (LED-1) first (needs public.get_partner_balances(date))';
+  END IF;
+  RETURN QUERY EXECUTE $q$
   WITH ledger AS (
     SELECT round(COALESCE(sum(b.receivable), 0), 2) AS receivable, round(COALESCE(sum(b.payable), 0), 2) AS payable
     FROM public.get_partner_balances(public._guard_today()) b
   ),
   gl AS (
-    SELECT round(COALESCE(sum(jl.debit - jl.credit) FILTER (WHERE c.code = COALESCE(p_params ->> 'receivable_code', '1200')), 0), 2) AS receivable,
-           round(COALESCE(sum(jl.credit - jl.debit) FILTER (WHERE c.code = COALESCE(p_params ->> 'payable_code', '2100')), 0), 2) AS payable
+    SELECT round(COALESCE(sum(jl.debit - jl.credit) FILTER (WHERE c.code = COALESCE($1 ->> 'receivable_code', '1200')), 0), 2) AS receivable,
+           round(COALESCE(sum(jl.credit - jl.debit) FILTER (WHERE c.code = COALESCE($1 ->> 'payable_code', '2100')), 0), 2) AS payable
     FROM public.journal_entry_lines jl
     JOIN public.journal_entries je ON je.id = jl.journal_entry_id
     JOIN public.chart_of_accounts c ON c.id = jl.coa_id
     WHERE je.entry_date <= public._guard_today()
   )
-  SELECT 'A10:receivable', NULL::text, 'gl_account', NULL::uuid, COALESCE(p_params ->> 'receivable_code', '1200'), public._guard_today(),
+  SELECT 'A10:receivable', NULL::text, 'gl_account', NULL::uuid, COALESCE($1 ->> 'receivable_code', '1200'), public._guard_today(),
          NULL::text, NULL::uuid, abs(l.receivable - g.receivable),
          jsonb_build_object('side', 'receivable', 'partner_ledger', l.receivable, 'general_ledger', g.receivable)
   FROM ledger l, gl g
-  WHERE abs(l.receivable - g.receivable) > public._guard_num(p_params, 'tolerance', 0.01)
+  WHERE abs(l.receivable - g.receivable) > public._guard_num($1, 'tolerance', 0.01)
   UNION ALL
-  SELECT 'A10:payable', NULL::text, 'gl_account', NULL::uuid, COALESCE(p_params ->> 'payable_code', '2100'), public._guard_today(),
+  SELECT 'A10:payable', NULL::text, 'gl_account', NULL::uuid, COALESCE($1 ->> 'payable_code', '2100'), public._guard_today(),
          NULL::text, NULL::uuid, abs(l.payable - g.payable),
          jsonb_build_object('side', 'payable', 'partner_ledger', l.payable, 'general_ledger', g.payable)
   FROM ledger l, gl g
-  WHERE abs(l.payable - g.payable) > public._guard_num(p_params, 'tolerance', 0.01);
+  WHERE abs(l.payable - g.payable) > public._guard_num($1, 'tolerance', 0.01);
+  $q$ USING p_params;
+END;
 $$;
 
 -- ─── 5. Rules: B, documents ─────────────────────────────────────────────────
@@ -1008,51 +1018,81 @@ $$;
 CREATE OR REPLACE FUNCTION public.guard_check_d1(p_params JSONB, p_since TIMESTAMPTZ)
 RETURNS TABLE (fingerprint TEXT, severity TEXT, entity_type TEXT, entity_id UUID, doc_no TEXT, doc_date DATE,
                partner_type TEXT, partner_id UUID, amount NUMERIC, details JSONB)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SET search_path = public
 AS $$
+BEGIN
+  -- Dynamic SQL: this migration must apply on a database where the partner-ledger migration
+  -- is not applied yet; the rule then fails with a clear message inside guard_scan (logged in
+  -- the run, the other rules go on).
+  IF to_regprocedure('public.get_partner_balances(date)') IS NULL THEN
+    RAISE EXCEPTION 'Run supabase/migrations/20261111100000_partner_ledger.sql (LED-1) first (needs public.get_partner_balances(date))';
+  END IF;
+  RETURN QUERY EXECUTE $q$
   SELECT 'D1:' || b.partner_id, NULL::text, 'partner', b.partner_id, b.partner_name, NULL::date, 'partner', b.partner_id,
          -b.receivable,
          jsonb_build_object('partner_name', b.partner_name, 'receivable', b.receivable, 'payable', b.payable,
                             'last_payment_date', b.last_payment_date)
   FROM public.get_partner_balances(public._guard_today()) b
-  WHERE b.receivable < -public._guard_num(p_params, 'tolerance', 0.01);
+  WHERE b.receivable < -public._guard_num($1, 'tolerance', 0.01);
+  $q$ USING p_params;
+END;
 $$;
 
 -- D2 supplier paid more than invoiced (the payable side is negative).
 CREATE OR REPLACE FUNCTION public.guard_check_d2(p_params JSONB, p_since TIMESTAMPTZ)
 RETURNS TABLE (fingerprint TEXT, severity TEXT, entity_type TEXT, entity_id UUID, doc_no TEXT, doc_date DATE,
                partner_type TEXT, partner_id UUID, amount NUMERIC, details JSONB)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SET search_path = public
 AS $$
+BEGIN
+  -- Dynamic SQL: this migration must apply on a database where the partner-ledger migration
+  -- is not applied yet; the rule then fails with a clear message inside guard_scan (logged in
+  -- the run, the other rules go on).
+  IF to_regprocedure('public.get_partner_balances(date)') IS NULL THEN
+    RAISE EXCEPTION 'Run supabase/migrations/20261111100000_partner_ledger.sql (LED-1) first (needs public.get_partner_balances(date))';
+  END IF;
+  RETURN QUERY EXECUTE $q$
   SELECT 'D2:' || b.partner_id, NULL::text, 'partner', b.partner_id, b.partner_name, NULL::date, 'partner', b.partner_id,
          -b.payable,
          jsonb_build_object('partner_name', b.partner_name, 'receivable', b.receivable, 'payable', b.payable,
                             'last_payment_date', b.last_payment_date)
   FROM public.get_partner_balances(public._guard_today()) b
-  WHERE b.payable < -public._guard_num(p_params, 'tolerance', 0.01);
+  WHERE b.payable < -public._guard_num($1, 'tolerance', 0.01);
+  $q$ USING p_params;
+END;
 $$;
 
 -- D3 an open item (receivable or payable) older than params.days (LED-4 open items, FIFO).
 CREATE OR REPLACE FUNCTION public.guard_check_d3(p_params JSONB, p_since TIMESTAMPTZ)
 RETURNS TABLE (fingerprint TEXT, severity TEXT, entity_type TEXT, entity_id UUID, doc_no TEXT, doc_date DATE,
                partner_type TEXT, partner_id UUID, amount NUMERIC, details JSONB)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SET search_path = public
 AS $$
+BEGIN
+  -- Dynamic SQL: this migration must apply on a database where the partner-ledger migration
+  -- is not applied yet; the rule then fails with a clear message inside guard_scan (logged in
+  -- the run, the other rules go on).
+  IF to_regprocedure('public._partner_open_items(date, uuid)') IS NULL THEN
+    RAISE EXCEPTION 'Run supabase/migrations/20261114100000_partner_debtor_reports.sql (LED-4) first (needs public._partner_open_items(date, uuid))';
+  END IF;
+  RETURN QUERY EXECUTE $q$
   SELECT 'D3:' || o.partner_id || ':' || o.side || ':' || o.item_key, NULL::text,
          COALESCE(o.doc_kind, 'partner'), COALESCE(o.doc_id, o.partner_id), o.doc_no, o.item_date, 'partner', o.partner_id,
          round(o.remaining, 2),
          jsonb_build_object('side', o.side, 'item_key', o.item_key, 'due_date', o.due_date,
                             'age_days', public._guard_today() - o.item_date, 'as_of', public._guard_today())
   FROM public._partner_open_items(public._guard_today(), NULL) o
-  WHERE o.kind = 'item' AND o.remaining > public._guard_num(p_params, 'tolerance', 0.01)
+  WHERE o.kind = 'item' AND o.remaining > public._guard_num($1, 'tolerance', 0.01)
     AND o.item_date IS NOT NULL
-    AND public._guard_today() - o.item_date > public._guard_num(p_params, 'days', 90);
+    AND public._guard_today() - o.item_date > public._guard_num($1, 'days', 90);
+  $q$ USING p_params;
+END;
 $$;
 
 -- Rule functions are internal: only guard_scan (as the owner) calls them.
