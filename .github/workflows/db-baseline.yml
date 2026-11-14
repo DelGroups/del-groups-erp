@@ -266,6 +266,13 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/gl_partner_cash_account.sql | tee "$RUNNER_TEMP/gl_partner_cash_account.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/gl_partner_cash_account.txt"
 
+      # Accounting Guard core (GUARD-1): every rule's bad / good case, upsert, auto-resolve,
+      # false positives, admin-only access, and no write to business data.
+      - name: Accounting guard checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/accounting_guard.sql | tee "$RUNNER_TEMP/accounting_guard.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/accounting_guard.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

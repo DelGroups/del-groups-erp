@@ -202,6 +202,9 @@ union all
 select 'pending', '20261115130000_lot_ui: reads of the lot screens (LOT-4)',
        case when to_regprocedure('public.lot_movements_page(uuid, integer, integer)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261120100000_accounting_guard_core: Accounting Guard rule engine and findings (GUARD-1)',
+       case when to_regclass('public.guard_findings') is null or to_regprocedure('public.guard_scan(text[], text, timestamp with time zone)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
