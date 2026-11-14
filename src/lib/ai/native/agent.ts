@@ -21,8 +21,8 @@ export type AgentResult = {
   status: "ok" | "refusal" | "max_steps" | "max_tokens";
 };
 
-const MAX_ITERATIONS = 6;
-const MAX_TOKENS = 16000;
+const DEFAULT_MAX_ITERATIONS = 6;
+const DEFAULT_MAX_TOKENS = 16000;
 
 /** Effort per tier (Haiku 4.5 does not take effort). */
 const TIER_EFFORT: Record<ModelTier, "low" | "medium" | null> = {
@@ -53,9 +53,19 @@ export async function runNativeAgent(input: {
   userMessage: string;
   today: string;
   ctx: ToolContext;
+  /** Other callers (the Accounting Guard accountant) bring their own client, tools and limits; the defaults are the assistant's. */
+  client?: Pick<Anthropic, "beta">;
+  toolset?: {
+    tools: Anthropic.Beta.BetaTool[];
+    run: (name: string, input: unknown) => Promise<{ content: string; isError: boolean; links: Array<{ label: string; href: string }> }>;
+  };
+  maxIterations?: number;
+  maxTokens?: number;
 }): Promise<AgentResult> {
-  const client = new Anthropic({ apiKey: input.apiKey, timeout: 60_000, maxRetries: 2 });
-  const tools = toolsForProfile(input.ctx.profile, input.ctx.enabledModules);
+  const client = input.client ?? new Anthropic({ apiKey: input.apiKey, timeout: 60_000, maxRetries: 2 });
+  const tools = input.toolset ? input.toolset.tools : toolsForProfile(input.ctx.profile, input.ctx.enabledModules);
+  const MAX_ITERATIONS = input.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+  const MAX_TOKENS = input.maxTokens ?? DEFAULT_MAX_TOKENS;
   const effort = TIER_EFFORT[input.tier];
   const useFallbacks = supportsFallbacks(input.model);
 
@@ -133,7 +143,9 @@ export async function runNativeAgent(input: {
     // Parallel tool calls run together and go back in one user message.
     const results = await Promise.all(
       toolUses.map(async (block) => {
-        const result = await runTool(block.name, block.input, input.ctx);
+        const result = await (input.toolset
+          ? input.toolset.run(block.name, block.input)
+          : runTool(block.name, block.input, input.ctx));
         steps.push({ tool: block.name, ok: !result.isError, summary: summarizeInput(block.input) });
         links.push(...result.links);
         return {

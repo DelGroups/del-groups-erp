@@ -12,6 +12,9 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { markGuardSeenAction, runGuardScanAction } from "@/lib/actions/accountingGuardSection";
 import { GUARD_TABS, guardQueryString, parseGuardQuery, type GuardQuery, type GuardTab } from "@/lib/guard/findings";
 import { GUARD_KEYS } from "./guardUi";
+import { useGuardAgent } from "./AccountingGuardFlag";
+import GuardAskPanel from "./GuardAskPanel";
+import GuardMemoryTab from "./GuardMemoryTab";
 import GuardDashboardTab from "./GuardDashboardTab";
 import GuardFindingsTab from "./GuardFindingsTab";
 import GuardReportsTab from "./GuardReportsTab";
@@ -46,6 +49,7 @@ function GuardPageBody() {
   const queryClient = useQueryClient();
   const q = useMemo(() => parseGuardQuery(params), [params]);
   const [scanning, setScanning] = useState(false);
+  const agent = useGuardAgent();
   const g = (key: string, p?: Record<string, string | number>) => t(`guard.ui.${key}`, p);
 
   const setQuery = useCallback(
@@ -91,11 +95,17 @@ function GuardPageBody() {
         />
       </div>
       <main className="app-page-content flex-1 print:hidden">
-        <Tabs label={g("tabsLabel")} value={q.tab} onValueChange={(v) => setQuery({ tab: v as GuardTab, finding: null })} items={GUARD_TABS.map((id) => ({ id, label: g(`tab_${id}`) }))}>
+        <Tabs label={g("tabsLabel")} value={q.tab} onValueChange={(v) => setQuery({ tab: v as GuardTab, finding: null })} items={GUARD_TABS.filter((id) => id !== "memory" || agent).map((id) => ({ id, label: g(`tab_${id}`) }))}>
           <div className="pt-3">
             {q.tab === "dashboard" ? <GuardDashboardTab /> : null}
             {q.tab === "findings" ? <GuardFindingsTab q={q} setQuery={setQuery} /> : null}
-            {q.tab === "reports" ? <GuardReportsTab /> : null}
+            {q.tab === "reports" ? (
+              <>
+                {agent ? <GuardAskPanel /> : null}
+                <GuardReportsTab />
+              </>
+            ) : null}
+            {q.tab === "memory" && agent ? <GuardMemoryTab /> : null}
             {q.tab === "rules" ? <GuardRulesTab /> : null}
             {q.tab === "runs" ? <GuardRunsTab /> : null}
           </div>

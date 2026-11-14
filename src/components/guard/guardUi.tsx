@@ -17,6 +17,7 @@ export const GUARD_KEYS = {
   reports: ["guard", "reports"] as const,
   report: (id: string) => ["guard", "report", id] as const,
   bell: ["guard", "bell"] as const,
+  memory: ["guard", "memory"] as const,
 };
 
 const SEVERITY_TONE: Record<GuardSeverity, ChipTone> = { critical: "danger", high: "warning", medium: "info", low: "neutral" };

@@ -45,6 +45,8 @@ export function guardMessage(message: string): string {
   if (/rule_not_found|finding_not_found/.test(message)) return "guard.errors.notFound";
   if (/title_required/.test(message)) return "guard.errors.titleRequired";
   if (/invalid_schedule/.test(message)) return "guard.errors.invalidSchedule";
+  if (/invalid_memory|invalid_suggestion/.test(message)) return "guard.errors.invalidMemory";
+  if (/memory_full/.test(message)) return "guard.errors.memoryFull";
   if (/invalid_severity|invalid_status|invalid_kind|invalid_what|invalid_summary/.test(message)) return "guard.errors.invalidInput";
   return mapRpcError(message);
 }
