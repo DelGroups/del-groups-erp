@@ -135,7 +135,7 @@ test("the button is for admins with the flag; it is on the product list and on S
   assert.match(button, /StandardGrid/);
   assert.match(button, /from "@\/design-system\/components"/);
   assert.doesNotMatch(button, /ToastMessage|@\/components\/ui\/table|window\.(confirm|alert|prompt)/);
-  assert.match(read("src/app/layout.tsx"), /<AccountingGuardProvider enabled=\{isAccountingGuardEnabled\(\)\}>/);
+  assert.match(read("src/app/layout.tsx"), /<AccountingGuardProvider enabled=\{isAccountingGuardEnabled\(\)\}/);
   assert.match(read("src/app/products/page.client.tsx"), /<DuplicateNamesButton \/>/);
   const integrity = read("src/modules/inventory/components/StockIntegrityPage.tsx");
   assert.equal([...integrity.matchAll(/<DuplicateNamesButton size="md" \/>/g)].length, 2, "both layouts of the page");

@@ -285,6 +285,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/accounting_guard_cron.sql | tee "$RUNNER_TEMP/accounting_guard_cron.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/accounting_guard_cron.txt"
 
+      # Accounting Guard accountant agent (GUARD-5): memory, the agent's suggestion on a finding, the monthly cost, admin only.
+      - name: Accounting guard agent checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/accounting_guard_agent.sql | tee "$RUNNER_TEMP/accounting_guard_agent.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/accounting_guard_agent.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

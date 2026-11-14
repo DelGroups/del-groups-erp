@@ -199,3 +199,14 @@ Migration `supabase/migrations/20261120130000_accounting_guard_cron.sql` (needs 
 - **Checks that need everything** run only in the full scan: A8, A9, A10, C1, C2, D1 to D3, F1 to F5, E1, E2, E4.
 - **No pg_cron needed to merge:** on a database without it (CI, a new tenant) the migration applies, the settings are stored, and a notice says what to do. One scan runs at a time.
 - **The card** (admins): turn it on, how often it looks at changed documents, the nightly hour (with the Baku time), how long closed findings and old scans are kept, the next runs, the last scheduled scan and the pg_cron jobs; without pg_cron it lists the steps.
+
+## What GUARD-5 built
+
+The accountant agent: Claude reads the findings and the books like a senior accountant and writes saved reports. **It never posts, edits, reverses or deletes anything; it proposes, an admin decides.**
+
+- **Switches (all off by default):** `ACCOUNTING_GUARD=true`, `ACCOUNTING_GUARD_AI=true`, `ANTHROPIC_API_KEY`, `GUARD_CRON_SECRET` (at least 16 characters) on the server; optional `GUARD_AI_MONTHLY_BUDGET_USD` (default 15). Nothing is stored in the repository.
+- **Tools (read-only):** list and open findings, read one sale / purchase / journal entry by id, the trial balance, a partner statement, the rules, its memory. The only things it can write are its own notes (`guard_memory_save`) and a "probably not an error" suggestion on a finding (`guard_set_agent_suggestion`); an admin confirms (the ordinary status change, with the reason) or dismisses it. It has no tool to change a status, delete a note, post or scan.
+- **Reports:** daily (standard model) and monthly (deep model) from a scheduled GitHub workflow that calls `POST /api/guard/agent` with the secret; on demand from the Reports tab ("Ask the accountant" or "Build report"). Saved in `guard_reports` as written by AI with model, tokens and cost; scheduled reports are new to every admin (the bell counts them).
+- **Memory:** `guard_agent_memory`, at most 500 notes, one per subject, shown on the Memory tab where admins add, edit and delete.
+- **Budget:** every call is in `guard_ai_usage`; at the monthly budget the agent stops before calling Claude. On-demand calls also count against the plan's AI credit.
+- **Tests:** `supabase/tests/accounting_guard_agent.sql` and `tests/accountingGuardAgent.test.mjs` (with a stand-in for Claude).

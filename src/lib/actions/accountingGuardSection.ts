@@ -23,6 +23,7 @@ import {
   type GuardStatus,
   type ParamValue,
 } from "@/lib/guard/findings";
+import { isGuardAgentFlagOn } from "@/lib/guard/agentConfig";
 import { guardDb, guardFail, guardMessage, guardRows, requireGuardAdmin, type GuardActionResult, type GuardDb } from "@/lib/guard/server";
 import { scheduleFromJson, validateSchedule, type GuardScheduleState, type ScheduleSettings } from "@/lib/guard/schedule";
 import { fetchProfileDisplayNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
@@ -90,6 +91,14 @@ export async function listGuardFindingsAction(): Promise<GuardActionResult<Guard
       .limit(FINDINGS_LIMIT);
     if (error) return { success: false, error: guardMessage(error.message) };
     const rows = guardRows(data);
+    // The agent's suggestions live in a column of the GUARD-5 migration: asked only when the agent is on, and a database without it is not an error.
+    if (isGuardAgentFlagOn()) {
+      const sug = await db.from("guard_findings").select("id, agent_suggestion").limit(FINDINGS_LIMIT);
+      if (!sug.error) {
+        const byId = new Map(guardRows(sug.data).map((s) => [String(s.id), s.agent_suggestion]));
+        for (const r of rows) r.agent_suggestion = byId.get(String(r.id)) ?? null;
+      }
+    }
 
     const partnerIds = ids(rows.map((r) => (typeof r.partner_id === "string" ? r.partner_id : null)));
     const saleIds = ids(rows.filter((r) => r.entity_type === "sale").map((r) => (typeof r.entity_id === "string" ? r.entity_id : null)));

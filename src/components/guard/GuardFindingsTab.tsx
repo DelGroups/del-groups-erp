@@ -14,6 +14,7 @@ import { downloadBlob, writeSheetBytes, XLSX_MIME, type XlsxModule } from "@/lib
 import { patchBoldRows } from "@/lib/export/invoiceExport";
 import { buildReportSheet } from "@/lib/reports/debtorReport";
 import { isoDay } from "@/lib/home/dates";
+import { dismissAgentSuggestionAction } from "@/lib/actions/accountingGuardAgent";
 import { guardFindingEventsAction, listGuardFindingsAction, saveGuardScanReportAction, setGuardFindingsStatusAction } from "@/lib/actions/accountingGuardSection";
 import { findingColumns, findingFilterLines, findingsFileName } from "@/lib/guard/export";
 import {
@@ -392,6 +393,33 @@ function FindingPanel({ finding, onClose, onChanged }: { finding: GuardFinding |
               <StatusChip status={finding.status} />
               <span className="ds-muted text-[length:var(--ds-text-xs)]">{t(`guard.category.${finding.category}`)}</span>
             </div>
+            {finding.agentSuggestion && active ? (
+              <section aria-label={g("agentSuggests")} className="rounded-[var(--ds-radius-md)] border border-[var(--ds-border)] p-3">
+                <h3 className="text-[length:var(--ds-text-sm)] font-semibold">{g("agentSuggests")}</h3>
+                <p className="mt-1 text-[length:var(--ds-text-sm)]">{finding.agentSuggestion.reason}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={() => void change("false_positive", finding.agentSuggestion?.reason)} loading={busy} disabled={busy}>
+                    {g("agentConfirm")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      const r = await dismissAgentSuggestionAction(finding.id);
+                      setBusy(false);
+                      if (!r.success) toast(t("common.error"), t(r.error), "error");
+                      else {
+                        toast(g("agentDismissed"), undefined, "success");
+                        onChanged();
+                      }
+                    }}
+                  >
+                    {g("agentDismiss")}
+                  </Button>
+                </div>
+              </section>
+            ) : null}
             <dl>
               <Fact label={g("colDocument")}>{docHref && finding.docNo ? <Link href={docHref} className="hover:underline">{finding.docNo}</Link> : (finding.docNo ?? "—")}</Fact>
               <Fact label={g("colDate")}>{finding.docDate ? formatGridDate(finding.docDate) : "—"}</Fact>
