@@ -40,9 +40,13 @@ begin
   perform public.lot_ctx_end();
 end $$;
 
--- Receipt of 20 into W1 as lot L4-LOT-1.
+-- Receipt of 20 into W1 as lot L4-LOT-1, dated 10 days ago: the ledger is ordered by document
+-- date, and a sale posted today is dated at the Baku day (which can be "yesterday" in UTC), so a
+-- receipt stamped now() could sort after it.
+select set_config('app.document_date', (public.document_today() - 10)::text, false);
 select pg_temp.move(20, 1, jsonb_build_object('doc_type', 'test_in', 'doc_id', gen_random_uuid(), 'doc_no', 'L4-IN-1',
   'new_lot', jsonb_build_object('lot_no', 'L4-LOT-1', 'supplier_batch_no', 'L4-B-1', 'exp_date', (current_date + 90)::text)));
+select set_config('app.document_date', '', false);
 
 create temp table l4_lot as select id from public.stock_lots where lot_no = 'L4-LOT-1';
 create temp table l4_ids (k text primary key, id uuid);
