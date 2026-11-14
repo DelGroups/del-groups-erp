@@ -8,6 +8,8 @@ import { isAccountingGuardEnabled } from "@/lib/features/accountingGuard";
  *   ANTHROPIC_API_KEY                the Claude API key (server only, never in the repo)
  *   GUARD_CRON_SECRET                the secret of the scheduled job that asks for the daily / monthly report
  *   GUARD_AI_MONTHLY_BUDGET_USD      optional, default 15: when this month's cost reaches it the agent stops
+ *   GUARD_AI_FORCE_TIER              optional: fast | standard | deep pins one model tier for every task (agentRouter.ts)
+ *   AI_MODEL_FAST / _STANDARD / _DEEP optional model ids per tier (shared with the assistant)
  * Pure functions of an env object, so tests can pass their own.
  */
 
