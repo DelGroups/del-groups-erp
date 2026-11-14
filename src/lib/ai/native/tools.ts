@@ -538,6 +538,19 @@ export function toolsForProfile(
   }));
 }
 
+/** Names of the read tools, in registry order (Del Assistant groups them into skills). */
+export const NATIVE_TOOL_NAMES: readonly string[] = TOOLS.map((tool) => tool.name);
+
+/** The given tools this user may call, in registry order (the same filter as toolsForProfile). */
+export function nativeToolsByName(
+  names: readonly string[],
+  profile: UserProfile | null,
+  enabledModules: ReadonlySet<string>
+): Anthropic.Tool[] {
+  const wanted = new Set(names);
+  return toolsForProfile(profile, enabledModules).filter((tool) => wanted.has(tool.name));
+}
+
 const MAX_RESULT_CHARS = 12_000;
 
 export type ToolRunResult = {

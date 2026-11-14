@@ -10,6 +10,12 @@ import { runTool, toolsForProfile, type ToolContext } from "@/lib/ai/native/tool
 
 export type AgentStep = { tool: string; ok: boolean; summary: string };
 
+/** What a streaming caller sees while the loop runs (the final result still comes back as AgentResult). */
+export type AgentEvent =
+  | { type: "text_delta"; text: string }
+  | { type: "tool_start"; tool: string; summary: string }
+  | { type: "tool_end"; tool: string; ok: boolean; links: Array<{ label: string; href: string }> };
+
 export type AgentResult = {
   reply: string;
   model: string;
@@ -61,6 +67,8 @@ export async function runNativeAgent(input: {
   };
   maxIterations?: number;
   maxTokens?: number;
+  /** Streaming (Del Assistant): text deltas and tool steps as they happen. Without it the loop is unchanged. */
+  onEvent?: (event: AgentEvent) => void;
 }): Promise<AgentResult> {
   const client = input.client ?? new Anthropic({ apiKey: input.apiKey, timeout: 60_000, maxRetries: 2 });
   const tools = input.toolset ? input.toolset.tools : toolsForProfile(input.ctx.profile, input.ctx.enabledModules);
@@ -88,16 +96,29 @@ export async function runNativeAgent(input: {
   const links: Array<{ label: string; href: string }> = [];
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
-    const response = await client.beta.messages.create({
+    const params = {
       model: input.model,
       max_tokens: MAX_TOKENS,
       // Stable system prompt + fixed tool order → cacheable prefix.
-      system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text" as const, text: input.system, cache_control: { type: "ephemeral" as const } }],
       tools,
       messages,
       ...(effort ? { output_config: { effort } } : {}),
       ...(useFallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-    });
+    };
+    let response: Anthropic.Beta.BetaMessage;
+    if (input.onEvent && typeof client.beta.messages.stream === "function") {
+      // Stream text to the caller as it is written; the final message carries usage and tool calls.
+      const stream = client.beta.messages.stream(params);
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          input.onEvent({ type: "text_delta", text: event.delta.text });
+        }
+      }
+      response = await stream.finalMessage();
+    } else {
+      response = await client.beta.messages.create(params);
+    }
 
     servedModel = response.model || input.model;
     const turnUsage: TokenUsage = {
@@ -143,10 +164,12 @@ export async function runNativeAgent(input: {
     // Parallel tool calls run together and go back in one user message.
     const results = await Promise.all(
       toolUses.map(async (block) => {
+        input.onEvent?.({ type: "tool_start", tool: block.name, summary: summarizeInput(block.input) });
         const result = await (input.toolset
           ? input.toolset.run(block.name, block.input)
           : runTool(block.name, block.input, input.ctx));
         steps.push({ tool: block.name, ok: !result.isError, summary: summarizeInput(block.input) });
+        input.onEvent?.({ type: "tool_end", tool: block.name, ok: !result.isError, links: result.links });
         links.push(...result.links);
         return {
           type: "tool_result" as const,

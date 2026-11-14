@@ -73,6 +73,10 @@ export async function saveTurn(
     routeReason: string;
     latencyMs: number;
     status: string;
+    /** Del Assistant marks its rows "assistant_v2" (column from the AST-1 migration); left out, the old shape is written. */
+    source?: string;
+    /** Del Assistant: what the user was looking at, saved on the conversation (AST-1 migration). */
+    context?: Record<string, unknown> | null;
   }
 ): Promise<void> {
   const { userId, conversationId, result } = input;
@@ -93,6 +97,10 @@ export async function saveTurn(
     }
     const { error } = await client.from("ai_messages").insert(rows);
     warn("save messages", error);
+    if (input.context) {
+      const saved = await client.from("ai_conversations").update({ context: input.context }).eq("id", conversationId);
+      warn("save context", saved.error);
+    }
   }
   const { error } = await client.from("ai_usage_log").insert({
     user_id: userId,
@@ -108,6 +116,7 @@ export async function saveTurn(
     tool_calls: result?.steps.length ?? 0,
     latency_ms: input.latencyMs,
     status: input.status,
+    ...(input.source ? { source: input.source } : {}),
   });
   warn("save usage", error);
 }
