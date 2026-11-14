@@ -1,0 +1,175 @@
+# Accounting Guard: plan
+
+**Del's request (2026-11-10, item 10):** a button that finds products with the same or a wrong name, a button that finds documents suspected of an accounting error, and a "professional accountant agent" that watches the whole system all the time, tells the admin when something is wrong or suspicious, and builds and stores its reports in a section of its own.
+
+This file holds sections 1 and 2 of the plan. The prompts for each step (GUARD-1 to GUARD-5) are in Del's project files (`prompts/accounting-guard-2026-11-10/GUARD-plan-and-prompts.md`). What GUARD-1 actually built is listed at the end.
+
+## 1. Where things stand (code on main, commit 7b02d4c)
+
+- **Duplicate product names (F4) exist:** `stock_integrity_report()` in migration `20261029300000_duplicate_product_names.sql` has a `duplicate_name` kind (exact match on `lower(btrim(name))` only). It is shown at `/settings/stock-integrity` (`src/modules/inventory/components/StockIntegrityPage.tsx`). The other kinds are duplicate_code, duplicate_barcode, no_category, total_mismatch, polywood_mismatch and so on. "Similar" names (extra spaces, ə/e, ı/i, Cyrillic and Latin letters, typos) are not found. `pg_trgm` is not enabled yet.
+- **The general ledger is only checked by a manual script:** `supabase/scripts/gl_partner_cash_check.sql` (read-only, run by hand in the SQL Editor). There is no automatic function for "suspicious documents".
+- **The accounting base the guard builds on:** `journal_entries` (document_type, document_id, reversal_of, reversed_by) and `journal_entry_lines` (debit/credit, coa_id, partner_id, account_id), `chart_of_accounts`, `accounting_periods` (period lock), `sales` / `purchases` (total_amount, paid_amount, debt_amount, doc_date, created_by, status), `payments`, `transactions`, `accounts`, `invoice_amendments`, `audit_logs` and `audit_alerts`.
+- **Notifications:** the bell in `NewShell.tsx` (`useNotifications`) only shows the plan-limit warning. There is no per-user notification table. The app sends no e-mail.
+- **AI:** the built-in Claude assistant (`src/lib/ai/native/*`) exists behind the `AI_NATIVE_ENABLED` flag and `ANTHROPIC_API_KEY`, with read-only tools. The accountant agent uses the same router and key.
+- **Scheduling:** only GitHub Actions (`tenant-usage.yml`, `billing.yml`). `pg_cron` is not enabled in the database.
+
+## 2. Design (summary)
+
+The guard has two layers. Both only **read and report**: they never post, correct or delete a document.
+
+1. **Rule engine (SQL, deterministic and cheap):** a set of checks, each one its own SQL function with the same output. `guard_scan()` runs every enabled check and writes the results into the findings table. Every finding has a fingerprint, so the same problem does not raise a new alert on later runs. When a problem is no longer seen, it is resolved automatically.
+2. **Accountant agent (Claude):** reads the findings and overall figures, ranks them, suggests the likely cause and the correct accounting fix (for example a reversal entry), reports unusual patterns that fixed rules do not see, and stores daily / monthly reports. Its tools are read-only. Only an admin can confirm a "false positive" it suggests.
+
+### Tables (one migration)
+
+| Table | Purpose |
+|---|---|
+| `guard_rules` | List of checks: code, category, default severity, enabled, params (thresholds, JSONB) |
+| `guard_runs` | Each run: trigger (manual / scheduled / button), scope, start / end, counts of new / open / resolved findings, error |
+| `guard_findings` | Each problem: rule_code, severity, fingerprint (unique), entity_type / entity_id, doc_no, partner, amount, details JSONB, status (open / acknowledged / resolved / auto_resolved / false_positive), first_seen, last_seen, resolved_by, note |
+| `guard_finding_events` | History of each finding: who set which status and why (full log) |
+| `guard_reports` | Stored reports: kind (daily / monthly / on_demand / scan), period, body (Markdown), summary JSONB, model, cost, created_by (system / ai / user) |
+| `guard_notifications` | Notification per admin: finding_id or report_id, read_at |
+
+Access: admins only (`isAdminRole` / `can_manage_settings`); RLS on every table; writes only through SECURITY DEFINER functions.
+
+### Checks (first version)
+
+**A. General ledger (critical)**
+- A1 Unbalanced journal entry (total debit ≠ total credit)
+- A2 Journal entry with no lines or with zero lines
+- A3 Orphan journal entry (the source document was deleted)
+- A4 Posted invoice / payment with no journal entry, or COGS not posted
+- A5 Invoice amount ≠ the amount of its journal entry
+- A6 The same source document posted twice (double posting)
+- A7 Entry posted or changed inside a closed period
+- A8 Broken reversal chain (reversed_by pointing nowhere, reversed twice)
+- A9 GL balance of a cash / bank account ≠ the account's own balance (`accounts.balance`)
+- A10 Sum of customer debts ≠ the receivable account; sum of debts to suppliers ≠ the payable account
+
+**B. Documents**
+- B1 paid_amount greater than the invoice total, or debt ≠ total − paid, or a negative amount
+- B2 Possibly duplicate invoice: same partner, same amount, 0–2 days apart
+- B3 Duplicate document number
+- B4 Payment dated before the invoice; a date in the future
+- B5 Document dated far back (more than N days before it was created), or a date changed by an admin (`invoice_amendments`)
+- B6 Sale below cost, zero price, discount above X %
+- B7 Amount unusual for the same partner or product (for example more than 5 times the median)
+- B8 Large cash expense without an attachment
+- B9 Document deleted or changed after posting (`audit_logs` with DELETE / UPDATE on a posted document)
+
+**C. Cash and bank**
+- C1 Negative cash / bank balance at any moment (running balance by date)
+- C2 Account balance ≠ the sum of its transactions
+
+**D. Business partners**
+- D1 Customer with a credit balance (paid too much; maybe paid twice)
+- D2 Payments to a supplier above the supplier's invoices
+- D3 Old debt (more than 90 days)
+
+**E. Stock**
+- E1 Every current kind of `stock_integrity_report()` (no duplicated logic: call that function)
+- E2 Negative stock in a warehouse
+- E3 Sale of a product that had no stock on the document date (backdated documents)
+- E4 Zero unit cost, or a sudden jump in purchase price
+- E5 Large inventory count difference
+
+**F. Product data (the "duplicate or wrong name" button)**
+- F1 Exactly the same name (the current duplicate_name)
+- F2 Similar name: normalisation (spaces, punctuation, upper / lower case, ə→e, ı→i, ö→o, ü→u, ş→s, ç→c, ğ→g, Cyrillic look-alike letters) and `pg_trgm` similarity above a threshold (default 0.85)
+- F3 Name in the code column, code in the name column, leading / trailing or double spaces
+- F4 No category, no unit, zero sale or purchase price
+- F5 Duplicate code or barcode (the current kinds)
+
+Severity: critical (A1–A6, A9, C1) / high / medium / low. Every threshold can be changed in `guard_rules.params`.
+
+### Running and scheduling
+
+- **Buttons (immediate):** "Find duplicate or wrong products" on the product list and the Stock integrity page; "Find suspicious documents" on the sales and purchase invoice lists and the guard page. Each button runs `guard_scan(scope)` with its category and opens the result. Admins only.
+- **Automatic:** `pg_cron` inside the database (every 30 minutes a scan of documents changed since the last run, every night at 02:00 Baku a full scan). It does not depend on the server or GitHub and works for SaaS companies too. Del enables `pg_cron` once in Supabase (Database → Extensions, or Integrations → Cron).
+- **Accountant agent:** a server route `/api/guard/agent` called with the secret key `GUARD_CRON_SECRET` (only in `.env.production`). Every night after the full scan a scheduled GitHub Action (like `tenant-usage.yml`) calls it and a daily report is stored; on the first day of each month a deeper monthly report. An admin can also press "Ask the accountant" or "Build a report" by hand. No trigger is added to the invoice posting path, so posting a document is never slowed down or broken by the guard.
+
+### Alerts for the admin
+
+- Bell at the top of the page: new critical / high findings and fresh reports (admins only).
+- "Accounting Guard" widget on the admin home page: health score, open counts by severity.
+- E-mail / Telegram: no infrastructure yet; later, as a separate step (GUARD-6).
+
+### Its own section: "Accounting Guard" (`/finance/guard`, admins only)
+
+Tabs: **Dashboard** (score, trend, most important items) · **Findings** (table with filters by severity / category / status / date / partner, open the document, buttons "Seen", "Resolved", "Not an error" with a required reason, Excel / PDF export) · **Reports** (stored agent and scan reports, view, PDF / Excel export) · **Rules** (on / off, severity, thresholds) · **Runs** (history of runs and errors). Every status change is written to `guard_finding_events` and `audit_logs`.
+
+### Flags (off by default)
+
+- `ACCOUNTING_GUARD=true` turns on the section, the buttons, the notifications and the manual scan (admins only).
+- `ACCOUNTING_GUARD_AI=true` turns on the agent layer (needs `ANTHROPIC_API_KEY`).
+- `GUARD_CRON_SECRET` the key of the scheduled route (Del sets it on the server himself; never in chat or in the repo).
+
+### Order of the PRs
+
+| # | Prompt | Branch | Suggested migration* |
+|---|---|---|---|
+| 1 | GUARD-1 tables + engine + checks A, B, C and D | `saas/accounting-guard-core` | `20261120100000_accounting_guard_core.sql` |
+| 2 | GUARD-2 product data (F) + stock checks (E) + products button | `saas/accounting-guard-products` | `20261120110000_accounting_guard_products.sql` |
+| 3 | GUARD-3 guard section + suspicious documents button + notifications + widget | `saas/accounting-guard-ui` | none (or `20261120120000_accounting_guard_notifications.sql` if needed) |
+| 4 | GUARD-4 scheduling with pg_cron + incremental scan | `saas/accounting-guard-schedule` | `20261120130000_accounting_guard_cron.sql` |
+| 5 | GUARD-5 Claude accountant agent + stored reports | `saas/accounting-guard-agent` | `20261120140000_accounting_guard_reports.sql` (if GUARD-1 was not enough) |
+| 6 | GUARD-6 (later, optional) e-mail / Telegram, merge tool for duplicate products | separate | separate |
+
+\* Before choosing, check `ls supabase/migrations` and the open PRs; if other threads have taken the number, take the next free one.
+
+**Merging duplicate products** is deliberately not in this stage: F4 decided that a person chooses which row is right, and a merge has irreversible effects on stock, invoices and unit cost. The guard only finds and reports. If Del wants it, GUARD-6 builds a merge wizard with a preview and a compensating stock document.
+
+### Manual steps for Del after each merge
+
+1. After each PR: run that migration's SQL on the test database, then on production (the order is written in each PR).
+2. `ACCOUNTING_GUARD=true` in `.env.production`, then restart.
+3. After GUARD-4: enable `pg_cron` in Supabase, then run its migration.
+4. After GUARD-5: `ACCOUNTING_GUARD_AI=true` and `GUARD_CRON_SECRET` on the server, and the same secret in GitHub (Settings → Secrets → Actions).
+
+## What GUARD-1 built
+
+Migration `supabase/migrations/20261120100000_accounting_guard_core.sql`, tests in `supabase/tests/accounting_guard.sql` (CI: db-baseline) and `tests/accountingGuard.test.mjs`, flag helper `src/lib/features/accountingGuard.ts`.
+
+- Tables `guard_rules`, `guard_runs`, `guard_findings`, `guard_finding_events` (`guard_reports` and `guard_notifications` come with GUARD-3 / GUARD-5). RLS on, SELECT for admins (`user_is_admin()`), no write policy.
+- One function per rule, `guard_check_<code>(p_params jsonb, p_since timestamptz)`, all with the same columns (fingerprint, severity, entity_type, entity_id, doc_no, doc_date, partner_type, partner_id, amount, details).
+- `guard_scan(p_scope text[], p_trigger text, p_since timestamptz)` returns the run id. `p_since` is for the incremental scan of GUARD-4; with it set, nothing is auto-resolved.
+- `guard_set_finding_status(p_id, p_status, p_note)` for admins: open, acknowledged, resolved, false_positive (a reason is required for the last two).
+- Rule categories used as scan scopes: `ledger` (A), `documents` (B), `cash` (C), `partners` (D). `products` and `stock` are allowed for GUARD-2.
+
+How the rules read the data (checked against the schema):
+
+- A sale's journal entry is `document_type` `invoice` (older `sale`) with `document_id` = the sale; a purchase's is `bill` (older `purchase`); COGS is `sale_cogs` or `sales.cogs_journal_entry_id`; a partner payment's entry is `payments.journal_entry_id`. "Live" = `reversal_of` and `reversed_by` both empty.
+- A6 counts types that own exactly one live entry per document. Opening balances (`customer_opening_balance`, `supplier_opening_balance`) are left out on purpose: every change of an opening balance posts a delta entry for the same customer / supplier.
+- A9 compares `accounts.balance` with the journal lines that name the account on 1000 / 1100 or on the account's own ledger (`accounts.coa_id`), as table 5 of `gl_partner_cash_check.sql`.
+- A10, D1, D2 use the LED-1 partner ledger (`get_partner_balances`), D3 the LED-4 open items (`_partner_open_items`).
+- B3: `sales.doc_no`, `sales.invoice_number` and `purchases.invoice_number` have unique indexes, so B3 finds the same number written differently (case, spaces).
+- B5 also reports every date change of DATE-1..3 (`document_date_changes`).
+- B8 reads `expense_attachments`; "cash" = the expense's account has type Kassa / cash.
+- B9 reads `audit_logs`: sales and purchases are audited on DELETE only; cash rows and expenses on UPDATE too.
+- C1 walks the cash rows of an account back from today's `accounts.balance`, so an opening balance typed without a cash row does not create a false alarm (C2 reports that difference).
+
+## What GUARD-2 built
+
+Migration `supabase/migrations/20261120110000_accounting_guard_products.sql` (needs GUARD-1), tests added to `supabase/tests/accounting_guard.sql` and `tests/accountingGuardNames.test.mjs`, the "Find duplicate or wrong names" drawer (`src/components/guard/DuplicateNamesButton.tsx`, `src/lib/actions/accountingGuard.ts`, `src/lib/guard/nameFindings.ts`).
+
+Rules, in the categories `products` and `stock` (scan scopes are the category or the rule code):
+
+| Rule | What it reports |
+|---|---|
+| F1 | The exact same name (lower case, trimmed) on several stockable products. It reads the `duplicate_name` kind of `stock_integrity_report()`; the logic is not copied. One finding per name. |
+| F2 | Similar names: equal after `guard_normalize_name()` (case, spaces, punctuation, ə ı ö ü ş ç ğ, Cyrillic look-alikes) or `pg_trgm` similarity at least `params.threshold` (0.85). Pairs with the same raw name are F1's. Pairs are joined into clusters: one finding per cluster, fingerprinted by its smallest product id, with every product's id, code, name, unit, category, stock and last movement date. |
+| F3 | Stray spaces in a name or code, a code that equals the name, a code with a space, a name that is another product's code. |
+| F4 | No category (the `no_category` kind of the report), no unit, a zero or empty sale price, a zero or empty buy price. |
+| F5 | The same code or barcode (the `duplicate_code` / `duplicate_barcode` kinds of the report), one finding per value. |
+| E1 | Every other kind of `stock_integrity_report()` (total or Polywood mismatch, no stock row, lost subcategory and so on), except the ones F1, F4 and F5 own and `service_or_composite` (it only says what a product is; `params.ignore_kinds`). |
+| E2 | A warehouse row below zero, or a product total below zero. |
+| E3 | A posted sale whose stock movement left the product's balance below zero (balance after each movement = today's stock minus every later movement). Polywood products are left out. |
+| E4 | Stock on a FIFO batch with zero unit cost; a purchase line priced above the product's previous purchase by more than `params.pct` (50), in AZN. |
+| E5 | A posted inventory count line that differs from the book quantity by more than `params.pct` (20 %), or where nothing was expected and something was found. |
+
+Notes:
+
+- `guard_normalize_name(text)` is IMMUTABLE and has a trigram index (`idx_products_guard_name_trgm`) when `pg_trgm` is available. Without `pg_trgm` F2 compares equal normalised names only.
+- A "not a duplicate" decision on a cluster survives changes of the cards' stock and last movement; it lapses when a product joins or leaves the cluster (`_guard_details_hash` ignores `products`, the cards, and keeps `product_ids`).
+- The drawer lists F1, F2, F3 and F5 findings. "Not a duplicate" sets the finding to `false_positive` with a required reason. "Open in Accounting Guard" links to `/finance/guard?tab=findings&finding=<id>`, which GUARD-3 builds. There is no merge and no delete.
