@@ -170,5 +170,15 @@ begin
   end;
 end $$;
 
+-- Clean up: CI runs every test on one database, and home_widgets.sql counts today's posted sales.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-04b7-00000000000a","role":"authenticated"}', false);
+do $$
+begin
+  perform public.cancel_sales_invoice_atomic((select id from l4_ids where k = 'sale1'), 'L4 cleanup');
+  if exists (select 1 from public.sales where id = (select id from l4_ids where k = 'sale1') and status <> 'cancelled') then
+    raise exception 'FAIL cleanup: the test sale is still posted';
+  end if;
+end $$;
+
 reset role;
 select 'ALL CHECKS PASSED';
