@@ -2,6 +2,7 @@
 
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ScanLine } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/useToast";
 import Button from "@/components/ui/button";
@@ -31,6 +32,9 @@ interface QuickScanModalProps {
 
 interface LookupResponse {
   found: boolean;
+  /** LOT-4: "lot" when the code is a lot number / supplier batch number; then `href` opens the lot card. */
+  kind?: "lot";
+  href?: string;
   data?: {
     name?: string;
     image_url?: string | null;
@@ -51,6 +55,7 @@ export default function QuickScanModal({
   onExistingProduct,
 }: QuickScanModalProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const { message: toastMessage, variant: toastVariant, showError, showSuccess } = useToast();
   const barcodeRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -122,6 +127,13 @@ export default function QuickScanModal({
       if (!response.ok) {
         showError(payload.error || t("common.error"));
         setFormUnlocked(true);
+        return;
+      }
+
+      // LOT-4: a lot label was scanned: open the lot card.
+      if (payload.found && payload.kind === "lot" && payload.href) {
+        onClose();
+        router.push(payload.href);
         return;
       }
 

@@ -127,6 +127,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/lot_outbound.sql | tee "$RUNNER_TEMP/lot_outbound.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/lot_outbound.txt"
 
+      # LOT-4: reads of the lot screens (card figures, movements page, forward trace, lots.view).
+      - name: Lot screen read checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/lot_ui.sql | tee "$RUNNER_TEMP/lot_ui.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/lot_ui.txt"
+
       # Activities and chatter (phase 19): RLS follows the record, authors and logs protected.
       - name: Activities and chatter checks
         run: |

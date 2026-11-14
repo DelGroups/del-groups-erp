@@ -100,17 +100,20 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "reports", path: "/dashboard/reports/partner-statement", titleKey: "nav.items.partnerStatement", module: "accounting", icon: "FileCheck2", flag: "partnerLedgers" },
   // Debtors and creditors (LED-4): same flag and permission.
   { section: "reports", path: "/dashboard/reports/debtors", titleKey: "nav.items.debtorReports", module: "accounting", icon: "Scale", flag: "partnerLedgers" },
+  // Lots (LOT-4): only while LOT_TRACKING is on for this user; the route needs can_view_lots.
+  { section: "inventory", path: "/inventory/lots", titleKey: "nav.items.lots", module: "inventory", icon: "Tags", flag: "lotTracking" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */
-export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean; partnerLedgers?: boolean }): E[] {
+export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean; partnerLedgers?: boolean; lotTracking?: boolean }): E[] {
   return extras.filter((e) => {
     const flag = "flag" in e ? (e as { flag?: string }).flag : undefined;
     return (
       !flag ||
       (flag === "newCrm" && flags.newCrm) ||
       (flag === "newImports" && flags.newImports === true) ||
-      (flag === "partnerLedgers" && flags.partnerLedgers === true)
+      (flag === "partnerLedgers" && flags.partnerLedgers === true) ||
+      (flag === "lotTracking" && flags.lotTracking === true)
     );
   });
 }

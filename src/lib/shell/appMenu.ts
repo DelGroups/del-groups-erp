@@ -26,7 +26,7 @@ export const APP_MENU_GROUPS: Readonly<Record<string, readonly MenuGroupDef[]>> 
     { id: "purchases", titleKey: "uiUnified.menuGroups.tradePurchases", paths: ["/purchases", "/imports"] },
   ],
   inventory: [
-    { id: "products", titleKey: "uiUnified.menuGroups.inventoryProducts", paths: ["/products", "/inventory", "/polywood"] },
+    { id: "products", titleKey: "uiUnified.menuGroups.inventoryProducts", paths: ["/products", "/inventory", "/inventory/lots", "/polywood"] },
     { id: "movements", titleKey: "uiUnified.menuGroups.inventoryMovements", paths: ["/inventory/transfers/new", "/dashboard/warehouse/slips", "/products/damaged-goods"] },
     { id: "counts", titleKey: "uiUnified.menuGroups.inventoryCounts", paths: ["/inventory/counts", "/warehouse/initial-balance"] },
     { id: "setup", titleKey: "uiUnified.menuGroups.inventorySetup", paths: ["/warehouses"] },

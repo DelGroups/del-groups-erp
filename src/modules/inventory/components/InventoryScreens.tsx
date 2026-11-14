@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRightLeft, CalendarClock, CheckCircle2, ExternalLink, History, PencilLine, Plus, Printer, Trash2, Undo2, XCircle } from "lucide-react";
+import { ArrowRightLeft, CalendarClock, CheckCircle2, ExternalLink, History, PencilLine, Plus, Printer, Tags, Trash2, Undo2, XCircle } from "lucide-react";
 import { TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { StandardGrid, type StandardColumn } from "@/components/lists/StandardGrid";
 import { codeName } from "@/components/lists/standardGridLogic";
@@ -24,6 +24,11 @@ import { deleteInventoryCountAction, fetchInventoryCountsAction } from "../actio
 import { deleteInitialBalanceDraftAction, fetchInitialBalanceListAction, unpostInitialBalanceDocumentAction } from "../actions/initialBalance";
 import { fetchInventoryWriteoffs, type WriteoffRecord } from "../lib/writeoff";
 import DamagedGoodsForm from "./DamagedGoodsForm";
+import { LotStatusBadge, useProductLots } from "./LotPicker";
+import { useLotTracking } from "./LotTrackingFlag";
+import { lotCardHref, lotsOfProductHref } from "../lib/lotScreens";
+import { sortLotsFefo } from "../lib/lotPicker";
+import { formatQuantity } from "@/lib/dates/localeDate";
 import { DATE_CHANGE_ACTION_KEY, useDocumentDateChange } from "@/components/documents/DocumentDateChange";
 import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
 import { CreateCountModal } from "./InventoryCountsPage";
@@ -126,6 +131,8 @@ function Lines({ items, extra }: { items: readonly { product_name: string; produ
 
 export function InventoryStockScreen() {
   const { t } = useI18n();
+  const { can } = useAuth();
+  const lots = useLotTracking() && can("can_view_lots");
   return (
     <EngineScreen
       definition={STOCK}
@@ -141,21 +148,61 @@ export function InventoryStockScreen() {
       rowActions={(): RowActionSpec[] => [
         { key: "transfer", label: t("inventory.actions.transfer"), icon: <ArrowRightLeft className="h-4 w-4" /> },
         { key: "kardex", label: t("inventory.actions.kardex"), icon: <History className="h-4 w-4" /> },
+        { key: "lots", label: t("lots.screens.actions.productLots"), icon: <Tags className="h-4 w-4" />, hidden: !lots },
       ]}
-      renderRecord={(r) => <StockRecordView record={r} />}
+      renderRecord={(r) => <StockRecordView record={r} lots={lots} />}
     />
   );
 }
 
-function StockRecordView({ record }: { record: StockRecord }) {
+function StockRecordView({ record, lots }: { record: StockRecord; lots: boolean }) {
   const { t } = useI18n();
   const fmt = useFormatter();
   const router = useRouter();
   const actions: FormAction[] = [
     { key: "transfer", label: t("inventory.actions.transfer"), primary: true, icon: <ArrowRightLeft className="h-4 w-4" aria-hidden />, onClick: () => router.push(`/inventory/transfers/new?from=${record.warehouse_id ?? ""}&productId=${record.product_id}`) },
     { key: "kardex", label: t("inventory.actions.kardex"), icon: <History className="h-4 w-4" aria-hidden />, onClick: () => router.push(`/dashboard/reports/inventory-turnover?productId=${record.product_id}`) },
+    ...(lots ? [{ key: "lots", label: t("lots.screens.actions.productLots"), icon: <Tags className="h-4 w-4" aria-hidden />, onClick: () => router.push(lotsOfProductHref(record.product_id)) }] : []),
   ];
-  return <FormView definition={STOCK} record={record} canWrite={false} fmt={fmt} actions={actions} />;
+  return (
+    <div className="flex flex-col gap-4">
+      <FormView definition={STOCK} record={record} canWrite={false} fmt={fmt} actions={actions} />
+      {lots && record.warehouse_id ? <StockLots productId={record.product_id} warehouseId={record.warehouse_id} unit={record.unit ?? ""} /> : null}
+    </div>
+  );
+}
+
+/** LOT-4: the lots of the product in this warehouse (FEFO order), each linking to its lot card. */
+function StockLots({ productId, warehouseId, unit }: { productId: string; warehouseId: string; unit: string }) {
+  const { t, locale, formatDate } = useI18n();
+  const { lots, loading } = useProductLots(productId, warehouseId);
+  const today = new Date().toISOString().slice(0, 10);
+  const list = sortLotsFefo(lots.filter((l) => Math.abs(l.qty) > 0.0005));
+  return (
+    <section aria-label={t("lots.screens.stockLots")} className="flex flex-col gap-2" data-stock-lots="">
+      <h3 className="ds-label">{t("lots.screens.stockLots")}</h3>
+      {loading ? (
+        <p className="ds-muted">{t("common.loading")}</p>
+      ) : !list.length ? (
+        <p className="ds-muted">{t("lots.picker.noLots")}</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {list.map((l) => (
+            <li key={l.id} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <Link href={lotCardHref(l.id)} className="ds-mono underline-offset-2 hover:underline">
+                  {l.lotNo}
+                </Link>
+                {l.expDate ? <span className="ds-muted text-[length:var(--ds-text-xs)]">{t("lots.picker.expShort", { date: formatDate(l.expDate) })}</span> : null}
+                <LotStatusBadge lot={l} today={today} />
+              </span>
+              <span className="ds-mono tabular-nums">{`${formatQuantity(l.qty, locale)} ${unit}`.trim()}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 // ── Warehouse slips ──────────────────────────────────────────────────────────

@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { AlertTriangle, Copy, Pencil, Printer, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, Pencil, Printer, Tags, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { lotsOfProductHref, useLotTracking } from "@/modules/inventory";
 import { TableRowActionsMenu } from "@/components/ui/table-row-actions-menu";
 import PolywoodStockCell from "@/components/polywood/PolywoodStockCell";
 import type { PolywoodInventorySummary } from "@/lib/polywood/types";
@@ -160,6 +163,10 @@ export default function ProductTable({
 }: ProductTableProps) {
   const { t } = useI18n();
   const standard = useUiStandard();
+  const router = useRouter();
+  const { can } = useAuth();
+  // LOT-4: "Lots" opens the lot list of the product (LOT_TRACKING on for this user, lots.view).
+  const lotsMenu = useLotTracking() && can("can_view_lots");
   const columns = (Object.keys(visibleColumns) as ProductColumnKey[]).filter(
     (key) => visibleColumns[key]
   );
@@ -169,6 +176,16 @@ export default function ProductTable({
       <>
         <TableRowActionsMenu
           items={[
+            ...(lotsMenu
+              ? [
+                  {
+                    key: "lots",
+                    label: t("lots.screens.actions.productLots"),
+                    icon: <Tags className="h-4 w-4" />,
+                    onClick: () => router.push(lotsOfProductHref(product.id)),
+                  },
+                ]
+              : []),
             ...(onPrintLabel
               ? [
                   {
@@ -228,7 +245,7 @@ export default function ProductTable({
         emptyMessage={emptyMessage || t("products.empty")}
         countText={countText}
         bulkSelection={bulkSelection}
-        rowActions={canEdit || onPrintLabel ? rowActions : undefined}
+        rowActions={canEdit || onPrintLabel || lotsMenu ? rowActions : undefined}
       />
     );
   }
@@ -260,14 +277,14 @@ export default function ProductTable({
                 <Th numeric>{t("products.minStockLevel")}</Th>
                 <Th>{t("common.warehouse")}</Th>
                 <Th>{t("common.status")}</Th>
-                {canEdit || onPrintLabel ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
+                {canEdit || onPrintLabel || lotsMenu ? <ActionsTh>{t("common.actions")}</ActionsTh> : null}
               </tr>
             </THead>
             <tbody>
               <TableSkeletonRows
                 columns={skeletonDataColumns}
                 rows={10}
-                withActions={Boolean(canEdit || onPrintLabel)}
+                withActions={Boolean(canEdit || onPrintLabel || lotsMenu)}
               />
             </tbody>
           </Table>
@@ -299,7 +316,7 @@ export default function ProductTable({
                 <Th numeric>{t("products.minStockLevel")}</Th>
                 <Th>{t("common.warehouse")}</Th>
                 <Th>{t("common.status")}</Th>
-                {canEdit || onPrintLabel ? (
+                {canEdit || onPrintLabel || lotsMenu ? (
                   <ActionsTh>{t("common.actions")}</ActionsTh>
                 ) : null}
               </tr>
@@ -347,7 +364,7 @@ export default function ProductTable({
                         <StatusBadge tone="posted">{t("products.sufficientStock")}</StatusBadge>
                       )}
                     </Td>
-                    {canEdit || onPrintLabel ? (
+                    {canEdit || onPrintLabel || lotsMenu ? (
                       <ActionsTd>{rowActions(product)}</ActionsTd>
                     ) : null}
                   </Tr>

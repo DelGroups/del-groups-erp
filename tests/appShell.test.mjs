@@ -156,7 +156,7 @@ test("launcher search: app or page names, every word, accents and İ/ı ignored"
 
 test("extra pages join their app without duplicates; missing apps are skipped", () => {
   const out = withExtraItems(SECTIONS, [...SHELL_EXTRA_ITEMS, { section: "inventory", path: "/products", titleKey: "x", module: "core" }], (e) => ({ path: e.path, titleKey: e.titleKey, module: e.module }));
-  assert.deepEqual(out.find((s) => s.id === "inventory").items.map((i) => i.path), ["/inventory", "/inventory/counts", "/products", "/polywood"]);
+  assert.deepEqual(out.find((s) => s.id === "inventory").items.map((i) => i.path), ["/inventory", "/inventory/counts", "/products", "/polywood", "/inventory/lots"]);
   assert.deepEqual(out.find((s) => s.id === "hr").items.map((i) => i.path), ["/employees", "/comissions/report"]);
 });
 

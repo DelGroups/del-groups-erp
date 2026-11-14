@@ -54,3 +54,9 @@ export { DocumentLotChips, LotAutoText, LotPicker, LotStatusBadge, useDocumentLo
 export type { LotPickerProps } from "./components/LotPicker";
 export { getLotPrintOnInvoice, listDocumentLots } from "./actions/lots";
 export { transferPath } from "./lib/stockTransferRpc";
+
+// LOT-4: links to the lot screens and the lot search of the barcode lookup and the command palette.
+export { exactLotMatch, lotCardHref, lotSearchTerm, lotsOfProductHref } from "./lib/lotScreens";
+export { findLotsAction } from "./actions/lotScreens";
+export type { FoundLot } from "./actions/lotScreens";
+export { useLotPaletteGroup } from "./components/LotPaletteSearch";

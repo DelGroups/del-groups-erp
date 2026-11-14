@@ -45,6 +45,8 @@ export default defineModule({
     { prefix: "/inventory-audit", permission: "can_writeoff_inventory" },
     { prefix: "/inventory/counts", permission: "can_writeoff_inventory" },
     { prefix: "/inventory/transfers", permission: "can_manage_warehouses" },
+    // LOT-4: the lot list and card (lots.view); the pages 404 while LOT_TRACKING is off.
+    { prefix: "/inventory/lots", permission: "can_view_lots" },
     { prefix: "/inventory", permission: "can_view_products" },
     { prefix: "/products/damaged-goods", permission: "can_writeoff_inventory" },
     { prefix: "/dashboard/warehouse/slips", permission: "can_view_warehouse_slips" },
