@@ -126,6 +126,10 @@ async function pageRules(request: NextRequest, forward: Forward): Promise<NextRe
   if (pathname === "/dev/ui-lab" && isUiLabOpen()) {
     return forward.next();
   }
+  // The same, for the assistant avatar review page (AST-2 screenshots).
+  if (pathname === "/settings/dev/avatar" && isUiLabOpen()) {
+    return forward.next();
+  }
 
   // Invite/recovery links must land on the set-password flow even if the
   // Supabase project's configured redirect URL (or a stale email template)

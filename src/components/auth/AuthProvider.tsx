@@ -49,6 +49,8 @@ function redirectToLogin(pathname: string) {
   if (typeof window === "undefined" || isPublicAuthPath(pathname)) return;
   // `next dev` with UI_LAB_OPEN=true (src/lib/features/uiStandard.ts): the UI lab without signing in.
   if (pathname === "/dev/ui-lab" && document.documentElement.hasAttribute("data-ui-lab-open")) return;
+  // The same for the assistant avatar review (AST-2 screenshots).
+  if (pathname === "/settings/dev/avatar" && document.documentElement.hasAttribute("data-ui-lab-open")) return;
   const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
   window.location.replace(`/login${next}`);
 }

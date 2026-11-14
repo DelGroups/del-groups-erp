@@ -155,6 +155,11 @@ function publish(next: TrailEntry[]) {
 // the record, so crumbs show the name instead of an id.
 const recordLabels = new Map<string, string>();
 
+/** The name a record page gave itself ("/sales/<id>" → "SS-2026-00123"), or null; the assistant panel shows it as its context. */
+export function recordLabelFor(path: string): string | null {
+  return recordLabels.get(path) ?? null;
+}
+
 /** A record page names its crumb (view engine forms, prompt 17). */
 export function useRecordCrumb(label: string | null | undefined): void {
   const pathname = usePathname();
