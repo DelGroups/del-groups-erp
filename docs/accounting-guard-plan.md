@@ -148,3 +148,28 @@ How the rules read the data (checked against the schema):
 - B8 reads `expense_attachments`; "cash" = the expense's account has type Kassa / cash.
 - B9 reads `audit_logs`: sales and purchases are audited on DELETE only; cash rows and expenses on UPDATE too.
 - C1 walks the cash rows of an account back from today's `accounts.balance`, so an opening balance typed without a cash row does not create a false alarm (C2 reports that difference).
+
+## What GUARD-2 built
+
+Migration `supabase/migrations/20261120110000_accounting_guard_products.sql` (needs GUARD-1), tests added to `supabase/tests/accounting_guard.sql` and `tests/accountingGuardNames.test.mjs`, the "Find duplicate or wrong names" drawer (`src/components/guard/DuplicateNamesButton.tsx`, `src/lib/actions/accountingGuard.ts`, `src/lib/guard/nameFindings.ts`).
+
+Rules, in the categories `products` and `stock` (scan scopes are the category or the rule code):
+
+| Rule | What it reports |
+|---|---|
+| F1 | The exact same name (lower case, trimmed) on several stockable products. It reads the `duplicate_name` kind of `stock_integrity_report()`; the logic is not copied. One finding per name. |
+| F2 | Similar names: equal after `guard_normalize_name()` (case, spaces, punctuation, ə ı ö ü ş ç ğ, Cyrillic look-alikes) or `pg_trgm` similarity at least `params.threshold` (0.85). Pairs with the same raw name are F1's. Pairs are joined into clusters: one finding per cluster, fingerprinted by its smallest product id, with every product's id, code, name, unit, category, stock and last movement date. |
+| F3 | Stray spaces in a name or code, a code that equals the name, a code with a space, a name that is another product's code. |
+| F4 | No category (the `no_category` kind of the report), no unit, a zero or empty sale price, a zero or empty buy price. |
+| F5 | The same code or barcode (the `duplicate_code` / `duplicate_barcode` kinds of the report), one finding per value. |
+| E1 | Every other kind of `stock_integrity_report()` (total or Polywood mismatch, no stock row, lost subcategory and so on), except the ones F1, F4 and F5 own and `service_or_composite` (it only says what a product is; `params.ignore_kinds`). |
+| E2 | A warehouse row below zero, or a product total below zero. |
+| E3 | A posted sale whose stock movement left the product's balance below zero (balance after each movement = today's stock minus every later movement). Polywood products are left out. |
+| E4 | Stock on a FIFO batch with zero unit cost; a purchase line priced above the product's previous purchase by more than `params.pct` (50), in AZN. |
+| E5 | A posted inventory count line that differs from the book quantity by more than `params.pct` (20 %), or where nothing was expected and something was found. |
+
+Notes:
+
+- `guard_normalize_name(text)` is IMMUTABLE and has a trigram index (`idx_products_guard_name_trgm`) when `pg_trgm` is available. Without `pg_trgm` F2 compares equal normalised names only.
+- A "not a duplicate" decision on a cluster survives changes of the cards' stock and last movement; it lapses when a product joins or leaves the cluster (`_guard_details_hash` ignores `products`, the cards, and keeps `product_ids`).
+- The drawer lists F1, F2, F3 and F5 findings. "Not a duplicate" sets the finding to `false_positive` with a required reason. "Open in Accounting Guard" links to `/finance/guard?tab=findings&finding=<id>`, which GUARD-3 builds. There is no merge and no delete.

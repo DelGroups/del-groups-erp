@@ -36,13 +36,16 @@ set local session_replication_role = replica;
 truncate public.journal_entry_lines, public.journal_entries, public.sale_items, public.sales, public.purchases,
          public.payments, public.transactions, public.accounts, public.expenses, public.expense_attachments,
          public.audit_logs, public.invoice_amendments, public.document_date_changes, public.accounting_periods,
-         public.customers, public.suppliers, public.partners,
+         public.customers, public.suppliers, public.partners, public.products, public.warehouse_stocks,
+         public.stock_movements, public.inventory_batches,
          public.guard_finding_events, public.guard_findings, public.guard_runs cascade;
 do $$
 begin
   if to_regclass('public.import_shipments') is not null then
     execute 'truncate public.import_shipments, public.import_payments, public.import_prepayments cascade';
   end if;
+  if to_regclass('public.purchase_items') is not null then execute 'truncate public.purchase_items cascade'; end if;
+  if to_regclass('public.inventory_counts') is not null then execute 'truncate public.inventory_counts, public.inventory_count_items cascade'; end if;
 end $$;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────────
@@ -99,7 +102,8 @@ declare t text; v text; acc text := '';
 begin
   foreach t in array array['journal_entries', 'journal_entry_lines', 'sales', 'sale_items', 'purchases', 'payments',
                            'transactions', 'accounts', 'expenses', 'expense_attachments', 'invoice_amendments',
-                           'document_date_changes', 'accounting_periods', 'partners', 'customers', 'suppliers'] loop
+                           'document_date_changes', 'accounting_periods', 'partners', 'customers', 'suppliers',
+                           'products', 'warehouse_stocks', 'stock_movements', 'inventory_batches'] loop
     execute format('select count(*)::text || '':'' || coalesce(md5(string_agg(x::text, ''|'' order by x::text)), '''') from public.%I x', t) into v;
     acc := acc || t || '=' || v || ';';
   end loop;
@@ -304,6 +308,102 @@ begin
   update public.sales set created_at = now() - interval '120 days' where id = '00000000-0000-0000-0a11-0000000005d3';
 end $$;
 
+-- ═══ Phase 2b: product data and stock cases (GUARD-2) ═══
+do $$
+declare
+  today date := public._guard_today();
+  wh uuid := '00000000-0000-0000-0a11-0000000000a9';
+begin
+  insert into public.warehouses (id, code, name, is_default) values (wh, 'G-WH', 'G warehouse', false) on conflict (id) do nothing;
+
+  -- One stockable product, complete (unit, category, prices) and with one warehouse row equal to its stock,
+  -- so that only the case under test is wrong.
+  create or replace function pg_temp.prod(p_n int, p_code text, p_name text, p_stock numeric default 10,
+                                          p_wh_stock numeric default null, p_unit text default 'əd', p_cat text default 'Cat',
+                                          p_sell numeric default 10, p_buy numeric default 5, p_barcode text default null)
+  returns uuid language plpgsql as $f$
+  declare v_id uuid := ('00000000-0000-0000-0a11-0000000f' || lpad(p_n::text, 4, '0'))::uuid;
+  begin
+    insert into public.products (id, code, name, category, unit, buy_price, sell_price, stock, barcode)
+    values (v_id, p_code, p_name, p_cat, p_unit, p_buy, p_sell, p_stock, p_barcode);
+    insert into public.warehouse_stocks (product_id, warehouse_id, current_stock)
+    values (v_id, '00000000-0000-0000-0a11-0000000000a9', coalesce(p_wh_stock, p_stock));
+    return v_id;
+  end $f$;
+  create or replace function pg_temp.pid(p_n int) returns uuid language sql as $f$
+    select ('00000000-0000-0000-0a11-0000000f' || lpad(p_n::text, 4, '0'))::uuid;
+  $f$;
+
+  -- F1: the same name twice (different case); good: a unique name.
+  perform pg_temp.prod(1, 'Q-1', 'Qapı');
+  perform pg_temp.prod(2, 'Q-2', 'qapı');
+  perform pg_temp.prod(3, 'U-1', 'Unikal ad');
+  -- F2: spaces, Azerbaijani letters, a Cyrillic look-alike; good: genuinely different names.
+  perform pg_temp.prod(4, 'KB-1', 'Konik bar');
+  perform pg_temp.prod(5, 'KB-2', 'konik  bar');
+  perform pg_temp.prod(6, 'AG-1', 'Ağac');
+  perform pg_temp.prod(7, 'AG-2', 'Agac');
+  perform pg_temp.prod(8, 'KBL-1', 'Kаbel');   -- the а is Cyrillic
+  perform pg_temp.prod(9, 'KBL-2', 'Kabel');
+  perform pg_temp.prod(10, 'MX-1', 'Mixi 40mm');
+  perform pg_temp.prod(11, 'TX-1', 'Taxta 20mm');
+  perform pg_temp.prod(12, 'KB-3X15', 'Kabel 3x1.5');
+  perform pg_temp.prod(13, 'KB-3X25', 'Kabel 3x2.5');
+  -- F3: stray spaces, the name in the code column, a space in a code, a name that is another product's code.
+  perform pg_temp.prod(14, 'SP-1', ' Boşluq ad ');
+  perform pg_temp.prod(15, 'Plain name', 'Plain name');
+  perform pg_temp.prod(16, 'ab cd', 'Digər ad');
+  perform pg_temp.prod(17, 'XY-1', 'XY-77');
+  perform pg_temp.prod(18, 'XY-77', 'XY adı');
+  -- F4: no unit, zero sale price, zero buy price, no category.
+  perform pg_temp.prod(19, 'U-0', 'Vahidsiz', p_unit => null);
+  perform pg_temp.prod(20, 'SP-0', 'Satışsız qiymət', p_sell => 0);
+  perform pg_temp.prod(21, 'BP-0', 'Alışsız qiymət', p_buy => 0);
+  perform pg_temp.prod(22, 'NC-0', 'Kateqoriyasız', p_cat => null);
+  -- F5: the same code (other case), the same barcode (a space in front).
+  perform pg_temp.prod(23, 'DUP-1', 'Kod bir');
+  perform pg_temp.prod(24, 'dup-1', 'Kod iki');
+  perform pg_temp.prod(25, 'BC-1', 'Barkod bir', p_barcode => '4012345');
+  perform pg_temp.prod(26, 'BC-2', 'Barkod iki', p_barcode => ' 4012345');
+  -- E1: the total says 10, the warehouse rows say 7. E2: a warehouse below zero.
+  perform pg_temp.prod(27, 'E1-1', 'Cəm uyğunsuz', p_stock => 10, p_wh_stock => 7);
+  perform pg_temp.prod(28, 'E2-1', 'Mənfi qalıq', p_stock => 0, p_wh_stock => -3);
+  -- E3: sold 8 with 5 in stock (balance -3 after the sale, then 9 came in); good: 10 in, 4 out.
+  perform pg_temp.prod(29, 'E3-1', 'Qalıqsız satış', p_stock => 6);
+  perform pg_temp.prod(30, 'E3-2', 'Qalıqlı satış', p_stock => 6);
+  perform pg_temp.sale('00000000-0000-0000-0a11-0000000005e1', 'G-E3-1', null, 80, today - 5);
+  perform pg_temp.sale('00000000-0000-0000-0a11-0000000005e2', 'G-E3-2', null, 40, today - 5);
+  insert into public.stock_movements (id, product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, created_at) values
+    ('00000000-0000-0000-0a11-0000000e0001', pg_temp.pid(29), wh, 'in', 5, 'import', null, now() - interval '10 days'),
+    ('00000000-0000-0000-0a11-0000000e0002', pg_temp.pid(29), wh, 'out', 8, 'sale', '00000000-0000-0000-0a11-0000000005e1', now() - interval '5 days'),
+    ('00000000-0000-0000-0a11-0000000e0003', pg_temp.pid(29), wh, 'in', 9, 'import', null, now() - interval '2 days'),
+    ('00000000-0000-0000-0a11-0000000e0004', pg_temp.pid(30), wh, 'in', 10, 'import', null, now() - interval '10 days'),
+    ('00000000-0000-0000-0a11-0000000e0005', pg_temp.pid(30), wh, 'out', 4, 'sale', '00000000-0000-0000-0a11-0000000005e2', now() - interval '5 days');
+  -- E4: stock on a zero-cost batch; good: a batch with a cost. Prices 10 then 25 (jump) and 10 then 12 (fine).
+  perform pg_temp.prod(31, 'E4-1', 'Sıfır maya');
+  perform pg_temp.prod(32, 'E4-2', 'Maya ilə');
+  insert into public.inventory_batches (product_id, unit_cost, initial_qty, remaining_qty) values
+    (pg_temp.pid(31), 0, 5, 5), (pg_temp.pid(32), 3, 5, 5);
+  perform pg_temp.prod(33, 'E4-3', 'Qiymət sıçrayışı');
+  perform pg_temp.prod(34, 'E4-4', 'Qiymət normal');
+  insert into public.purchases (id, invoice_number, total_amount, paid_amount, debt_amount, status, doc_date, created_at, posted_at) values
+    ('00000000-0000-0000-0a11-0000000006e1', 'G-PU-1', 20, 0, 20, 'posted', today - 20, now(), now()),
+    ('00000000-0000-0000-0a11-0000000006e2', 'G-PU-2', 37, 0, 37, 'posted', today - 10, now(), now());
+  insert into public.purchase_items (id, purchase_id, product_id, quantity, unit_price, total_price, currency, exchange_rate) values
+    ('00000000-0000-0000-0a11-0000000007e1', '00000000-0000-0000-0a11-0000000006e1', pg_temp.pid(33), 1, 10, 10, 'AZN', 1),
+    ('00000000-0000-0000-0a11-0000000007e2', '00000000-0000-0000-0a11-0000000006e2', pg_temp.pid(33), 1, 25, 25, 'AZN', 1),
+    ('00000000-0000-0000-0a11-0000000007e3', '00000000-0000-0000-0a11-0000000006e1', pg_temp.pid(34), 1, 10, 10, 'AZN', 1),
+    ('00000000-0000-0000-0a11-0000000007e4', '00000000-0000-0000-0a11-0000000006e2', pg_temp.pid(34), 1, 12, 12, 'AZN', 1);
+  -- E5: a posted count: half missing (flagged), 10 % over (fine), nothing expected but 3 found (flagged), exact (fine).
+  insert into public.inventory_counts (id, document_number, warehouse_id, status, count_date, posted_at)
+  values ('00000000-0000-0000-0a11-0000000008c1', 'G-CNT-1', wh, 'posted', today - 3, now());
+  insert into public.inventory_count_items (id, count_id, product_id, product_name, expected_qty, actual_qty, unit_cost) values
+    ('00000000-0000-0000-0a11-0000000009c1', '00000000-0000-0000-0a11-0000000008c1', pg_temp.pid(3), 'Unikal ad', 10, 5, 5),
+    ('00000000-0000-0000-0a11-0000000009c2', '00000000-0000-0000-0a11-0000000008c1', pg_temp.pid(1), 'Qapı', 10, 11, 5),
+    ('00000000-0000-0000-0a11-0000000009c3', '00000000-0000-0000-0a11-0000000008c1', pg_temp.pid(2), 'qapı', 0, 3, 5),
+    ('00000000-0000-0000-0a11-0000000009c4', '00000000-0000-0000-0a11-0000000008c1', pg_temp.pid(30), 'Qalıqlı satış', 20, 20, 5);
+end $$;
+
 -- Business data as it is before the guard runs.
 create temp table guard_before as select pg_temp.business_checksum() as sum;
 set local session_replication_role = origin;
@@ -320,7 +420,7 @@ declare
 begin
   select * into r from public.guard_runs where id = (select id from guard_run1);
   if r.status <> 'ok' then raise exception 'FAIL run status % %', r.status, r.error; end if;
-  if cardinality(r.rules_run) <> 24 then raise exception 'FAIL rules run %', r.rules_run; end if;
+  if cardinality(r.rules_run) <> 34 then raise exception 'FAIL rules run %', r.rules_run; end if;
   if r.new_count < 24 or r.new_count <> (select count(*) from public.guard_findings) then raise exception 'FAIL new_count %', r.new_count; end if;
 
   perform pg_temp.expect('A1', 'A1:00000000-0000-0000-0a11-0000000000a1', 'A1:00000000-0000-0000-0a11-0000000000a0');
@@ -372,6 +472,105 @@ begin
      or (select severity from public.guard_findings where fingerprint = 'B3:sale:g-b3') <> 'medium' then
     raise exception 'FAIL severity';
   end if;
+end $$;
+
+-- GUARD-2: product data and stock rules, bad and good cases.
+do $$
+declare
+  wh text := '00000000-0000-0000-0a11-0000000000a9';
+  f record;
+begin
+  -- F1 the same name; good: a unique name. The cluster lists both products with their cards.
+  perform pg_temp.expect('F1', 'F1:' || lower('Qapı'), 'F1:unikal ad');
+  select * into f from public.guard_findings where fingerprint = 'F1:' || lower('Qapı');
+  if f.details -> 'product_ids' <> jsonb_build_array(pg_temp.pid(1), pg_temp.pid(2)) then raise exception 'FAIL F1 members %', f.details -> 'product_ids'; end if;
+  if jsonb_array_length(f.details -> 'products') <> 2
+     or (f.details -> 'products' -> 0 ->> 'unit') <> 'əd' or (f.details -> 'products' -> 0 ->> 'category') <> 'Cat'
+     or (f.details -> 'products' -> 0 -> 'last_movement') is null or not (f.details -> 'products' -> 0 ? 'stock') then
+    raise exception 'FAIL F1 cards %', f.details -> 'products';
+  end if;
+
+  -- F2 similar names: spaces, Azerbaijani letters, a Cyrillic look-alike.
+  perform pg_temp.expect('F2', 'F2:' || pg_temp.pid(4), null);
+  perform pg_temp.expect('F2', 'F2:' || pg_temp.pid(6), null);
+  perform pg_temp.expect('F2', 'F2:' || pg_temp.pid(8), null);
+  if (select details -> 'product_ids' from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(4)) <> jsonb_build_array(pg_temp.pid(4), pg_temp.pid(5))
+     or (select details -> 'product_ids' from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(6)) <> jsonb_build_array(pg_temp.pid(6), pg_temp.pid(7))
+     or (select details -> 'product_ids' from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(8)) <> jsonb_build_array(pg_temp.pid(8), pg_temp.pid(9)) then
+    raise exception 'FAIL F2 clusters';
+  end if;
+  -- Genuinely different names are in no cluster; the exact same name is F1's, not F2's.
+  if exists (select 1 from public.guard_findings g where g.rule_code = 'F2'
+             and g.details -> 'product_ids' ?| array[pg_temp.pid(1)::text, pg_temp.pid(2)::text, pg_temp.pid(3)::text, pg_temp.pid(10)::text,
+                                                    pg_temp.pid(11)::text, pg_temp.pid(12)::text, pg_temp.pid(13)::text]) then
+    raise exception 'FAIL F2 matched names that differ';
+  end if;
+  if (select count(*) from public.guard_findings where rule_code = 'F2') <> 3 then raise exception 'FAIL F2 clusters: %', (select count(*) from public.guard_findings where rule_code = 'F2'); end if;
+
+  -- F3
+  perform pg_temp.expect('F3', 'F3:name_spaces:' || pg_temp.pid(14), 'F3:name_spaces:' || pg_temp.pid(3));
+  perform pg_temp.expect('F3', 'F3:code_is_name:' || pg_temp.pid(15), 'F3:code_is_name:' || pg_temp.pid(3));
+  perform pg_temp.expect('F3', 'F3:code_has_space:' || pg_temp.pid(16), 'F3:code_has_space:' || pg_temp.pid(3));
+  perform pg_temp.expect('F3', 'F3:name_is_a_code:' || pg_temp.pid(17), 'F3:name_is_a_code:' || pg_temp.pid(18));
+  if exists (select 1 from public.guard_findings where rule_code = 'F3' and entity_id = pg_temp.pid(3)) then raise exception 'FAIL F3 good product flagged'; end if;
+
+  -- F4; good: a complete product.
+  perform pg_temp.expect('F4', 'F4:no_unit:' || pg_temp.pid(19), 'F4:no_unit:' || pg_temp.pid(3));
+  perform pg_temp.expect('F4', 'F4:zero_sell_price:' || pg_temp.pid(20), 'F4:zero_sell_price:' || pg_temp.pid(3));
+  perform pg_temp.expect('F4', 'F4:zero_buy_price:' || pg_temp.pid(21), 'F4:zero_buy_price:' || pg_temp.pid(3));
+  perform pg_temp.expect('F4', 'F4:no_category:' || pg_temp.pid(22), 'F4:no_category:' || pg_temp.pid(3));
+  if exists (select 1 from public.guard_findings where rule_code = 'F4' and entity_id = pg_temp.pid(3)) then raise exception 'FAIL F4 good product flagged'; end if;
+
+  -- F5 code (other case) and barcode (a space); one finding per value, with both products.
+  perform pg_temp.expect('F5', 'F5:code:dup-1', 'F5:code:u-1');
+  perform pg_temp.expect('F5', 'F5:barcode:4012345', null);
+  if (select details -> 'product_ids' from public.guard_findings where fingerprint = 'F5:code:dup-1') <> jsonb_build_array(pg_temp.pid(23), pg_temp.pid(24))
+     or (select details -> 'product_ids' from public.guard_findings where fingerprint = 'F5:barcode:4012345') <> jsonb_build_array(pg_temp.pid(25), pg_temp.pid(26)) then
+    raise exception 'FAIL F5 members';
+  end if;
+
+  -- E1: the report's other kinds. A total mismatch is "high"; the kinds F1 / F4 / F5 own are not repeated.
+  perform pg_temp.expect('E1', 'E1:total_mismatch:' || pg_temp.pid(27), 'E1:total_mismatch:' || pg_temp.pid(3));
+  if (select severity from public.guard_findings where fingerprint = 'E1:total_mismatch:' || pg_temp.pid(27)) <> 'high' then raise exception 'FAIL E1 severity'; end if;
+  if exists (select 1 from public.guard_findings where rule_code = 'E1' and details ->> 'kind' in ('duplicate_name', 'no_category', 'duplicate_code', 'duplicate_barcode', 'service_or_composite')) then
+    raise exception 'FAIL E1 repeats another rule';
+  end if;
+
+  -- E2 a warehouse below zero; good: a warehouse with stock.
+  perform pg_temp.expect('E2', 'E2:' || pg_temp.pid(28) || ':' || wh, 'E2:' || pg_temp.pid(3) || ':' || wh);
+
+  -- E3 sold 8 when 5 were there; good: sold 4 of 10.
+  perform pg_temp.expect('E3', 'E3:00000000-0000-0000-0a11-0000000e0002', 'E3:00000000-0000-0000-0a11-0000000e0005');
+  if (select amount from public.guard_findings where fingerprint = 'E3:00000000-0000-0000-0a11-0000000e0002') <> 3 then raise exception 'FAIL E3 shortfall'; end if;
+
+  -- E4 zero cost; good: a cost. A price jump from 10 to 25; good: 10 to 12 and the first price.
+  perform pg_temp.expect('E4', 'E4:zero_cost:' || pg_temp.pid(31), 'E4:zero_cost:' || pg_temp.pid(32));
+  perform pg_temp.expect('E4', 'E4:jump:00000000-0000-0000-0a11-0000000007e2', 'E4:jump:00000000-0000-0000-0a11-0000000007e1');
+  if exists (select 1 from public.guard_findings where fingerprint in ('E4:jump:00000000-0000-0000-0a11-0000000007e3', 'E4:jump:00000000-0000-0000-0a11-0000000007e4')) then
+    raise exception 'FAIL E4 small change flagged';
+  end if;
+
+  -- E5 half missing and "nothing expected, 3 found"; good: 10 % over and an exact count.
+  perform pg_temp.expect('E5', 'E5:00000000-0000-0000-0a11-0000000009c1', 'E5:00000000-0000-0000-0a11-0000000009c2');
+  perform pg_temp.expect('E5', 'E5:00000000-0000-0000-0a11-0000000009c3', 'E5:00000000-0000-0000-0a11-0000000009c4');
+end $$;
+
+-- The scan scopes: 'products' runs F1-F5, 'stock' runs E1-E5.
+create temp table guard_run_products as select public.guard_scan(array['products'], 'button') as id;
+create temp table guard_run_stock as select public.guard_scan(array['stock'], 'button') as id;
+do $$
+begin
+  if (select rules_run from public.guard_runs where id = (select id from guard_run_products)) <> array['F1', 'F2', 'F3', 'F4', 'F5']
+     or (select rules_run from public.guard_runs where id = (select id from guard_run_stock)) <> array['E1', 'E2', 'E3', 'E4', 'E5'] then
+    raise exception 'FAIL scopes: % / %', (select rules_run from public.guard_runs where id = (select id from guard_run_products)),
+                                          (select rules_run from public.guard_runs where id = (select id from guard_run_stock));
+  end if;
+  if (select status from public.guard_runs where id = (select id from guard_run_products)) <> 'ok'
+     or (select status from public.guard_runs where id = (select id from guard_run_stock)) <> 'ok' then
+    raise exception 'FAIL product scans: %', (select error from public.guard_runs where id = (select id from guard_run_products));
+  end if;
+  -- A scoped scan does not add findings again.
+  if (select new_count from public.guard_runs where id = (select id from guard_run_products)) <> 0 then raise exception 'FAIL products rescan added findings'; end if;
 end $$;
 
 -- A second scan does not duplicate; a scoped scan runs only its rules.
@@ -512,6 +711,55 @@ begin
 end $$;
 reset role;
 update public.guard_rules set enabled = true where code = 'D3';
+
+-- ═══ Phase 3c: a "not a duplicate" decision on a name cluster (GUARD-2) ═══
+-- It survives a change of the cards' stock; it lapses when the cluster gains a product.
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0a11-00000000000a');
+do $$ begin
+  perform public.guard_set_finding_status((select id from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(4)),
+                                          'false_positive', 'Two sizes of the same bar');
+end $$;
+reset role;
+set local session_replication_role = replica;
+update public.products set stock = 11 where id = pg_temp.pid(4);
+update public.warehouse_stocks set current_stock = 11 where product_id = pg_temp.pid(4);
+set local session_replication_role = origin;
+drop table guard_before;
+create temp table guard_before as select pg_temp.business_checksum() as sum;
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0a11-00000000000a');
+create temp table guard_run_x as select public.guard_scan(array['products'], 'button') as id;
+do $$
+begin
+  if (select status from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(4)) <> 'false_positive' then
+    raise exception 'FAIL a cluster decision lapsed when only the stock changed';
+  end if;
+  if (select (c ->> 'stock')::numeric from public.guard_findings f, jsonb_array_elements(f.details -> 'products') c
+      where f.fingerprint = 'F2:' || pg_temp.pid(4) and c ->> 'id' = pg_temp.pid(4)::text) <> 11 then
+    raise exception 'FAIL the cluster card is not refreshed';
+  end if;
+end $$;
+reset role;
+-- A third product with the same look: the cluster changed, the decision lapses.
+set local session_replication_role = replica;
+do $$ begin perform pg_temp.prod(36, 'KB-4', 'KONİK BAR'); end $$;
+set local session_replication_role = origin;
+drop table guard_before;
+create temp table guard_before as select pg_temp.business_checksum() as sum;
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0a11-00000000000a');
+create temp table guard_run_y as select public.guard_scan(array['products'], 'button') as id;
+do $$
+begin
+  if (select status from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(4)) <> 'open' then
+    raise exception 'FAIL the decision did not lapse when the cluster gained a product';
+  end if;
+  if jsonb_array_length((select details -> 'product_ids' from public.guard_findings where fingerprint = 'F2:' || pg_temp.pid(4))) <> 3 then
+    raise exception 'FAIL cluster did not grow';
+  end if;
+end $$;
+reset role;
 
 -- ═══ Phase 4: the guard wrote nothing to business data ═══
 do $$

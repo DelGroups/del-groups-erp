@@ -66,6 +66,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import { useToast } from "@/hooks/useToast";
 import { deleteProductAction } from "@/lib/actions/entityDelete";
 import { isBarcodeModuleEnabled } from "@/lib/features/barcodeModule";
+import DuplicateNamesButton from "@/components/guard/DuplicateNamesButton";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -288,6 +289,8 @@ export default function ProductsPage() {
             {standard ? <span /> : <p className="text-xs text-app-muted">{loading ? t("common.loading") : showingCount}</p>}
 
             <div className="flex items-center gap-2">
+              {/* ACCOUNTING_GUARD (GUARD-2): admins only; renders nothing otherwise. */}
+              <DuplicateNamesButton />
               <ColumnVisibilityPanel
                 visibility={columnVisibility}
                 onChange={setColumnVisibility}

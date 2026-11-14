@@ -30,6 +30,8 @@ import { isDocDateChangeEnabled } from "@/lib/features/docDateChange";
 import { DocDateChangeProvider } from "@/components/documents/DocDateChangeFlag";
 import { isLotTrackingEnabled, lotTrackingAudience } from "@/lib/features/lotTracking";
 import { LotTrackingProvider } from "@/modules/inventory";
+import { isAccountingGuardEnabled } from "@/lib/features/accountingGuard";
+import { AccountingGuardProvider } from "@/components/guard/AccountingGuardFlag";
 import { isCountTeamEnabled } from "@/lib/features/countTeam";
 import { isPartnerLedgersEnabled, partnerLedgersAudience } from "@/lib/features/partnerLedgers";
 import { PartnerLedgersProvider } from "@/components/reports/PartnerLedgersFlag";
@@ -139,6 +141,8 @@ export default async function RootLayout({
                           <PartnerLedgersProvider value={{ enabled: isPartnerLedgersEnabled(), audience: partnerLedgersAudience() }}>
                           {/* LOT_TRACKING (LOT-2): lot fields on inbound documents (admins unless LOT_TRACKING_AUDIENCE=all). */}
                           <LotTrackingProvider enabled={isLotTrackingEnabled()} audience={lotTrackingAudience()}>
+                          {/* ACCOUNTING_GUARD (GUARD-2): the "Find duplicate or wrong names" button, admins only. */}
+                          <AccountingGuardProvider enabled={isAccountingGuardEnabled()}>
                             {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
                             {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
                             {tenant.status !== null ? <LimitBanner /> : null}
@@ -147,6 +151,7 @@ export default async function RootLayout({
                             {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
                             <LegacyModalEscape />
                             <TableColumnResizer />
+                          </AccountingGuardProvider>
                           </LotTrackingProvider>
                           </PartnerLedgersProvider>
                           </CountTeamProvider>
