@@ -12,7 +12,7 @@ export type GuardSeverity = (typeof GUARD_SEVERITIES)[number];
 export const GUARD_CATEGORIES = ["ledger", "documents", "cash", "partners", "products", "stock"] as const;
 export type GuardCategory = (typeof GUARD_CATEGORIES)[number];
 
-export const GUARD_TABS = ["dashboard", "findings", "reports", "rules", "runs"] as const;
+export const GUARD_TABS = ["dashboard", "findings", "reports", "rules", "runs", "memory"] as const;
 export type GuardTab = (typeof GUARD_TABS)[number];
 
 export type GuardStatus = AccountingGuardStatus;
@@ -55,6 +55,8 @@ export interface GuardFinding {
   /** The person who made the document (sales, purchases): the "created by" filter. */
   createdBy: string | null;
   createdByName: string | null;
+  /** The accountant agent's "this may not be an error" suggestion (GUARD-5); an admin confirms or dismisses it. */
+  agentSuggestion: { reason: string } | null;
 }
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
@@ -65,6 +67,12 @@ const num = (v: unknown): number | null => {
 };
 
 /** A guard_findings row (with its rule's category) → a finding; rows of an unknown shape are dropped. */
+export function agentSuggestionFromJson(value: unknown): { reason: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const o = value as Record<string, unknown>;
+  return o.status === "false_positive" && typeof o.reason === "string" && o.reason.trim().length >= 3 ? { reason: o.reason.trim() } : null;
+}
+
 export function findingFromRow(row: Record<string, unknown>, extra: { partnerName?: string | null; createdBy?: string | null; createdByName?: string | null } = {}): GuardFinding | null {
   const rule = row.guard_rules && typeof row.guard_rules === "object" ? (row.guard_rules as Record<string, unknown>) : {};
   const category = isCategory(row.category) ? row.category : isCategory(rule.category) ? rule.category : null;
@@ -89,6 +97,7 @@ export function findingFromRow(row: Record<string, unknown>, extra: { partnerNam
     resolvedAt: text(row.resolved_at),
     createdBy: extra.createdBy ?? null,
     createdByName: extra.createdByName ?? null,
+    agentSuggestion: agentSuggestionFromJson(row.agent_suggestion),
   };
 }
 

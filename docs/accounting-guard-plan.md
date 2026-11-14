@@ -187,3 +187,26 @@ Migration `supabase/migrations/20261120120000_accounting_guard_ui.sql` (needs GU
 - **"Find suspicious documents"** on the sales and purchase lists (classic and new screens) runs the `ledger`, `documents`, `cash` and `partners` rules and opens the Findings tab filtered to that kind of document. A small warning chip in the sale and purchase view shows when a document has findings.
 - **The bell** shows new critical and high findings and new reports since the admin last opened the section (`guard_admin_state`). The **home widget** "Accounting Guard" shows the score and the open findings by severity.
 - Added to the database: `guard_reports`, `guard_admin_state`, and the functions `guard_dashboard`, `guard_update_rule`, `guard_bulk_set_status`, `guard_create_report`, `guard_notification_state`, `guard_mark_seen`. All admin only; none writes business data.
+
+## What GUARD-4 built
+
+Migration `supabase/migrations/20261120130000_accounting_guard_cron.sql` (needs GUARD-1 and GUARD-3), SQL tests `supabase/tests/accounting_guard_cron.sql` (CI step), `tests/accountingGuardSchedule.test.mjs`, the "Automatic scan" card on the Rules tab (`src/components/guard/GuardScheduleCard.tsx`), `src/lib/guard/schedule.ts`.
+
+- **Off by default.** The setting `system_settings` key `accounting_guard` is `{enabled: false, incremental_minutes: 30, nightly_hour_utc: 22, retention_days: 365}`. The scheduled functions do nothing while `enabled` is false, so merging changes nothing.
+- **Two jobs in pg_cron:** `guard-incremental` (every 10, 15, 30 or 60 minutes) and `guard-full` (every night at the chosen UTC hour; 22:00 UTC is 02:00 in Baku). Both call `guard_scheduled_run(mode)`. They are created while pg_cron exists, here or the next time an admin saves the schedule, and they exist while the setting is off (then they do nothing).
+- **Incremental scan:** runs only the checks that can look at changes (`guard_rules.full_only = false`), over documents and entries changed since the last good scheduled scan (5 minutes earlier, for documents saved while it ran). It closes nothing (no auto-resolve): a fixed problem is closed by the next full scan. The first scheduled scan is a full one.
+- **Full scan:** every check, with auto-resolve; then the retention clean-up, which deletes only the guard's own old closed findings (`auto_resolved`) and old scans. Open, seen and "not an error" findings are never deleted.
+- **Checks that need everything** run only in the full scan: A8, A9, A10, C1, C2, D1 to D3, F1 to F5, E1, E2, E4.
+- **No pg_cron needed to merge:** on a database without it (CI, a new tenant) the migration applies, the settings are stored, and a notice says what to do. One scan runs at a time.
+- **The card** (admins): turn it on, how often it looks at changed documents, the nightly hour (with the Baku time), how long closed findings and old scans are kept, the next runs, the last scheduled scan and the pg_cron jobs; without pg_cron it lists the steps.
+
+## What GUARD-5 built
+
+The accountant agent: Claude reads the findings and the books like a senior accountant and writes saved reports. **It never posts, edits, reverses or deletes anything; it proposes, an admin decides.**
+
+- **Switches (all off by default):** `ACCOUNTING_GUARD=true`, `ACCOUNTING_GUARD_AI=true`, `ANTHROPIC_API_KEY`, `GUARD_CRON_SECRET` (at least 16 characters) on the server; optional `GUARD_AI_MONTHLY_BUDGET_USD` (default 15). Nothing is stored in the repository.
+- **Tools (read-only):** list and open findings, read one sale / purchase / journal entry by id, the trial balance, a partner statement, the rules, its memory. The only things it can write are its own notes (`guard_memory_save`) and a "probably not an error" suggestion on a finding (`guard_set_agent_suggestion`); an admin confirms (the ordinary status change, with the reason) or dismisses it. It has no tool to change a status, delete a note, post or scan.
+- **Reports:** daily (standard model) and monthly (deep model) from a scheduled GitHub workflow that calls `POST /api/guard/agent` with the secret; on demand from the Reports tab ("Ask the accountant" or "Build report"). Saved in `guard_reports` as written by AI with model, tokens and cost; scheduled reports are new to every admin (the bell counts them).
+- **Memory:** `guard_agent_memory`, at most 500 notes, one per subject, shown on the Memory tab where admins add, edit and delete.
+- **Budget:** every call is in `guard_ai_usage`; at the monthly budget the agent stops before calling Claude. On-demand calls also count against the plan's AI credit.
+- **Tests:** `supabase/tests/accounting_guard_agent.sql` and `tests/accountingGuardAgent.test.mjs` (with a stand-in for Claude).

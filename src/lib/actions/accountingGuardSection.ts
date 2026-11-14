@@ -23,7 +23,9 @@ import {
   type GuardStatus,
   type ParamValue,
 } from "@/lib/guard/findings";
+import { isGuardAgentFlagOn } from "@/lib/guard/agentConfig";
 import { guardDb, guardFail, guardMessage, guardRows, requireGuardAdmin, type GuardActionResult, type GuardDb } from "@/lib/guard/server";
+import { scheduleFromJson, validateSchedule, type GuardScheduleState, type ScheduleSettings } from "@/lib/guard/schedule";
 import { fetchProfileDisplayNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
@@ -89,6 +91,14 @@ export async function listGuardFindingsAction(): Promise<GuardActionResult<Guard
       .limit(FINDINGS_LIMIT);
     if (error) return { success: false, error: guardMessage(error.message) };
     const rows = guardRows(data);
+    // The agent's suggestions live in a column of the GUARD-5 migration: asked only when the agent is on, and a database without it is not an error.
+    if (isGuardAgentFlagOn()) {
+      const sug = await db.from("guard_findings").select("id, agent_suggestion").limit(FINDINGS_LIMIT);
+      if (!sug.error) {
+        const byId = new Map(guardRows(sug.data).map((s) => [String(s.id), s.agent_suggestion]));
+        for (const r of rows) r.agent_suggestion = byId.get(String(r.id)) ?? null;
+      }
+    }
 
     const partnerIds = ids(rows.map((r) => (typeof r.partner_id === "string" ? r.partner_id : null)));
     const saleIds = ids(rows.filter((r) => r.entity_type === "sale").map((r) => (typeof r.entity_id === "string" ? r.entity_id : null)));
@@ -425,6 +435,47 @@ export async function guardFindingsForDocumentsAction(entityType: "sale" | "purc
       byDocument[id] = { count: (cur?.count ?? 0) + 1, severity: cur && WORST.indexOf(cur.severity) < WORST.indexOf(r.severity) ? cur.severity : r.severity };
     }
     return { success: true, data: { byDocument } };
+  } catch (err) {
+    return guardFail(err);
+  }
+}
+
+// ── The automatic scan (GUARD-4) ───────────────────────────────────────────
+
+/** The schedule: settings, the pg_cron jobs, the next runs and the last scheduled scan. */
+export async function guardScheduleStateAction(): Promise<GuardActionResult<GuardScheduleState>> {
+  try {
+    await requireGuardAdmin();
+    const { data, error } = await (await guardDb()).rpc("guard_schedule_state");
+    if (error) return { success: false, error: guardMessage(error.message) };
+    return { success: true, data: scheduleFromJson(data) };
+  } catch (err) {
+    return guardFail(err);
+  }
+}
+
+/**
+ * Turn the automatic scan on or off and set when it runs (the database checks the ranges again and
+ * writes the change to the audit log). The jobs are (re)created when pg_cron is installed.
+ */
+export async function guardSetScheduleAction(input: ScheduleSettings): Promise<GuardActionResult<GuardScheduleState>> {
+  try {
+    await requireGuardAdmin();
+    const checked = validateSchedule({
+      enabled: input?.enabled === true,
+      incrementalMinutes: Number(input?.incrementalMinutes),
+      nightlyHourUtc: Number(input?.nightlyHourUtc),
+      retentionDays: Number(input?.retentionDays),
+    });
+    if (!checked.ok) return { success: false, error: "guard.errors.invalidSchedule" };
+    const { data, error } = await (await guardDb()).rpc("guard_set_schedule", {
+      p_enabled: checked.value.enabled,
+      p_incremental_minutes: checked.value.incrementalMinutes,
+      p_nightly_hour_utc: checked.value.nightlyHourUtc,
+      p_retention_days: checked.value.retentionDays,
+    });
+    if (error) return { success: false, error: guardMessage(error.message) };
+    return { success: true, data: scheduleFromJson(data) };
   } catch (err) {
     return guardFail(err);
   }

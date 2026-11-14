@@ -1,0 +1,53 @@
+name: Accounting Guard accountant
+
+# Asks the ERP to write the accountant agent's daily report (every night) and monthly report (1st of the month).
+# It does nothing unless the repository variable ACCOUNTING_GUARD_AI_ENABLED is 'true', and it runs only on main.
+# The ERP side also needs ACCOUNTING_GUARD=true, ACCOUNTING_GUARD_AI=true, ANTHROPIC_API_KEY and GUARD_CRON_SECRET
+# (set on the server by hand, never in this repository). This workflow holds only the shared secret and the address.
+# To switch it off: set ACCOUNTING_GUARD_AI_ENABLED to anything else, or remove ACCOUNTING_GUARD_AI on the server.
+
+on:
+  schedule:
+    - cron: "0 23 * * *"
+    - cron: "30 23 1 * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily or monthly"
+        required: true
+        default: daily
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: ${{ vars.ACCOUNTING_GUARD_AI_ENABLED == 'true' && github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ask the ERP for the report
+        env:
+          GUARD_CRON_SECRET: ${{ secrets.GUARD_CRON_SECRET }}
+          ERP_BASE_URL: ${{ vars.ERP_BASE_URL }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+        run: |
+          set -eu
+          if [ -z "${GUARD_CRON_SECRET}" ] || [ -z "${ERP_BASE_URL}" ]; then
+            echo "GUARD_CRON_SECRET (secret) and ERP_BASE_URL (variable) must be set." >&2
+            exit 1
+          fi
+          mode=daily
+          if [ "${EVENT}" = "schedule" ] && [ "${SCHEDULE}" = "30 23 1 * *" ]; then mode=monthly; fi
+          if [ "${EVENT}" = "workflow_dispatch" ] && [ "${INPUT_MODE}" = "monthly" ]; then mode=monthly; fi
+          code=$(curl --silent --show-error --max-time 290 --output response.json --write-out '%{http_code}' \
+            --request POST "${ERP_BASE_URL%/}/api/guard/agent" \
+            --header "Authorization: Bearer ${GUARD_CRON_SECRET}" \
+            --header "Content-Type: application/json" \
+            --data "{\"mode\":\"${mode}\"}")
+          echo "HTTP ${code}"
+          cat response.json
+          echo
+          [ "${code}" = "200" ]

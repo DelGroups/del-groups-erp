@@ -211,6 +211,12 @@ union all
 select 'pending', '20261120120000_accounting_guard_ui: Accounting Guard section, reports and bell (GUARD-3)',
        case when to_regclass('public.guard_reports') is null or to_regprocedure('public.guard_dashboard()') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261120130000_accounting_guard_cron: Accounting Guard automatic scan (GUARD-4)',
+       case when to_regprocedure('public.guard_scheduled_run(text)') is null or to_regprocedure('public.guard_set_schedule(boolean, integer, integer, integer)') is null then 'missing' else 'present' end
+union all
+select 'pending', '20261120140000_accounting_guard_agent: Accounting Guard accountant agent memory and usage (GUARD-5)',
+       case when to_regclass('public.guard_agent_memory') is null or to_regprocedure('public.guard_set_agent_suggestion(uuid, jsonb)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

@@ -309,7 +309,7 @@ test("the section's actions need an admin and the flag, and write only the guard
   }
   // Only the guard's functions and tables; never a business table's write.
   assert.deepEqual([...new Set([...src.matchAll(/\.rpc\("(\w+)"/g)].map((m) => m[1]))].sort(), [
-    "guard_bulk_set_status", "guard_create_report", "guard_dashboard", "guard_mark_seen", "guard_notification_state", "guard_scan", "guard_set_finding_status", "guard_update_rule",
+    "guard_bulk_set_status", "guard_create_report", "guard_dashboard", "guard_mark_seen", "guard_notification_state", "guard_scan", "guard_schedule_state", "guard_set_finding_status", "guard_set_schedule", "guard_update_rule",
   ]);
   assert.doesNotMatch(src, /\.(insert|update|delete|upsert)\(/);
   const tables = [...new Set([...src.matchAll(/\.from\("(\w+)"\)/g)].map((m) => m[1]))].sort();
@@ -401,7 +401,7 @@ test("texts follow the rulebook: one script per language, no ALL CAPS, every sev
   for (const key of leaves(ruMessages.guard)) {
     const text = lookup(ruMessages.guard, key).replace(/\{\w+\}/g, "");
     // Only product-neutral codes and units stay Latin in the Russian texts: Excel, PDF, AZN, ids.
-    assert.doesNotMatch(text.replace(/Excel|PDF|AZN/g, ""), /[A-Za-z]{3,}/, `ru ${key} has Latin words`);
+    assert.doesNotMatch(text.replace(/Excel|PDF|AZN|UTC|pg_cron|Supabase|Database|Extensions/g, ""), /[A-Za-z]{3,}/, `ru ${key} has Latin words`);
   }
   for (const messages of [azMessages, enMessages, ruMessages]) {
     for (const key of leaves(messages.guard)) {
