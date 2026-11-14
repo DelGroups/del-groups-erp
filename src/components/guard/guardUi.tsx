@@ -12,6 +12,7 @@ export const GUARD_KEYS = {
   findings: ["guard", "findings"] as const,
   events: (id: string) => ["guard", "events", id] as const,
   rules: ["guard", "rules"] as const,
+  schedule: ["guard", "schedule"] as const,
   runs: ["guard", "runs"] as const,
   reports: ["guard", "reports"] as const,
   report: (id: string) => ["guard", "report", id] as const,

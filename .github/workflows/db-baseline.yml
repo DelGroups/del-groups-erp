@@ -279,6 +279,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/accounting_guard_ui.sql | tee "$RUNNER_TEMP/accounting_guard_ui.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/accounting_guard_ui.txt"
 
+      # Accounting Guard schedule (GUARD-4): off by default, first scan full, incremental scans, retention, validation, pg_cron jobs.
+      - name: Accounting guard schedule checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/accounting_guard_cron.sql | tee "$RUNNER_TEMP/accounting_guard_cron.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/accounting_guard_cron.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

@@ -24,6 +24,7 @@ import {
   type ParamValue,
 } from "@/lib/guard/findings";
 import { guardDb, guardFail, guardMessage, guardRows, requireGuardAdmin, type GuardActionResult, type GuardDb } from "@/lib/guard/server";
+import { scheduleFromJson, validateSchedule, type GuardScheduleState, type ScheduleSettings } from "@/lib/guard/schedule";
 import { fetchProfileDisplayNames, type ProfileNamesClient } from "@/lib/profiles/displayNames";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
@@ -425,6 +426,47 @@ export async function guardFindingsForDocumentsAction(entityType: "sale" | "purc
       byDocument[id] = { count: (cur?.count ?? 0) + 1, severity: cur && WORST.indexOf(cur.severity) < WORST.indexOf(r.severity) ? cur.severity : r.severity };
     }
     return { success: true, data: { byDocument } };
+  } catch (err) {
+    return guardFail(err);
+  }
+}
+
+// ── The automatic scan (GUARD-4) ───────────────────────────────────────────
+
+/** The schedule: settings, the pg_cron jobs, the next runs and the last scheduled scan. */
+export async function guardScheduleStateAction(): Promise<GuardActionResult<GuardScheduleState>> {
+  try {
+    await requireGuardAdmin();
+    const { data, error } = await (await guardDb()).rpc("guard_schedule_state");
+    if (error) return { success: false, error: guardMessage(error.message) };
+    return { success: true, data: scheduleFromJson(data) };
+  } catch (err) {
+    return guardFail(err);
+  }
+}
+
+/**
+ * Turn the automatic scan on or off and set when it runs (the database checks the ranges again and
+ * writes the change to the audit log). The jobs are (re)created when pg_cron is installed.
+ */
+export async function guardSetScheduleAction(input: ScheduleSettings): Promise<GuardActionResult<GuardScheduleState>> {
+  try {
+    await requireGuardAdmin();
+    const checked = validateSchedule({
+      enabled: input?.enabled === true,
+      incrementalMinutes: Number(input?.incrementalMinutes),
+      nightlyHourUtc: Number(input?.nightlyHourUtc),
+      retentionDays: Number(input?.retentionDays),
+    });
+    if (!checked.ok) return { success: false, error: "guard.errors.invalidSchedule" };
+    const { data, error } = await (await guardDb()).rpc("guard_set_schedule", {
+      p_enabled: checked.value.enabled,
+      p_incremental_minutes: checked.value.incrementalMinutes,
+      p_nightly_hour_utc: checked.value.nightlyHourUtc,
+      p_retention_days: checked.value.retentionDays,
+    });
+    if (error) return { success: false, error: guardMessage(error.message) };
+    return { success: true, data: scheduleFromJson(data) };
   } catch (err) {
     return guardFail(err);
   }

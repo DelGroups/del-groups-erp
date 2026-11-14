@@ -9,6 +9,7 @@ import { stateLabels } from "@/i18n/uiUnifiedLabels";
 import { listGuardRulesAction, updateGuardRuleAction } from "@/lib/actions/accountingGuardSection";
 import { GUARD_CATEGORIES, GUARD_SEVERITIES, paramToText, paramsPatch, type GuardRule, type GuardSeverity } from "@/lib/guard/findings";
 import { GUARD_KEYS } from "./guardUi";
+import GuardScheduleCard from "./GuardScheduleCard";
 
 /**
  * The Rules tab: switch a rule on or off, change its severity and its thresholds (numbers, lists of
@@ -30,6 +31,8 @@ export default function GuardRulesTab() {
   if (!rules.data) return <LoadingState label={states.loading} variant="form" rows={6} />;
   return (
     <div className="flex flex-col gap-6">
+      {/* GUARD-4: the automatic scan (pg_cron). */}
+      <GuardScheduleCard />
       {GUARD_CATEGORIES.map((category) => {
         const list = rules.data.filter((r) => r.category === category);
         if (list.length === 0) return null;
