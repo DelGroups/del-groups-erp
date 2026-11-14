@@ -28,9 +28,9 @@ export default function GuardAskPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: question.trim(), locale }),
       });
-      const body = (await res.json().catch(() => ({}))) as { title?: string; reason?: string };
+      const body = (await res.json().catch(() => ({}))) as { title?: string; reason?: string; error?: string };
       if (!res.ok) {
-        toast(t("common.error"), body.reason === "budget" ? g("askBudget") : g("askFailed"), "error");
+        toast(g("askFailed"), body.reason === "budget" ? g("askBudget") : (body.error ?? undefined), "error");
         return;
       }
       toast(g("askDone", { title: body.title ?? "" }), undefined, "success");

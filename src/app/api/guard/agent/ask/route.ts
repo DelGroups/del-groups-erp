@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     question: question || undefined,
   });
   if (!result.ok) {
+    console.warn(`[guard-agent] on-demand report not saved (${result.reason}): ${result.message}`);
     const status = result.reason === "budget" ? 429 : 502;
     return NextResponse.json({ error: result.message, reason: result.reason }, { status });
   }

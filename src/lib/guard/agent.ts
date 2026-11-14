@@ -242,6 +242,9 @@ export async function generateGuardReport(input: GenerateReportInput): Promise<A
     await input.writeDb.from("guard_ai_usage").insert({ ...usageRow, report_id: reportId });
     return { ok: true, reportId, title, costUsd: result.costUsd, status: result.status, summary };
   } catch (err) {
-    return { ok: false, reason: "failed", message: err instanceof Error ? err.message : "The agent failed." };
+    const message = err instanceof Error ? err.message : "The agent failed.";
+    // The reason goes to the server log (an API error text never holds the key), so a failed report can be diagnosed.
+    console.warn(`[guard-agent] ${input.kind} report failed: ${message}`);
+    return { ok: false, reason: "failed", message };
   }
 }
