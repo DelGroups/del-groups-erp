@@ -217,6 +217,9 @@ union all
 select 'pending', '20261120140000_accounting_guard_agent: Accounting Guard accountant agent memory and usage (GUARD-5)',
        case when to_regclass('public.guard_agent_memory') is null or to_regprocedure('public.guard_set_agent_suggestion(uuid, jsonb)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261121100000_assistant_core: Del Assistant conversation context and monthly cost (AST-1)',
+       case when to_regprocedure('public.assistant_month_cost()') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)
