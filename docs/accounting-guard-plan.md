@@ -210,3 +210,7 @@ The accountant agent: Claude reads the findings and the books like a senior acco
 - **Memory:** `guard_agent_memory`, at most 500 notes, one per subject, shown on the Memory tab where admins add, edit and delete.
 - **Budget:** every call is in `guard_ai_usage`; at the monthly budget the agent stops before calling Claude. On-demand calls also count against the plan's AI credit.
 - **Tests:** `supabase/tests/accounting_guard_agent.sql` and `tests/accountingGuardAgent.test.mjs` (with a stand-in for Claude).
+
+### Model router (after GUARD-5)
+
+The agent picks the cheapest model that can do the task (`src/lib/guard/agentRouter.ts`): **Haiku** for a quiet daily review (nothing open, or no new serious findings and at most 10 new ones) and for plain questions; **Sonnet** when there are new critical or high findings, a busy day (more than 10 new), a general review, or an ordinary question; **Opus** for the monthly review and for questions that ask for analysis ("why", compare, forecast). A Haiku run that does not produce a proper report is repeated once with Sonnet, and both runs are logged in `guard_ai_usage`. `GUARD_AI_FORCE_TIER` pins one tier for everything. The saved report records the route in its summary.

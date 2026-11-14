@@ -13,11 +13,14 @@ import {
   isGuardAgentFlagOn,
 } from "../src/lib/guard/agentConfig.ts";
 import { AGENT_ALLOWED_RPC, AGENT_READABLE_DOCS, GUARD_AGENT_TOOLS, runGuardAgentTool } from "../src/lib/guard/agentTools.ts";
+import { BUSY_DAY_NEW_FINDINGS, nextTier, routeGuardTask, routerStats } from "../src/lib/guard/agentRouter.ts";
 import { agentSystemPrompt, generateGuardReport, parseAgentReport } from "../src/lib/guard/agent.ts";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const FID = "11111111-1111-4111-8111-111111111111";
 const SECRET = "s".repeat(32);
+/** A serious finding first seen a few hours before the tests' "now": the day is not quiet, so the standard model is used. */
+const NEW_CRITICAL = { id: FID, rule_code: "B6", severity: "critical", status: "open", first_seen_at: "2026-11-14T10:00:00Z" };
 
 test("the agent is off unless the guard, the AI flag and the key are all set", () => {
   assert.deepEqual(guardAgentAccess({}), { enabled: false, reason: "guard_disabled" });
@@ -54,7 +57,7 @@ test("the scheduled job needs the exact secret; no secret set refuses everyone",
 /** A database stand-in that records every call and answers from a table of canned results. */
 function fakeDb(overrides = {}) {
   const calls = [];
-  const answer = (key, fallback) => (key in overrides ? overrides[key] : fallback);
+  const answer = (key, fallback) => (key in overrides ? overrides[key] : key === "guard_findings.list" ? [NEW_CRITICAL] : fallback);
   const query = (table, args = []) => {
     const q = {
       calls: args,
@@ -335,4 +338,74 @@ test("the migration: only the guard's own rows, no trigger, nothing that posts; 
   assert.match(flow, /secrets\.GUARD_CRON_SECRET/);
   assert.match(flow, /github\.ref == 'refs\/heads\/main'|ref_name == 'main'/);
   assert.ok(!/secrets.ANTHROPIC/.test(flow), "the API key is never passed to the workflow");
+});
+
+const REPORT_JSON = (headline, risk) => "Body.\n\n```json\n" + JSON.stringify({ headline, risk, suggestions: [] }) + "\n```";
+
+test("the router: light work goes to the cheap model, thinking work to the expensive ones", () => {
+  const quiet = { kind: "daily", newFindings: 2, newSerious: 0, openFindings: 40 };
+  assert.deepEqual(routeGuardTask(quiet), { tier: "fast", reason: "quiet_day" });
+  assert.deepEqual(routeGuardTask({ ...quiet, openFindings: 0, newFindings: 0 }), { tier: "fast", reason: "nothing_open" });
+  assert.deepEqual(routeGuardTask({ ...quiet, newSerious: 1 }), { tier: "standard", reason: "new_serious" });
+  assert.deepEqual(routeGuardTask({ ...quiet, newFindings: BUSY_DAY_NEW_FINDINGS + 1 }), { tier: "standard", reason: "busy_day" });
+  assert.equal(routeGuardTask({ ...quiet, newFindings: BUSY_DAY_NEW_FINDINGS }).tier, "fast");
+  assert.deepEqual(routeGuardTask({ ...quiet, kind: "monthly" }), { tier: "deep", reason: "monthly" });
+  assert.deepEqual(routeGuardTask({ ...quiet, kind: "on_demand" }), { tier: "standard", reason: "general_review" });
+  assert.equal(routeGuardTask({ ...quiet, kind: "on_demand", question: "How many open findings?" }).tier, "fast");
+  assert.equal(routeGuardTask({ ...quiet, kind: "on_demand", question: "Why is Customer X sold below cost? Analyse it." }).tier, "deep");
+  assert.equal(routeGuardTask({ ...quiet, kind: "on_demand", question: "Compare B6 and B7 this month" }).tier, "deep");
+  assert.deepEqual(routeGuardTask({ ...quiet, kind: "monthly", force: "fast" }), { tier: "fast", reason: "forced" });
+  assert.equal(routeGuardTask({ ...quiet, force: "bogus" }).tier, "fast", "an unknown forced tier is ignored");
+  assert.equal(nextTier("fast"), "standard");
+  assert.equal(nextTier("standard"), "deep");
+  assert.equal(nextTier("deep"), null);
+});
+
+test("the router counts only recent open findings as new", () => {
+  const now = new Date("2026-11-14T20:00:00Z");
+  const stats = routerStats(
+    [
+      { first_seen_at: "2026-11-14T10:00:00Z", severity: "critical" },
+      { first_seen_at: "2026-11-13T12:00:00Z", severity: "low" },
+      { first_seen_at: "2026-11-01T12:00:00Z", severity: "high" },
+      { first_seen_at: "nonsense", severity: "high" },
+      {},
+    ],
+    now,
+  );
+  assert.deepEqual(stats, { newFindings: 2, newSerious: 1, openFindings: 5 });
+});
+
+test("a quiet day uses Haiku and the report keeps the route; a new critical finding uses Sonnet", async () => {
+  const claude = fakeClaude([answerText(REPORT_JSON("All quiet", "low"))]);
+  const w = writeDb();
+  const db = fakeDb({ "guard_findings.list": [{ id: FID, severity: "low", first_seen_at: "2026-11-01T00:00:00Z" }], "rpc.guard_ai_month_cost": 0 });
+  const result = await generateGuardReport(baseInput({ db, writeDb: w, client: claude }));
+  assert.equal(result.ok, true);
+  assert.match(claude.sent[0].model, /haiku/);
+  assert.equal(claude.sent.length, 1);
+  assert.deepEqual(w.rows.find((r) => r.table === "guard_reports").row.summary.route, { tier: "fast", reason: "quiet_day" });
+  assert.equal(w.rows.find((r) => r.table === "guard_ai_usage").row.tier, "fast");
+  const claude2 = fakeClaude([answerText(REPORT_JSON("One critical", "high"))]);
+  await generateGuardReport(baseInput({ db: fakeDb({ "rpc.guard_ai_month_cost": 0 }), writeDb: writeDb(), client: claude2 }));
+  assert.match(claude2.sent[0].model, /sonnet/);
+});
+
+test("a light run that fails is repeated once with the standard model, and both runs are logged", async () => {
+  const bad = answerText("no json block here");
+  const good = answerText(REPORT_JSON("ok", "low"));
+  const claude = fakeClaude([bad, good]);
+  const w = writeDb();
+  const db = fakeDb({ "guard_findings.list": [], "rpc.guard_ai_month_cost": 0 });
+  const result = await generateGuardReport(baseInput({ db, writeDb: w, client: claude }));
+  assert.equal(result.ok, true);
+  assert.equal(claude.sent.length, 2);
+  assert.match(claude.sent[0].model, /haiku/);
+  assert.match(claude.sent[1].model, /sonnet/);
+  const usageRows = w.rows.filter((r) => r.table === "guard_ai_usage").map((r) => r.row);
+  assert.deepEqual(usageRows.map((r) => [r.tier, r.status]), [["fast", "escalated"], ["standard", "ok"]]);
+  assert.deepEqual(w.rows.find((r) => r.table === "guard_reports").row.summary.route, { tier: "standard", reason: "nothing_open_escalated" });
+  const forced = fakeClaude([bad, good]);
+  await generateGuardReport(baseInput({ db: fakeDb({ "guard_findings.list": [], "rpc.guard_ai_month_cost": 0 }), writeDb: writeDb(), client: forced, env: { GUARD_AI_FORCE_TIER: "fast" } }));
+  assert.equal(forced.sent.length, 1, "a forced tier is never escalated");
 });

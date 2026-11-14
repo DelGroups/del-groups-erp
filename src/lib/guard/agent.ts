@@ -3,6 +3,7 @@ import { runNativeAgent, type AgentResult } from "@/lib/ai/native/agent";
 import { resolveTierModels, type ModelTier } from "@/lib/ai/native/router";
 import { GUARD_AGENT_TOOLS, runGuardAgentTool } from "@/lib/guard/agentTools";
 import { guardMonthlyBudgetUsd } from "@/lib/guard/agentConfig";
+import { nextTier, routeGuardTask, routerStats } from "@/lib/guard/agentRouter";
 import type { GuardDb } from "@/lib/guard/server";
 
 /**
@@ -89,7 +90,7 @@ function reportTitle(kind: AgentReportKind, now: Date): string {
 }
 
 /** What the agent is told up front: counts, the newest findings, recent human decisions. The tools fetch the rest. */
-async function buildContext(db: GuardDb): Promise<string> {
+async function buildContext(db: GuardDb): Promise<{ json: string; open: Array<{ first_seen_at?: unknown; severity?: unknown }> }> {
   const dash = await db.rpc("guard_dashboard");
   const open = await db
     .from("guard_findings")
@@ -104,12 +105,13 @@ async function buildContext(db: GuardDb): Promise<string> {
     .order("resolved_at", { ascending: false })
     .limit(15);
   const reports = await db.from("guard_reports").select("kind, title, summary, created_at").order("created_at", { ascending: false }).limit(3);
-  return JSON.stringify({
+  const json = JSON.stringify({
     dashboard: dash.error ? null : dash.data,
     open_findings_newest_30: open.error ? [] : open.data,
     recent_decisions: decided.error ? [] : decided.data,
     previous_reports: reports.error ? [] : reports.data,
   }).slice(0, 30_000);
+  return { json, open: open.error || !Array.isArray(open.data) ? [] : (open.data as Array<{ first_seen_at?: unknown; severity?: unknown }>) };
 }
 
 async function monthSpent(db: GuardDb): Promise<number> {
@@ -148,11 +150,13 @@ export async function generateGuardReport(input: GenerateReportInput): Promise<A
       return { ok: false, reason: "budget", message: `Monthly AI budget reached (${spent.toFixed(2)} of ${budget} USD).` };
     }
 
-    const tier: ModelTier = input.kind === "monthly" ? "deep" : "standard";
-    const model = resolveTierModels(input.env ?? process.env)[tier];
     const memory = await input.db.from("guard_agent_memory").select("subject, body").order("updated_at", { ascending: false }).limit(200);
     const memoryRows = memory.error || !Array.isArray(memory.data) ? [] : (memory.data as Array<{ subject: string; body: string }>);
-    const context = await buildContext(input.db);
+    const { json: context, open } = await buildContext(input.db);
+    // The router: the cheap model for light work, the expensive ones only where thinking is needed.
+    const env = input.env ?? process.env;
+    const decision = routeGuardTask({ kind: input.kind, question: input.question, ...routerStats(open, now), force: env.GUARD_AI_FORCE_TIER });
+    const models = resolveTierModels(env);
 
     const task =
       input.kind === "on_demand" && input.question
@@ -161,34 +165,51 @@ export async function generateGuardReport(input: GenerateReportInput): Promise<A
           ? "Write the monthly review: what changed this month, the biggest risks, repeated patterns, and what to fix first."
           : "Write the daily review: what is new since the last report, what needs attention today, and what you suggest.";
 
-    const result = await runNativeAgent({
-      apiKey: input.apiKey,
-      model,
+    const run = (tier: ModelTier) =>
+      runNativeAgent({
+        apiKey: input.apiKey,
+        model: models[tier],
+        tier,
+        system: agentSystemPrompt({ language: input.language, company: input.company.name, currency: input.company.currency, memory: memoryRows }),
+        history: [],
+        userMessage: `${task}\n\nCurrent state of the guard (JSON data):\n${context}`,
+        today: now.toISOString().slice(0, 10),
+        ctx: { client: undefined as never, profile: null, enabledModules: new Set<string>() },
+        client: input.client,
+        toolset: { tools: GUARD_AGENT_TOOLS, run: (name, args) => runGuardAgentTool(input.db, name, args) },
+        maxIterations: input.kind === "monthly" ? 14 : 10,
+        maxTokens: 8000,
+      });
+    const usageOf = (r: AgentResult, tier: ModelTier, status: string) => ({
+      kind: input.kind,
+      model: r.model,
       tier,
-      system: agentSystemPrompt({ language: input.language, company: input.company.name, currency: input.company.currency, memory: memoryRows }),
-      history: [],
-      userMessage: `${task}\n\nCurrent state of the guard (JSON data):\n${context}`,
-      today: now.toISOString().slice(0, 10),
-      ctx: { client: undefined as never, profile: null, enabledModules: new Set<string>() },
-      client: input.client,
-      toolset: { tools: GUARD_AGENT_TOOLS, run: (name, args) => runGuardAgentTool(input.db, name, args) },
-      maxIterations: input.kind === "monthly" ? 14 : 10,
-      maxTokens: 8000,
+      input_tokens: r.usage.input_tokens,
+      output_tokens: r.usage.output_tokens,
+      cache_read_tokens: r.usage.cache_read_tokens,
+      cache_write_tokens: r.usage.cache_write_tokens,
+      cost_usd: r.costUsd,
+      tool_calls: r.steps.length,
+      status,
+      user_id: input.userId,
     });
 
-    const usageRow = {
-      kind: input.kind,
-      model: result.model,
-      tier,
-      input_tokens: result.usage.input_tokens,
-      output_tokens: result.usage.output_tokens,
-      cache_read_tokens: result.usage.cache_read_tokens,
-      cache_write_tokens: result.usage.cache_write_tokens,
-      cost_usd: result.costUsd,
-      tool_calls: result.steps.length,
-      status: result.status,
-      user_id: input.userId,
-    };
+    let tier = decision.tier;
+    let result = await run(tier);
+    // A light run that did not produce a proper report is repeated once with the standard model (every run is logged and costed).
+    const proper = (r: AgentResult) => r.status === "ok" && r.reply.trim() !== "" && parseAgentReport(r.reply).summary.headline !== "";
+    let escalated = false;
+    if (tier === "fast" && decision.reason !== "forced" && !proper(result)) {
+      await input.writeDb.from("guard_ai_usage").insert(usageOf(result, tier, "escalated"));
+      const next = nextTier(tier);
+      if (next) {
+        tier = next;
+        escalated = true;
+        result = await run(tier);
+      }
+    }
+    const usageRow = usageOf(result, tier, result.status);
+    const route = { tier, reason: escalated ? `${decision.reason}_escalated` : decision.reason };
 
     if (result.status === "refusal" || !result.reply.trim()) {
       await input.writeDb.from("guard_ai_usage").insert(usageRow);
@@ -203,7 +224,7 @@ export async function generateGuardReport(input: GenerateReportInput): Promise<A
         kind: input.kind,
         title,
         body: result.status === "max_steps" || result.status === "max_tokens" ? `${body}\n\n> (The report was cut: ${result.status}.)` : body,
-        summary: { ...summary, tool_calls: result.steps.length, status: result.status },
+        summary: { ...summary, tool_calls: result.steps.length, status: result.status, route },
         model: result.model,
         tokens_in: result.usage.input_tokens,
         tokens_out: result.usage.output_tokens,
