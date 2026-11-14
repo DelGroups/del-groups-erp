@@ -21,6 +21,7 @@ const PATH_I18N: Record<string, string> = {
   "/consignments": "nav.items.consignments",
   "/inventory/counts": "nav.items.inventoryAudit",
   "/inventory/lots": "nav.items.lots",
+  "/finance/guard": "nav.items.accountingGuard",
   "/warehouse/initial-balance": "nav.items.initialBalances",
   "/warehouse/initial-balance/new": "breadcrumb.initialBalanceNew",
   "/warehouses": "nav.items.warehouses",

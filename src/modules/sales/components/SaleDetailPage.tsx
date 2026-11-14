@@ -1,5 +1,6 @@
 "use client";
 
+import DocumentFindingsChip from "@/components/guard/DocumentFindingsChip";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,11 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-app">{t("modals.salesView.title")}</h2>
-            <p className="font-mono text-sm text-app-accent">{sale?.doc_no || "-"}</p>
+            <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-app-accent">
+              {sale?.doc_no || "-"}
+              {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+              {sale ? <DocumentFindingsChip entity="sale" id={sale.id} docNo={sale.doc_no} /> : null}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <EQaimeExportButton

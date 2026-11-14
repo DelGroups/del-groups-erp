@@ -102,10 +102,13 @@ test("the reason of 'Not a duplicate' is required: trimmed, collapsed, at least 
 });
 
 test("the actions are admin only, behind the flag, and only call the guard functions", () => {
+  // The gate lives in one place, shared with the GUARD-3 actions.
+  const gate = read("src/lib/guard/server.ts");
+  assert.match(gate, /if \(!isAccountingGuardEnabled\(\)\) throw new ActionAuthError\("accountingGuard\.errors\.disabled"\);/);
+  assert.match(gate, /requirePermissionAction\("can_manage_settings"\)/);
+  assert.match(gate, /if \(!isAdminRole\(ctx\.profile\?\.role\)\) throw new ActionAuthError\("accountingGuard\.errors\.adminOnly"\);/);
+  assert.doesNotMatch(gate, /createSupabaseAdminClient/);
   const src = read("src/lib/actions/accountingGuard.ts");
-  assert.match(src, /if \(!isAccountingGuardEnabled\(\)\) throw new ActionAuthError\("accountingGuard\.errors\.disabled"\);/);
-  assert.match(src, /requirePermissionAction\("can_manage_settings"\)/);
-  assert.match(src, /if \(!isAdminRole\(ctx\.profile\?\.role\)\) throw new ActionAuthError\("accountingGuard\.errors\.adminOnly"\);/);
   const exported = [...src.matchAll(/export async function (\w+)/g)].map((m) => m[1]);
   assert.deepEqual(exported, ["scanProductNamesAction", "markNotDuplicateAction"]);
   // A "use server" file may export only async functions (and types): the build fails on any other export.

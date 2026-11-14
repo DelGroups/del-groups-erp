@@ -14,6 +14,7 @@ import { useInvoiceTools } from "@/components/invoices/InvoiceToolsFlag";
 import { invoiceExportRowActions } from "@/components/invoices/invoiceExportActions";
 import { DATE_CHANGE_ACTION_KEY } from "@/components/documents/DocumentDateChange";
 import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
+import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
 
 /** Sales invoices on the view engine (new UI): dashboard, then list, kanban, pivot, graph, calendar. */
 export default function SalesScreen() {
@@ -59,6 +60,8 @@ function SalesBody() {
         valueFilters={exportOn}
         actions={
           <>
+            {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+            <FindSuspiciousButton entity="sale" />
             {can("can_view_reports") ? (
               <Link href="/reports/sales" className="ds-btn ds-btn-sm">
                 <BarChart3 className="h-4 w-4" aria-hidden />

@@ -102,10 +102,12 @@ export const SHELL_EXTRA_ITEMS = [
   { section: "reports", path: "/dashboard/reports/debtors", titleKey: "nav.items.debtorReports", module: "accounting", icon: "Scale", flag: "partnerLedgers" },
   // Lots (LOT-4): only while LOT_TRACKING is on for this user; the route needs can_view_lots.
   { section: "inventory", path: "/inventory/lots", titleKey: "nav.items.lots", module: "inventory", icon: "Tags", flag: "lotTracking" },
+  // Accounting Guard (GUARD-3): only while ACCOUNTING_GUARD is on and the user is an admin; the route needs settings.
+  { section: "finance", path: "/finance/guard", titleKey: "nav.items.accountingGuard", module: "accounting", icon: "ShieldCheck", flag: "accountingGuard" },
 ] as const;
 
 /** The extra items of the features that are on (items without a flag always). */
-export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean; partnerLedgers?: boolean; lotTracking?: boolean }): E[] {
+export function extraItemsFor<E extends object>(extras: readonly E[], flags: { newCrm: boolean; newImports?: boolean; partnerLedgers?: boolean; lotTracking?: boolean; accountingGuard?: boolean }): E[] {
   return extras.filter((e) => {
     const flag = "flag" in e ? (e as { flag?: string }).flag : undefined;
     return (
@@ -113,7 +115,8 @@ export function extraItemsFor<E extends object>(extras: readonly E[], flags: { n
       (flag === "newCrm" && flags.newCrm) ||
       (flag === "newImports" && flags.newImports === true) ||
       (flag === "partnerLedgers" && flags.partnerLedgers === true) ||
-      (flag === "lotTracking" && flags.lotTracking === true)
+      (flag === "lotTracking" && flags.lotTracking === true) ||
+      (flag === "accountingGuard" && flags.accountingGuard === true)
     );
   });
 }

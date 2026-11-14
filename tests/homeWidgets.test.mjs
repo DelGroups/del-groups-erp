@@ -102,7 +102,7 @@ test("registry: unique ids, a component, a loader for remote widgets, money widg
     assert.equal(w.financial, w.category === "management", `${w.id}: financial and category disagree`);
   }
   assert.deepEqual(WIDGETS.filter((w) => w.pinned).map((w) => w.id), ["apps"]);
-  assert.deepEqual(WIDGETS.filter((w) => w.requires).map((w) => w.id).sort(), ["pipeline_value", "sales_target"]);
+  assert.deepEqual(WIDGETS.filter((w) => w.requires).map((w) => w.id).sort(), ["accounting_guard", "pipeline_value", "sales_target"]);
 });
 
 test("visibility: module off, missing permission, financial without the right, feature off", () => {

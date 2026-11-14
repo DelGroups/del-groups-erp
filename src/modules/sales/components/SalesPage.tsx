@@ -64,6 +64,7 @@ import { ListBodyCells, ListHeadCells, dash, useTableColumns, type TableColumn }
 import { ListGrid } from "@/components/lists/ListGrid";
 import { useUiStandard } from "@/design-system/components";
 import { formatGridDate } from "@/lib/dates/localeDate";
+import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
 import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
 import { docStatusLabelKey, paymentTypeLabelKey, warehouseStateLabelKey } from "@/lib/lists/documentLabels";
 
@@ -363,14 +364,16 @@ export default function SalesPage() {
             onCreate={() => router.push("/sales/new")}
             createDisabled={!canCreateInvoice}
             extraActions={
-              standard ? undefined : (
-                <>
+              <>
+                {/* ACCOUNTING_GUARD (GUARD-3): admins only; renders nothing otherwise. */}
+                <FindSuspiciousButton entity="sale" />
+                {standard ? null : (
                   <Button type="button" variant="secondary" onClick={() => handleExport()}>
                     <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                     {t("common.excelDownload")}
                   </Button>
-                </>
-              )
+                )}
+              </>
             }
           />
         }

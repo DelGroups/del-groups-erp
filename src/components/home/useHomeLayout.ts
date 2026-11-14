@@ -1,5 +1,6 @@
 "use client";
 
+import { useAccountingGuard } from "@/components/guard/AccountingGuardFlag";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,14 +22,15 @@ export function useHomeContext(): HomeContext {
   const { profile } = useAuth();
   const { isEnabled } = useEnabledModules();
   const { newCrm } = useNewUi();
+  const accountingGuard = useAccountingGuard();
   return useMemo(
     () => ({
       isEnabled: (m: string) => isEnabled(m as Parameters<typeof isEnabled>[0]),
       can: (path: string) => userHasGranularPermission(profile, path),
       financials: canViewFinancials(profile),
-      flags: { newCrm },
+      flags: { newCrm, accountingGuard },
     }),
-    [profile, isEnabled, newCrm]
+    [profile, isEnabled, newCrm, accountingGuard]
   );
 }
 

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { WidgetProps } from "./types";
 import { AgendaWidget, ApprovalsWidget, CalendarWidget, ClockWidget, GreetingWidget, MyActivitiesWidget, MyTodosWidget, QuickActionsWidget, RecentDocumentsWidget, SavedViewsWidget, WeatherWidget } from "./PersonalWidgets";
+import { AccountingGuardWidget } from "./GuardWidget";
 import { AppsWidget, AwayTodayWidget, LowStockWidget, MyPipelineWidget, ProductionStatusWidget } from "./OperationsWidgets";
 import {
   ArDiscrepancyWidget,
@@ -55,6 +56,7 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<WidgetProps>> = {
   ar_discrepancy: ArDiscrepancyWidget,
   sales_target: SalesTargetWidget,
   pipeline_value: PipelineValueWidget,
+  accounting_guard: AccountingGuardWidget,
 };
 
 export type { WidgetProps } from "./types";

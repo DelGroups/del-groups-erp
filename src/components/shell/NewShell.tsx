@@ -2,6 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useLotPaletteGroup } from "@/modules/inventory";
+import { useQuery } from "@tanstack/react-query";
+import { useAccountingGuard } from "@/components/guard/AccountingGuardFlag";
+import { guardNotificationStateAction } from "@/lib/actions/accountingGuardSection";
+import { guardFindingsHref } from "@/lib/guard/findings";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
@@ -217,26 +221,44 @@ const LIMIT_TEXT: Record<LimitKind, { warning: string; blocked: string }> = {
   ai: { warning: "limits.bannerAiWarning", blocked: "limits.bannerAiBlocked" },
 };
 
-function useNotifications(): string[] {
+/** A line of the bell: plain text, or a link (the Accounting Guard's items open its section). */
+type NotificationItem = { text: string; href?: string };
+
+function useNotifications(): NotificationItem[] {
   const { t } = useI18n();
   const { user, can } = useAuth();
   const { status } = useLimitStatus(Boolean(user));
+  // ACCOUNTING_GUARD (GUARD-3): admins see new critical / high findings and new reports since they last looked.
+  const guard = useAccountingGuard();
+  const guardState = useQuery({
+    queryKey: ["guard", "bell"],
+    enabled: guard,
+    refetchInterval: 120_000,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const r = await guardNotificationStateAction();
+      return r.success ? r.data : null;
+    },
+  });
   return useMemo(() => {
-    if (!status) return [];
-    const out: string[] = [];
+    const out: NotificationItem[] = [];
+    const g = guardState.data;
+    if (guard && g && g.newFindings > 0) out.push({ text: t("guard.ui.bellNewFindings", { count: g.newFindings }), href: guardFindingsHref({ status: "open" }) });
+    if (guard && g && g.newReports > 0) out.push({ text: t("guard.ui.bellNewReports", { count: g.newReports }), href: "/finance/guard?tab=reports" });
+    if (!status) return out;
     for (const kind of ["users", "storage", "ai"] as const) {
       if (kind === "users" && !can("can_manage_users")) continue;
       const u = status[kind];
       const state = limitState(u);
       if (state !== "warning" && state !== "blocked") continue;
       const fmt = (v: number | null) => (v === null ? "∞" : kind === "storage" ? formatBytesShort(v) : kind === "ai" ? v.toFixed(2) : String(v));
-      out.push(t(LIMIT_TEXT[kind][state], { used: fmt(u.used), limit: fmt(u.limit) }));
+      out.push({ text: t(LIMIT_TEXT[kind][state], { used: fmt(u.used), limit: fmt(u.limit) }) });
     }
     return out;
-  }, [status, can, t]);
+  }, [status, can, t, guard, guardState.data]);
 }
 
-function NotificationsButton({ items, tab = false }: { items: string[]; /** Bottom tab bar look (glyph over a tiny label). */ tab?: boolean }) {
+function NotificationsButton({ items, tab = false }: { items: NotificationItem[]; /** Bottom tab bar look (glyph over a tiny label). */ tab?: boolean }) {
   const { t } = useI18n();
   const { portalContainer } = useDesignScope();
   const label = items.length ? t("newShell.notificationsUnread", { count: items.length }) : t("newShell.notifications");
@@ -261,9 +283,15 @@ function NotificationsButton({ items, tab = false }: { items: string[]; /** Bott
           <p className="px-2 pb-2 pt-1 font-semibold">{t("newShell.notifications")}</p>
           {items.length ? (
             <ul className="flex flex-col gap-1">
-              {items.map((text) => (
+              {items.map(({ text, href }) => (
                 <li key={text} className="rounded-[var(--ds-radius-sm)] p-2.5" style={{ background: "var(--ds-warning-soft)" }}>
-                  {text}
+                  {href ? (
+                    <Link href={href} className="block hover:underline">
+                      {text}
+                    </Link>
+                  ) : (
+                    text
+                  )}
                 </li>
               ))}
             </ul>

@@ -173,3 +173,17 @@ Notes:
 - `guard_normalize_name(text)` is IMMUTABLE and has a trigram index (`idx_products_guard_name_trgm`) when `pg_trgm` is available. Without `pg_trgm` F2 compares equal normalised names only.
 - A "not a duplicate" decision on a cluster survives changes of the cards' stock and last movement; it lapses when a product joins or leaves the cluster (`_guard_details_hash` ignores `products`, the cards, and keeps `product_ids`).
 - The drawer lists F1, F2, F3 and F5 findings. "Not a duplicate" sets the finding to `false_positive` with a required reason. "Open in Accounting Guard" links to `/finance/guard?tab=findings&finding=<id>`, which GUARD-3 builds. There is no merge and no delete.
+
+## What GUARD-3 built
+
+Migration `supabase/migrations/20261120120000_accounting_guard_ui.sql` (needs GUARD-1), SQL tests `supabase/tests/accounting_guard_ui.sql` (CI step), `tests/accountingGuardSection.test.mjs`, the section `/finance/guard` (`src/components/guard/*`, `src/app/finance/guard/page.tsx`), the actions `src/lib/actions/accountingGuardSection.ts`, the pure helpers `src/lib/guard/*`.
+
+- **The section** (admins only, `ACCOUNTING_GUARD=true`, a 404 otherwise; menu entry under Finance; route needs `can_manage_settings`). The tab, the filters and the open finding live in the URL.
+  - **Dashboard:** health score (100 minus 10 per critical, 5 per high, 2 per medium, 1 per low open finding, never below 0; the formula is in the score's text), open findings by severity and by category (each a link to the Findings tab with that filter), the trend of open findings over the last 30 scans, the last scan, the ten worst open findings, and "Scan now" (the one primary action).
+  - **Findings:** filters by severity, category, rule, status, dates, partner, who created the document, document kind and search; a grid with a side panel per finding (the document and partner as links, the finding's facts, its history from `guard_finding_events`); "Mark as seen", "Resolved" and "Not an error" (the last two with a required reason), "Reopen"; bulk "Mark as seen"; Excel, PDF (the print dialog) and "Save as report" for the filtered list.
+  - **Reports:** saved reports (`guard_reports`): snapshots of the findings now, and from GUARD-5 the accountant agent's reports. View, PDF and (for snapshots) Excel.
+  - **Rules:** switch a rule on or off, change its severity and its thresholds. The database validates every value again and writes the change to the audit log.
+  - **Runs:** every scan with its trigger, scope, counts, duration and failed rules.
+- **"Find suspicious documents"** on the sales and purchase lists (classic and new screens) runs the `ledger`, `documents`, `cash` and `partners` rules and opens the Findings tab filtered to that kind of document. A small warning chip in the sale and purchase view shows when a document has findings.
+- **The bell** shows new critical and high findings and new reports since the admin last opened the section (`guard_admin_state`). The **home widget** "Accounting Guard" shows the score and the open findings by severity.
+- Added to the database: `guard_reports`, `guard_admin_state`, and the functions `guard_dashboard`, `guard_update_rule`, `guard_bulk_set_status`, `guard_create_report`, `guard_notification_state`, `guard_mark_seen`. All admin only; none writes business data.
