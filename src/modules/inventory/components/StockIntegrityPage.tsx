@@ -28,6 +28,7 @@ import {
   type StockIssueKind,
 } from "../lib/stockIntegrity";
 import { SettingsV2Page, useSettingsV2 } from "@/components/settings/v2/SettingsV2Page";
+import DuplicateNamesButton from "@/components/guard/DuplicateNamesButton";
 
 type PendingFix = { kind: StockIssueKind; productIds: string[] | null; count: number };
 
@@ -258,6 +259,8 @@ export default function StockIntegrityPage() {
     return (
       <SettingsV2Page id="stock-integrity" actions={isAdmin ? (
         <>
+              {/* ACCOUNTING_GUARD (GUARD-2): admins only; renders nothing otherwise. */}
+              <DuplicateNamesButton size="md" />
               <Button
                 appearance="outline"
                 color="secondary"
@@ -324,18 +327,22 @@ export default function StockIntegrityPage() {
                 </h1>
                 <p className="mt-1 text-sm text-app-muted">{t("stockIntegrity.description")}</p>
               </div>
-              <Button
-                appearance="outline"
-                color="secondary"
-                onClick={() => {
-                  setLoading(true);
-                  void load();
-                }}
-                loading={loading}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {t("stockIntegrity.refresh")}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* ACCOUNTING_GUARD (GUARD-2): admins only; renders nothing otherwise. */}
+                <DuplicateNamesButton size="md" />
+                <Button
+                  appearance="outline"
+                  color="secondary"
+                  onClick={() => {
+                    setLoading(true);
+                    void load();
+                  }}
+                  loading={loading}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {t("stockIntegrity.refresh")}
+                </Button>
+              </div>
             </header>
             {settingsBody}
           </div>
