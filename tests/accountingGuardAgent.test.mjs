@@ -90,7 +90,7 @@ test("the tools cannot write business data: no tool name, table or function allo
   const names = GUARD_AGENT_TOOLS.map((t) => t.name);
   assert.deepEqual(names, ["list_findings", "get_finding", "get_document", "trial_balance", "partner_statement", "guard_rules", "list_memory", "remember", "suggest_false_positive"]);
   assert.ok(!names.some((n) => /post|create|update|delete|reverse|cancel|void|status|forget/.test(n)), "no tool posts, changes a status or forgets");
-  assert.deepEqual([...AGENT_ALLOWED_RPC].sort(), ["get_gl_trial_balance", "get_partner_statement", "guard_memory_save", "guard_set_agent_suggestion"]);
+  assert.deepEqual([...AGENT_ALLOWED_RPC].sort(), ["assistant_memory_save", "get_gl_trial_balance", "get_partner_statement", "guard_memory_save", "guard_set_agent_suggestion"]);
   assert.deepEqual([...AGENT_READABLE_DOCS], ["sales", "purchases", "journal_entries"]);
   const source = read("src/lib/guard/agentTools.ts");
   assert.ok(!/\.(update|delete|upsert|insert)\(/.test(source), "the tools never write with the table API");
@@ -128,10 +128,24 @@ test("reading tools query only what they should; the notes go through the guard'
 
   const remembered = await runGuardAgentTool(db, "remember", { subject: "Customer X", body: "Buys below cost by agreement.", kind: "bogus", finding_id: FID });
   assert.equal(remembered.isError, false);
-  const save = db.calls.find((c) => c.fn === "guard_memory_save");
+  // AST-3: the note is a company note in Del Assistant's memory.
+  const save = db.calls.find((c) => c.fn === "assistant_memory_save");
+  assert.equal(save.args.p_scope, "company");
   assert.equal(save.args.p_kind, "fact", "an unknown kind becomes a fact");
-  assert.equal(save.args.p_source, "agent");
-  assert.equal(save.args.p_source_ref, FID);
+  assert.equal(save.args.p_source, "assistant");
+  assert.deepEqual(save.args.p_evidence, { finding_id: FID });
+  assert.ok(!db.calls.some((c) => c.fn === "guard_memory_save"));
+
+  // Before the memory migration is run, the guard's own table is used.
+  const old = fakeDb();
+  old.rpc = (fn, args) => {
+    old.calls.push({ fn, args, kind: "rpc" });
+    return Promise.resolve(fn === "assistant_memory_save" ? { data: null, error: { message: "function public.assistant_memory_save does not exist" } } : { data: "id", error: null });
+  };
+  assert.equal((await runGuardAgentTool(old, "remember", { subject: "Customer X", body: "Buys below cost.", finding_id: FID })).isError, false);
+  const fallback = old.calls.find((c) => c.fn === "guard_memory_save");
+  assert.equal(fallback.args.p_source, "agent");
+  assert.equal(fallback.args.p_source_ref, FID);
 
   const suggested = await runGuardAgentTool(db, "suggest_false_positive", { finding_id: FID, reason: "Agreed discount" });
   assert.equal(suggested.isError, false);
@@ -144,7 +158,7 @@ test("a database error comes back as a tool error, and very long answers are cut
   const failing = { from: () => ({ select: () => { throw new Error("boom"); } }), rpc: () => Promise.resolve({ data: null, error: { message: "denied" } }) };
   assert.equal((await runGuardAgentTool(failing, "guard_rules", {})).isError, true);
   assert.deepEqual(await runGuardAgentTool(failing, "trial_balance", { from: "2026-01-01", to: "2026-01-31" }), { content: "denied", isError: true, links: [] });
-  const big = fakeDb({ "guard_agent_memory.list": Array.from({ length: 5000 }, (_, i) => ({ subject: `note ${i}`, body: "x".repeat(50) })) });
+  const big = fakeDb({ "assistant_memory.list": Array.from({ length: 5000 }, (_, i) => ({ subject: `note ${i}`, body: "x".repeat(50) })) });
   const r = await runGuardAgentTool(big, "list_memory", {});
   assert.ok(r.content.length < 25_000 && r.content.includes("cut"));
 });
@@ -246,7 +260,7 @@ test("a daily report: the agent reads, remembers, and the report is saved as wri
   assert.equal(usageRow.kind, "daily");
   assert.equal(usageRow.report_id, "report-1");
   assert.equal(usageRow.tool_calls, 1);
-  assert.ok(db.calls.some((c) => c.fn === "guard_memory_save"), "the note went through the guard's own function");
+  assert.ok(db.calls.some((c) => c.fn === "assistant_memory_save"), "the note went into Del Assistant's memory (AST-3)");
   const first = claude.sent[0];
   assert.deepEqual(first.tools.map((t) => t.name), GUARD_AGENT_TOOLS.map((t) => t.name), "only the guard's tools are offered");
   assert.match(first.system[0].text, /chief accountant/);

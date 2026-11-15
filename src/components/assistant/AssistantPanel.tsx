@@ -153,6 +153,11 @@ function PanelBody() {
   );
 
   const newChat = () => {
+    // AST-3: the finished conversation may teach the assistant a note or two (server side; nothing comes back).
+    const finished = chat.conversationId;
+    if (finished && chat.messages.filter((m) => m.role === "user").length >= 2) {
+      void fetch("/api/assistant/learn", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ conversationId: finished }) }).catch(() => undefined);
+    }
     chat.reset();
     setDraft("");
     dispatchAvatar({ type: "stop" });

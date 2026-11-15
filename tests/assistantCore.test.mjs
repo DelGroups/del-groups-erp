@@ -211,7 +211,7 @@ test("a turn: only the chosen skills' permitted tools are offered; a tool outsid
   const turn = await runAssistantTurn(baseTurn({ client: claude, onEvent: (e) => events.push(e) }));
   assert.equal(turn.ok, true);
   assert.deepEqual(turn.skills, ["sales"]);
-  assert.deepEqual(claude.sent[0].tools.map((t) => t.name), ["list_sales", "get_sale"]);
+  assert.deepEqual(claude.sent[0].tools.map((t) => t.name), ["list_sales", "get_sale", "remember", "recall"], "the chosen skill's tools, then the memory tools (AST-3)");
   assert.match(claude.sent[0].system[0].text, /Aysel/);
   assert.match(claude.sent[0].messages[0].content[1].text, /The user is on the page \/sales/);
   const end = events.find((e) => e.type === "tool_end");

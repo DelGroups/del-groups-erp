@@ -21,7 +21,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
 ];
 
 /** Feature switches an item depends on, besides its module. */
-export type SettingsItemFlag = "barcode" | "billing" | "newImports" | "docDateChange" | "lotTracking";
+export type SettingsItemFlag = "barcode" | "billing" | "newImports" | "docDateChange" | "lotTracking" | "assistantV2";
 
 export interface SettingsItem {
   id: string;
@@ -77,6 +77,8 @@ export const SETTINGS_ITEMS: readonly SettingsItem[] = [
   { id: "modules", path: "/settings/modules", ...t("modules"), icon: "Boxes", group: "system", permission: "can_manage_settings", adminOnly: true },
   { id: "studio", path: "/settings/studio", ...t("studio"), icon: "Blocks", group: "system", permission: "can_manage_settings", module: "studio" },
   { id: "ai", path: "/settings/ai", ...t("ai"), icon: "Sparkles", group: "system", permission: "can_manage_settings", module: "ai" },
+  // AST-3 (ASSISTANT_V2): what Del Assistant remembers; admins only (Del, 2026-11-14).
+  { id: "assistant-memory", path: "/settings/assistant/memory", ...t("assistantMemory"), icon: "Brain", group: "system", permission: "can_manage_settings", module: "ai", adminOnly: true, flag: "assistantV2" },
   { id: "backup", path: "/settings/backup", ...t("backup"), icon: "Database", group: "system", permission: "can_manage_settings" },
   { id: "billing", path: "/settings/billing", ...t("billing"), icon: "CreditCard", group: "system", permission: "can_manage_settings", adminOnly: true, flag: "billing" },
 ];
