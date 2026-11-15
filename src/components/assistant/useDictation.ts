@@ -146,5 +146,5 @@ export function useDictation(locale: string, onText: (text: string) => void) {
     later(DICTATION_TIMEOUTS.maxMs, () => stop());
   }, [clearTimers, finish, later, locale, stop]);
 
-  return { supported, listening, interim, error, start, stop };
+  return { supported, listening, busy: false, interim, error, start, stop };
 }

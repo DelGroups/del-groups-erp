@@ -13,12 +13,12 @@ export const dynamic = "force-dynamic";
  * reduced motion, and the panel with sample content, for review. Admins only, and only while ASSISTANT_V2
  * is on; under `next dev` with UI_LAB_OPEN=true it opens without signing in (screenshots).
  */
-export default async function AvatarReviewPage({ searchParams }: { searchParams: Promise<{ theme?: string }> }) {
+export default async function AvatarReviewPage({ searchParams }: { searchParams: Promise<{ theme?: string; voice?: string }> }) {
   if (!isUiLabOpen()) {
     if (!isAssistantV2On()) notFound();
     const { user, profile, isActive } = await getServerAuthContext();
     if (!user || !isActive || !isAdminRole(profile?.role)) notFound();
   }
-  const { theme } = await searchParams;
-  return <AvatarReview fontClassName={dsFont.variable} theme={theme === "light" || theme === "dark" ? theme : undefined} />;
+  const { theme, voice } = await searchParams;
+  return <AvatarReview fontClassName={dsFont.variable} theme={theme === "light" || theme === "dark" ? theme : undefined} voiceServer={voice === "server"} />;
 }

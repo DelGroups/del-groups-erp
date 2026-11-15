@@ -6,6 +6,7 @@ import { Button, IconButton } from "@/design-system/components";
 import { COMPOSER_MAX_ROWS, composerKeyAction } from "@/lib/assistant/ui/panel";
 import { dictationErrorKey } from "@/lib/assistant/ui/dictation";
 import { useDictation } from "./useDictation";
+import { useVoiceNote } from "./useVoiceNote";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
@@ -24,6 +25,8 @@ export interface AssistantComposerProps {
   suggestions: Array<{ id: string; label: string }>;
   onSuggestion: (label: string) => void;
   onFocusChange: (focused: boolean) => void;
+  /** The server can turn voice notes into text (/api/assistant/transcribe); otherwise the browser dictates. */
+  voiceServer?: boolean;
 }
 
 /**
@@ -32,7 +35,7 @@ export interface AssistantComposerProps {
  * panel's one primary action (ACT-2).
  */
 export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantComposerProps>(function AssistantComposer(
-  { value, onChange, onSend, onStop, streaming, t, locale, contextLabel, onRemoveContext, suggestions, onSuggestion, onFocusChange },
+  { value, onChange, onSend, onStop, streaming, t, locale, contextLabel, onRemoveContext, suggestions, onSuggestion, onFocusChange, voiceServer = false },
   ref
 ) {
   const localRef = useRef<HTMLTextAreaElement | null>(null);
@@ -46,7 +49,10 @@ export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantCompos
   );
 
   const append = useCallback((text: string) => onChange(value ? `${value.replace(/\s+$/, "")} ${text}` : text), [onChange, value]);
-  const dictation = useDictation(locale, append);
+  const browserDictation = useDictation(locale, append);
+  const voiceNote = useVoiceNote(locale, append);
+  // A recorded note transcribed on the server understands Azerbaijani; the browser's own dictation often does not.
+  const dictation = voiceServer && voiceNote.supported ? voiceNote : browserDictation;
 
   // Grow with the text up to six lines, then scroll inside.
   useLayoutEffect(() => {
@@ -122,14 +128,14 @@ export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantCompos
               icon={dictation.listening ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               data-active={dictation.listening || undefined}
               aria-pressed={dictation.listening}
-              disabled={streaming}
+              disabled={streaming || dictation.busy}
               onClick={() => (dictation.listening ? dictation.stop() : dictation.start())}
             />
           ) : (
             <span />
           )}
           <span className="ds-assistant-hint" aria-live="polite" data-error={(!dictation.listening && dictation.error) || undefined}>
-            {dictation.listening ? dictation.interim || t("assistant.dictating") : dictation.error ? t(dictationErrorKey(dictation.error)) : ""}
+            {dictation.busy ? t("assistant.transcribing") : dictation.listening ? dictation.interim || t(voiceServer ? "assistant.recording" : "assistant.dictating") : dictation.error ? t(dictationErrorKey(dictation.error)) : ""}
           </span>
           {streaming ? (
             <Button size="sm" variant="secondary" icon={Square} onClick={onStop}>
