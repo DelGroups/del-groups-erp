@@ -4,6 +4,7 @@ import React, { forwardRef, useCallback, useLayoutEffect, useRef } from "react";
 import { Mic, Send, Square, X } from "lucide-react";
 import { Button, IconButton } from "@/design-system/components";
 import { COMPOSER_MAX_ROWS, composerKeyAction } from "@/lib/assistant/ui/panel";
+import { dictationErrorKey } from "@/lib/assistant/ui/dictation";
 import { useDictation } from "./useDictation";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
@@ -127,8 +128,8 @@ export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantCompos
           ) : (
             <span />
           )}
-          <span className="ds-assistant-hint" aria-live="polite">
-            {dictation.listening ? t("assistant.dictating") : dictation.failed ? t("assistant.dictationError") : ""}
+          <span className="ds-assistant-hint" aria-live="polite" data-error={(!dictation.listening && dictation.error) || undefined}>
+            {dictation.listening ? t("assistant.dictating") : dictation.error ? t(dictationErrorKey(dictation.error)) : ""}
           </span>
           {streaming ? (
             <Button size="sm" variant="secondary" icon={Square} onClick={onStop}>

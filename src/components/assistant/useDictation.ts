@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { DICTATION_LANG, dictationErrorKind, type DictationError } from "@/lib/assistant/ui/dictation";
 
 /** Speech recognition of the browser (Chrome, Edge, Safari); typed loosely, it is not in lib.dom yet. */
 type Recognition = {
@@ -22,7 +23,6 @@ function recognitionCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-const LANG: Record<string, string> = { az: "az-AZ", en: "en-US", ru: "ru-RU" };
 const noop = () => () => {};
 
 /**
@@ -33,7 +33,7 @@ const noop = () => () => {};
 export function useDictation(locale: string, onText: (text: string) => void) {
   const supported = useSyncExternalStore(noop, () => recognitionCtor() !== null, () => false);
   const [listening, setListening] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<DictationError | null>(null);
   const recRef = useRef<Recognition | null>(null);
   const textRef = useRef(onText);
   useEffect(() => {
@@ -47,7 +47,7 @@ export function useDictation(locale: string, onText: (text: string) => void) {
     const Ctor = recognitionCtor();
     if (!Ctor || recRef.current) return;
     const rec = new Ctor();
-    rec.lang = LANG[locale] ?? "az-AZ";
+    rec.lang = DICTATION_LANG[locale] ?? "az-AZ";
     rec.interimResults = false;
     rec.continuous = false;
     rec.onresult = (e) => {
@@ -56,23 +56,26 @@ export function useDictation(locale: string, onText: (text: string) => void) {
       if (text.trim()) textRef.current(text.trim());
     };
     rec.onerror = (e) => {
-      if (e.error !== "aborted" && e.error !== "no-speech") setFailed(true);
+      const kind = dictationErrorKind(e.error);
+      if (kind) setError(kind);
+      // Keep the cause in the console for support (no audio or text is logged).
+      if (kind) console.warn(`[assistant] dictation error: ${e.error} (${rec.lang})`);
     };
     rec.onend = () => {
       recRef.current = null;
       setListening(false);
     };
     recRef.current = rec;
-    setFailed(false);
+    setError(null);
     setListening(true);
     try {
       rec.start();
     } catch {
       recRef.current = null;
       setListening(false);
-      setFailed(true);
+      setError("other");
     }
   }, [locale]);
 
-  return { supported, listening, failed, start, stop };
+  return { supported, listening, error, start, stop };
 }
