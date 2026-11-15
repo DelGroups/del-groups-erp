@@ -1,0 +1,621 @@
+/**
+ * Del Assistant's panel and avatar (AST-2, docs/assistant/ASSISTANT-plan-and-prompts.md). Tokens only
+ * (TOK-1); everything is scoped to [data-ds] except the dock rule, which makes room for the panel on wide
+ * screens and only applies while html[data-assistant-dock] is set (ASSISTANT_V2 on, panel open, ≥ 1440 px).
+ */
+
+/* Wide screens: the page shrinks beside the docked panel instead of being covered. */
+html[data-assistant-dock] body {
+  padding-inline-end: var(--ds-assistant-w, 400px);
+}
+
+/* ── Avatar ─────────────────────────────────────────────────────────────── */
+[data-ds] .ds-assistant-avatar {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+[data-ds] .ds-assistant-avatar-body,
+[data-ds] .ds-assistant-avatar-spark {
+  transition: fill var(--ds-duration-base) var(--ds-ease-out);
+}
+
+/* ── Launchers ──────────────────────────────────────────────────────────── */
+[data-ds] .ds-assistant-trigger {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+[data-ds] .ds-assistant-fab {
+  position: fixed;
+  inset-inline-end: 1.5rem;
+  z-index: var(--ds-z-sticky);
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--ds-radius-full);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-raised);
+  box-shadow: var(--ds-elevation-3);
+  cursor: pointer;
+  transition: box-shadow var(--ds-duration-fast) var(--ds-ease-out), transform var(--ds-duration-fast) var(--ds-ease-out);
+}
+@media (min-width: 768px) {
+  [data-ds] .ds-assistant-fab[data-hide-md] {
+    display: none;
+  }
+}
+@media print {
+  [data-ds] .ds-assistant-fab {
+    display: none;
+  }
+}
+[data-ds] .ds-assistant-fab:hover {
+  box-shadow: var(--ds-elevation-4);
+}
+[data-ds] .ds-assistant-fab:focus-visible,
+[data-ds] .ds-assistant-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+/* ── Panel ──────────────────────────────────────────────────────────────── */
+[data-ds] .ds-assistant-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ds-z-modal);
+  background: var(--ds-overlay);
+}
+[data-ds] .ds-assistant-panel {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: var(--ds-z-sidebar);
+  display: flex;
+  flex-direction: column;
+  width: var(--ds-assistant-w, 400px);
+  max-width: 100vw;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-inline-start: 1px solid var(--ds-border);
+  box-shadow: var(--ds-elevation-3);
+  outline: none;
+}
+[data-ds] .ds-assistant-panel[data-layout="push"] {
+  box-shadow: none;
+}
+[data-ds] .ds-assistant-panel[data-layout="sheet"] {
+  inset-block-start: auto;
+  inset-inline: 0;
+  z-index: var(--ds-z-modal-content);
+  width: auto;
+  height: min(88dvh, calc(100dvh - 2rem));
+  border-inline-start: 0;
+  border-block-start: 1px solid var(--ds-border);
+  border-start-start-radius: var(--ds-radius-xl);
+  border-start-end-radius: var(--ds-radius-xl);
+  box-shadow: var(--ds-elevation-4);
+  padding-block-end: env(safe-area-inset-bottom);
+}
+[data-ds] .ds-assistant-grabber {
+  align-self: center;
+  width: 2.5rem;
+  height: 0.25rem;
+  margin-block-start: var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-border-strong);
+}
+[data-ds] .ds-assistant-resize {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+[data-ds] .ds-assistant-resize::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-assistant-resize:hover::after,
+[data-ds] .ds-assistant-resize:focus-visible::after {
+  background: var(--ds-brand);
+}
+[data-ds] .ds-assistant-resize:focus-visible {
+  outline: none;
+}
+
+[data-ds] .ds-assistant-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-3) var(--ds-space-3) var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-border);
+}
+[data-ds] .ds-assistant-title {
+  margin: 0;
+  font-size: var(--ds-text-base);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-ds] .ds-assistant-subtitle {
+  margin: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+[data-ds] .ds-assistant-header-actions [aria-pressed="true"] {
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand);
+}
+
+/* The one scroller of the panel; its scrollbar is hidden (PAGE-4: overlays scroll inside themselves). */
+[data-ds] .ds-assistant-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: var(--ds-space-4);
+}
+[data-ds] .ds-assistant-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Empty state */
+[data-ds] .ds-assistant-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  padding-block-start: var(--ds-space-8);
+}
+[data-ds] .ds-assistant-greeting {
+  margin: var(--ds-space-2) 0 0;
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+}
+[data-ds] .ds-assistant-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  margin: var(--ds-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+[data-ds] .ds-assistant-suggestions > li {
+  max-width: 100%;
+}
+[data-ds] .ds-btn.ds-assistant-suggestion {
+  max-width: 100%;
+  justify-content: flex-start;
+}
+
+/* Thread */
+[data-ds] .ds-assistant-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+[data-ds] .ds-assistant-msg[data-role="user"] {
+  align-self: flex-end;
+  max-width: 85%;
+}
+[data-ds] .ds-assistant-user-text {
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-lg);
+  border-end-end-radius: var(--ds-radius-xs);
+  background: var(--ds-surface-sunken);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-ds] .ds-assistant-msg[data-role="assistant"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+[data-ds] .ds-assistant-md {
+  overflow-wrap: anywhere;
+}
+/* The shared markdown renderer (AiAssistantMarkdown) in the panel's type and colours. */
+[data-ds] .ds-assistant-md > div {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-md strong {
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-md a {
+  /* Brand mixed with the text colour: readable on light and dark surfaces (A11Y-1). */
+  color: color-mix(in srgb, var(--ds-brand) 60%, var(--ds-text));
+  font-weight: 500;
+}
+[data-ds] .ds-assistant-md code {
+  font-size: var(--ds-text-xs);
+  background: var(--ds-surface-sunken);
+}
+/* Tables in a reply look like the standard grid: one-line sentence-case header, 1 px dividers. */
+[data-ds] .ds-assistant-md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-assistant-md thead {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-md th,
+[data-ds] .ds-assistant-md td {
+  padding: var(--ds-space-1) var(--ds-space-2);
+  text-align: start;
+  white-space: nowrap;
+  color: inherit;
+}
+[data-ds] .ds-assistant-md td {
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-md tr + tr,
+[data-ds] .ds-assistant-md tbody tr {
+  border-block-start: 1px solid var(--ds-border);
+}
+[data-ds] .ds-assistant-md > div > div {
+  border-color: var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  scrollbar-width: thin;
+}
+
+[data-ds] .ds-assistant-steps {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-steps > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: 1.75rem;
+  padding: 0 var(--ds-space-2);
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--ds-radius-md);
+}
+[data-ds] .ds-assistant-steps > summary::-webkit-details-marker {
+  display: none;
+}
+[data-ds] .ds-assistant-steps > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+[data-ds] .ds-assistant-steps-chevron {
+  flex-shrink: 0;
+  transition: transform var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-assistant-steps[open] .ds-assistant-steps-chevron {
+  transform: rotate(90deg);
+}
+[data-ds] .ds-assistant-steps ul {
+  margin: 0;
+  padding: 0 var(--ds-space-2) var(--ds-space-2);
+  list-style: none;
+}
+[data-ds] .ds-assistant-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: 1.5rem;
+}
+[data-ds] .ds-assistant-steps li[data-ok="true"] svg {
+  color: var(--ds-success);
+}
+[data-ds] .ds-assistant-steps li[data-ok="false"] svg {
+  color: var(--ds-danger-strong, var(--ds-danger));
+}
+
+[data-ds] .ds-assistant-typing {
+  display: inline-flex;
+  gap: 4px;
+  padding-block: var(--ds-space-2);
+}
+[data-ds] .ds-assistant-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-text-subtle);
+  animation: ds-assistant-typing 1.2s infinite ease-in-out;
+}
+[data-ds] .ds-assistant-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+[data-ds] .ds-assistant-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ds-assistant-typing {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-ds] .ds-assistant-typing span {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+[data-ds] .ds-assistant-note {
+  margin: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-danger-soft);
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-error svg {
+  margin-block-start: 2px;
+  color: var(--ds-danger-strong, var(--ds-danger));
+}
+[data-ds] .ds-assistant-error p {
+  margin: 0;
+}
+[data-ds] .ds-assistant-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+}
+[data-ds] .ds-assistant-link,
+[data-ds] .ds-assistant-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 1.75rem;
+  padding: 0 var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--ds-text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--ds-duration-fast) var(--ds-ease-out), border-color var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-assistant-link {
+  color: color-mix(in srgb, var(--ds-brand) 60%, var(--ds-text));
+}
+[data-ds] .ds-assistant-link:hover,
+[data-ds] .ds-assistant-chip:hover {
+  background: var(--ds-surface-sunken);
+  border-color: var(--ds-border-strong);
+}
+[data-ds] .ds-assistant-link:focus-visible,
+[data-ds] .ds-assistant-chip:focus-visible,
+[data-ds] .ds-assistant-context-remove:focus-visible,
+[data-ds] .ds-assistant-history-open:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+[data-ds] .ds-assistant-msg-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: 1.75rem;
+}
+
+/* Composer */
+[data-ds] .ds-assistant-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4) var(--ds-space-4);
+  border-block-start: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-assistant-chips {
+  display: flex;
+  gap: var(--ds-space-1);
+  overflow: hidden;
+}
+[data-ds] .ds-assistant-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+[data-ds] .ds-assistant-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-2);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  transition: border-color var(--ds-duration-fast) var(--ds-ease-out), box-shadow var(--ds-duration-fast) var(--ds-ease-out);
+}
+[data-ds] .ds-assistant-input:focus-within {
+  border-color: var(--ds-brand);
+  box-shadow: var(--ds-focus-ring);
+}
+[data-ds] .ds-assistant-input textarea {
+  width: 100%;
+  min-height: 1.5rem;
+  padding: var(--ds-space-1);
+  border: 0;
+  background: transparent;
+  color: var(--ds-text);
+  font: inherit;
+  font-size: var(--ds-text-sm);
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  scrollbar-width: none;
+}
+[data-ds] .ds-assistant-input textarea::placeholder {
+  color: var(--ds-text-subtle);
+}
+[data-ds] .ds-assistant-context {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 1.5rem;
+  padding-inline: var(--ds-space-2) 0;
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-brand-soft);
+  color: var(--ds-text);
+  font-size: var(--ds-text-xs);
+  white-space: nowrap;
+}
+[data-ds] .ds-assistant-context-label {
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-context-remove {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--ds-radius-xs);
+  background: transparent;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+}
+[data-ds] .ds-assistant-context-remove:hover {
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-input-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+[data-ds] .ds-assistant-input-bar [data-active] {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger-strong, var(--ds-danger));
+}
+[data-ds] .ds-assistant-hint {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* History */
+[data-ds] .ds-assistant-history-list {
+  margin: 0 calc(-1 * var(--ds-space-2));
+  padding: 0;
+  list-style: none;
+}
+[data-ds] .ds-assistant-history-list > li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding-inline-end: var(--ds-space-1);
+  border-radius: var(--ds-radius-md);
+}
+[data-ds] .ds-assistant-history-list > li:hover,
+[data-ds] .ds-assistant-history-list > li[data-active] {
+  background: var(--ds-surface-sunken);
+}
+[data-ds] .ds-assistant-history-open {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--ds-space-2);
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-text);
+  text-align: start;
+  cursor: pointer;
+}
+[data-ds] .ds-assistant-history-open > * {
+  max-width: 100%;
+}
+[data-ds] .ds-assistant-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-10) var(--ds-space-4);
+  text-align: center;
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-history-empty svg {
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-history-empty p {
+  margin: 0;
+}
+
+/* Avatar review page (/settings/dev/avatar) */
+[data-ds] .ds-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--ds-space-3);
+}
+[data-ds] .ds-avatar-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4) var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+[data-ds] .ds-avatar-sizes {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-3);
+  min-height: 4.5rem;
+}
+[data-ds] .ds-avatar-review > * + * {
+  margin-block-start: var(--ds-space-6);
+}
+[data-ds] .ds-assistant-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-4);
+}
+/* The review page shows the panel in place, not fixed to the window. */
+[data-ds] .ds-assistant-panel[data-layout="preview"] {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 400px;
+  max-width: 100%;
+  height: 680px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ds-elevation-2);
+}

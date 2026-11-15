@@ -32,6 +32,8 @@ import { isLotTrackingEnabled, lotTrackingAudience } from "@/lib/features/lotTra
 import { LotTrackingProvider } from "@/modules/inventory";
 import { isAccountingGuardEnabled } from "@/lib/features/accountingGuard";
 import { isGuardAgentFlagOn } from "@/lib/guard/agentConfig";
+import { assistantAudience, isAssistantV2On } from "@/lib/assistant/config";
+import { AssistantProvider } from "@/components/assistant/AssistantProvider";
 import { AccountingGuardProvider } from "@/components/guard/AccountingGuardFlag";
 import { isCountTeamEnabled } from "@/lib/features/countTeam";
 import { isPartnerLedgersEnabled, partnerLedgersAudience } from "@/lib/features/partnerLedgers";
@@ -144,6 +146,8 @@ export default async function RootLayout({
                           <LotTrackingProvider enabled={isLotTrackingEnabled()} audience={lotTrackingAudience()}>
                           {/* ACCOUNTING_GUARD (GUARD-2): the "Find duplicate or wrong names" button, admins only. */}
                           <AccountingGuardProvider enabled={isAccountingGuardEnabled()} ai={isGuardAgentFlagOn()}>
+                          {/* ASSISTANT_V2 (AST-2): the new assistant panel and avatar, admins unless ASSISTANT_V2_AUDIENCE=all. */}
+                          <AssistantProvider value={{ enabled: isAssistantV2On(), audience: assistantAudience() }}>
                             {tenant.status === "read_only" ? <ReadOnlyBanner /> : null}
                             {/* Plan limits exist only for control-plane tenants (multi-tenant mode). */}
                             {tenant.status !== null ? <LimitBanner /> : null}
@@ -152,6 +156,7 @@ export default async function RootLayout({
                             {/* Escape closes the old dialogs (UI-7 live check, audit OVL-01). */}
                             <LegacyModalEscape />
                             <TableColumnResizer />
+                          </AssistantProvider>
                           </AccountingGuardProvider>
                           </LotTrackingProvider>
                           </PartnerLedgersProvider>

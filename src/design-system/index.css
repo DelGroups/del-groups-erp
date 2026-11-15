@@ -5,6 +5,8 @@
 /* New UI (prompt 15): scoped to [data-ds], no effect on existing screens. */
 @import "./theme.css";
 @import "./components.css";
+/* ASSISTANT_V2 (AST-2): the assistant panel and avatar; scoped to [data-ds], plus the dock rule. */
+@import "./assistant.css";
 /* UI_STANDARD (UI-1): token aliases and layout fixes, only under html[data-ui-standard]. */
 @import "./ui-standard.css";
 /* UI_UNIFIED (UI-7): --app-* aliases and one font, only under html[data-ui-unified]. */

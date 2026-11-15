@@ -46,6 +46,8 @@ import { formatBytesShort, limitState, type LimitKind } from "@/lib/limits/limit
 import { CommandPalette, DesignScope, PageChromeProvider, useDesignScope, type PageChromeValue, type PaletteAction } from "@/design-system/components";
 import type { PaletteGroup } from "@/design-system/logic";
 import { motionPreset, overlayVariants, transitions } from "@/design-system/motion";
+import { AssistantHeaderButton } from "@/components/assistant/AssistantLauncher";
+import { useAssistantUi } from "@/components/assistant/AssistantProvider";
 import { AI_OPEN_EVENT, collapseCrumbs, filterApps, parentCrumbHref, shellBackButton, shortcutModifier, type Crumb } from "@/lib/shell/shell";
 import { showsAppMenu } from "@/lib/shell/appMenu";
 import { UI_UNIFIED_ATTR } from "@/lib/features/uiUnified";
@@ -654,6 +656,8 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
   }, [apps, quickActions, router, t, lotGroup]);
 
   const openAi = () => window.dispatchEvent(new CustomEvent(AI_OPEN_EVENT));
+  // ASSISTANT_V2 (AST-2): the avatar button opens the new panel; with the flag off, the old sparkle button.
+  const assistantV2 = useAssistantUi().active;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[color:var(--erp-bg-main)]">
@@ -711,9 +715,13 @@ export default function NewShell({ children, contentClassName, pageTitle }: { ch
             </div>
             {aiEnabled ? (
               <span className="hidden md:block">
-                <button type="button" className="ds-icon-btn" aria-label={t("newShell.assistant")} onClick={openAi}>
-                  <Sparkles className="h-5 w-5" aria-hidden />
-                </button>
+                {assistantV2 ? (
+                  <AssistantHeaderButton />
+                ) : (
+                  <button type="button" className="ds-icon-btn" aria-label={t("newShell.assistant")} onClick={openAi}>
+                    <Sparkles className="h-5 w-5" aria-hidden />
+                  </button>
+                )}
               </span>
             ) : null}
             <div className="hidden md:block">

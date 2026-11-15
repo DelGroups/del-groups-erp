@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import ERPLayout from "@/components/layout/ERPLayout";
 import CommandPalette from "@/components/layout/CommandPalette";
 import AiAssistantWidget from "@/components/ai/AiAssistantWidget";
+import AssistantPanel from "@/components/assistant/AssistantPanel";
+import { useAssistantUi } from "@/components/assistant/AssistantProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import PermissionGuard from "@/components/auth/PermissionGuard";
 import { SidebarMenuProvider } from "@/components/layout/SidebarContext";
@@ -26,6 +28,8 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
   const aiEnabled = useEnabledModules().isEnabled("ai");
   // The new shell (prompt 16) brings its own palette and mobile menu.
   const { active: newShell } = useNewUi();
+  // ASSISTANT_V2 (AST-2): the new assistant panel replaces the old widget; off by default.
+  const assistantV2 = useAssistantUi().active;
   const requiredPermission =
     permission === undefined ? getRequiredPermission(pathname) : permission;
 
@@ -71,7 +75,7 @@ export default function PageLayout({ children, permission }: PageLayoutProps) {
       </ERPLayout>
 
       {newShell ? null : <CommandPalette />}
-      {aiEnabled ? <AiAssistantWidget /> : null}
+      {aiEnabled ? assistantV2 ? <AssistantPanel floatingFromMd={!newShell} /> : <AiAssistantWidget /> : null}
     </SidebarMenuProvider>
   );
 }
