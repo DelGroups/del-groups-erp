@@ -563,7 +563,7 @@ test("dictation: the site lets its own pages use the microphone, and every error
   assert.equal(dictationErrorKind("bad-grammar"), "other");
   assert.equal(dictationErrorKind(undefined), "other");
   const all = flatten(azMessages);
-  for (const kind of ["mic", "language", "network", "silence", "other"]) {
+  for (const kind of ["mic", "language", "network", "silence", "service", "other"]) {
     const key = dictationErrorKey(kind);
     assert.ok(all[key] && flatten(enMessages)[key] && flatten(ruMessages)[key], key);
   }
@@ -574,4 +574,18 @@ test("the camera barcode scanner may use the camera on our own pages; geolocatio
   const config = read("next.config.ts");
   assert.match(config, /"Permissions-Policy", value: "camera=\(self\), microphone=\(self\), geolocation=\(\)"/);
   assert.match(read("src/components/inventory/CameraBarcodeScanner.tsx"), /html5-qrcode/);
+});
+
+test("dictation never stays on Listening: interim and final words are split, and limits end a silent service", async () => {
+  const { collectResults, DICTATION_TIMEOUTS } = await import("../src/lib/assistant/ui/dictation.ts");
+  const r = (text, isFinal) => Object.assign([{ transcript: text }], { isFinal });
+  assert.deepEqual(collectResults([r("Bu gün ", true), r(" satışlar  necə", false)], 0), { final: "Bu gün", interim: "satışlar necə" });
+  assert.deepEqual(collectResults([r("old", true), r("new", true)], 1), { final: "new", interim: "" }, "only results from resultIndex on");
+  assert.deepEqual(collectResults([], 0), { final: "", interim: "" });
+  assert.ok(DICTATION_TIMEOUTS.noAudioMs < DICTATION_TIMEOUTS.noResultMs && DICTATION_TIMEOUTS.noResultMs < DICTATION_TIMEOUTS.maxMs);
+  const hook = read("src/components/assistant/useDictation.ts");
+  assert.match(hook, /rec\.interimResults = true/);
+  assert.match(hook, /finish\(rec, "service"\)/, "no answer from the service ends with a reason");
+  assert.match(hook, /later\(DICTATION_TIMEOUTS\.stopGraceMs, \(\) => finish\(rec, null\)\)/, "Stop always ends, even without the end event");
+  assert.match(read("src/components/assistant/AssistantComposer.tsx"), /dictation\.interim \|\| t\("assistant\.dictating"\)/);
 });

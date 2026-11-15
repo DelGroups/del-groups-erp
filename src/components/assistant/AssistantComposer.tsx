@@ -129,7 +129,7 @@ export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantCompos
             <span />
           )}
           <span className="ds-assistant-hint" aria-live="polite" data-error={(!dictation.listening && dictation.error) || undefined}>
-            {dictation.listening ? t("assistant.dictating") : dictation.error ? t(dictationErrorKey(dictation.error)) : ""}
+            {dictation.listening ? dictation.interim || t("assistant.dictating") : dictation.error ? t(dictationErrorKey(dictation.error)) : ""}
           </span>
           {streaming ? (
             <Button size="sm" variant="secondary" icon={Square} onClick={onStop}>
