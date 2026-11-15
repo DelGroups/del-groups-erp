@@ -9,6 +9,7 @@ import { assistantBudgetUsd, assistantForcedTier } from "@/lib/assistant/config"
 import { loadTurnContext, type ClientContext, type ContextDb, type TurnContext } from "@/lib/assistant/context";
 import { assistantSystemPrompt, turnPreamble, type AssistantLanguage } from "@/lib/assistant/prompt";
 import { selectSkills, skillById, type SkillId } from "@/lib/assistant/skills";
+import { checkNote, MEMORY_TOOL_NAMES, MEMORY_TOOLS, memoryBlock, type TurnNote } from "@/lib/assistant/memory";
 import type { UserProfile } from "@/types/database.types";
 
 /**
@@ -59,6 +60,8 @@ export interface AssistantTurnInput {
   /** This month's assistant cost so far (read by the server, admin rights). */
   monthSpent: () => Promise<number>;
   onEvent?: (event: AgentEvent) => void;
+  /** The conversation this turn belongs to (evidence of notes the assistant saves). */
+  conversationId?: string | null;
   today?: string;
   client?: Pick<Anthropic, "beta">;
   env?: Readonly<Record<string, string | undefined>>;
@@ -75,10 +78,11 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
     return { ok: false, reason: "budget", message: `Monthly AI budget reached (${spent.toFixed(2)} of ${budget} USD).`, skills, context };
   }
 
-  const tools = toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin);
+  const tools = [...toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin), ...MEMORY_TOOLS];
+  const memory = await loadTurnMemory(input.db, context);
   const route = routeAssistantTurn(input.message, { isAdmin: input.isAdmin, skills, forced: assistantForcedTier(env) });
   const model = resolveTierModels(env)[route.tier];
-  const preamble = turnPreamble({ page: context.page, recordSummary: context.summary });
+  const preamble = [turnPreamble({ page: context.page, recordSummary: context.summary }), memory.text].filter(Boolean).join("\n\n");
   const ctx = { client: input.db, profile: input.profile, enabledModules: input.enabledModules };
 
   const result = await runNativeAgent({
@@ -104,6 +108,7 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
       tools,
       run: async (name, args) => {
         if (!tools.some((t) => t.name === name)) return { content: `Tool not available here: ${name}`, isError: true, links: [] };
+        if (MEMORY_TOOL_NAMES.has(name)) return runMemoryTool(input.db, name, args, input.conversationId ?? null);
         if (GUARD_TOOL_NAMES.has(name)) {
           if (!input.isAdmin) return { content: "Permission denied for this user.", isError: true, links: [] };
           return runGuardAgentTool(input.db as unknown as GuardDb, name, args);
@@ -114,4 +119,51 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
     onEvent: input.onEvent,
   });
   return { ok: true, result, route, skills, context };
+}
+
+/**
+ * The notes for this turn (AST-3): company + this user's own + the record in view they may see, read with the
+ * user's own client through assistant_memory_for_turn, cut to about 2 000 tokens and marked as used. Before
+ * the memory migration is run (or on any error) the turn simply has no notes.
+ */
+export async function loadTurnMemory(db: SupabaseClient, context: TurnContext): Promise<{ text: string; usedIds: string[] }> {
+  try {
+    const { data, error } = await db.rpc("assistant_memory_for_turn" as never, { p_record_type: context.recordType, p_record_id: context.recordId } as never);
+    if (error || !Array.isArray(data)) return { text: "", usedIds: [] };
+    const block = memoryBlock(data as TurnNote[]);
+    if (block.usedIds.length) await db.rpc("assistant_memory_touch" as never, { p_ids: block.usedIds } as never);
+    return block;
+  } catch {
+    return { text: "", usedIds: [] };
+  }
+}
+
+type ToolOut = { content: string; isError: boolean; links: Array<{ label: string; href: string }> };
+
+/** remember / recall, with the user's own client: the database decides what this user may write and read. */
+export async function runMemoryTool(db: SupabaseClient, name: string, args: unknown, conversationId: string | null): Promise<ToolOut> {
+  const input = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+  const fail = (content: string): ToolOut => ({ content, isError: true, links: [] });
+  if (name === "remember") {
+    const check = checkNote(input);
+    if (!check.ok) return fail(check.reason === "forbidden" ? "Not saved: this is a topic that is never remembered." : "Not saved: give scope, a subject (3-120 characters), a body (3-1000) and, for partner or product, its subject_id.");
+    const n = check.note;
+    const { data, error } = await db.rpc("assistant_memory_save" as never, {
+      p_scope: n.scope,
+      p_subject: n.subject,
+      p_body: n.body,
+      p_kind: n.kind,
+      p_subject_id: n.subjectId,
+      p_source: "assistant",
+      p_confidence: 1,
+      p_evidence: conversationId ? { conversation_id: conversationId } : {},
+    } as never);
+    if (error) return fail(/forbidden/.test(error.message) ? "Not saved: this user may not save that note." : "Not saved: " + error.message);
+    return { content: JSON.stringify({ saved: true, id: data }), isError: false, links: [] };
+  }
+  const query = typeof input.query === "string" ? input.query.slice(0, 80) : "";
+  const { data, error } = await db.rpc("assistant_memory_recall" as never, { p_query: query, p_limit: 10 } as never);
+  if (error) return fail("Memory is not available: " + error.message);
+  const rows = (Array.isArray(data) ? data : []) as Array<{ scope: string; kind: string; subject: string; body: string }>;
+  return { content: JSON.stringify(rows.map((r) => ({ scope: r.scope, kind: r.kind, subject: r.subject, body: r.body }))), isError: false, links: [] };
 }

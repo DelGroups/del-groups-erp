@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
             const n = Number(data);
             return Number.isFinite(n) ? n : 0;
           },
+          conversationId,
           onEvent: (event) => send(event),
         });
         if (!turn.ok) {

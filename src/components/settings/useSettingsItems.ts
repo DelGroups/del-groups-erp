@@ -7,6 +7,7 @@ import {
   Barcode,
   Blocks,
   Boxes,
+  Brain,
   Building2,
   CalendarClock,
   ClipboardCheck,
@@ -27,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useAssistantUi } from "@/components/assistant/AssistantProvider";
 import { useNewUi } from "@/components/shell/NewUiProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -40,6 +42,7 @@ const ICONS: Record<string, LucideIcon> = {
   Barcode,
   Blocks,
   Boxes,
+  Brain,
   Building2,
   CalendarClock,
   ClipboardCheck,
@@ -83,6 +86,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
   const { active: newUi, newImports, settingsV2 } = useNewUi();
   const docDateChange = useDocDateChangeFlag();
   const lotTracking = useLotTracking();
+  const assistantV2 = useAssistantUi().active;
   const { t } = useI18n();
   const v2 = newUi && settingsV2;
 
@@ -93,7 +97,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       isAdmin,
       isEnabled: (m) => isEnabled(m as ModuleId | undefined),
       newUi,
-      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports, docDateChange, lotTracking },
+      flags: { barcode: isBarcodeModuleEnabled(), billing: BILLING_PAGE, newImports, docDateChange, lotTracking, assistantV2 },
       v2,
     }).map((item) => ({
       ...item,
@@ -102,7 +106,7 @@ export function useSettingsItems(): { items: SettingsNavItem[]; v2: boolean } {
       groupTitle: groupTitle.get(item.group) ?? "",
       Icon: settingsIcon(item.icon),
     }));
-  }, [can, isAdmin, isEnabled, newUi, newImports, docDateChange, lotTracking, v2, t]);
+  }, [can, isAdmin, isEnabled, newUi, newImports, docDateChange, lotTracking, assistantV2, v2, t]);
 
   return { items, v2 };
 }

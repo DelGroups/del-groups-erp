@@ -150,7 +150,9 @@ export async function generateGuardReport(input: GenerateReportInput): Promise<A
       return { ok: false, reason: "budget", message: `Monthly AI budget reached (${spent.toFixed(2)} of ${budget} USD).` };
     }
 
-    const memory = await input.db.from("guard_agent_memory").select("subject, body").order("updated_at", { ascending: false }).limit(200);
+    // AST-3: the company notes of Del Assistant's memory; the guard's own table until that migration is run.
+    let memory = await input.db.from("assistant_memory").select("subject, body").eq("scope", "company").order("updated_at", { ascending: false }).limit(200);
+    if (memory.error) memory = await input.db.from("guard_agent_memory").select("subject, body").order("updated_at", { ascending: false }).limit(200);
     const memoryRows = memory.error || !Array.isArray(memory.data) ? [] : (memory.data as Array<{ subject: string; body: string }>);
     const { json: context, open } = await buildContext(input.db);
     // The router: the cheap model for light work, the expensive ones only where thinking is needed.

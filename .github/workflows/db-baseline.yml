@@ -297,6 +297,13 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_core.sql | tee "$RUNNER_TEMP/assistant_core.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_core.txt"
 
+      # Del Assistant memory (AST-3): admins read, employees write only about themselves and what they may see,
+      # forbidden topics, the notes of one turn, admin edit/delete audited, guard notes copied once, the cap.
+      - name: Assistant memory checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_memory.sql | tee "$RUNNER_TEMP/assistant_memory.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_memory.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

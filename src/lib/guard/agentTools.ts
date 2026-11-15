@@ -16,7 +16,7 @@ export type AgentToolResult = { content: string; isError: boolean; links: Array<
 /** Tables the agent may read by id, and the columns' worth of data it gets (the row as stored). */
 export const AGENT_READABLE_DOCS = ["sales", "purchases", "journal_entries"] as const;
 /** Functions the agent may call (name → argument names). Everything else is refused. */
-export const AGENT_ALLOWED_RPC = ["get_gl_trial_balance", "get_partner_statement", "guard_memory_save", "guard_set_agent_suggestion"] as const;
+export const AGENT_ALLOWED_RPC = ["get_gl_trial_balance", "get_partner_statement", "assistant_memory_save", "guard_memory_save", "guard_set_agent_suggestion"] as const;
 
 const MAX_CHARS = 24_000;
 const MAX_ROWS = 40;
@@ -188,6 +188,10 @@ export async function runGuardAgentTool(db: GuardDb, name: string, rawInput: unk
         return ok(data);
       }
       case "list_memory": {
+        // AST-3: the company notes of Del Assistant's memory (the guard's notes were copied there); the old
+        // table only until the memory migration is run.
+        const next = await db.from("assistant_memory").select("id, kind, subject, body, source, updated_at").eq("scope", "company").order("updated_at", { ascending: false }).limit(200);
+        if (!next.error) return ok(next.data);
         const { data, error } = await db.from("guard_agent_memory").select("id, kind, subject, body, source, updated_at").order("updated_at", { ascending: false }).limit(200);
         if (error) return fail(error.message);
         return ok(data);
@@ -195,6 +199,17 @@ export async function runGuardAgentTool(db: GuardDb, name: string, rawInput: unk
       case "remember": {
         const kind = ["fact", "pattern", "preference"].includes(text(input.kind, 12)) ? text(input.kind, 12) : "fact";
         const ref = text(input.finding_id, 40);
+        // AST-3: a company note in Del Assistant's memory; the guard's own table only until that migration is run.
+        const saved = await db.rpc("assistant_memory_save", {
+          p_scope: "company",
+          p_subject: text(input.subject, 120),
+          p_body: text(input.body, 1000),
+          p_kind: kind,
+          p_source: "assistant",
+          p_evidence: UUID.test(ref) ? { finding_id: ref } : {},
+        });
+        if (!saved.error) return ok({ saved: true, id: saved.data });
+        if (!/assistant_memory_save|PGRST202|does not exist/i.test(saved.error.message)) return fail(saved.error.message);
         const { data, error } = await db.rpc("guard_memory_save", {
           p_subject: text(input.subject, 120),
           p_body: text(input.body, 2000),
