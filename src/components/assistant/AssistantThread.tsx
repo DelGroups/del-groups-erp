@@ -6,12 +6,15 @@ import { AlertCircle, Check, ChevronRight, Copy, Loader2, RotateCcw, X } from "l
 import { Button, IconButton } from "@/design-system/components";
 import { AiAssistantMarkdown } from "@/components/ai/AiAssistantMarkdown";
 import { canRetry, errorKey, type ThreadMessage } from "@/lib/assistant/ui/thread";
+import { ProposalCard } from "./ProposalCard";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
 export interface AssistantThreadProps {
   messages: ThreadMessage[];
   t: T;
+  /** The ERP language, for money, dates and quantities in proposal cards. */
+  locale?: string;
   onRetry: (assistantId: string) => void;
   onCopy: (text: string) => void;
   /** A link in a reply was followed (phones close the sheet). */
@@ -25,7 +28,7 @@ export interface AssistantThreadProps {
  * text on the panel (no bubble), each with the tools it used ("What I looked at"), internal links,
  * Copy, and an error in plain words with Retry when trying again can help.
  */
-export function AssistantThread({ messages, t, onRetry, onCopy, onNavigate, busy }: AssistantThreadProps) {
+export function AssistantThread({ messages, t, locale = "az", onRetry, onCopy, onNavigate, busy }: AssistantThreadProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const followed = useRef(false);
@@ -110,6 +113,10 @@ export function AssistantThread({ messages, t, onRetry, onCopy, onNavigate, busy
                 <p>{t(errorKey(m.error))}</p>
               </div>
             ) : null}
+
+            {(m.proposals ?? []).map((p) => (
+              <ProposalCard key={p.id} card={p} t={t} locale={locale} onNavigate={onNavigate} />
+            ))}
 
             {m.links.length > 0 ? (
               <div className="ds-assistant-links">

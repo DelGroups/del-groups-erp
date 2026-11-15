@@ -104,7 +104,8 @@ test("the system prompt: rules, language, skills; the per-turn part stays out of
   assert.match(p, /Russian/);
   assert.match(p, /Always reply in the language of the user's latest message/, "any language in, the same language out");
   assert.match(p, /own permissions/);
-  assert.match(p, /cannot create, change, post or delete/);
+  assert.match(p, /You never post, delete, reverse or pay anything/);
+  assert.match(p, /they create the DRAFT themselves/, "AST-4: writes are proposals the user confirms");
   assert.match(p, /- sales:/);
   assert.ok(!/Today is/.test(p), "the date is not in the cached prompt");
   assert.equal(turnPreamble({ page: "/sales", recordSummary: "Sale SS-1" }), "The user is on the page /sales. They are looking at: Sale SS-1.");

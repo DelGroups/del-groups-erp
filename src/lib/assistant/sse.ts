@@ -1,3 +1,5 @@
+import type { ProposalCard } from "@/lib/assistant/proposals";
+
 /**
  * Server-Sent Events of the assistant chat (AST-1): one JSON object per `data:` line. Used by the route to
  * write and by the panel (AST-2) to read, so both sides agree on the shape.
@@ -9,7 +11,9 @@ export type AssistantStreamEvent =
   | { type: "tool_start"; tool: string; summary: string }
   | { type: "tool_end"; tool: string; ok: boolean; links: Array<{ label: string; href: string }> }
   | { type: "done"; reply: string; status: string; links: Array<{ label: string; href: string }>; conversationId: string | null; skills: string[]; tier: string }
-  | { type: "error"; reason: "budget" | "unavailable" | "refused"; message: string };
+  | { type: "error"; reason: "budget" | "unavailable" | "refused"; message: string }
+  /** AST-4: a draft the user confirms in a card (the server keeps its own copy and fingerprint). */
+  | { type: "proposal"; proposal: ProposalCard };
 
 export function encodeSse(event: AssistantStreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;

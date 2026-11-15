@@ -223,6 +223,9 @@ union all
 select 'pending', '20261121110000_assistant_memory: Del Assistant memory, admins only (AST-3)',
        case when to_regclass('public.assistant_memory') is null or to_regprocedure('public.assistant_memory_for_turn(text, uuid, integer)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261121120000_assistant_actions: Del Assistant proposals and drafts (AST-4)',
+       case when to_regclass('public.assistant_proposals') is null or to_regprocedure('public.assistant_proposal_claim(uuid, text, boolean)') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

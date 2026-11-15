@@ -788,3 +788,126 @@ html[data-assistant-dock] body {
   white-space: normal;
   color: var(--ds-danger-strong, var(--ds-danger));
 }
+
+/* ── Proposal cards (AST-4): a draft the user checks and confirms ─────────── */
+[data-ds] .ds-assistant-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-raised);
+}
+[data-ds] .ds-assistant-proposal[data-state="done"] {
+  border-color: var(--ds-success);
+}
+[data-ds] .ds-assistant-proposal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-1) var(--ds-space-2);
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-proposal-head > .font-semibold {
+  white-space: nowrap;
+}
+[data-ds] .ds-assistant-proposal-badge {
+  margin-inline-start: auto;
+  padding: 0 var(--ds-space-2);
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-warning-soft);
+  color: var(--ds-text);
+  font-size: var(--ds-text-xs);
+  white-space: nowrap;
+}
+[data-ds] .ds-assistant-proposal-fields,
+[data-ds] .ds-assistant-proposal-totals {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  gap: var(--ds-space-1) var(--ds-space-3);
+  margin: 0;
+  font-size: var(--ds-text-sm);
+}
+[data-ds] .ds-assistant-proposal-row {
+  display: contents;
+}
+[data-ds] .ds-assistant-proposal-row dt {
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-proposal-row dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+[data-ds] .ds-assistant-proposal-totals {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-assistant-proposal-totals dd {
+  text-align: end;
+}
+[data-ds] .ds-assistant-proposal-lines {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+}
+[data-ds] .ds-assistant-proposal-lines > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--ds-space-3);
+  padding: var(--ds-space-2);
+  font-variant-numeric: tabular-nums;
+}
+[data-ds] .ds-assistant-proposal-lines > li + li {
+  border-block-start: 1px solid var(--ds-border);
+}
+[data-ds] .ds-assistant-proposal-line-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+[data-ds] .ds-assistant-proposal-line-total {
+  text-align: end;
+  white-space: nowrap;
+}
+[data-ds] .ds-assistant-proposal-line-calc {
+  grid-column: 1 / -1;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-assistant-proposal-warn,
+[data-ds] .ds-assistant-proposal-done {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  font-size: var(--ds-text-sm);
+}
+[data-ds] .ds-assistant-proposal-warn {
+  background: var(--ds-warning-soft);
+}
+[data-ds] .ds-assistant-proposal-done {
+  background: var(--ds-success-soft);
+}
+[data-ds] .ds-assistant-proposal-warn svg {
+  margin-block-start: 2px;
+  color: var(--ds-warning);
+}
+[data-ds] .ds-assistant-proposal-done svg {
+  margin-block-start: 2px;
+  color: var(--ds-success);
+}
+[data-ds] .ds-assistant-proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}

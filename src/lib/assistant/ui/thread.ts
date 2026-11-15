@@ -1,5 +1,6 @@
 import { isSafeInternalHref } from "@/lib/ai/links";
 import { parseSse, type AssistantStreamEvent } from "@/lib/assistant/sse";
+import type { ProposalCard } from "@/lib/assistant/proposals";
 
 /**
  * The conversation as the panel shows it (AST-2): messages built from the stream of /api/assistant/chat
@@ -31,6 +32,8 @@ export interface ThreadMessage {
   error?: ErrorReason;
   /** On an assistant message: the question it answers, for Retry. */
   question?: string;
+  /** AST-4: drafts the assistant prepared, for the user to confirm. */
+  proposals?: ProposalCard[];
 }
 
 /** Only internal links (`/sales/…`), never another site (isSafeInternalHref). */
@@ -56,6 +59,8 @@ export function applyStreamEvent(messages: ThreadMessage[], id: string, event: A
   switch (event.type) {
     case "start":
       return messages;
+    case "proposal":
+      return update(messages, id, (m) => ({ ...m, proposals: [...(m.proposals ?? []).filter((p) => p.id !== event.proposal.id), event.proposal] }));
     case "text_delta":
       return update(messages, id, (m) => ({ ...m, content: m.content + event.text }));
     case "tool_start":
