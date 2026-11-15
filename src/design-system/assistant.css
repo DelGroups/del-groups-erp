@@ -783,3 +783,8 @@ html[data-assistant-dock] body {
   overflow: hidden;
   box-shadow: var(--ds-elevation-2);
 }
+/* A dictation error is a full sentence: let it wrap instead of cutting it. */
+[data-ds] .ds-assistant-hint[data-error] {
+  white-space: normal;
+  color: var(--ds-danger-strong, var(--ds-danger));
+}

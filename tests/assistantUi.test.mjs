@@ -546,3 +546,26 @@ test("ui-standard basics in the new UI: no native select, no raw palette, no tin
   assert.match(panel, /@radix-ui\/react-dialog/, "built on the Radix dialog primitive");
   assert.match(panel, /modal=\{layout === "sheet"\}/);
 });
+
+// ─── Dictation ──────────────────────────────────────────────────────────────
+
+test("dictation: the site lets its own pages use the microphone, and every error has a plain-words reason", async () => {
+  const { dictationErrorKind, dictationErrorKey, DICTATION_LANG } = await import("../src/lib/assistant/ui/dictation.ts");
+  // The Permissions-Policy header must not block the mic for our own origin (it did: microphone=()).
+  const config = read("next.config.ts");
+  assert.match(config, /microphone=\(self\)/);
+  assert.ok(!/microphone=\(\)/.test(config), "microphone=() blocks dictation on every page");
+  assert.equal(dictationErrorKind("aborted"), null, "the user stopped it: say nothing");
+  for (const code of ["not-allowed", "service-not-allowed", "audio-capture"]) assert.equal(dictationErrorKind(code), "mic");
+  assert.equal(dictationErrorKind("language-not-supported"), "language");
+  assert.equal(dictationErrorKind("network"), "network");
+  assert.equal(dictationErrorKind("no-speech"), "silence");
+  assert.equal(dictationErrorKind("bad-grammar"), "other");
+  assert.equal(dictationErrorKind(undefined), "other");
+  const all = flatten(azMessages);
+  for (const kind of ["mic", "language", "network", "silence", "other"]) {
+    const key = dictationErrorKey(kind);
+    assert.ok(all[key] && flatten(enMessages)[key] && flatten(ruMessages)[key], key);
+  }
+  assert.deepEqual({ ...DICTATION_LANG }, { az: "az-AZ", en: "en-US", ru: "ru-RU" });
+});
