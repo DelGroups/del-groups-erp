@@ -7423,6 +7423,7 @@ export const azMessages = {
       language: "Brauzer bu dildə nitqi tanımır. Chrome və ya Edge-in son versiyasını sınayın.",
       network: "Səs tanıma xidmətinə qoşulmaq olmadı. İnterneti yoxlayın və yenidən cəhd edin.",
       silence: "Səs eşidilmədi. Mikrofona yaxın danışın və yenidən cəhd edin.",
+      service: "Brauzerin səs tanıma xidməti cavab vermədi. Google Chrome-da sınayın və ya sualı yazın.",
       other: "Səslə yazma alınmadı. Yenidən cəhd edin.",
     },
     you: "Siz",

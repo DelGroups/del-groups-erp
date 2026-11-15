@@ -7424,6 +7424,7 @@ export const enMessages: Messages = {
       language: "Your browser can't recognise speech in this language. Try the latest Chrome or Edge.",
       network: "Couldn't reach the speech service. Check the internet and try again.",
       silence: "No speech was heard. Speak closer to the microphone and try again.",
+      service: "The browser's speech service didn't respond. Try Google Chrome, or type the question.",
       other: "Dictation didn't work. Try again.",
     },
     you: "You",
