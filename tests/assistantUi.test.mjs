@@ -161,6 +161,21 @@ test("the avatar component draws with tokens only, respects reduced motion and n
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
+test("the Orb avatar: colours from one token per state, motion only where avatarMotion allows it", () => {
+  const src = read("src/components/assistant/AssistantAvatar.tsx");
+  assert.match(src, /"--av-tone" as string\]: TONE_TOKEN\[avatarTone\(state\)\]/, "the state picks the token");
+  assert.match(src, /useId\(\)\.replace\(\/\[\^a-zA-Z0-9\]\/g, ""\)/, "gradient ids are safe inside url(#…)");
+  for (const flag of ["breathe", "bounce", "orbit", "pulse", "shake", "hop", "lookDown"]) assert.match(src, new RegExp(`on\\(plan\\.${flag}\\)`), flag);
+  assert.match(src, /key=\{state\}/, "one-off motions replay on every state change");
+  const css = read("src/design-system/assistant.css");
+  // Every looping or one-off animation of the avatar is gated by a data flag the plan sets.
+  for (const m of css.matchAll(/([^\n{}]*)\{\s*animation: ds-av-/g)) {
+    assert.match(m[1], /\.ds-assistant-avatar\[data-(float|bounce|orbit|pulse|shake|hop)\]/, `ungated animation: ${m[1].trim()}`);
+  }
+  assert.match(css, /--av-tone: var\(--ds-brand\)/);
+  assert.match(css, /@supports \(color: oklch\(from red l c h\)\)/, "a fallback for browsers without relative colours");
+});
+
 // ─── Panel ──────────────────────────────────────────────────────────────────
 
 test("open, close, toggle and the history view", () => {

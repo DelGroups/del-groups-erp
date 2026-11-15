@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   avatarLabelKey,
@@ -24,21 +24,19 @@ export interface AssistantAvatarProps {
   className?: string;
 }
 
-const EASE = [0.65, 0, 0.35, 1] as const;
-
 /**
- * Del Assistant's face (AST-2, plan section 6): a soft rounded body with two eyes and a small spark, drawn
- * in SVG with design tokens only, so it follows the light and dark themes and the tenant's brand colour.
- * Every state has its own small motion; with "reduce motion" nothing moves and only the colour and the
- * eyes change (A11Y-5).
+ * Del Assistant's face, "Orb" (chosen by Del, 2026-11-15): a glossy sphere with big eyes, catchlights and
+ * soft cheeks. Its colours are mixed from one design token per state (brand, warning, danger, success,
+ * muted), so it follows light and dark themes and the tenant's brand colour. Motion lives in
+ * src/design-system/assistant.css and runs only for what avatarMotion() allows; with "reduce motion"
+ * nothing moves and only the colour and the eyes change (A11Y-5).
  */
 export function AssistantAvatar({ state, size = 40, decorative = false, reducedMotion, className }: AssistantAvatarProps) {
   const { t } = useI18n();
   const osReduced = useReducedMotion();
   const reduced = reducedMotion ?? osReduced ?? false;
   const plan = avatarMotion(state, reduced);
-  const tone = TONE_TOKEN[avatarTone(state)];
-  const glowId = useId();
+  const uid = `av${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const [blinking, setBlinking] = useState(false);
 
   // Blinks at random every 4–7 s while the state allows it.
@@ -64,118 +62,97 @@ export function AssistantAvatar({ state, size = 40, decorative = false, reducedM
   }, [plan.blink]);
 
   const label = t(avatarLabelKey(state));
-  const look = plan.lookDown ? { x: -1.5, y: 2 } : { x: 0, y: 0 };
-  const eyesClosed = plan.eyes === "closed" || (blinking && plan.eyes === "open");
-
-  // One motion for the whole body: entering a state can shake or hop once; loops breathe or bounce.
-  const bodyAnimate = plan.shake
-    ? { x: [0, -3, 3, -2, 2, 0], y: 0, scale: 1 }
-    : plan.hop
-      ? { y: [0, -5, 0], x: 0, scale: 1 }
-      : plan.bounce
-        ? { y: [0, -1.6, 0], x: 0, scale: 1 }
-        : plan.breathe
-          ? { scale: [1, 1.03, 1], x: 0, y: 0 }
-          : { x: 0, y: 0, scale: 1 };
-  const bodyTransition = plan.shake
-    ? { duration: 0.3, ease: "easeInOut" as const }
-    : plan.hop
-      ? { duration: 0.42, ease: EASE }
-      : plan.bounce
-        ? { duration: 0.5, ease: "easeInOut" as const, repeat: Infinity }
-        : plan.breathe
-          ? { duration: state === "sleeping" ? 4.8 : 3.4, ease: "easeInOut" as const, repeat: Infinity }
-          : { duration: 0.2 };
+  const on = (v: boolean) => (v ? "" : undefined);
 
   return (
     <svg
-      viewBox="0 0 64 64"
+      viewBox="0 0 100 100"
       width={size}
       height={size}
       className={["ds-assistant-avatar", className].filter(Boolean).join(" ")}
+      style={{ ["--av-tone" as string]: TONE_TOKEN[avatarTone(state)] }}
       data-state={state}
       data-size={size}
+      data-float={on(plan.breathe)}
+      data-bounce={on(plan.bounce)}
+      data-orbit={on(plan.orbit)}
+      data-pulse={on(plan.pulse)}
+      data-shake={on(plan.shake)}
+      data-hop={on(plan.hop)}
+      data-look={on(plan.lookDown)}
+      data-blink={on(blinking && plan.eyes === "open")}
       {...(decorative ? { "aria-hidden": true, focusable: false } : { role: "img", "aria-label": label })}
     >
       {decorative ? null : <title>{label}</title>}
       <defs>
-        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
-          <stop offset="60%" stopColor={tone} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={tone} stopOpacity="0" />
+        <radialGradient id={`${uid}b`} cx="38%" cy="32%" r="72%">
+          <stop offset="0" style={{ stopColor: "var(--av-c1)" }} />
+          <stop offset=".55" style={{ stopColor: "var(--av-c2)" }} />
+          <stop offset="1" style={{ stopColor: "var(--av-c3)" }} />
         </radialGradient>
+        <radialGradient id={`${uid}r`} cx="50%" cy="50%" r="50%">
+          <stop offset=".78" style={{ stopColor: "var(--ds-brand-fg)", stopOpacity: 0 }} />
+          <stop offset="1" style={{ stopColor: "var(--ds-brand-fg)", stopOpacity: 0.35 }} />
+        </radialGradient>
+        <radialGradient id={`${uid}a`} cx="50%" cy="50%" r="50%">
+          <stop offset=".55" style={{ stopColor: "var(--av-tone)", stopOpacity: 0.45 }} />
+          <stop offset="1" style={{ stopColor: "var(--av-tone)", stopOpacity: 0 }} />
+        </radialGradient>
+        <filter id={`${uid}f`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
       </defs>
 
-      {/* Attention: a soft glow ring that pulses (static and faint with reduced motion). */}
-      {state === "attention" ? (
-        <motion.circle
-          cx="32"
-          cy="34"
-          r="30"
-          fill={`url(#${glowId})`}
-          initial={false}
-          animate={plan.pulse ? { opacity: [0.9, 0.2, 0.9], scale: [0.92, 1.04, 0.92] } : { opacity: 0.6, scale: 1 }}
-          transition={plan.pulse ? { duration: 1.6, ease: "easeInOut", repeat: Infinity } : { duration: 0 }}
-          style={{ transformOrigin: "32px 34px" }}
-        />
-      ) : null}
+      {/* Warning: a soft aura that pulses (still, with reduced motion). */}
+      {state === "attention" ? <circle className="ds-av-aura" cx="50" cy="50" r="49" fill={`url(#${uid}a)`} /> : null}
+      <ellipse className="ds-av-shadow" cx="50" cy="94" rx="24" ry="3.2" />
 
-      <motion.g
-        key={plan.shake || plan.hop ? state : "loop"}
-        initial={false}
-        animate={bodyAnimate}
-        transition={bodyTransition}
-        style={{ transformOrigin: "32px 56px" }}
-      >
-        {/* Body: a soft rounded pebble in the tone of the state. */}
-        <rect x="9" y="12" width="46" height="44" rx="20" className="ds-assistant-avatar-body" style={{ fill: tone }} />
-        {/* A quiet highlight so the shape reads as a body, not a button. */}
-        <path d="M19 22 Q24 16 32 16" fill="none" stroke="var(--ds-brand-fg)" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" />
+      {/* Keyed by state, so the one-off motions (shake, hop) play again on every change. */}
+      <g key={state} className="ds-av-body">
+        <circle cx="50" cy="50" r="38" fill={`url(#${uid}b)`} />
+        <circle cx="50" cy="50" r="38" fill={`url(#${uid}r)`} />
+        <ellipse cx="37" cy="30" rx="14" ry="8" className="ds-av-gloss" filter={`url(#${uid}f)`} />
+        <circle cx="31" cy="27" r="2.2" className="ds-av-spark" />
 
-        {/* Eyes */}
-        <motion.g initial={false} animate={look} transition={{ duration: 0.24, ease: EASE }}>
+        <g className="ds-av-eyes">
           {plan.eyes === "arcs" ? (
-            <g fill="none" stroke="var(--ds-brand-fg)" strokeWidth="3.2" strokeLinecap="round">
-              <path d="M21.5 35 Q25 30 28.5 35" />
-              <path d="M35.5 35 Q39 30 42.5 35" />
+            <g className="ds-av-stroke" strokeWidth="3.4">
+              <path d="M33.5 53 Q39 45 44.5 53" />
+              <path d="M55.5 53 Q61 45 66.5 53" />
             </g>
-          ) : eyesClosed ? (
-            <g fill="none" stroke="var(--ds-brand-fg)" strokeWidth="3" strokeLinecap="round">
-              <path d="M21.5 34 H28.5" />
-              <path d="M35.5 34 H42.5" />
+          ) : plan.eyes === "closed" ? (
+            <g className="ds-av-stroke" strokeWidth="3">
+              <path d="M33.5 52 Q39 56 44.5 52" />
+              <path d="M55.5 52 Q61 56 66.5 52" />
             </g>
           ) : (
-            <g fill="var(--ds-brand-fg)">
-              <rect x="22.5" y="28" width="5" height="10" rx="2.5" />
-              <rect x="36.5" y="28" width="5" height="10" rx="2.5" />
-            </g>
+            <>
+              <g className="ds-av-eye">
+                <ellipse cx="39" cy="51" rx="5.6" ry="8.2" className="ds-av-pupil" />
+                <circle cx="41" cy="47.5" r="2.1" className="ds-av-spark" />
+                <circle cx="37.6" cy="54.5" r=".9" className="ds-av-spark" opacity=".7" />
+              </g>
+              <g className="ds-av-eye">
+                <ellipse cx="61" cy="51" rx="5.6" ry="8.2" className="ds-av-pupil" />
+                <circle cx="63" cy="47.5" r="2.1" className="ds-av-spark" />
+                <circle cx="59.6" cy="54.5" r=".9" className="ds-av-spark" opacity=".7" />
+              </g>
+            </>
           )}
-        </motion.g>
-      </motion.g>
+          {state === "sleeping" ? null : <ellipse className="ds-av-mouth" cx="50" cy="63.5" rx="3.4" ry="2" />}
+        </g>
+        {state === "sleeping" || state === "alert" ? null : (
+          <>
+            <ellipse className="ds-av-cheek" cx="30" cy="61" rx="5" ry="3" />
+            <ellipse className="ds-av-cheek" cx="70" cy="61" rx="5" ry="3" />
+          </>
+        )}
+      </g>
 
-      {/* The spark: Del Assistant's mark, top right; it grows a little when a reply is done. */}
-      <motion.path
-        d="M52 3 Q53.2 8.8 59 10 Q53.2 11.2 52 17 Q50.8 11.2 45 10 Q50.8 8.8 52 3 Z"
-        style={{ fill: tone, transformOrigin: "52px 10px" }}
-        className="ds-assistant-avatar-spark"
-        initial={false}
-        animate={plan.hop ? { scale: [1, 1.35, 1], rotate: [0, 20, 0] } : { scale: state === "sleeping" ? 0.7 : 1, rotate: 0 }}
-        transition={plan.hop ? { duration: 0.5, ease: EASE } : { duration: 0.2 }}
-      />
-
-      {/* Thinking: three dots orbit the body (standing still with reduced motion). */}
-      {state === "thinking" ? (
-        <motion.g
-          initial={false}
-          animate={plan.orbit ? { rotate: 360 } : { rotate: 0 }}
-          transition={plan.orbit ? { duration: 1.6, ease: "linear", repeat: Infinity } : { duration: 0 }}
-          style={{ transformOrigin: "32px 34px" }}
-        >
-          {[0, 120, 240].map((deg, i) => {
-            const rad = ((deg - 90) * Math.PI) / 180;
-            return <circle key={deg} cx={32 + 27 * Math.cos(rad)} cy={34 + 27 * Math.sin(rad)} r={2.6 - i * 0.5} style={{ fill: tone }} />;
-          })}
-        </motion.g>
-      ) : null}
+      {/* Thinking: a dotted ring turns around the orb (standing still with reduced motion). */}
+      {state === "thinking" ? <circle className="ds-av-ring" cx="50" cy="50" r="46" /> : null}
+      {/* Done: a short burst of light. */}
+      {state === "success" && plan.hop ? <path className="ds-av-burst" d="M50 4v6M50 90v6M4 50h6M90 50h6M17 17l4 4M79 79l4 4M83 17l-4 4M21 79l-4 4" /> : null}
     </svg>
   );
 }
