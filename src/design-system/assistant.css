@@ -10,14 +10,178 @@ html[data-assistant-dock] body {
 }
 
 /* ── Avatar ─────────────────────────────────────────────────────────────── */
+/* "Orb" (Del's choice, 2026-11-15). One token per state (--av-tone, set by the component) gives the light
+   top, the body and the shaded edge; the eyes are the tone in deep shade, so they stay dark on both themes. */
 [data-ds] .ds-assistant-avatar {
+  --av-tone: var(--ds-brand);
+  --av-c1: color-mix(in oklch, var(--av-tone) 40%, white);
+  --av-c2: color-mix(in oklch, var(--av-tone) 72%, white);
+  --av-c3: color-mix(in oklab, var(--av-tone) 70%, black);
+}
+/* Browsers with relative colours: lighter but just as saturated, so a deep brand colour still glows. */
+@supports (color: oklch(from red l c h)) {
+  [data-ds] .ds-assistant-avatar {
+    --av-c1: oklch(from var(--av-tone) calc(l + 0.32) calc(c * 0.9) h);
+    --av-c2: oklch(from var(--av-tone) calc(l + 0.16) calc(c * 1.3) h);
+    --av-c3: oklch(from var(--av-tone) calc(l - 0.08) c h);
+  }
+}
+[data-ds] .ds-assistant-avatar {
+  --av-eye: color-mix(in oklab, var(--av-tone) 18%, black);
   display: block;
   flex-shrink: 0;
   overflow: visible;
 }
-[data-ds] .ds-assistant-avatar-body,
-[data-ds] .ds-assistant-avatar-spark {
-  transition: fill var(--ds-duration-base) var(--ds-ease-out);
+[data-ds] .ds-assistant-avatar stop {
+  transition: stop-color var(--ds-duration-slow) var(--ds-ease-out);
+}
+[data-ds] .ds-av-shadow {
+  fill: var(--ds-text);
+  opacity: 0.16;
+  transform-origin: 50px 94px;
+}
+[data-ds] .ds-av-gloss {
+  fill: var(--ds-brand-fg);
+  opacity: 0.6;
+}
+[data-ds] .ds-av-spark {
+  fill: var(--ds-brand-fg);
+}
+[data-ds] .ds-av-pupil,
+[data-ds] .ds-av-mouth {
+  fill: var(--av-eye);
+}
+[data-ds] .ds-av-mouth {
+  opacity: 0.85;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-ds] .ds-av-stroke {
+  fill: none;
+  stroke: var(--av-eye);
+  stroke-linecap: round;
+}
+[data-ds] .ds-av-cheek {
+  fill: color-mix(in oklab, var(--ds-danger-strong, var(--ds-danger)) 45%, white);
+  opacity: 0.4;
+}
+[data-ds] .ds-av-body {
+  transform-origin: 50px 50px;
+}
+[data-ds] .ds-av-eyes {
+  transition: transform var(--ds-duration-slow) var(--ds-ease-out);
+}
+[data-ds] .ds-av-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 80ms ease;
+}
+[data-ds] .ds-assistant-avatar[data-blink] .ds-av-eye {
+  transform: scaleY(0.1);
+}
+[data-ds] .ds-assistant-avatar[data-look] .ds-av-eyes {
+  transform: translate(-3px, 4px);
+}
+[data-ds] .ds-assistant-avatar[data-state="thinking"] .ds-av-eyes {
+  transform: translate(4px, -5px);
+}
+[data-ds] .ds-av-aura {
+  opacity: 0.6;
+  transform-origin: 50px 50px;
+}
+[data-ds] .ds-av-ring {
+  fill: none;
+  stroke: var(--av-c2);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 9;
+  transform-origin: 50px 50px;
+}
+[data-ds] .ds-av-burst {
+  fill: none;
+  stroke: var(--av-c2);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  opacity: 0;
+  transform-origin: 50px 50px;
+}
+
+/* Motion: only what avatarMotion() switched on (none with reduced motion). */
+[data-ds] .ds-assistant-avatar[data-float] .ds-av-body {
+  animation: ds-av-float 3.6s ease-in-out infinite;
+}
+[data-ds] .ds-assistant-avatar[data-float] .ds-av-shadow {
+  animation: ds-av-shadow 3.6s ease-in-out infinite;
+}
+[data-ds] .ds-assistant-avatar[data-state="sleeping"][data-float] .ds-av-body {
+  animation-duration: 6s;
+}
+[data-ds] .ds-assistant-avatar[data-bounce] .ds-av-body {
+  animation: ds-av-bob 0.5s ease-in-out infinite;
+}
+[data-ds] .ds-assistant-avatar[data-bounce] .ds-av-mouth {
+  animation: ds-av-talk 0.32s ease-in-out infinite alternate;
+}
+[data-ds] .ds-assistant-avatar[data-orbit] .ds-av-ring {
+  animation: ds-av-spin 1.4s linear infinite;
+}
+[data-ds] .ds-assistant-avatar[data-pulse] .ds-av-aura {
+  animation: ds-av-aura 1.6s ease-in-out infinite;
+}
+[data-ds] .ds-assistant-avatar[data-shake] .ds-av-body {
+  animation: ds-av-shake 0.3s ease 1;
+}
+[data-ds] .ds-assistant-avatar[data-hop] .ds-av-body {
+  animation: ds-av-hop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) 1;
+}
+[data-ds] .ds-assistant-avatar[data-hop] .ds-av-burst {
+  animation: ds-av-burst 0.8s ease-out 1;
+}
+@keyframes ds-av-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px) scale(1.015); }
+}
+@keyframes ds-av-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.16; }
+  50% { transform: scaleX(0.86); opacity: 0.1; }
+}
+@keyframes ds-av-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+@keyframes ds-av-talk {
+  from { transform: scale(1, 0.4); }
+  to { transform: scale(1.15, 1.25); }
+}
+@keyframes ds-av-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ds-av-aura {
+  0%, 100% { opacity: 0.35; transform: scale(0.94); }
+  50% { opacity: 0.9; transform: scale(1.08); }
+}
+@keyframes ds-av-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes ds-av-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-9px) scale(1.03); }
+  70% { transform: translateY(1px) scale(1.01, 0.98); }
+}
+@keyframes ds-av-burst {
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-ds] .ds-assistant-avatar * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ── Launchers ──────────────────────────────────────────────────────────── */
