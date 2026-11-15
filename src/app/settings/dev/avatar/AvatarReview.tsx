@@ -13,7 +13,7 @@ import { AVATAR_SIZES, AVATAR_STATES, avatarLabelKey } from "@/lib/assistant/ui/
 import type { ThreadMessage } from "@/lib/assistant/ui/thread";
 
 /** The review page of the avatar and the panel (AST-2); sample content only, nothing is sent anywhere. */
-export default function AvatarReview({ fontClassName, theme }: { fontClassName?: string; theme?: "light" | "dark" }) {
+export default function AvatarReview({ fontClassName, theme, voiceServer = false }: { fontClassName?: string; theme?: "light" | "dark"; voiceServer?: boolean }) {
   const { theme: appTheme } = useTheme();
   const { t, locale } = useI18n();
   const scopeTheme = theme ?? (appTheme === "daylight" ? "light" : "dark");
@@ -69,6 +69,7 @@ export default function AvatarReview({ fontClassName, theme }: { fontClassName?:
       suggestions={chips ? suggestions.filter((s) => s.id === "salesToday" || s.id === "financeSummary") : []}
       onSuggestion={noop}
       onFocusChange={noop}
+      voiceServer={voiceServer}
     />
   );
 

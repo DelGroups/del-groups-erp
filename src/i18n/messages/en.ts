@@ -7419,6 +7419,8 @@ export const enMessages: Messages = {
     dictate: "Dictate",
     stopDictation: "Stop dictation",
     dictating: "Listening… speak now.",
+    recording: "Recording… press stop when you finish.",
+    transcribing: "Turning your voice into text…",
     dictationErrors: {
       mic: "The microphone is blocked. Allow it from the lock icon in the address bar and try again.",
       language: "Your browser can't recognise speech in this language. Try the latest Chrome or Edge.",

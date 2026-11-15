@@ -7418,6 +7418,8 @@ export const azMessages = {
     dictate: "Səslə yaz",
     stopDictation: "Səslə yazmanı dayandır",
     dictating: "Dinləyirəm… danışın.",
+    recording: "Səs yazılır… bitirəndə dayandır düyməsini basın.",
+    transcribing: "Səs mətnə çevrilir…",
     dictationErrors: {
       mic: "Mikrofona icazə yoxdur. Ünvan sətrindəki kilid nişanından mikrofona icazə verin və yenidən cəhd edin.",
       language: "Brauzer bu dildə nitqi tanımır. Chrome və ya Edge-in son versiyasını sınayın.",

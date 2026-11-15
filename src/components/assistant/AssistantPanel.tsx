@@ -82,6 +82,9 @@ function PanelBody() {
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState("");
   const [contextOffFor, setContextOffFor] = useState<string | null>(null);
+  // Voice notes transcribed on the server (OPENAI_TRANSCRIBE_API_KEY); asked once, when the panel first opens.
+  const [voiceServer, setVoiceServer] = useState(false);
+  const voiceAsked = useRef(false);
   const storedWidth = useMemo(() => (user ? readPanelWidth(safeStorage(), user.id) : clampPanelWidth(NaN)), [user]);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const width = dragWidth ?? storedWidth;
@@ -129,6 +132,15 @@ function PanelBody() {
     }
     return () => root.removeAttribute(DOCK_ATTR);
   }, [open, layout, width]);
+
+  useEffect(() => {
+    if (!open || voiceAsked.current) return;
+    voiceAsked.current = true;
+    fetch("/api/assistant/transcribe", { credentials: "same-origin" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ enabled?: boolean }>) : { enabled: false }))
+      .then((b) => setVoiceServer(b.enabled === true))
+      .catch(() => setVoiceServer(false));
+  }, [open]);
 
   const send = useCallback(
     (text: string) => {
@@ -309,6 +321,7 @@ function PanelBody() {
                 suggestions={chipSuggestions}
                 onSuggestion={send}
                 onFocusChange={(focused) => dispatchAvatar({ type: focused ? "focus" : "blur" })}
+                voiceServer={voiceServer}
               />
             </>
           )}

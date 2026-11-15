@@ -587,5 +587,43 @@ test("dictation never stays on Listening: interim and final words are split, and
   assert.match(hook, /rec\.interimResults = true/);
   assert.match(hook, /finish\(rec, "service"\)/, "no answer from the service ends with a reason");
   assert.match(hook, /later\(DICTATION_TIMEOUTS\.stopGraceMs, \(\) => finish\(rec, null\)\)/, "Stop always ends, even without the end event");
-  assert.match(read("src/components/assistant/AssistantComposer.tsx"), /dictation\.interim \|\| t\("assistant\.dictating"\)/);
+  assert.match(read("src/components/assistant/AssistantComposer.tsx"), /dictation\.interim \|\| t\(voiceServer \? "assistant\.recording" : "assistant\.dictating"\)/);
+});
+
+// ─── Voice notes transcribed on the server ─────────────────────────────────
+
+test("transcription: own key, safe limits, language hint, clean text", async () => {
+  const t = await import("../src/lib/assistant/transcribe.ts");
+  assert.deepEqual(t.transcribeConfig({}), { enabled: false });
+  assert.deepEqual(t.transcribeConfig({ OPENAI_API_KEY: "k" }), { enabled: false }, "the general OpenAI key does not switch it on (it would move the old chat to OpenAI)");
+  assert.deepEqual(t.transcribeConfig({ OPENAI_TRANSCRIBE_API_KEY: " 'k' " }), { enabled: true, apiKey: "k", model: "gpt-4o-mini-transcribe" });
+  assert.equal(t.transcribeConfig({ OPENAI_TRANSCRIBE_API_KEY: "k", ASSISTANT_TRANSCRIBE_MODEL: "whisper-1" }).model, "whisper-1");
+  assert.equal(t.audioType("audio/webm;codecs=opus"), "audio/webm");
+  assert.equal(t.audioType("video/webm"), null);
+  assert.equal(t.audioFileName("audio/mp4"), "voice.mp4");
+  assert.deepEqual(t.checkAudio({ size: 10, type: "audio/webm" }), { ok: false, status: 400, reason: "empty" });
+  assert.deepEqual(t.checkAudio({ size: t.MAX_AUDIO_BYTES + 1, type: "audio/webm" }), { ok: false, status: 413, reason: "too_large" });
+  assert.deepEqual(t.checkAudio({ size: 5000, type: "text/plain" }), { ok: false, status: 415, reason: "type" });
+  assert.deepEqual(t.checkAudio({ size: 5000, type: "audio/ogg;codecs=opus" }), { ok: true, type: "audio/ogg" });
+  assert.equal(t.transcribeLanguage("ru"), "ru");
+  assert.equal(t.transcribeLanguage("fa"), "az");
+  assert.equal(t.cleanTranscript("  Bu gün\n satışlar  "), "Bu gün satışlar");
+  assert.equal(t.cleanTranscript(null), "");
+});
+
+test("transcription route: gated like the assistant, rate-limited, never stores or echoes the audio", () => {
+  const route = read("src/app/api/assistant/transcribe/route.ts");
+  assert.match(route, /assistantHistoryGate\(\)/, "signed in, AI module, ASSISTANT_V2 and its audience");
+  assert.match(route, /rateLimit\(`assistant-transcribe:/);
+  assert.match(route, /checkAudio\(/);
+  assert.match(route, /https:\/\/api\.openai\.com\/v1\/audio\/transcriptions/);
+  assert.match(route, /redirect: "error"/);
+  assert.match(route, /AbortSignal\.timeout\(/);
+  assert.ok(!/from\("|\.insert\(|\.storage\./.test(route), "nothing is stored");
+  assert.ok(!/console\.\w+\([^)]*apiKey/.test(route), "the key is never logged");
+  const composer = read("src/components/assistant/AssistantComposer.tsx");
+  assert.match(composer, /voiceServer && voiceNote\.supported \? voiceNote : browserDictation/);
+  const note = read("src/components/assistant/useVoiceNote.ts");
+  assert.match(note, /MAX_RECORDING_MS/);
+  assert.match(note, /getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/, "the mic is released after each note");
 });
