@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import { audioFileName, checkAudio, cleanTranscript, transcribeConfig, transcribeLanguage } from "@/lib/assistant/transcribe";
+import { audioFileName, checkAudio, cleanTranscript, TRANSCRIBE_PROMPT, transcribeConfig } from "@/lib/assistant/transcribe";
 import { assistantHistoryGate } from "../conversations/gate";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
   const upstream = new FormData();
   upstream.set("file", new File([audio], audioFileName(check.type), { type: check.type }));
   upstream.set("model", config.model);
-  upstream.set("language", transcribeLanguage(form.get("locale")));
+  // No language parameter: the model detects the spoken language (any language in, the same language out).
+  upstream.set("prompt", TRANSCRIBE_PROMPT);
   upstream.set("response_format", "json");
 
   try {

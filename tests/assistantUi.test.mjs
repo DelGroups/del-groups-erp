@@ -605,14 +605,17 @@ test("transcription: own key, safe limits, language hint, clean text", async () 
   assert.deepEqual(t.checkAudio({ size: t.MAX_AUDIO_BYTES + 1, type: "audio/webm" }), { ok: false, status: 413, reason: "too_large" });
   assert.deepEqual(t.checkAudio({ size: 5000, type: "text/plain" }), { ok: false, status: 415, reason: "type" });
   assert.deepEqual(t.checkAudio({ size: 5000, type: "audio/ogg;codecs=opus" }), { ok: true, type: "audio/ogg" });
-  assert.equal(t.transcribeLanguage("ru"), "ru");
-  assert.equal(t.transcribeLanguage("fa"), "az");
+  assert.match(t.TRANSCRIBE_PROMPT, /Azerbaijani, Russian, English, Persian or Turkish/);
+  assert.match(t.TRANSCRIBE_PROMPT, /do not translate/);
   assert.equal(t.cleanTranscript("  Bu gün\n satışlar  "), "Bu gün satışlar");
   assert.equal(t.cleanTranscript(null), "");
 });
 
 test("transcription route: gated like the assistant, rate-limited, never stores or echoes the audio", () => {
   const route = read("src/app/api/assistant/transcribe/route.ts");
+  assert.ok(!route.includes('upstream.set("language"'), "no fixed language: the spoken language is detected");
+  assert.ok(route.includes('upstream.set("prompt", TRANSCRIBE_PROMPT)'));
+  for (const f of ["AssistantThread.tsx", "AssistantComposer.tsx"]) assert.match(read(`src/components/assistant/${f}`), /dir="auto"/, `${f}: Persian reads right to left`);
   assert.match(route, /assistantHistoryGate\(\)/, "signed in, AI module, ASSISTANT_V2 and its audience");
   assert.match(route, /rateLimit\(`assistant-transcribe:/);
   assert.match(route, /checkAudio\(/);

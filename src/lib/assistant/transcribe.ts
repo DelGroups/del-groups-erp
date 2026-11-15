@@ -53,10 +53,14 @@ export function checkAudio(input: { size: number; type: string | null | undefine
   return type ? { ok: true, type } : { ok: false, status: 415, reason: "type" };
 }
 
-/** The ERP language as the language hint of the transcription (better accuracy for short notes). */
-export function transcribeLanguage(locale: unknown): "az" | "en" | "ru" {
-  return locale === "en" || locale === "ru" ? locale : "az";
-}
+/**
+ * No fixed language: people ask in Azerbaijani, Russian, English, Persian or Turkish, and the note is written
+ * down in the language that was spoken (Del, 2026-11-15). This hint only tells the model which languages to
+ * expect, so short Azerbaijani notes are not mistaken for Turkish; it never translates.
+ */
+export const TRANSCRIBE_PROMPT =
+  "The speaker uses an ERP (sales, stock, invoices, customers) and may speak Azerbaijani, Russian, English, Persian or Turkish. " +
+  "Write down exactly what is said, in the language and script that is spoken; do not translate.";
 
 /** One line of plain text for the message box. */
 export function cleanTranscript(text: unknown): string {

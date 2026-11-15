@@ -104,6 +104,7 @@ export const AssistantComposer = forwardRef<HTMLTextAreaElement, AssistantCompos
         </label>
         <textarea
           id="ds-assistant-textarea"
+          dir="auto"
           ref={setRefs}
           value={value}
           rows={1}
