@@ -302,6 +302,7 @@ function PanelBody() {
                   <AssistantThread
                     messages={chat.messages}
                     t={t}
+                    locale={locale}
                     busy={chat.streaming}
                     onRetry={(id) => chat.retry(id, sentContext)}
                     onCopy={(text) => void copy(text)}

@@ -304,6 +304,13 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_memory.sql | tee "$RUNNER_TEMP/assistant_memory.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_memory.txt"
 
+      # Del Assistant proposals (AST-4): own proposals only, claim once with the same fingerprint and permission,
+      # second confirm above the limit, expiry, audit line via the assistant.
+      - name: Assistant proposals checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_actions.sql | tee "$RUNNER_TEMP/assistant_actions.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_actions.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

@@ -10,6 +10,9 @@ import { loadTurnContext, type ClientContext, type ContextDb, type TurnContext }
 import { assistantSystemPrompt, turnPreamble, type AssistantLanguage } from "@/lib/assistant/prompt";
 import { selectSkills, skillById, type SkillId } from "@/lib/assistant/skills";
 import { checkNote, MEMORY_TOOL_NAMES, MEMORY_TOOLS, memoryBlock, type TurnNote } from "@/lib/assistant/memory";
+import { PROPOSAL_TOOL_NAMES, proposalToolsFor, type ProposalCard } from "@/lib/assistant/proposals";
+import { runProposalTool } from "@/lib/assistant/proposeServer";
+import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import type { UserProfile } from "@/types/database.types";
 
 /**
@@ -60,6 +63,11 @@ export interface AssistantTurnInput {
   /** This month's assistant cost so far (read by the server, admin rights). */
   monthSpent: () => Promise<number>;
   onEvent?: (event: AgentEvent) => void;
+  /**
+   * AST-4: proposals (drafts the user confirms). The server client stores them; the card goes to onProposal.
+   * Left out, the turn offers no proposal tools.
+   */
+  proposals?: { admin: SupabaseClient; userId: string; confirmLimit: number; onProposal: (card: ProposalCard) => void };
   /** The conversation this turn belongs to (evidence of notes the assistant saves). */
   conversationId?: string | null;
   today?: string;
@@ -78,7 +86,9 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
     return { ok: false, reason: "budget", message: `Monthly AI budget reached (${spent.toFixed(2)} of ${budget} USD).`, skills, context };
   }
 
-  const tools = [...toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin), ...MEMORY_TOOLS];
+  const can = (permission: string) => input.isAdmin || userHasLegacyPermission(input.profile, permission as never);
+  const proposalTools = input.proposals ? proposalToolsFor(can) : [];
+  const tools = [...toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin), ...MEMORY_TOOLS, ...proposalTools];
   const memory = await loadTurnMemory(input.db, context);
   const route = routeAssistantTurn(input.message, { isAdmin: input.isAdmin, skills, forced: assistantForcedTier(env) });
   const model = resolveTierModels(env)[route.tier];
@@ -109,6 +119,18 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
       run: async (name, args) => {
         if (!tools.some((t) => t.name === name)) return { content: `Tool not available here: ${name}`, isError: true, links: [] };
         if (MEMORY_TOOL_NAMES.has(name)) return runMemoryTool(input.db, name, args, input.conversationId ?? null);
+        if (PROPOSAL_TOOL_NAMES.has(name) && input.proposals) {
+          return runProposalTool(name, args, {
+            db: input.db,
+            admin: input.proposals.admin,
+            userId: input.proposals.userId,
+            conversationId: input.conversationId ?? null,
+            can,
+            today: input.today ?? new Date().toISOString().slice(0, 10),
+            confirmLimit: input.proposals.confirmLimit,
+            onProposal: input.proposals.onProposal,
+          });
+        }
         if (GUARD_TOOL_NAMES.has(name)) {
           if (!input.isAdmin) return { content: "Permission denied for this user.", isError: true, links: [] };
           return runGuardAgentTool(input.db as unknown as GuardDb, name, args);

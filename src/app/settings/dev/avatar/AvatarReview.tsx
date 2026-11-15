@@ -34,6 +34,31 @@ export default function AvatarReview({ fontClassName, theme, voiceServer = false
     { id: "u2", role: "user", content: t("assistant.suggestions.lowStock"), status: "done", steps: [], links: [] },
     { id: "a2", role: "assistant", content: "", status: "error", error: "network", steps: [], links: [], question: t("assistant.suggestions.lowStock") },
   ];
+  // AST-4: a draft the assistant prepared, as the user sees it before confirming (sample; nothing is saved).
+  const saleLine = { product_id: "p1", product_code: "QP-01", product_name: "Qara panel 2,8 m", unit: "Ədəd", quantity: 2, unit_price: 30, discount_percent: 0, vat_rate: 18, net: 60, vat: 10.8, total: 70.8 };
+  const proposalDemo: ThreadMessage[] = [
+    { id: "u3", role: "user", content: t("assistant.dev.demoInvoice"), status: "done", steps: [], links: [] },
+    {
+      id: "a3",
+      role: "assistant",
+      content: t("assistant.dev.demoInvoiceAnswer"),
+      status: "done",
+      steps: [{ tool: "search_customers", summary: "Test", ok: true }],
+      links: [],
+      proposals: [
+        {
+          id: "demo",
+          kind: "sale_draft",
+          summary: "Sale draft for Test",
+          amount: 70.8,
+          payload: { customer_id: "c1", customer_name: "Test", doc_date: "2026-11-15", warehouse_id: null, warehouse_name: "Əsas anbar", note: "", lines: [saleLine], subtotal: 60, vat_total: 10.8, total: 70.8 },
+          hash: "0".repeat(64),
+          secondConfirm: false,
+          limit: 10000,
+        },
+      ],
+    },
+  ];
   const suggestions = (["salesToday", "debtors", "lowStock", "financeSummary"] as const).map((id) => ({ id, label: t(`assistant.suggestions.${id}`) }));
 
   const preview = (body: React.ReactNode, avatar: (typeof AVATAR_STATES)[number], composer: React.ReactNode) => (
@@ -109,6 +134,7 @@ export default function AvatarReview({ fontClassName, theme, voiceServer = false
             <div className="ds-assistant-previews" data-review="panel">
               {preview(<AssistantEmptyState t={t} avatarState="idle" name="Aysel" suggestions={suggestions} onSuggestion={noop} />, "idle", composer(false))}
               {preview(<AssistantThread messages={demo} t={t} busy={false} onRetry={noop} onCopy={noop} />, "alert", composer(true))}
+              {preview(<AssistantThread messages={proposalDemo} t={t} locale={locale} busy={false} onRetry={noop} onCopy={noop} />, "success", composer(false))}
             </div>
           </Section>
         </main>

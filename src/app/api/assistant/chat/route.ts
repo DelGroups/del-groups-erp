@@ -7,6 +7,7 @@ import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { assistantAccess } from "@/lib/assistant/config";
 import { parseClientContext } from "@/lib/assistant/context";
 import { runAssistantTurn } from "@/lib/assistant/engine";
+import { assistantConfirmLimit } from "@/lib/assistant/proposals";
 import type { AssistantLanguage } from "@/lib/assistant/prompt";
 import { encodeSse, type AssistantStreamEvent } from "@/lib/assistant/sse";
 import { ensureConversation, loadHistory, saveTurn } from "@/lib/ai/native/store";
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
             return Number.isFinite(n) ? n : 0;
           },
           conversationId,
+          proposals: { admin, userId: auth.user.id, confirmLimit: assistantConfirmLimit(), onProposal: (proposal) => send({ type: "proposal", proposal }) },
           onEvent: (event) => send(event),
         });
         if (!turn.ok) {

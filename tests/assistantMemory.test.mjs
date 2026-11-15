@@ -127,7 +127,7 @@ test("each turn reads its notes with the user's client and marks them used; no n
   assert.deepEqual(await loadTurnMemory({}, { page: null, recordType: null, recordId: null, summary: null }), { text: "", usedIds: [] }, "a broken client never breaks the turn");
   const engine = read("src/lib/assistant/engine.ts");
   assert.match(engine, /\[turnPreamble\(\{ page: context\.page, recordSummary: context\.summary \}\), memory\.text\]/, "notes go into the user message, not the cached system prompt");
-  assert.match(engine, /\.\.\.MEMORY_TOOLS\]/, "every turn has remember and recall");
+  assert.match(engine, /\.\.\.MEMORY_TOOLS[,\]]/, "every turn has remember and recall");
 });
 
 test("remember: forbidden notes never reach the database; others go to assistant_memory_save as the assistant", async () => {
