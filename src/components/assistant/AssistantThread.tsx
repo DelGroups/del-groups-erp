@@ -54,7 +54,7 @@ export function AssistantThread({ messages, t, onRetry, onCopy, onNavigate, busy
         m.role === "user" ? (
           <div key={m.id} className="ds-assistant-msg" data-role="user">
             <span className="sr-only">{t("assistant.you")}: </span>
-            <p className="ds-assistant-user-text">{m.content}</p>
+            <p className="ds-assistant-user-text" dir="auto">{m.content}</p>
           </div>
         ) : (
           <div key={m.id} className="ds-assistant-msg" data-role="assistant" data-status={m.status} aria-busy={m.status === "streaming" || undefined}>
@@ -87,6 +87,7 @@ export function AssistantThread({ messages, t, onRetry, onCopy, onNavigate, busy
             {m.content ? (
               <div
                 className="ds-assistant-md"
+                dir="auto"
                 onClick={(e) => {
                   if ((e.target as Element).closest("a")) onNavigate?.();
                 }}

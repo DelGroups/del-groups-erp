@@ -102,6 +102,7 @@ test("the system prompt: rules, language, skills; the per-turn part stays out of
   const p = assistantSystemPrompt({ productName: "Del ERP", company: "Del Groups", currency: "AZN", language: "ru", userName: "Aysel", role: "Admin", isAdmin: true, skills: ["sales"] });
   assert.match(p, /Del Groups/);
   assert.match(p, /Russian/);
+  assert.match(p, /Always reply in the language of the user's latest message/, "any language in, the same language out");
   assert.match(p, /own permissions/);
   assert.match(p, /cannot create, change, post or delete/);
   assert.match(p, /- sales:/);
