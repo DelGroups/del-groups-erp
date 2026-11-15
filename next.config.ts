@@ -40,7 +40,9 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // microphone=(self): the assistant's dictation (and the old widget's voice note) may ask for the mic on
   // our own pages only; no embedded frame from another site can.
-  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+  // camera=(self): the camera barcode scanner (production in progress, CameraBarcodeScanner) on our own
+  // pages only; the browser still asks the user, and the camera turns on only after a click.
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
   {
     key: "Content-Security-Policy",
     value: [

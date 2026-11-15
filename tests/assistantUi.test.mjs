@@ -569,3 +569,9 @@ test("dictation: the site lets its own pages use the microphone, and every error
   }
   assert.deepEqual({ ...DICTATION_LANG }, { az: "az-AZ", en: "en-US", ru: "ru-RU" });
 });
+
+test("the camera barcode scanner may use the camera on our own pages; geolocation stays blocked", () => {
+  const config = read("next.config.ts");
+  assert.match(config, /"Permissions-Policy", value: "camera=\(self\), microphone=\(self\), geolocation=\(\)"/);
+  assert.match(read("src/components/inventory/CameraBarcodeScanner.tsx"), /html5-qrcode/);
+});
