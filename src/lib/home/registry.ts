@@ -35,7 +35,7 @@ export interface WidgetDef {
   /** Always on the page: may be moved and resized, never removed (the apps grid). */
   pinned?: boolean;
   /** Feature that must be on; until then the widget is registered but never shown. */
-  requires?: "newCrm" | "accountingGuard";
+  requires?: "newCrm" | "accountingGuard" | "assistantBriefing";
   /** Loads its data from /api/home/widgets/[id] (false: computed in the browser, e.g. the clock). */
   remote: boolean;
   /** Refresh interval in ms (on focus as well); none = load once. */
@@ -89,6 +89,9 @@ export const WIDGETS: readonly WidgetDef[] = [
   w({ id: "sales_target", category: "management", sizes: ["M", "L"], defaultSize: "M", module: "crm", permission: "crm.view_pipeline", financial: true, defaultColumn: "end", defaultOrder: 150, requires: "newCrm", remote: true, refreshMs: LIVE }),
   // Accounting Guard (GUARD-3): admins, only while ACCOUNTING_GUARD is on; it loads its own figures (server action).
   w({ id: "accounting_guard", category: "operations", sizes: ["S", "M"], defaultSize: "M", financial: false, defaultColumn: "end", defaultOrder: 170, requires: "accountingGuard", remote: false }),
+  // Del Assistant morning briefing (AST-7): admins and managers (financial reports), only while the assistant is on;
+  // it reads the user's own briefing (/api/assistant/briefing) and is calm and empty while briefings are off.
+  w({ id: "morning_briefing", category: "management", sizes: ["M", "L"], defaultSize: "M", financial: true, defaultColumn: "start", defaultOrder: 15, requires: "assistantBriefing", remote: false }),
   w({ id: "pipeline_value", category: "management", sizes: ["M", "L"], defaultSize: "M", module: "crm", permission: "crm.view_pipeline", financial: true, defaultColumn: "end", defaultOrder: 160, requires: "newCrm", remote: true, refreshMs: LIVE }),
 ];
 
@@ -105,13 +108,15 @@ export interface HomeContext {
   can: (path: string) => boolean;
   financials: boolean;
   /** accountingGuard: ACCOUNTING_GUARD is on and the user is an admin. */
-  flags: { newCrm: boolean; accountingGuard?: boolean };
+  /** assistantBriefing: the assistant (ASSISTANT_V2) is on for this user, and they are an admin or may see financial reports. */
+  flags: { newCrm: boolean; accountingGuard?: boolean; assistantBriefing?: boolean };
 }
 
 /** May this user see (and add) this widget? */
 export function visibleTo(def: WidgetDef, ctx: HomeContext): boolean {
   if (def.requires === "newCrm" && !ctx.flags.newCrm) return false;
   if (def.requires === "accountingGuard" && ctx.flags.accountingGuard !== true) return false;
+  if (def.requires === "assistantBriefing" && ctx.flags.assistantBriefing !== true) return false;
   if (def.module && !ctx.isEnabled(def.module)) return false;
   if (def.permission && !ctx.can(def.permission)) return false;
   if (def.financial && !ctx.financials) return false;

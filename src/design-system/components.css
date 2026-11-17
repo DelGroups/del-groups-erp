@@ -2923,3 +2923,67 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* Switch (yes / no setting): 44 px wide target row, token colours, the global focus ring. */
+[data-ds] .ds-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  min-height: 2.75rem;
+}
+[data-ds] .ds-switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+[data-ds] .ds-switch-label {
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+[data-ds] .ds-switch-description {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+[data-ds] .ds-switch {
+  position: relative;
+  flex: none;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--ds-border-strong, var(--ds-border));
+  background: var(--ds-surface-sunken);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+[data-ds] .ds-switch[data-checked] {
+  background: var(--ds-brand);
+  border-color: var(--ds-brand);
+}
+[data-ds] .ds-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+[data-ds] .ds-switch-thumb {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 2px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  background: var(--ds-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transform: translateY(-50%);
+  transition: inset-inline-start 160ms ease;
+}
+[data-ds] .ds-switch[data-checked] .ds-switch-thumb {
+  inset-inline-start: calc(100% - 1.125rem - 2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-ds] .ds-switch,
+  [data-ds] .ds-switch-thumb {
+    transition: none;
+  }
+}

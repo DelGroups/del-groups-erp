@@ -6154,6 +6154,10 @@ export const azMessages = {
       timeZone: "Saat qurşağı",
     },
     widgets: {
+      morning_briefing: {
+        title: "Səhər icmalı",
+        description: "Köməkçinin bugünkü icmalı (adminlər və menecerlər)",
+      },
       accounting_guard: {
         title: "Mühasibat nəzarəti",
         description: "Sağlamlıq balı və açıq tapıntılar (adminlər üçün)",
@@ -7629,6 +7633,20 @@ export const azMessages = {
       guardInChat: "Mühasib indi köməkçidə işləyir: nəticələr və uçot haqqında orada soruşun və ya bugünkü icmalı qurun.",
       buildReview: "Bugünkü icmalı qur",
       buildReviewQuestion: "Accounting Guard üzrə bugünkü icmalı qur: açıq nəticələr vaciblik sırası ilə, hansı real səhvdir, hansı çox güman ki qaydasındadır və ilk növbədə nəyi düzəltmək lazımdır.",
+    },
+    briefingWidget: {
+      open: "Köməkçini aç",
+      emptyTitle: "Bu gün hələ icmal yoxdur",
+      emptyHint: "İcmal hər səhər tezdən (06:30) yazılır. Hələlik köməkçidən satış, borclar və anbar haqqında soruşa bilərsiniz.",
+      offTitle: "Gündəlik icmal söndürülüb",
+      offHint: "Administrator onu burada yandıra bilər.",
+      offHintAdmin: "Hər səhər burada qısa icmal almaq üçün aşağıda yandırın.",
+      switchLabel: "Gündəlik icmal",
+      switchOn: "Yanılı: hər səhər 06:30-da adminlər və menecerlər üçün yazılır.",
+      switchOff: "Sönülü: heç nə yazılmır və AI büdcəsi xərclənmir.",
+      saveFailed: "Ayar yadda saxlanmadı. Yenidən cəhd edin.",
+      notAllowed: "Bu ayarı dəyişə bilməzsiniz.",
+      preview: "Dünənki satış, kassa, vaxtı keçmiş borclar, anbar riskləri və gün üçün üç təklif.",
     },
     dev: {
       title: "Köməkçinin avatarı",

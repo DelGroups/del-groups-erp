@@ -6155,6 +6155,10 @@ export const enMessages: Messages = {
       timeZone: "Time zone",
     },
     widgets: {
+      morning_briefing: {
+        title: "Morning briefing",
+        description: "Today's briefing from the assistant (admins and managers)",
+      },
       accounting_guard: {
         title: "Accounting Guard",
         description: "Health score and open findings (admins)",
@@ -7630,6 +7634,20 @@ export const enMessages: Messages = {
       guardInChat: "The accountant now works in the assistant: ask about findings and the books there, or build today's review.",
       buildReview: "Build today's review",
       buildReviewQuestion: "Build today's review of the Accounting Guard: the open findings by importance, what looks like a real error, what is probably fine, and what to correct first.",
+    },
+    briefingWidget: {
+      open: "Open the assistant",
+      emptyTitle: "No briefing yet today",
+      emptyHint: "The briefing is written early every morning (06:30). Meanwhile you can ask the assistant about sales, debts and stock.",
+      offTitle: "The daily briefing is switched off",
+      offHint: "An administrator can switch it on here.",
+      offHintAdmin: "Switch it on below to get a short briefing here every morning.",
+      switchLabel: "Daily briefing",
+      switchOn: "On: written every morning at 06:30 for admins and managers.",
+      switchOff: "Off: nothing is written and no AI budget is spent.",
+      saveFailed: "The setting was not saved. Try again.",
+      notAllowed: "You cannot change this setting.",
+      preview: "Yesterday's sales, cash, overdue debts, stock risks and three suggestions for the day.",
     },
     dev: {
       title: "Assistant avatar",

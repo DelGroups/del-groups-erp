@@ -222,7 +222,7 @@ function fakeDb(tables, writes = []) {
       order: () => q,
       limit: () => q,
       range: (a, b) => Promise.resolve({ data: rows.slice(a, b + 1), error: null }),
-      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+      maybeSingle: () => Promise.resolve({ data: table === "system_settings" ? (rows[0] ?? null) : null, error: null }),
       insert: (row) => (writes.push({ table, op: "insert", row }), Promise.resolve({ error: null })),
       upsert: (row, opts) => (writes.push({ table, op: "upsert", row, opts }), Promise.resolve({ error: null })),
       then: (ok, bad) => Promise.resolve({ data: rows, error: null }).then(ok, bad),
@@ -324,7 +324,7 @@ test("the composer writes one briefing per person and day with the fast model, a
 });
 
 test("the nightly job stops at the budget and skips people without access", async () => {
-  const db = { ...fakeDb({ sales: SALES, products: PRODUCTS }), rpc: async () => ({ data: 50, error: null }) };
+  const db = { ...fakeDb({ sales: SALES, products: PRODUCTS, system_settings: [{ value: { enabled: true } }] }), rpc: async () => ({ data: 50, error: null }) };
   const client = { messages: { create: async () => assert.fail("no call over budget") } };
   const profiles = [{ id: "a", is_active: true, full_name: "A", role: { name: "Admin", permissions: {} } }, { id: "e", is_active: true, full_name: "E", role: { name: "Sales", permissions: {} } }];
   const r = await nightlyBriefings({ apiKey: "k", db, env: { ASSISTANT_MONTHLY_BUDGET_USD: "50" }, today: TODAY, client, profiles });

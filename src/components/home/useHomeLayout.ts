@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccountingGuard } from "@/components/guard/AccountingGuardFlag";
+import { useAssistantUi } from "@/components/assistant/AssistantProvider";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -8,7 +9,7 @@ import { supabase as typedClient } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useNewUi } from "@/components/shell/NewUiProvider";
-import { canViewFinancials, userHasGranularPermission } from "@/lib/auth/permissionMatrix";
+import { canViewFinancials, userHasGranularPermission, userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import { mergeWithDefaults, type HomeLayout } from "@/lib/home/layout";
 import type { HomeContext } from "@/lib/home/registry";
 
@@ -23,14 +24,17 @@ export function useHomeContext(): HomeContext {
   const { isEnabled } = useEnabledModules();
   const { newCrm } = useNewUi();
   const accountingGuard = useAccountingGuard();
+  // AST-7: the morning briefing widget follows the assistant (flag + audience) and the briefing's own audience.
+  const assistantOn = useAssistantUi().active;
+  const assistantBriefing = assistantOn && userHasLegacyPermission(profile, "can_view_financial_reports");
   return useMemo(
     () => ({
       isEnabled: (m: string) => isEnabled(m as Parameters<typeof isEnabled>[0]),
       can: (path: string) => userHasGranularPermission(profile, path),
       financials: canViewFinancials(profile),
-      flags: { newCrm, accountingGuard },
+      flags: { newCrm, accountingGuard, assistantBriefing },
     }),
-    [profile, isEnabled, newCrm, accountingGuard]
+    [profile, isEnabled, newCrm, accountingGuard, assistantBriefing]
   );
 }
 
