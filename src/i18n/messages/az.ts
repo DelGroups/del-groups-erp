@@ -7661,6 +7661,7 @@ export const azMessages = {
       demoInvoiceAnswer: "**Test** üçün qaralama faktura hazırladım. Aşağıda yoxlayın və «Qaralama yarat» düyməsini basın; sənədi özünüz təsdiqləyirsiniz.",
       watch: "Aktiv nəzarət",
       watchDescription: "Nəzarət altında nümunə satış fakturası: qaydalar hər dəyişiklikdə işləyir; Düzəlt nümunəni dəyişir, Nəzərə alma xəbərdarlığı gizlədir.",
+      briefingWidget: "Ana səhifə vidjeti: səhər icmalı",
       insights: "İcmal və təhlil",
       demoBriefing: "Sabahınız xeyir, Aysel.\n\n- Dünənki satış: 9 fakturada **2 480,00 ₼**, adi cümə axşamından (2 100,00 ₼) 18% çox.\n- Kassa və bank: **14 920,00 ₼**.\n- Vaxtı keçmiş debitor borcu: 3 müştəridən **6 120,00 ₼**.\n- Anbar: 2 məhsul iki həftəyə bitəcək.\n\nBu gün:\n1. Konik MMC-yə 3 400,00 ₼ vaxtı keçmiş borc üçün zəng edin; [SS-2026-00098](/sales) 47 gündür.\n2. Qara panel 2,8 m sifariş edin: 12 qalıb, gündə 2,4 ilə təxminən 5 günlük ([QP-01](/products)).\n3. Vint M8 qiymətini yoxlayın: 30 gündə 640,00 ₼ satışda marja 3,1% ([Vint M8](/products)).",
       demoAnalysisQuestion: "Bu ayın satışını keçən ayla müqayisə et və niyə dəyişdiyini de",

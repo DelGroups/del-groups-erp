@@ -14,6 +14,54 @@ import { frameProps, type WidgetProps } from "./types";
 const SWITCH_KEY = ["assistant", "briefing", "switch"] as const;
 const BRIEFING_KEY = ["assistant", "briefing", "widget"] as const;
 
+type T = (key: string, params?: Record<string, string | number>) => string;
+
+/** The "Open the assistant" header action. */
+export function BriefingOpenButton({ t, onOpen }: { t: T; onOpen: () => void }) {
+  return (
+    <Button size="sm" variant="ghost" icon={MessageSquareText} onClick={onOpen}>
+      {t("assistant.briefingWidget.open")}
+    </Button>
+  );
+}
+
+/**
+ * What the widget shows (no data loading; the review page renders it with samples): switched off, on with
+ * no briefing yet, or today's briefing; and, for admins only, the switch.
+ */
+export function BriefingWidgetView(props: { t: T; on: boolean; canChange: boolean; briefing: MorningBriefing | null; busy?: boolean; error?: string | null; onFlip: (next: boolean) => void }) {
+  const { t, on, canChange, briefing } = props;
+  return (
+    <>
+      {!on ? (
+        <EmptyState icon={MoonStar} title={t("assistant.briefingWidget.offTitle")} description={t(canChange ? "assistant.briefingWidget.offHintAdmin" : "assistant.briefingWidget.offHint")} className="gap-2! px-3! py-5!" />
+      ) : briefing ? (
+        <div className="ds-briefing-widget" data-all-well={briefing.all_well || undefined}>
+          <AiAssistantMarkdown content={briefing.body} />
+        </div>
+      ) : (
+        <EmptyState icon={Sunrise} title={t("assistant.briefingWidget.emptyTitle")} description={t("assistant.briefingWidget.emptyHint")} className="gap-2! px-3! py-5!" />
+      )}
+      {canChange ? (
+        <div className="ds-briefing-switch">
+          <Switch
+            checked={on}
+            busy={props.busy}
+            onCheckedChange={props.onFlip}
+            label={t("assistant.briefingWidget.switchLabel")}
+            description={t(on ? "assistant.briefingWidget.switchOn" : "assistant.briefingWidget.switchOff")}
+          />
+          {props.error ? (
+            <p role="alert" className="m-0 text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-danger-strong)" }}>
+              {t(props.error)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 /**
  * The morning briefing on the home page (AST-7): admins and managers, only while the assistant is on.
  * Admins turn the daily briefing on or off here (off by default; every change is audited); managers see
@@ -61,12 +109,6 @@ export function BriefingWidget(props: WidgetProps) {
     },
   });
 
-  const openButton = (
-    <Button size="sm" variant="ghost" icon={MessageSquareText} onClick={() => ui.open()}>
-      {t("assistant.briefingWidget.open")}
-    </Button>
-  );
-
   if (props.preview) {
     return (
       <WidgetFrame {...frameProps(props)}>
@@ -76,41 +118,11 @@ export function BriefingWidget(props: WidgetProps) {
   }
 
   const status = sw.status === "success" && on ? briefing.status : sw.status;
-  const body = !on ? (
-    <EmptyState
-      icon={MoonStar}
-      title={t("assistant.briefingWidget.offTitle")}
-      description={t(sw.data?.canChange ? "assistant.briefingWidget.offHintAdmin" : "assistant.briefingWidget.offHint")}
-      className="gap-2! px-3! py-5!"
-    />
-  ) : briefing.data ? (
-    <div className="ds-briefing-widget" data-all-well={briefing.data.all_well || undefined}>
-      <AiAssistantMarkdown content={briefing.data.body} />
-    </div>
-  ) : (
-    <EmptyState icon={Sunrise} title={t("assistant.briefingWidget.emptyTitle")} description={t("assistant.briefingWidget.emptyHint")} className="gap-2! px-3! py-5!" />
-  );
-
+  const error = flip.isError ? (flip.error instanceof Error && flip.error.message.startsWith("assistant.") ? flip.error.message : "assistant.briefingWidget.saveFailed") : null;
   return (
-    <WidgetFrame {...frameProps(props)} action={openButton}>
+    <WidgetFrame {...frameProps(props)} action={<BriefingOpenButton t={t} onOpen={() => ui.open()} />}>
       <WidgetState status={status} onRetry={() => void (sw.status === "error" ? sw.refetch() : briefing.refetch())} emptyIcon={Sunrise} emptyTitle={t("assistant.briefingWidget.emptyTitle")} rows={4}>
-        {body}
-        {sw.data?.canChange ? (
-          <div className="ds-briefing-switch">
-            <Switch
-              checked={on}
-              busy={flip.isPending}
-              onCheckedChange={(next) => flip.mutate(next)}
-              label={t("assistant.briefingWidget.switchLabel")}
-              description={t(on ? "assistant.briefingWidget.switchOn" : "assistant.briefingWidget.switchOff")}
-            />
-            {flip.isError ? (
-              <p role="alert" className="m-0 text-[length:var(--ds-text-xs)]" style={{ color: "var(--ds-danger-strong)" }}>
-                {t(flip.error instanceof Error && flip.error.message.startsWith("assistant.") ? flip.error.message : "assistant.briefingWidget.saveFailed")}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        <BriefingWidgetView t={t} on={on} canChange={sw.data?.canChange === true} briefing={briefing.data ?? null} busy={flip.isPending} error={error} onFlip={(next) => flip.mutate(next)} />
       </WidgetState>
     </WidgetFrame>
   );

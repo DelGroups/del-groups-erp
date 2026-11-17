@@ -1031,3 +1031,10 @@ html[data-assistant-dock] body {
   padding-top: var(--ds-space-2);
   border-top: 1px solid var(--ds-border);
 }
+/* The review page only: the home widget's states side by side. */
+[data-ds] .ds-widget-review {
+  display: grid;
+  gap: var(--ds-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  align-items: start;
+}

@@ -83,11 +83,11 @@ test("classic dashboard: money cards, trend and recent transactions only with fi
 
 // ── Registry and layouts ────────────────────────────────────────────────
 
-const ctxFor = (profile, enabled = () => true, newCrm = false) => ({
+const ctxFor = (profile, enabled = () => true, newCrm = false, flags = {}) => ({
   isEnabled: enabled,
   can: (path) => userHasGranularPermission(profile, path),
   financials: canViewFinancials(profile),
-  flags: { newCrm },
+  flags: { newCrm, ...flags },
 });
 
 test("registry: unique ids, a component, a loader for remote widgets, money widgets are management and financial", () => {
@@ -119,9 +119,9 @@ test("visibility: module off, missing permission, financial without the right, f
 
 test("API: a non-admin gets 403 for every financial widget; unknown is 404; admins get 200", () => {
   for (const profile of [MANAGER, CUSTOM]) {
-    for (const w of WIDGETS.filter((x) => x.financial)) assert.equal(widgetAccess(w.id, ctxFor(profile, () => true, true)), 403, `${profile.role.name}: ${w.id}`);
+    for (const w of WIDGETS.filter((x) => x.financial)) assert.equal(widgetAccess(w.id, ctxFor(profile, () => true, true, { assistantBriefing: true })), 403, `${profile.role.name}: ${w.id}`);
   }
-  for (const w of WIDGETS.filter((x) => x.financial)) assert.equal(widgetAccess(w.id, ctxFor(ADMIN, () => true, true)), 200, w.id);
+  for (const w of WIDGETS.filter((x) => x.financial)) assert.equal(widgetAccess(w.id, ctxFor(ADMIN, () => true, true, { assistantBriefing: true })), 200, w.id);
   assert.equal(widgetAccess("nope", ctxFor(ADMIN)), 404);
   assert.equal(widgetAccess("my_activities", ctxFor(CUSTOM)), 200);
   const route = read("src/app/api/home/widgets/[id]/route.ts");

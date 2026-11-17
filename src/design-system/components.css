@@ -2987,3 +2987,6 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
     transition: none;
   }
 }
+[data-ds] .ds-switch[data-checked] .ds-switch-thumb {
+  background: var(--ds-brand-fg, #fff);
+}

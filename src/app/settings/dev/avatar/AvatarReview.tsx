@@ -12,6 +12,7 @@ import { AssistantThread } from "@/components/assistant/AssistantThread";
 import { AVATAR_SIZES, AVATAR_STATES, avatarLabelKey } from "@/lib/assistant/ui/avatar";
 import type { ThreadMessage } from "@/lib/assistant/ui/thread";
 import { WatchReview } from "./WatchReview";
+import { BriefingWidgetReview } from "./BriefingWidgetReview";
 
 /** The review page of the avatar and the panel (AST-2); sample content only, nothing is sent anywhere. */
 export default function AvatarReview({ fontClassName, theme, voiceServer = false }: { fontClassName?: string; theme?: "light" | "dark"; voiceServer?: boolean }) {
@@ -178,6 +179,10 @@ export default function AvatarReview({ fontClassName, theme, voiceServer = false
                 composer(true)
               )}
             </div>
+          </Section>
+
+          <Section title={t("assistant.dev.briefingWidget")}>
+            <BriefingWidgetReview t={t} />
           </Section>
 
           <Section title={t("assistant.dev.watch")} description={t("assistant.dev.watchDescription")}>

@@ -7662,6 +7662,7 @@ export const enMessages: Messages = {
       demoInvoiceAnswer: "I prepared a draft invoice for **Test**. Check it below and press Create draft; you post it yourself on the document.",
       watch: "Active watch",
       watchDescription: "A sample sales invoice under watch: the rules run on every change; Fix changes the sample, Ignore hides the warning.",
+      briefingWidget: "Home widget: morning briefing",
       insights: "Briefing and analysis",
       demoBriefing: "Good morning, Aysel.\n\n- Yesterday's sales: **2 480,00 ₼** in 9 invoices, 18% above a usual Thursday (2 100,00 ₼).\n- Cash and bank: **14 920,00 ₼**.\n- Overdue receivables: **6 120,00 ₼** from 3 customers.\n- Stock: 2 products run out within two weeks.\n\nToday:\n1. Call Konik MMC about 3 400,00 ₼ overdue; [SS-2026-00098](/sales) is 47 days old.\n2. Reorder Qara panel 2,8 m: 12 left, about 5 days at 2,4 a day ([QP-01](/products)).\n3. Check the price of Vint M8: margin 3,1% on 640,00 ₼ sold in 30 days ([Vint M8](/products)).",
       demoAnalysisQuestion: "Compare this month's sales with last month and tell me why they changed",
