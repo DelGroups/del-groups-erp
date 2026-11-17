@@ -25,6 +25,8 @@ import { ListColumnsFlagProvider } from "@/components/lists/ListColumnsFlag";
 import { isUiLabOpen, isUiStandardEnabled } from "@/lib/features/uiStandard";
 import { UiStandardProvider } from "@/design-system/components/UiStandard";
 import { isInvoiceToolsEnabled } from "@/lib/features/invoiceTools";
+import { isDeliveryActEnabled } from "@/lib/features/deliveryAct";
+import { DeliveryActProvider } from "@/components/deliveryAct/DeliveryActFlag";
 import { InvoiceToolsProvider } from "@/components/invoices/InvoiceToolsFlag";
 import { isDocDateChangeEnabled } from "@/lib/features/docDateChange";
 import { DocDateChangeProvider } from "@/components/documents/DocDateChangeFlag";
@@ -136,6 +138,8 @@ export default async function RootLayout({
                         <UiStandardProvider enabled={uiStandard}>
                           {/* INVOICE_TOOLS (INV-1): "New product" in the invoice forms. */}
                           <InvoiceToolsProvider enabled={isInvoiceToolsEnabled()}>
+                          {/* DELIVERY_ACT: the delivery act (Təhvil-təslim aktı) from a sales invoice. */}
+                          <DeliveryActProvider enabled={isDeliveryActEnabled()}>
                           {/* DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place. */}
                           <DocDateChangeProvider enabled={isDocDateChangeEnabled()}>
                           {/* COUNT_TEAM (INV-4): the count's responsible people from the employee list. */}
@@ -162,6 +166,7 @@ export default async function RootLayout({
                           </PartnerLedgersProvider>
                           </CountTeamProvider>
                           </DocDateChangeProvider>
+                          </DeliveryActProvider>
                           </InvoiceToolsProvider>
                         </UiStandardProvider>
                       </ListColumnsFlagProvider>

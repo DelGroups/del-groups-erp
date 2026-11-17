@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Ban, Banknote, BarChart3, CalendarClock, FileCode2, FileJson, PencilLine, Plus, Printer, Truck } from "lucide-react";
+import { Ban, Banknote, BarChart3, CalendarClock, FileCode2, FileJson, FileSignature, PencilLine, Plus, Printer, Truck } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { invalidateModel, useFilterContext, useFormatter, useViewData, ViewEngine, ViewScope, type RowActionSpec, type ViewRecord } from "@/views";
@@ -15,6 +15,8 @@ import { invoiceExportRowActions } from "@/components/invoices/invoiceExportActi
 import { DATE_CHANGE_ACTION_KEY } from "@/components/documents/DocumentDateChange";
 import { useDocDateChangeAllowed } from "@/components/documents/DocDateChangeFlag";
 import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
+import { useDeliveryActEnabled } from "@/components/deliveryAct/DeliveryActFlag";
+import { DELIVERY_ACT_ACTION_KEY } from "@/components/deliveryAct/deliveryActAction";
 
 /** Sales invoices on the view engine (new UI): dashboard, then list, kanban, pivot, graph, calendar. */
 export default function SalesScreen() {
@@ -36,6 +38,8 @@ function SalesBody() {
   const exportOn = useInvoiceTools();
   // DOC_DATE_CHANGE (DATE-1): admins change a posted invoice's date in place.
   const dateChangeOn = useDocDateChangeAllowed();
+  // DELIVERY_ACT: "Təhvil-təslim aktı" in the row menu; the opened invoice runs it.
+  const deliveryActOn = useDeliveryActEnabled();
   const [preset, setPreset] = useState<{ id: number; filters: string[] } | undefined>(undefined);
 
   // Invoices are saved in the invoice form; always show the latest when the list opens.
@@ -55,7 +59,7 @@ function SalesBody() {
         ctx={ctx}
         preset={preset}
         openHref={(r) => `/sales/${r.id}`}
-        rowActions={(r) => salesRowActions(r, t, can, exportOn, dateChangeOn)}
+        rowActions={(r) => salesRowActions(r, t, can, exportOn, dateChangeOn, deliveryActOn)}
         // INVOICE_TOOLS (INV-3): pick salespeople / creators in the search panel.
         valueFilters={exportOn}
         actions={
@@ -85,7 +89,7 @@ function SalesBody() {
  * The row "…" menu of the invoice list (UI-5): the same actions as the classic list and the
  * invoice form (SaleFormScreen), shown as the row's status allows; the form runs them (?do=).
  */
-function salesRowActions(r: ViewRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"], exportOn = false, dateChangeOn = false): RowActionSpec[] {
+function salesRowActions(r: ViewRecord, t: (key: string) => string, can: ReturnType<typeof useAuth>["can"], exportOn = false, dateChangeOn = false, deliveryActOn = false): RowActionSpec[] {
   const status = String(r.doc_status ?? "");
   const icon = (C: typeof Printer) => <C className="h-4 w-4" />;
   return [
@@ -95,6 +99,7 @@ function salesRowActions(r: ViewRecord, t: (key: string) => string, can: ReturnT
     { key: "pay", label: t("sales.engine.actions.registerPayment"), icon: icon(Banknote), hidden: !(Number(r.remaining ?? 0) > 0) || status === "cancelled" },
     { key: "print", label: t("common.print"), icon: icon(Printer) },
     ...invoiceExportRowActions(t, exportOn),
+    { key: DELIVERY_ACT_ACTION_KEY, label: t("deliveryAct.action"), icon: icon(FileSignature), hidden: !deliveryActOn || status === "cancelled" },
     { key: "send", label: t("sales.engine.actions.sendToWarehouse"), icon: icon(Truck), hidden: !(status === "posted" && (r.warehouse_state === "not_sent" || r.warehouse_state === "rejected")) },
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: icon(FileCode2), hidden: status === "cancelled" },
     { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: icon(FileJson), hidden: status === "cancelled" },

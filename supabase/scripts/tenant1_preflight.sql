@@ -232,6 +232,9 @@ union all
 select 'pending', '20261121140000_assistant_briefings: Del Assistant morning briefing (AST-6)',
        case when to_regclass('public.assistant_briefings') is null or to_regprocedure('public.assistant_briefing_seen(uuid)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261121150000_delivery_act_directors: director names for the delivery act',
+       case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'customers' and column_name = 'director_name') then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

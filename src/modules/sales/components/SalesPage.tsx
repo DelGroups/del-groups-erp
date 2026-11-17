@@ -65,6 +65,8 @@ import { ListGrid } from "@/components/lists/ListGrid";
 import { useUiStandard } from "@/design-system/components";
 import { formatGridDate } from "@/lib/dates/localeDate";
 import FindSuspiciousButton from "@/components/guard/FindSuspiciousButton";
+import { ScopedDeliveryActDialog } from "@/components/deliveryAct/DeliveryActDialog";
+import { useDeliveryActEnabled } from "@/components/deliveryAct/DeliveryActFlag";
 import { exportXlsx, xlsxFileName, type XlsxColumn } from "@/lib/export/exportXlsx";
 import { docStatusLabelKey, paymentTypeLabelKey, warehouseStateLabelKey } from "@/lib/lists/documentLabels";
 
@@ -96,6 +98,9 @@ export default function SalesPage() {
   const [viewingSale, setViewingSale] = useState<SaleRecord | null>(null);
   const [paymentSale, setPaymentSale] = useState<SaleRecord | null>(null);
   const [voidTarget, setVoidTarget] = useState<SaleRecord | null>(null);
+  // DELIVERY_ACT: "Təhvil-təslim aktı" from the row menu.
+  const deliveryActOn = useDeliveryActEnabled();
+  const [actSaleId, setActSaleId] = useState<string | null>(null);
   const [voiding, setVoiding] = useState(false);
   const invoicePrint = useInvoicePrintSystem();
   // INVOICE_TOOLS (INV-2): "Download Excel" / "Download PDF" in the row menu.
@@ -313,6 +318,7 @@ export default function SalesPage() {
         onView={() => void openView(sale)}
         onPrint={() => void openPrint(sale)}
         onInvoiceExport={invoiceExport.enabled ? (format) => void invoiceExport.exportSale(() => fetchSaleById(sale.id), format) : undefined}
+        onDeliveryAct={deliveryActOn && sale.status !== "cancelled" ? () => setActSaleId(sale.id) : undefined}
         onDateChange={
           dateChange.allowed && isSalesPosted(sale.status)
             ? () => dateChange.open({ type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null })
@@ -353,6 +359,7 @@ export default function SalesPage() {
 
   return (
     <PageLayout>
+      {deliveryActOn ? <ScopedDeliveryActDialog saleId={actSaleId} open={actSaleId !== null} onOpenChange={(o) => !o && setActSaleId(null)} /> : null}
       <ListPageChrome
         header={
           <DocumentPageHeader

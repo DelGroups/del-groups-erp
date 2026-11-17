@@ -22,6 +22,7 @@ import ToastMessage from "@/components/ui/ToastMessage";
 import EQaimeExportButton from "@/components/tax/EQaimeExportButton";
 import { exportSaleEQaime } from "@/lib/tax/eQaimeDocuments";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DeliveryActButton } from "@/components/deliveryAct/DeliveryActButton";
 import { canDelegateInvoiceIssuer } from "@/types/database.types";
 import { DocumentLotChips, getLotPrintOnInvoice, lotsOfLine, useDocumentLots, useLotTracking } from "@/modules/inventory";
 
@@ -117,6 +118,8 @@ export default function SaleDetailPage({ saleId }: SaleDetailPageClientProps) {
             {dateChange.allowed && sale && isSalesPosted(sale.status) ? (
               <DateChangeButton onClick={() => dateChange.open({ type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null })} />
             ) : null}
+            {/* DELIVERY_ACT: the delivery act of this invoice (not for a cancelled one). */}
+            {sale && sale.status !== "cancelled" ? <DeliveryActButton saleId={sale.id} size="sm" /> : null}
             <button
               type="button"
               disabled={!sale}

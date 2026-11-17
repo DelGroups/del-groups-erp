@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Banknote, CalendarClock, Edit, Eye, FileCode2, Package, Printer, Trash2 } from "lucide-react";
+import { Banknote, CalendarClock, Edit, Eye, FileCode2, FileSignature, Package, Printer, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import {
   TableRowActionsMenu,
@@ -22,6 +22,8 @@ interface DocumentListActionsProps {
   onInvoiceExport?: (format: InvoiceExportFormat) => void;
   /** DATE-1 (DOC_DATE_CHANGE, admins, posted only): "Tarixi dəyiş"; leave out to hide it. */
   onDateChange?: () => void;
+  /** DELIVERY_ACT (sales): "Təhvil-təslim aktı" after Print; leave out to hide it. */
+  onDeliveryAct?: () => void;
   viewTitle?: string;
   printTitle?: string;
   editTitle?: string;
@@ -45,6 +47,7 @@ export default function DocumentListActions({
   onEQaimeExport,
   onInvoiceExport,
   onDateChange,
+  onDeliveryAct,
   viewTitle,
   printTitle,
   editTitle,
@@ -85,6 +88,9 @@ export default function DocumentListActions({
     for (const a of INVOICE_EXPORT_ACTIONS) {
       items.push({ key: a.key, label: t(a.labelKey), icon: <a.Icon className="h-4 w-4" />, onClick: () => onInvoiceExport(a.format) });
     }
+  }
+  if (onDeliveryAct) {
+    items.push({ key: "delivery_act", label: t("deliveryAct.action"), icon: <FileSignature className="h-4 w-4" />, onClick: onDeliveryAct });
   }
   if (showSendToWarehouse && onSendToWarehouse) {
     items.push({

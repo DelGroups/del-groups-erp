@@ -218,6 +218,22 @@ export function CompanyProfileClassic() {
                   </div>
 
                   <div>
+                    <label htmlFor="company-director" className="block text-xs font-semibold text-app mb-1">
+                      {t("settings.directorName")}
+                    </label>
+                    <input
+                      id="company-director"
+                      type="text"
+                      maxLength={120}
+                      value={form.directorName}
+                      disabled={company.source === "legacy"}
+                      onChange={(e) => patch({ directorName: e.target.value })}
+                      placeholder={t("settings.directorNamePlaceholder")}
+                      className="app-input"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-semibold text-app mb-1">
                       {t("settings.phoneNumber")}
                     </label>

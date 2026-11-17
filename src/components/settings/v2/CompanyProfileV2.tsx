@@ -136,6 +136,9 @@ function CompanyForm() {
           <Field label={t("settings.voen")}>
             {({ id }) => <input id={id} className="ds-input ds-mono w-full" value={form.voen} placeholder={t("settings.voenPlaceholder")} disabled={!canManage} onChange={(e) => patch({ voen: e.target.value })} />}
           </Field>
+          <Field label={t("settings.directorName")} hint={t("settings.directorNameHint")}>
+            {({ id, describedBy }) => <input id={id} aria-describedby={describedBy} className="ds-input w-full" value={form.directorName} maxLength={120} placeholder={t("settings.directorNamePlaceholder")} disabled={!canManage || company.source === "legacy"} onChange={(e) => patch({ directorName: e.target.value })} />}
+          </Field>
           <Field label={t("settings.phoneNumber")}>
             {({ id }) => iconInput(Phone, { id, type: "tel", value: form.phone, placeholder: "+994 50 000 00 00", onChange: (e) => patch({ phone: e.target.value }) })}
           </Field>

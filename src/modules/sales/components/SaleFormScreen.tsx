@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Ban, Banknote, FileCode2, FileJson, Lock, PencilLine, Printer, SearchX, Truck } from "lucide-react";
+import { AlertTriangle, Ban, Banknote, FileCode2, FileJson, FileSignature, Lock, PencilLine, Printer, SearchX, Truck } from "lucide-react";
 import { EmptyState, SkeletonList, TypeToConfirmDialog, useToast, useUiStandard } from "@/design-system/components";
 import { StandardGrid } from "@/components/lists/StandardGrid";
 import { formatFigure } from "@/design-system/logic";
@@ -34,6 +34,9 @@ import { SALES_VIEW_KEY } from "../views/sales";
 import { useInvoiceExport } from "@/components/invoices/useInvoiceExport";
 import { invoiceExportFormActions } from "@/components/invoices/invoiceExportActions";
 import { useDocumentDateChange } from "@/components/documents/DocumentDateChange";
+import { DeliveryActDialog } from "@/components/deliveryAct/DeliveryActDialog";
+import { DELIVERY_ACT_ACTION_KEY } from "@/components/deliveryAct/deliveryActAction";
+import { useDeliveryActEnabled } from "@/components/deliveryAct/DeliveryActFlag";
 
 /** One sales invoice in the view engine's form (new UI), read-only like the classic detail page. */
 export default function SaleFormScreen({ id }: { id: string }) {
@@ -64,6 +67,9 @@ function SaleForm({ id }: { id: string }) {
   const sale = data.row as unknown as SaleRecord | null;
   const [paying, setPaying] = useState(false);
   const [voiding, setVoiding] = useState(false);
+  // DELIVERY_ACT: "Təhvil-təslim aktı" of this invoice (also from the list row, ?do=delivery_act).
+  const deliveryActOn = useDeliveryActEnabled();
+  const [actOpen, setActOpen] = useState(false);
   const reload = async () => {
     await invalidateModel(client, SALES_VIEW_KEY);
   };
@@ -132,6 +138,7 @@ function SaleForm({ id }: { id: string }) {
     ...(debt.totalRemaining > 0 ? [{ key: "pay", label: t("sales.engine.actions.registerPayment"), primary: !isDraft, icon: <Banknote className="h-4 w-4" aria-hidden />, onClick: () => setPaying(true) }] : []),
     { key: "print", label: t("common.print"), icon: <Printer className="h-4 w-4" aria-hidden />, onClick: () => invoicePrint.requestPrint(mapSaleToInvoicePrint(sale)) },
     ...invoiceExportFormActions(t, invoiceExport.enabled, (format) => void invoiceExport.exportSale(sale, format)),
+    ...(deliveryActOn && record.doc_status !== "cancelled" ? [{ key: DELIVERY_ACT_ACTION_KEY, label: t("deliveryAct.action"), icon: <FileSignature className="h-4 w-4" aria-hidden />, onClick: () => setActOpen(true) }] : []),
     ...dateChange.formActions(record.doc_status === "posted", { type: "sale", id: sale.id, label: sale.doc_no ?? sale.id, date: sale.doc_date ?? null }),
     { key: "xml", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.XML_ETAXES")}`, icon: <FileCode2 className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("xml") },
     { key: "json", label: `${t("tax.eQaimeExport")} · ${t("taxPayrollSettings.formats.JSON_STANDARD")}`, icon: <FileJson className="h-4 w-4" aria-hidden />, onClick: () => void eQaime("json") },
@@ -254,6 +261,7 @@ function SaleForm({ id }: { id: string }) {
 
   return (
     <>
+      {deliveryActOn ? <DeliveryActDialog saleId={sale.id} open={actOpen} onOpenChange={setActOpen} /> : null}
       <FormView
         definition={data.definition}
         record={record}
