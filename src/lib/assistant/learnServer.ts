@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateCostUsd, resolveTierModels } from "@/lib/ai/native/router";
 import { assistantBudgetUsd } from "@/lib/assistant/config";
 import { LEARN_SYSTEM_PROMPT, parseProposedNotes } from "@/lib/assistant/memory";
-import { conversationTranscript, detectCorrections, detectRoutines, worthLearning, type AuditRow, type LearnedNote } from "@/lib/assistant/learn";
+import { conversationTranscript, detectCorrections, detectRoutines, detectWatchPatterns, worthLearning, type AuditRow, type LearnedNote, type WatchEventRow } from "@/lib/assistant/learn";
 import { isAdminRole } from "@/types/database.types";
 
 /**
@@ -165,7 +165,15 @@ export async function nightlyLearning(input: { apiKey: string; db: SupabaseClien
   const audit = (rows ?? []) as AuditRow[];
   const { data: active } = await input.db.from("profiles").select("id").eq("is_active", true);
   const activeIds = new Set(((active ?? []) as Array<{ id: string }>).map((p) => p.id));
-  const notes: LearnedNote[] = [...detectRoutines(audit, now), ...detectCorrections(audit, now)].filter((n) => activeIds.has(n.userId));
+  // 3. The active watch (AST-5): which warnings this employee keeps fixing, and which they always ignore.
+  const { data: watchRows } = await input.db
+    .from("assistant_watch_events" as never)
+    .select("user_id, code, action, created_at")
+    .gte("created_at", new Date(now.getTime() - 14 * 86_400_000).toISOString())
+    .in("action", ["fixed", "ignored"])
+    .limit(50_000);
+  const watch = (watchRows ?? []) as unknown as WatchEventRow[];
+  const notes: LearnedNote[] = [...detectRoutines(audit, now), ...detectCorrections(audit, now), ...detectWatchPatterns(watch, now)].filter((n) => activeIds.has(n.userId));
   for (const n of notes) {
     const { error } = await input.db.rpc("assistant_memory_save" as never, {
       p_scope: "user",

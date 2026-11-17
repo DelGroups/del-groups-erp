@@ -495,7 +495,8 @@ test("every assistant text exists in az, en and ru, and the languages are really
     assert.ok(typeof v === "string" && v.trim(), `az ${k}`);
     assert.ok(en[k].trim() && ru[k].trim(), `en/ru ${k}`);
     assert.ok(!/[А-Яа-яЁё]/.test(v), `no Cyrillic in az: ${k}`);
-    if (k !== "shortcut") assert.ok(/[А-Яа-яЁё]/.test(ru[k]), `ru is Russian: ${k}`);
+    // watch.ai_note is only the placeholder of Haiku's note (written in the user's language).
+    if (k !== "shortcut" && k !== "watch.ai_note") assert.ok(/[А-Яа-яЁё]/.test(ru[k]), `ru is Russian: ${k}`);
   }
   // Placeholders match across languages.
   const ph = (s) => (s.match(/\{\w+\}/g) ?? []).sort().join();

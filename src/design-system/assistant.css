@@ -911,3 +911,101 @@ html[data-assistant-dock] body {
   flex-wrap: wrap;
   gap: var(--ds-space-2);
 }
+
+/* ── Active watch bubble (AST-5): next to the assistant, never over the form's own controls ─────── */
+[data-ds] .ds-assistant-bubble {
+  position: fixed;
+  z-index: var(--ds-z-sticky);
+  inset-inline-end: 1rem;
+  bottom: calc(6rem + env(safe-area-inset-bottom));
+  width: min(23rem, calc(100vw - 2rem));
+}
+@media (min-width: 768px) {
+  /* The new shell: the assistant is the header's avatar, top right. */
+  [data-ds] .ds-assistant-bubble:not([data-floating]) {
+    top: 4rem;
+    bottom: auto;
+  }
+}
+@media (max-width: 767.98px) {
+  html:has(.ds-scroll-root-tabbar) [data-ds] .ds-assistant-bubble {
+    bottom: calc(10rem + env(safe-area-inset-bottom));
+  }
+}
+@media print {
+  [data-ds] .ds-assistant-bubble {
+    display: none;
+  }
+}
+[data-ds] .ds-assistant-bubble-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-inline-start: 4px solid var(--ds-warning);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-raised);
+  box-shadow: var(--ds-elevation-3);
+  color: var(--ds-text);
+}
+[data-ds] .ds-assistant-bubble-card[data-severity="error"] {
+  border-inline-start-color: var(--ds-danger-strong, var(--ds-danger));
+}
+[data-ds] .ds-assistant-bubble-text {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+}
+[data-ds] .ds-assistant-bubble-text p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+[data-ds] .ds-assistant-bubble-card[data-severity="warning"] .ds-assistant-bubble-text > svg {
+  margin-block-start: 2px;
+  color: var(--ds-warning);
+}
+[data-ds] .ds-assistant-bubble-card[data-severity="error"] .ds-assistant-bubble-text > svg {
+  margin-block-start: 2px;
+  color: var(--ds-danger-strong, var(--ds-danger));
+}
+[data-ds] .ds-assistant-bubble-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+[data-ds] .ds-assistant-bubble-count {
+  margin-inline-start: auto;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+/* AST-5: the watch on the review page (the bubble in place, next to a sample invoice). */
+[data-ds] .ds-assistant-bubble[data-layout="preview"] {
+  position: static;
+  inset: auto;
+  width: 100%;
+}
+[data-ds] .ds-assistant-watch-review {
+  display: grid;
+  gap: var(--ds-space-4);
+  align-items: start;
+}
+@media (min-width: 768px) {
+  [data-ds] .ds-assistant-watch-review {
+    grid-template-columns: minmax(0, 26rem) minmax(0, 23rem);
+  }
+}
+[data-ds] .ds-assistant-watch-review-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+}
+[data-ds] .ds-assistant-proposal-lines li[data-flagged] .ds-assistant-proposal-line-name {
+  text-decoration: underline wavy var(--ds-warning);
+  text-underline-offset: 3px;
+}

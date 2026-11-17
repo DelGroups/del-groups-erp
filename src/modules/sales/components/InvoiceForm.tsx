@@ -132,6 +132,8 @@ import { onlyDateChanged } from "@/lib/documents/dateChange";
 import { useUiStandard } from "@/design-system/components";
 import { reorderByKeys } from "@/components/line-grid";
 import { SalesLinesGrid } from "./SalesLinesGrid";
+import { useAssistantWatch, useSavedDocumentWatch } from "@/components/assistant/useAssistantWatch";
+import { draftFromForm, formLinePatch } from "@/lib/assistant/watch/formDraft";
 import Button from "@/components/ui/button";
 import AmendPostedDialog from "@/components/documents/AmendPostedDialog";
 import { isBackdatedDocument, todayLocalDate } from "@/lib/forms/paymentDate";
@@ -403,6 +405,8 @@ export default function UniversalInvoiceForm({
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [notes, setNotes] = useState("");
   const [savedSaleId, setSavedSaleId] = useState<string | null>(null);
+  /** AST-5: the invoice just posted from this form (the assistant checks it for guard findings for a while). */
+  const [justPostedId, setJustPostedId] = useState<string | null>(null);
   const [documentStatus, setDocumentStatus] = useState<SalesDocumentStatus>("draft");
   const [paymentType, setPaymentType] = useState<SalesPaymentType>("cash");
   const [dueDate, setDueDate] = useState("");
@@ -1465,6 +1469,33 @@ export default function UniversalInvoiceForm({
     displayTotals.grand_total,
   ]);
   const salePreflightHint = salePreflightIssue ? preflightMessage(t, salePreflightIssue) : undefined;
+  // AST-5: the assistant watches this invoice while it is filled in (only with the assistant on; the form stays the source of truth).
+  const watchDraft = draftFromForm({
+    docType: "sale",
+    date: docDate,
+    partnerId: selectedCustomerId || null,
+    lines: items,
+    total: displayTotals.grand_total,
+    paid: totals.paid_amount,
+    payments,
+    availableStock: (line) => resolveItemAvailableStock(line as SaleItem),
+    creditLimit,
+    openReceivables,
+  });
+  useAssistantWatch({
+    formId: "sales.invoice",
+    enabled: isOpen && documentStatus !== "posted",
+    draft: watchDraft,
+    applyPatch: (patch) => {
+      if (patch.target === "header") {
+        setDocDate(String(patch.value));
+        return;
+      }
+      const row = items[patch.index];
+      if (row) handleItemChange(row.id, formLinePatch(patch) as Partial<SaleItem>);
+    },
+  });
+  useSavedDocumentWatch({ entityType: "sale", entityId: justPostedId, docNo, href: justPostedId ? `/sales/${justPostedId}` : "/sales" });
   const { locked: sellerLocked, lockedEmployeeId, lockedName } =
     useResponsiblePerson(employees);
   const effectiveSellerId = sellerLocked ? lockedEmployeeId : selectedSellerId;
@@ -1664,6 +1695,7 @@ export default function UniversalInvoiceForm({
 
     setSaving(false);
     if (result.saleId) setSavedSaleId(result.saleId);
+    if (result.saleId && result.status === "posted") setJustPostedId(result.saleId);
     if (result.docNo) setDocNo(result.docNo);
     setDocumentStatus(result.status === "posted" ? "posted" : "draft");
 
