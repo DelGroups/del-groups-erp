@@ -32,6 +32,7 @@ import { ASSISTANT_PANEL_ID, useAssistantUi } from "./AssistantProvider";
 import { AssistantFloatingButton } from "./AssistantLauncher";
 import { AssistantWatchBubble } from "./AssistantWatchBubble";
 import { useAssistantChat } from "./useAssistantChat";
+import { useMorningBriefing } from "./useMorningBriefing";
 
 const DOCK_ATTR = "data-assistant-dock";
 
@@ -95,6 +96,9 @@ function PanelBody() {
   const dispatchAvatar = ui.dispatchAvatar;
 
   const chat = useAssistantChat({ locale, onAvatar: dispatchAvatar });
+  // AST-6: today's morning briefing is the first message of the day (avatar `success` when all is well).
+  const onAllWell = useCallback(() => dispatchAvatar({ type: "done" }), [dispatchAvatar]);
+  const morning = useMorningBriefing({ active: ui.active, open, onAllWell });
 
   // What the user is looking at; the server reloads the record with the user's own client (AST-1).
   const pageContext = useMemo(() => contextFromPath(pathname), [pathname]);
@@ -304,6 +308,19 @@ function PanelBody() {
                   <p className="ds-assistant-note" role="status">
                     {t("assistant.loadingChat")}
                   </p>
+                ) : chat.messages.length === 0 && morning.message ? (
+                  <>
+                    <p className="ds-assistant-note">{t("assistant.insights.briefingLabel")}</p>
+                    <AssistantThread
+                      messages={[morning.message]}
+                      t={t}
+                      locale={locale}
+                      busy={false}
+                      onRetry={() => undefined}
+                      onCopy={(text) => void copy(text)}
+                      onNavigate={layout === "sheet" ? ui.close : undefined}
+                    />
+                  </>
                 ) : chat.messages.length === 0 ? (
                   <AssistantEmptyState
                     t={t}

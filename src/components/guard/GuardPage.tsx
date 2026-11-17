@@ -14,6 +14,7 @@ import { GUARD_TABS, guardQueryString, parseGuardQuery, type GuardQuery, type Gu
 import { GUARD_KEYS } from "./guardUi";
 import { useGuardAgent } from "./AccountingGuardFlag";
 import GuardAskPanel from "./GuardAskPanel";
+import GuardReviewInChat, { useGuardInChat } from "./GuardReviewInChat";
 import GuardMemoryTab from "./GuardMemoryTab";
 import GuardDashboardTab from "./GuardDashboardTab";
 import GuardFindingsTab from "./GuardFindingsTab";
@@ -50,7 +51,8 @@ function GuardPageBody() {
   const q = useMemo(() => parseGuardQuery(params), [params]);
   const [scanning, setScanning] = useState(false);
   const agent = useGuardAgent();
-  const g = (key: string, p?: Record<string, string | number>) => t(`guard.ui.${key}`, p);
+  const inChat = useGuardInChat();
+  const g =(key: string, p?: Record<string, string | number>) => t(`guard.ui.${key}`, p);
 
   const setQuery = useCallback(
     (patch: Partial<GuardQuery>) => {
@@ -101,7 +103,8 @@ function GuardPageBody() {
             {q.tab === "findings" ? <GuardFindingsTab q={q} setQuery={setQuery} /> : null}
             {q.tab === "reports" ? (
               <>
-                {agent ? <GuardAskPanel /> : null}
+                {/* AST-6: with the assistant on, the accountant is in the chat (the saved reports stay). */}
+                {inChat ? <GuardReviewInChat /> : agent ? <GuardAskPanel /> : null}
                 <GuardReportsTab />
               </>
             ) : null}

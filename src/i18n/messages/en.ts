@@ -7625,6 +7625,12 @@ export const enMessages: Messages = {
       whyQuestion: "Explain this warning on the document I am filling in, and what I should do: {issue}",
       ai_note: "{text}",
     },
+    insights: {
+      briefingLabel: "Morning briefing",
+      guardInChat: "The accountant now works in the assistant: ask about findings and the books there, or build today's review.",
+      buildReview: "Build today's review",
+      buildReviewQuestion: "Build today's review of the Accounting Guard: the open findings by importance, what looks like a real error, what is probably fine, and what to correct first.",
+    },
     dev: {
       title: "Assistant avatar",
       description: "Every state of the avatar in three sizes, and the panel with sample content, for review.",
@@ -7638,6 +7644,11 @@ export const enMessages: Messages = {
       demoInvoiceAnswer: "I prepared a draft invoice for **Test**. Check it below and press Create draft; you post it yourself on the document.",
       watch: "Active watch",
       watchDescription: "A sample sales invoice under watch: the rules run on every change; Fix changes the sample, Ignore hides the warning.",
+      insights: "Briefing and analysis",
+      demoBriefing: "Good morning, Aysel.\n\n- Yesterday's sales: **2 480,00 ₼** in 9 invoices, 18% above a usual Thursday (2 100,00 ₼).\n- Cash and bank: **14 920,00 ₼**.\n- Overdue receivables: **6 120,00 ₼** from 3 customers.\n- Stock: 2 products run out within two weeks.\n\nToday:\n1. Call Konik MMC about 3 400,00 ₼ overdue; [SS-2026-00098](/sales) is 47 days old.\n2. Reorder Qara panel 2,8 m: 12 left, about 5 days at 2,4 a day ([QP-01](/products)).\n3. Check the price of Vint M8: margin 3,1% on 640,00 ₼ sold in 30 days ([Vint M8](/products)).",
+      demoAnalysisQuestion: "Compare this month's sales with last month and tell me why they changed",
+      demoAnalysisAnswer: "Sales from 1 to 20 November are **41 300,00 ₼**, 12% more than the same 20 days before (36 870,00 ₼).\n\n| Customer | Now | Before | Change |\n| --- | --- | --- | --- |\n| Konik MMC | 9 800,00 ₼ | 6 100,00 ₼ | +61% |\n| Bakı Dekor | 7 250,00 ₼ | 7 900,00 ₼ | −8% |\n| Xəzər Mebel | 4 100,00 ₼ | 1 200,00 ₼ | +242% |\n\nMost of the growth is Konik MMC and Xəzər Mebel; Bakı Dekor bought a little less. Xəzər Mebel often buys Qara panel together with Kənar lent (14 invoices): offering the edge tape with every panel order is a cross-sell grounded in our own data.",
+      demoAnalysisStep: "Sales compared",
     },
   },
 };

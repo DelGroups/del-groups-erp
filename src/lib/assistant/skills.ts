@@ -6,7 +6,7 @@
  * Pure module: no database, no SDK; the engine turns skill ids into tool definitions.
  */
 
-export type SkillId = "sales" | "customers" | "inventory" | "finance" | "production" | "accountant";
+export type SkillId = "sales" | "customers" | "inventory" | "finance" | "production" | "accountant" | "insights";
 
 export interface Skill {
   id: SkillId;
@@ -16,6 +16,8 @@ export interface Skill {
   instructions: string;
   /** Only for admins (the guard's tools read across the whole company). */
   adminOnly?: boolean;
+  /** AST-6: only for admins and users who may see financial reports (and a tenant with sales). */
+  needsInsights?: boolean;
 }
 
 export const SKILLS: readonly Skill[] = [
@@ -51,6 +53,13 @@ export const SKILLS: readonly Skill[] = [
       "Accountant (Accounting Guard): you review the guard's findings and the books like a sceptical chartered accountant. Separate real errors, suspicious items and probably-fine items; propose corrections in words (which entry to reverse, which to post) but never post anything. suggest_false_positive only records a suggestion an admin confirms.",
     adminOnly: true,
   },
+  {
+    id: "insights",
+    tools: ["sales_compare", "gross_margin", "debtors_ageing", "stock_cover", "dormant_customers", "bought_together", "price_changes", "employee_overview"],
+    instructions:
+      "Insights for management: analyse sales, margins, debtors, stock and customers with the analysis tools, compare with the previous period, and say what changed and why as far as the numbers show it. Sales and marketing suggestions come only from our own data: never invent market facts, competitors' prices or trends you did not read; under every suggestion put the numbers it rests on and a link where there is one. Mention the tools' caveats (estimated cost, truncated data). About employees: facts only, never score, rank or compare people; at most one practical coaching suggestion per person, from their own recurring warnings.",
+    needsInsights: true,
+  },
 ];
 
 const BY_ID = new Map(SKILLS.map((s) => [s.id, s]));
@@ -67,6 +76,7 @@ const PAGE_SKILLS: Array<[RegExp, SkillId]> = [
   [/^\/(finance\/guard)\b/, "accountant"],
   [/^\/(finance(?!\/guard)|cash-bank|payments|expenses|reports)\b/, "finance"],
   [/^\/production\b/, "production"],
+  [/^\/(reports|dashboard)\b/, "insights"],
 ];
 
 /** Record type in context → skill. */
@@ -85,6 +95,7 @@ const WORD_SKILLS: Array<[RegExp, SkillId]> = [
   [/(product|stock|warehouse|item|məhsul|anbar|qalıq|товар|склад|остат|کالا|محصول|انبار|موجودی)/i, "inventory"],
   [/(cash|bank|account|balance|profit|expense|kassa|bank|hesab|xərc|mənfəət|касс|банк|счет|расход|прибыл|صندوق|بانک|حساب|هزینه|سود)/i, "finance"],
   [/(production|manufactur|istehsal|производств|تولید)/i, "production"],
+  [/(analy|compar|trend|margin|forecast|dormant|cross-?sell|bought together|marketing|campaign|suggest|briefing|employee|staff|slow mov|təhlil|analiz|müqayisə|marja|proqnoz|tövsiyə|marketinq|kampaniya|işçi|əməkdaş|анализ|сравн|тренд|марж|прогноз|маркетинг|предлож|сотрудник|персонал|تحلیل|مقایسه|حاشیه سود|پیش‌بینی|بازاریابی|پیشنهاد|کارمند)/i, "insights"],
   [/(guard|finding|audit|ledger|trial balance|journal|mühasib|nəzarət|yoxla|бухгалт|проводк|журнал|حسابدار|گارد|دفتر|سند حسابداری|اشتباه)/i, "accountant"],
 ];
 
@@ -95,6 +106,8 @@ export interface SelectInput {
   recordType?: string | null;
   question: string;
   isAdmin: boolean;
+  /** AST-6: may this user have the insights skill (admin or can_view_financial_reports, tenant has sales)? */
+  canInsights?: boolean;
 }
 
 /**
@@ -110,8 +123,8 @@ export function selectSkills(input: SelectInput): SkillId[] {
   if (fromRecord) chosen.add(fromRecord);
   for (const [pattern, id] of WORD_SKILLS) if (pattern.test(input.question)) chosen.add(id);
 
-  const allowed = (id: SkillId) => !skillById(id).adminOnly || input.isAdmin;
+  const allowed = (id: SkillId) => (!skillById(id).adminOnly || input.isAdmin) && (!skillById(id).needsInsights || input.canInsights === true);
   let ids = SKILLS.map((s) => s.id).filter((id) => chosen.has(id) && allowed(id));
-  if (ids.length === 0) ids = SKILLS.map((s) => s.id).filter((id) => allowed(id) && id !== "accountant");
+  if (ids.length === 0) ids = SKILLS.map((s) => s.id).filter((id) => allowed(id) && id !== "accountant" && id !== "insights");
   return ids.slice(0, MAX_SKILLS);
 }

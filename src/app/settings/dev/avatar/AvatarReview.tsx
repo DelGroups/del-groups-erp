@@ -138,6 +138,48 @@ export default function AvatarReview({ fontClassName, theme, voiceServer = false
               {preview(<AssistantThread messages={proposalDemo} t={t} locale={locale} busy={false} onRetry={noop} onCopy={noop} />, "success", composer(false))}
             </div>
           </Section>
+          <Section title={t("assistant.dev.insights")}>
+            <div className="ds-assistant-previews" data-review="insights">
+              {preview(
+                <>
+                  <p className="ds-assistant-note">{t("assistant.insights.briefingLabel")}</p>
+                  <AssistantThread
+                    messages={[{ id: "b1", role: "assistant", content: t("assistant.dev.demoBriefing"), status: "done", steps: [], links: [] }]}
+                    t={t}
+                    locale={locale}
+                    busy={false}
+                    onRetry={noop}
+                    onCopy={noop}
+                  />
+                </>,
+                "success",
+                composer(false)
+              )}
+              {preview(
+                <AssistantThread
+                  messages={[
+                    { id: "q1", role: "user", content: t("assistant.dev.demoAnalysisQuestion"), status: "done", steps: [], links: [] },
+                    {
+                      id: "a1",
+                      role: "assistant",
+                      content: t("assistant.dev.demoAnalysisAnswer"),
+                      status: "done",
+                      steps: [{ tool: "sales_compare", summary: t("assistant.dev.demoAnalysisStep"), ok: true }],
+                      links: [{ label: "Satışlar", href: "/sales" }],
+                    },
+                  ]}
+                  t={t}
+                  locale={locale}
+                  busy={false}
+                  onRetry={noop}
+                  onCopy={noop}
+                />,
+                "idle",
+                composer(true)
+              )}
+            </div>
+          </Section>
+
           <Section title={t("assistant.dev.watch")} description={t("assistant.dev.watchDescription")}>
             <WatchReview t={t} />
           </Section>

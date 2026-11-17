@@ -7624,6 +7624,12 @@ export const azMessages = {
       whyQuestion: "Doldurduğum sənəddəki bu xəbərdarlığı izah et və nə etməliyəm: {issue}",
       ai_note: "{text}",
     },
+    insights: {
+      briefingLabel: "Səhər icmalı",
+      guardInChat: "Mühasib indi köməkçidə işləyir: nəticələr və uçot haqqında orada soruşun və ya bugünkü icmalı qurun.",
+      buildReview: "Bugünkü icmalı qur",
+      buildReviewQuestion: "Accounting Guard üzrə bugünkü icmalı qur: açıq nəticələr vaciblik sırası ilə, hansı real səhvdir, hansı çox güman ki qaydasındadır və ilk növbədə nəyi düzəltmək lazımdır.",
+    },
     dev: {
       title: "Köməkçinin avatarı",
       description: "Avatarın bütün vəziyyətləri üç ölçüdə və nümunə məzmunlu panel, yoxlama üçün.",
@@ -7637,6 +7643,11 @@ export const azMessages = {
       demoInvoiceAnswer: "**Test** üçün qaralama faktura hazırladım. Aşağıda yoxlayın və «Qaralama yarat» düyməsini basın; sənədi özünüz təsdiqləyirsiniz.",
       watch: "Aktiv nəzarət",
       watchDescription: "Nəzarət altında nümunə satış fakturası: qaydalar hər dəyişiklikdə işləyir; Düzəlt nümunəni dəyişir, Nəzərə alma xəbərdarlığı gizlədir.",
+      insights: "İcmal və təhlil",
+      demoBriefing: "Sabahınız xeyir, Aysel.\n\n- Dünənki satış: 9 fakturada **2 480,00 ₼**, adi cümə axşamından (2 100,00 ₼) 18% çox.\n- Kassa və bank: **14 920,00 ₼**.\n- Vaxtı keçmiş debitor borcu: 3 müştəridən **6 120,00 ₼**.\n- Anbar: 2 məhsul iki həftəyə bitəcək.\n\nBu gün:\n1. Konik MMC-yə 3 400,00 ₼ vaxtı keçmiş borc üçün zəng edin; [SS-2026-00098](/sales) 47 gündür.\n2. Qara panel 2,8 m sifariş edin: 12 qalıb, gündə 2,4 ilə təxminən 5 günlük ([QP-01](/products)).\n3. Vint M8 qiymətini yoxlayın: 30 gündə 640,00 ₼ satışda marja 3,1% ([Vint M8](/products)).",
+      demoAnalysisQuestion: "Bu ayın satışını keçən ayla müqayisə et və niyə dəyişdiyini de",
+      demoAnalysisAnswer: "1-20 noyabr satışı **41 300,00 ₼**-dir, əvvəlki 20 gündən (36 870,00 ₼) 12% çox.\n\n| Müştəri | İndi | Əvvəl | Dəyişmə |\n| --- | --- | --- | --- |\n| Konik MMC | 9 800,00 ₼ | 6 100,00 ₼ | +61% |\n| Bakı Dekor | 7 250,00 ₼ | 7 900,00 ₼ | −8% |\n| Xəzər Mebel | 4 100,00 ₼ | 1 200,00 ₼ | +242% |\n\nArtımın çoxu Konik MMC və Xəzər Mebel hesabınadır; Bakı Dekor bir az az alıb. Xəzər Mebel Qara paneli tez-tez Kənar lentlə birlikdə alır (14 faktura): hər panel sifarişində kənar lenti təklif etmək öz məlumatlarımıza əsaslanan çarpaz satışdır.",
+      demoAnalysisStep: "Satış müqayisə edildi",
     },
   },
 } as const;

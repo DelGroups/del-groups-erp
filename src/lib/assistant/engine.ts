@@ -12,6 +12,7 @@ import { selectSkills, skillById, type SkillId } from "@/lib/assistant/skills";
 import { checkNote, MEMORY_TOOL_NAMES, MEMORY_TOOLS, memoryBlock, type TurnNote } from "@/lib/assistant/memory";
 import { PROPOSAL_TOOL_NAMES, proposalToolsFor, type ProposalCard } from "@/lib/assistant/proposals";
 import { runProposalTool } from "@/lib/assistant/proposeServer";
+import { canUseInsights, INSIGHT_TOOL_NAMES, insightToolsFor, runInsightTool } from "@/lib/assistant/insights/tools";
 import { userHasLegacyPermission } from "@/lib/auth/permissionMatrix";
 import type { UserProfile } from "@/types/database.types";
 
@@ -78,7 +79,9 @@ export interface AssistantTurnInput {
 export async function runAssistantTurn(input: AssistantTurnInput): Promise<AssistantTurnResult> {
   const env = input.env ?? process.env;
   const context = await loadTurnContext(input.db as unknown as ContextDb, input.clientContext);
-  const skills = selectSkills({ page: context.page, recordType: context.recordType, question: input.message, isAdmin: input.isAdmin });
+  const can = (permission: string) => input.isAdmin || userHasLegacyPermission(input.profile, permission as never);
+  const canInsights = canUseInsights({ isAdmin: input.isAdmin, can, enabledModules: input.enabledModules });
+  const skills = selectSkills({ page: context.page, recordType: context.recordType, question: input.message, isAdmin: input.isAdmin, canInsights });
 
   const budget = assistantBudgetUsd(env);
   const spent = await input.monthSpent();
@@ -86,9 +89,10 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
     return { ok: false, reason: "budget", message: `Monthly AI budget reached (${spent.toFixed(2)} of ${budget} USD).`, skills, context };
   }
 
-  const can = (permission: string) => input.isAdmin || userHasLegacyPermission(input.profile, permission as never);
   const proposalTools = input.proposals ? proposalToolsFor(can) : [];
-  const tools = [...toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin), ...MEMORY_TOOLS, ...proposalTools];
+  const insightTools = canInsights && skills.includes("insights") ? (insightToolsFor(input.isAdmin) as unknown as Anthropic.Beta.BetaTool[]) : [];
+  const tools = [...toolsForSkills(skills, input.profile, input.enabledModules, input.isAdmin), ...insightTools, ...MEMORY_TOOLS, ...proposalTools];
+  const today = input.today ?? new Date().toISOString().slice(0, 10);
   const memory = await loadTurnMemory(input.db, context);
   const route = routeAssistantTurn(input.message, { isAdmin: input.isAdmin, skills, forced: assistantForcedTier(env) });
   const model = resolveTierModels(env)[route.tier];
@@ -131,6 +135,7 @@ export async function runAssistantTurn(input: AssistantTurnInput): Promise<Assis
             onProposal: input.proposals.onProposal,
           });
         }
+        if (INSIGHT_TOOL_NAMES.has(name)) return runInsightTool(input.db, name, args, { today, isAdmin: input.isAdmin, allowed: canInsights });
         if (GUARD_TOOL_NAMES.has(name)) {
           if (!input.isAdmin) return { content: "Permission denied for this user.", isError: true, links: [] };
           return runGuardAgentTool(input.db as unknown as GuardDb, name, args);
