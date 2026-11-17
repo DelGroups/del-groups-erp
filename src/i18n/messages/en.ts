@@ -6155,6 +6155,10 @@ export const enMessages: Messages = {
       timeZone: "Time zone",
     },
     widgets: {
+      morning_briefing: {
+        title: "Morning briefing",
+        description: "Today's briefing from the assistant (admins and managers)",
+      },
       accounting_guard: {
         title: "Accounting Guard",
         description: "Health score and open findings (admins)",
@@ -7631,6 +7635,20 @@ export const enMessages: Messages = {
       buildReview: "Build today's review",
       buildReviewQuestion: "Build today's review of the Accounting Guard: the open findings by importance, what looks like a real error, what is probably fine, and what to correct first.",
     },
+    briefingWidget: {
+      open: "Open the assistant",
+      emptyTitle: "No briefing yet today",
+      emptyHint: "The briefing is written early every morning (06:30). Meanwhile you can ask the assistant about sales, debts and stock.",
+      offTitle: "The daily briefing is switched off",
+      offHint: "An administrator can switch it on here.",
+      offHintAdmin: "Switch it on below to get a short briefing here every morning.",
+      switchLabel: "Daily briefing",
+      switchOn: "On: written every morning at 06:30 for admins and managers.",
+      switchOff: "Off: nothing is written and no AI budget is spent.",
+      saveFailed: "The setting was not saved. Try again.",
+      notAllowed: "You cannot change this setting.",
+      preview: "Yesterday's sales, cash, overdue debts, stock risks and three suggestions for the day.",
+    },
     dev: {
       title: "Assistant avatar",
       description: "Every state of the avatar in three sizes, and the panel with sample content, for review.",
@@ -7644,6 +7662,7 @@ export const enMessages: Messages = {
       demoInvoiceAnswer: "I prepared a draft invoice for **Test**. Check it below and press Create draft; you post it yourself on the document.",
       watch: "Active watch",
       watchDescription: "A sample sales invoice under watch: the rules run on every change; Fix changes the sample, Ignore hides the warning.",
+      briefingWidget: "Home widget: morning briefing",
       insights: "Briefing and analysis",
       demoBriefing: "Good morning, Aysel.\n\n- Yesterday's sales: **2 480,00 ₼** in 9 invoices, 18% above a usual Thursday (2 100,00 ₼).\n- Cash and bank: **14 920,00 ₼**.\n- Overdue receivables: **6 120,00 ₼** from 3 customers.\n- Stock: 2 products run out within two weeks.\n\nToday:\n1. Call Konik MMC about 3 400,00 ₼ overdue; [SS-2026-00098](/sales) is 47 days old.\n2. Reorder Qara panel 2,8 m: 12 left, about 5 days at 2,4 a day ([QP-01](/products)).\n3. Check the price of Vint M8: margin 3,1% on 640,00 ₼ sold in 30 days ([Vint M8](/products)).",
       demoAnalysisQuestion: "Compare this month's sales with last month and tell me why they changed",

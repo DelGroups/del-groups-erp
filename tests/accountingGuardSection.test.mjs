@@ -369,7 +369,7 @@ test("the section is wired into the lists, the document views, the bell and the 
   assert.equal(visibleTo(def, ctx(true)), true);
   assert.equal(visibleTo(def, ctx(false)), false);
   assert.equal(visibleTo(def, { ...ctx(true), flags: { newCrm: false } }), false);
-  assert.match(read("src/components/home/useHomeLayout.ts"), /flags: \{ newCrm, accountingGuard \}/);
+  assert.match(read("src/components/home/useHomeLayout.ts"), /flags: \{ newCrm, accountingGuard(, assistantBriefing)? \}/);
   assert.ok(WIDGETS.some((w) => w.id === "accounting_guard"));
 });
 

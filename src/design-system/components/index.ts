@@ -16,6 +16,7 @@ export { ChartCard, type ChartCardProps, type ChartRange } from "./ChartCard";
 export { UiStandardProvider, useUiStandard } from "./UiStandard";
 export { Truncate, type TruncateProps } from "./Truncate";
 export { IconButton, type IconButtonProps } from "./IconButton";
+export { Switch, type SwitchProps } from "./Switch";
 export { Field, FormGrid, FieldRow, InlineGroup, Section, Card, Toolbar, type FieldProps, type FieldSpan, type SectionProps, type ToolbarProps } from "./Layout";
 export { Chip, MoneyCell, NumberCell, DateCell, type ChipTone } from "./Cells";
 export { DateField, DateTimeField, type DateFieldLabels, type ControlWidth } from "./DateField";

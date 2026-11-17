@@ -8,6 +8,7 @@ import { isAdminRole, type UserProfile } from "@/types/database.types";
 import { addDays } from "./compute";
 import { BRIEFING_SYSTEM_PROMPT, briefingFacts, briefingLinks, briefingUserMessage, cleanBriefingBody, type BriefingAccess, type BriefingData, type BriefingLanguage } from "./briefing";
 import { readLines, readProducts, readSales, type InsightDb } from "./tools";
+import { readBriefingSetting } from "./briefingSetting";
 
 type Env = Readonly<Record<string, string | undefined>>;
 type Claude = Pick<Anthropic, "messages">;
@@ -99,10 +100,13 @@ export async function writeBriefing(input: {
 /** The nightly job: every recipient, inside the monthly budget. */
 export async function nightlyBriefings(input: { apiKey: string; db: SupabaseClient; env?: Env; today: string; client?: Claude; profiles?: UserProfile[] }) {
   const env = input.env ?? process.env;
+  // AST-7: the admins' switch on the home widget. Off (the default) → nothing is read, no Claude call.
+  const setting = await readBriefingSetting(input.db);
+  if (!setting.enabled) return { recipients: 0, written: 0, existing: 0, errors: 0, budget: false, switchedOff: true };
   const model = resolveTierModels(env).fast;
   const client = input.client ?? new Anthropic({ apiKey: input.apiKey });
   const recipients = briefingRecipients(input.profiles ?? (await fetchAllProfiles(input.db as never)));
-  const result = { recipients: recipients.length, written: 0, existing: 0, errors: 0, budget: false };
+  const result = { recipients: recipients.length, written: 0, existing: 0, errors: 0, budget: false, switchedOff: false };
   if (!recipients.length) return result;
   const data = await readBriefingData(input.db, input.today);
   for (const profile of recipients) {
