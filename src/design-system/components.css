@@ -2990,3 +2990,37 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
 [data-ds] .ds-switch[data-checked] .ds-switch-thumb {
   background: var(--ds-brand-fg, #fff);
 }
+
+/* The delivery act dialog: the act date, what is missing, and a preview of the printed page. */
+[data-ds] .ds-delivery-act {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+[data-ds] .ds-delivery-act-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  list-style: none;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-warning-soft, var(--ds-surface-sunken));
+  font-size: var(--ds-text-sm);
+}
+[data-ds] .ds-delivery-act-warnings li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+}
+[data-ds] .ds-delivery-act-warnings svg {
+  margin-top: 2px;
+  color: var(--ds-warning);
+}
+[data-ds] .ds-delivery-act-preview {
+  width: 100%;
+  height: min(60vh, 34rem);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: #fff;
+}

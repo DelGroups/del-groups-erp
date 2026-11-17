@@ -581,6 +581,8 @@ export interface Customer {
   address?: string | null;
   voen?: string | null;
   entity_type?: "physical" | "legal" | null;
+  /** Who signs for a company customer (delivery act); 20261121150000_delivery_act_directors.sql. */
+  director_name?: string | null;
   balance?: number | null;
   default_price_tier?: PriceTier | null;
   created_at?: string | null;

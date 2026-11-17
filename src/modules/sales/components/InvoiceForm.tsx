@@ -132,6 +132,7 @@ import { onlyDateChanged } from "@/lib/documents/dateChange";
 import { useUiStandard } from "@/design-system/components";
 import { reorderByKeys } from "@/components/line-grid";
 import { SalesLinesGrid } from "./SalesLinesGrid";
+import { DeliveryActButton } from "@/components/deliveryAct/DeliveryActButton";
 import { useAssistantWatch, useSavedDocumentWatch } from "@/components/assistant/useAssistantWatch";
 import { draftFromForm, formLinePatch } from "@/lib/assistant/watch/formDraft";
 import Button from "@/components/ui/button";
@@ -1793,6 +1794,8 @@ export default function UniversalInvoiceForm({
       <Button type="button" variant="outline" size="sm" onClick={handleClose}>
         {t("common.cancel")}
       </Button>
+      {/* DELIVERY_ACT: the delivery act of the saved invoice (renders nothing while off or unsaved). */}
+      <DeliveryActButton saleId={savedSaleId} size="sm" />
       {documentLocked && canEditPosted ? (
         <Button type="button" variant="outline" size="sm" onClick={() => setAmendDialogOpen(true)}>
           <FileText className="h-4 w-4" />

@@ -63,6 +63,7 @@ export default function CustomersPage() {
     phone: "",
     company_name: "",
     address: "",
+    director_name: "",
     voen: "",
     entity_type: "physical" as EntityType,
     default_price_tier: "retail" as PriceTier,
@@ -114,6 +115,8 @@ export default function CustomersPage() {
       address: formData.address.trim() || null,
       entity_type: entityType,
       voen: entityType === "legal" ? trimmedVoen : trimmedVoen || null,
+      // Delivery act: who signs for a company customer ("direktoru X şəxsində"); individuals have none.
+      director_name: entityType === "legal" ? formData.director_name.trim() || null : null,
       default_price_tier: formData.default_price_tier,
     };
   };
@@ -153,18 +156,17 @@ export default function CustomersPage() {
 
     setSaving(true);
 
-    const { data, error } = isEdit
-      ? await supabase
-          .from("customers")
-          .update(newCustomer)
-          .eq("id", editingCustomerId)
-          .select("*")
-          .single()
-      : await supabase
-          .from("customers")
-          .insert([{ ...newCustomer, balance: 0 }])
-          .select("*")
-          .single();
+    const save = (payload: Record<string, unknown>) =>
+      isEdit
+        ? supabase.from("customers").update(payload as never).eq("id", editingCustomerId as string).select("*").single()
+        : supabase.from("customers").insert([{ ...payload, balance: 0 } as never]).select("*").single();
+    let { data, error } = await save(newCustomer);
+    if (error && /director_name/.test(error.message)) {
+      // 20261121150000_delivery_act_directors.sql has not run yet: save without the director.
+      const { director_name: _skip, ...rest } = newCustomer;
+      void _skip;
+      ({ data, error } = await save(rest));
+    }
 
     if (error) {
       showError(t("common.errorOccurred", { message: error.message }));
@@ -181,6 +183,7 @@ export default function CustomersPage() {
         phone: "",
         company_name: "",
         address: "",
+        director_name: "",
         voen: "",
         entity_type: "physical",
         default_price_tier: "retail",
@@ -215,6 +218,7 @@ export default function CustomersPage() {
       phone: "",
       company_name: "",
       address: "",
+      director_name: "",
       voen: "",
       entity_type: "physical",
       default_price_tier: "retail",
@@ -234,6 +238,7 @@ export default function CustomersPage() {
       company_name: customer.company_name || "",
       address: customer.address || "",
       voen: customer.voen || "",
+      director_name: customer.director_name || "",
       entity_type: customer.entity_type === "legal" ? "legal" : "physical",
       default_price_tier: customer.default_price_tier || "retail",
     });
@@ -574,6 +579,21 @@ export default function CustomersPage() {
                       required
                       value={formData.voen}
                       onChange={handleInputChange}
+                      className="app-input"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="customer-director" className="block text-xs font-medium text-app mb-1">
+                      {t("customers.directorName")}
+                    </label>
+                    <input
+                      id="customer-director"
+                      type="text"
+                      name="director_name"
+                      maxLength={120}
+                      value={formData.director_name}
+                      onChange={handleInputChange}
+                      placeholder={t("customers.directorNamePlaceholder")}
                       className="app-input"
                     />
                   </div>

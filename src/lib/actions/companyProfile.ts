@@ -52,9 +52,14 @@ export async function saveCompanyProfileAction(
         : await client.from("company_settings").insert([legacy]);
       if (error) return { success: false, error: error.message };
     } else {
-      const { error } = await client
-        .from(COMPANY_PROFILE_TABLE)
-        .upsert({ id: true, ...profileToRow(profile) }, { onConflict: "id" });
+      const row = profileToRow(profile);
+      let { error } = await client.from(COMPANY_PROFILE_TABLE).upsert({ id: true, ...row }, { onConflict: "id" });
+      if (error && /director_name/.test(error.message ?? "")) {
+        // 20261121150000_delivery_act_directors.sql has not run yet: save everything else as before.
+        const { director_name: _skip, ...rest } = row;
+        void _skip;
+        ({ error } = await client.from(COMPANY_PROFILE_TABLE).upsert({ id: true, ...rest }, { onConflict: "id" }));
+      }
       if (error) return { success: false, error: error.message };
     }
 

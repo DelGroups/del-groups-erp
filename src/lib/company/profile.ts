@@ -17,6 +17,8 @@ export interface CompanyProfile {
   /** Registered name printed on invoices, contracts and quotations. */
   legalName: string;
   voen: string;
+  /** The director (head) who signs for the company, e.g. on the delivery act ("… direktoru X şəxsində"). */
+  directorName: string;
   address: string;
   phone: string;
   email: string;
@@ -35,6 +37,7 @@ export const EMPTY_COMPANY_PROFILE: CompanyProfile = {
   displayName: "",
   legalName: "",
   voen: "",
+  directorName: "",
   address: "",
   phone: "",
   email: "",
@@ -77,6 +80,7 @@ export function profileFromRow(row: Row): CompanyProfile {
     displayName: text(r.display_name, 200),
     legalName: text(r.legal_name, 200),
     voen: text(r.voen, 50),
+    directorName: text(r.director_name, 120),
     address: text(r.address),
     phone: text(r.phone, 50),
     email: text(r.email, 200),
@@ -95,6 +99,7 @@ export function profileToRow(profile: CompanyProfile): Record<string, string | n
     display_name: profile.displayName,
     legal_name: profile.legalName,
     voen: profile.voen,
+    director_name: profile.directorName,
     address: profile.address,
     phone: profile.phone,
     email: profile.email,
@@ -119,6 +124,7 @@ export function profileFromLegacy(settings: Row, companySettings: Row, sealUrl?:
     displayName: firstText(s.company_name),
     legalName: firstText(c.company_name, s.company_name),
     voen: firstText(c.voen, s.voen),
+    directorName: "",
     address: firstText(c.address, s.address),
     phone: firstText(c.phone, s.phone),
     email: firstText(c.email),
