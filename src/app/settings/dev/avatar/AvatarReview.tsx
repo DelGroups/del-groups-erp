@@ -11,6 +11,7 @@ import { AssistantEmptyState, AssistantPanelHeader } from "@/components/assistan
 import { AssistantThread } from "@/components/assistant/AssistantThread";
 import { AVATAR_SIZES, AVATAR_STATES, avatarLabelKey } from "@/lib/assistant/ui/avatar";
 import type { ThreadMessage } from "@/lib/assistant/ui/thread";
+import { WatchReview } from "./WatchReview";
 
 /** The review page of the avatar and the panel (AST-2); sample content only, nothing is sent anywhere. */
 export default function AvatarReview({ fontClassName, theme, voiceServer = false }: { fontClassName?: string; theme?: "light" | "dark"; voiceServer?: boolean }) {
@@ -136,6 +137,9 @@ export default function AvatarReview({ fontClassName, theme, voiceServer = false
               {preview(<AssistantThread messages={demo} t={t} busy={false} onRetry={noop} onCopy={noop} />, "alert", composer(true))}
               {preview(<AssistantThread messages={proposalDemo} t={t} locale={locale} busy={false} onRetry={noop} onCopy={noop} />, "success", composer(false))}
             </div>
+          </Section>
+          <Section title={t("assistant.dev.watch")} description={t("assistant.dev.watchDescription")}>
+            <WatchReview t={t} />
           </Section>
         </main>
       </ToastProvider>

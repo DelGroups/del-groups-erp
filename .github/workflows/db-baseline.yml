@@ -311,6 +311,12 @@ jobs:
           psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_actions.sql | tee "$RUNNER_TEMP/assistant_actions.txt"
           grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_actions.txt"
 
+      # Del Assistant active watch (AST-5): form facts by permission, watch events, findings on my document.
+      - name: Assistant watch checks
+        run: |
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -f supabase/tests/assistant_watch.sql | tee "$RUNNER_TEMP/assistant_watch.txt"
+          grep -q "ALL CHECKS PASSED" "$RUNNER_TEMP/assistant_watch.txt"
+
       - name: Server log on failure
         if: failure()
         run: tail -n 100 "$RUNNER_TEMP/pg.log" || true

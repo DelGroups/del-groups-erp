@@ -226,6 +226,9 @@ union all
 select 'pending', '20261121120000_assistant_actions: Del Assistant proposals and drafts (AST-4)',
        case when to_regclass('public.assistant_proposals') is null or to_regprocedure('public.assistant_proposal_claim(uuid, text, boolean)') is null then 'missing' else 'present' end
 union all
+select 'pending', '20261121130000_assistant_watch: Del Assistant active watch on sales and purchase forms (AST-5)',
+       case when to_regclass('public.assistant_watch_events') is null or to_regprocedure('public.assistant_watch_context(text, uuid, uuid[])') is null then 'missing' else 'present' end
+union all
 select 'data', 'rows in ' || name, n::text from counted
 union all
 select 'data', 'auth users', (select count(*)::text from auth.users)

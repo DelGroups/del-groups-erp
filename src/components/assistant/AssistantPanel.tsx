@@ -30,6 +30,7 @@ import { AssistantHistory } from "./AssistantHistory";
 import { AssistantThread } from "./AssistantThread";
 import { ASSISTANT_PANEL_ID, useAssistantUi } from "./AssistantProvider";
 import { AssistantFloatingButton } from "./AssistantLauncher";
+import { AssistantWatchBubble } from "./AssistantWatchBubble";
 import { useAssistantChat } from "./useAssistantChat";
 
 const DOCK_ATTR = "data-assistant-dock";
@@ -66,6 +67,7 @@ export default function AssistantPanel({ floatingFromMd = true }: { floatingFrom
       <ToastProvider closeLabel={t("uiUnified.dialog.close")}>
         <PanelBody />
         <AssistantFloatingButton hideFromMd={!floatingFromMd} />
+        <AssistantWatchBubble floatingButton={floatingFromMd} />
       </ToastProvider>
     </DesignScope>
   );
@@ -151,6 +153,18 @@ function PanelBody() {
     },
     [chat, sentContext]
   );
+
+  // AST-5: "Why?" of a warning opens the panel with the question; it is sent once.
+  const { pendingQuestion, takeQuestion } = ui;
+  useEffect(() => {
+    if (!open || !pendingQuestion || chat.streaming) return;
+    // Sent once the panel has rendered open (a timer callback, not during the effect).
+    const timer = window.setTimeout(() => {
+      takeQuestion();
+      send(pendingQuestion);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [open, pendingQuestion, chat.streaming, takeQuestion, send]);
 
   const newChat = () => {
     // AST-3: the finished conversation may teach the assistant a note or two (server side; nothing comes back).

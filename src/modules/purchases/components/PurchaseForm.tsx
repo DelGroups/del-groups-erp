@@ -90,6 +90,8 @@ import { InvoiceNewProductButton, useInvoiceNewProductAllowed } from "@/componen
 import { createdProductTarget, isEmptyPurchaseLine } from "@/lib/invoices/newProduct";
 import { reorderByKeys } from "@/components/line-grid";
 import { PurchaseLinesGrid } from "./PurchaseLinesGrid";
+import { useAssistantWatch, useSavedDocumentWatch } from "@/components/assistant/useAssistantWatch";
+import { draftFromForm, formLinePatch } from "@/lib/assistant/watch/formDraft";
 import { useUiStandard } from "@/design-system/components";
 import {
   filterLegalSuppliers,
@@ -185,6 +187,8 @@ export default function PurchaseForm({
     initialPurchase ? (isPurchaseDraft(initialPurchase.status) ? "draft" : "posted") : "draft"
   );
   // Fix F1: a posted purchase is changed only by admins (or a role granted it), after a reason.
+  /** AST-5: the purchase just posted from this form (the assistant checks it for guard findings for a while). */
+  const [justPostedId, setJustPostedId] = useState<string | null>(null);
   const [amendDialogOpen, setAmendDialogOpen] = useState(false);
   const [amendReason, setAmendReason] = useState<string | null>(null);
   const amending = amendReason !== null;
@@ -392,6 +396,21 @@ export default function PurchaseForm({
   const newPaymentsTotal = useMemo(() => calcPurchasePaymentsTotal(payments), [payments]);
   const totalPaid = existingPaid + newPaymentsTotal;
   const debt = Math.max(0, grandTotal - totalPaid);
+  // AST-5: the assistant watches this purchase while it is filled in (only with the assistant on; the form stays the source of truth).
+  useAssistantWatch({
+    formId: "purchases.invoice",
+    enabled: documentStatus !== "posted",
+    draft: draftFromForm({ docType: "purchase", date: docDate, partnerId: supplierId || null, lines: items, total: grandTotal, paid: totalPaid, payments }),
+    applyPatch: (patch) => {
+      if (patch.target === "header") {
+        setDocDate(String(patch.value));
+        return;
+      }
+      const row = items[patch.index];
+      if (row) updateItem(row.id, formLinePatch(patch) as Partial<PurchaseLineItem>);
+    },
+  });
+  useSavedDocumentWatch({ entityType: "purchase", entityId: justPostedId, docNo: invoiceNumber, href: "/purchases" });
   // DATE-1 (DOC_DATE_CHANGE, admins): an amendment that changes only the date is a date change in
   // place. The fingerprint is everything the amendment saves except the date (persistDocument's
   // header and payload values).
@@ -783,6 +802,7 @@ export default function PurchaseForm({
 
     if (result.purchaseId) {
       setSavedPurchaseId(result.purchaseId);
+      if (result.status === "posted") setJustPostedId(result.purchaseId);
     }
     if (result.invoiceNumber) {
       setInvoiceNumber(result.invoiceNumber);

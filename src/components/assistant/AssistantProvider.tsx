@@ -1,10 +1,28 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { avatarReducer, INITIAL_AVATAR, settleAfterMs, type AvatarEvent, type AvatarMachine } from "@/lib/assistant/ui/avatar";
 import { assistantUiActive, INITIAL_PANEL, isToggleShortcut, panelReducer, type PanelAction, type PanelState } from "@/lib/assistant/ui/panel";
+import type { WatchIssue } from "@/lib/assistant/watch/rules";
+
+/**
+ * What a form under the active watch (AST-5) shows next to the avatar: its first warning, with Fix, Why and
+ * Ignore, or a notice that a document just saved has a guard finding.
+ */
+export interface WatchSlot {
+  formId: string;
+  issues: WatchIssue[];
+  fix: (issue: WatchIssue) => void;
+  ignore: (issue: WatchIssue) => void;
+  why: (issue: WatchIssue) => void;
+}
+export interface SavedNotice {
+  docNo: string;
+  href: string;
+  rules: string[];
+}
 
 /** The panel element (aria-controls of the buttons that open it). */
 export const ASSISTANT_PANEL_ID = "ds-assistant-panel";
@@ -26,6 +44,16 @@ interface AssistantUiValue {
   toggle: () => void;
   open: () => void;
   close: () => void;
+  /** AST-5: the warnings of the form being filled in (null: no form under watch). */
+  watch: WatchSlot | null;
+  setWatch: (slot: WatchSlot | null) => void;
+  /** AST-5: a saved document has a guard finding. */
+  savedNotice: SavedNotice | null;
+  setSavedNotice: (notice: SavedNotice | null) => void;
+  /** Opens the panel and asks this question ("Why?" of a warning). The panel takes it once. */
+  pendingQuestion: string | null;
+  ask: (question: string) => void;
+  takeQuestion: () => void;
 }
 
 const NOOP = () => undefined;
@@ -38,6 +66,13 @@ const OFF: AssistantUiValue = {
   toggle: NOOP,
   open: NOOP,
   close: NOOP,
+  watch: null,
+  setWatch: NOOP,
+  savedNotice: null,
+  setSavedNotice: NOOP,
+  pendingQuestion: null,
+  ask: NOOP,
+  takeQuestion: NOOP,
 };
 
 const AssistantUiContext = createContext<AssistantUiValue>(OFF);
@@ -81,6 +116,18 @@ export function AssistantProvider({ value, children }: { value: AssistantServerV
   }, [restoreFocus]);
   const toggle = useCallback(() => (openRef.current ? close() : open()), [close, open]);
 
+  const [watch, setWatch] = useState<WatchSlot | null>(null);
+  const [savedNotice, setSavedNotice] = useState<SavedNotice | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const ask = useCallback(
+    (question: string) => {
+      setPendingQuestion(question);
+      open();
+    },
+    [open]
+  );
+  const takeQuestion = useCallback(() => setPendingQuestion(null), []);
+
   // Ctrl+J / Cmd+J from anywhere in the app (A11Y-5).
   useEffect(() => {
     if (!active) return;
@@ -102,8 +149,9 @@ export function AssistantProvider({ value, children }: { value: AssistantServerV
   }, [avatar]);
 
   const ctx = useMemo<AssistantUiValue>(
-    () => (active ? { active, panel, avatar, dispatchPanel, dispatchAvatar, toggle, open, close } : OFF),
-    [active, panel, avatar, toggle, open, close]
+    // prettier-ignore
+    () => (active ? { active, panel, avatar, dispatchPanel, dispatchAvatar, toggle, open, close, watch, setWatch, savedNotice, setSavedNotice, pendingQuestion, ask, takeQuestion } : OFF),
+    [active, panel, avatar, toggle, open, close, watch, savedNotice, pendingQuestion, ask, takeQuestion]
   );
   return <AssistantUiContext.Provider value={ctx}>{children}</AssistantUiContext.Provider>;
 }

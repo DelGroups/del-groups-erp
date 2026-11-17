@@ -22,7 +22,7 @@ export interface AuditRow {
 
 export interface LearnedNote {
   userId: string;
-  kind: "routine" | "skill_gap";
+  kind: "routine" | "skill_gap" | "preference";
   subject: string;
   body: string;
   confidence: number;
@@ -152,4 +152,78 @@ export function conversationTranscript(rows: ReadonlyArray<{ role: string; conte
 /** Is a conversation worth a learning pass? At least 2 questions from the user and not learned before. */
 export function worthLearning(input: { userMessages: number; learnedAt: unknown }): boolean {
   return input.userMessages >= 2 && !input.learnedAt;
+}
+
+// ─── The active watch's events (AST-5) ───────────────────────────────────────
+
+export interface WatchEventRow {
+  user_id: string | null;
+  code: string;
+  action: string;
+  created_at: string;
+}
+
+export const WATCH_LOOKBACK_DAYS = 14;
+/** The same warning fixed this often → the employee keeps making that slip (a skill gap worth knowing). */
+export const WATCH_FIX_MIN = 3;
+/** The same warning ignored this often, and never fixed → it annoys this employee (a preference). */
+export const WATCH_IGNORE_MIN = 5;
+
+const WATCH_LABELS: Record<string, string> = {
+  below_cost: "a price below cost",
+  zero_price: "a zero price",
+  high_discount: "a discount above the maximum",
+  stock_short: "more than the stock",
+  credit_limit: "going over a customer's credit limit",
+  price_far: "a price far from the partner's usual",
+  quantity_unusual: "an unusual quantity",
+  unit_mismatch: "a unit that is not the product's",
+  vat_unusual: "an unusual VAT rate",
+  future_date: "a date in the future",
+  closed_period: "a date in a closed month",
+  possible_duplicate: "a possible duplicate document",
+  unusual_total: "an unusually large total",
+  overpaid: "a payment above the total",
+  cash_no_account: "a payment without a cash or bank account",
+  negative_value: "a negative amount",
+};
+
+/** Which warnings help and which annoy, per employee, from assistant_watch_events (no LLM). */
+export function detectWatchPatterns(rows: readonly WatchEventRow[], now: Date = new Date()): LearnedNote[] {
+  const since = now.getTime() - WATCH_LOOKBACK_DAYS * DAY;
+  const counts = new Map<string, { userId: string; code: string; fixed: number; ignored: number }>();
+  for (const r of rows) {
+    if (!r.user_id || !WATCH_LABELS[r.code]) continue;
+    const at = Date.parse(r.created_at);
+    if (!Number.isFinite(at) || at < since || at > now.getTime()) continue;
+    const key = `${r.user_id}|${r.code}`;
+    const g = counts.get(key) ?? { userId: r.user_id, code: r.code, fixed: 0, ignored: 0 };
+    if (r.action === "fixed") g.fixed += 1;
+    else if (r.action === "ignored") g.ignored += 1;
+    counts.set(key, g);
+  }
+  const out: LearnedNote[] = [];
+  for (const g of counts.values()) {
+    const label = WATCH_LABELS[g.code];
+    if (g.fixed >= WATCH_FIX_MIN) {
+      out.push({
+        userId: g.userId,
+        kind: "skill_gap",
+        subject: `Often enters ${label}`.slice(0, 120),
+        body: `The watch caught ${label} on this employee's documents and they fixed it ${g.fixed} times in ${WATCH_LOOKBACK_DAYS} days; remind them gently before saving.`,
+        confidence: Math.min(1, 0.6 + 0.05 * g.fixed),
+        evidence: { source: "assistant_watch_events", code: g.code, fixed: g.fixed },
+      });
+    } else if (g.ignored >= WATCH_IGNORE_MIN && g.fixed === 0) {
+      out.push({
+        userId: g.userId,
+        kind: "preference",
+        subject: `Ignores warnings about ${label}`.slice(0, 120),
+        body: `Ignored the warning about ${label} ${g.ignored} times in ${WATCH_LOOKBACK_DAYS} days and never fixed it; it is probably expected in their work, so mention it only when it is clearly wrong.`,
+        confidence: Math.min(1, 0.55 + 0.03 * g.ignored),
+        evidence: { source: "assistant_watch_events", code: g.code, ignored: g.ignored },
+      });
+    }
+  }
+  return out;
 }
