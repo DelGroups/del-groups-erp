@@ -7,7 +7,7 @@ import { isValidUuid } from "@/lib/auth/validate";
 import { loadCompanyProfile } from "@/lib/company/loadCompanyProfile";
 import { isDeliveryActEnabled } from "@/lib/features/deliveryAct";
 import type { ActInput } from "@/lib/deliveryAct/act";
-import { mapActSource, type ActSource } from "@/lib/deliveryAct/source";
+import { contractFromRow, mapActSource, type ActSource } from "@/lib/deliveryAct/source";
 
 type Result<T> = { success: true; data: T } | { success: false; error: string };
 
@@ -47,8 +47,9 @@ export async function loadDeliveryActAction(saleId: string): Promise<Result<Omit
 
   let contract: ActSource["contract"] = null;
   if (s.contract_id) {
-    const k = await db.from("contracts").select("contract_number, contract_date").eq("id", s.contract_id).maybeSingle();
-    contract = (k.data as ActSource["contract"]) ?? null;
+    // The whole row: the contract's date column differs between installs (contract_date, or an older one).
+    const k = await db.from("contracts").select("*").eq("id", s.contract_id).maybeSingle();
+    contract = k.data ? contractFromRow(k.data as Record<string, unknown>) : null;
   }
 
   const { profile } = await loadCompanyProfile(db).catch(() => ({ profile: null }));

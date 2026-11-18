@@ -1,4 +1,5 @@
 import type { DeliveryAct } from "@/lib/deliveryAct/act";
+import { PRINT_WIDTH_PX, type ActBarcodes } from "@/lib/deliveryAct/barcodes";
 
 /**
  * The delivery act as one printable HTML page (A4, black on white, no app styles), shown in the dialog's
@@ -7,6 +8,12 @@ import type { DeliveryAct } from "@/lib/deliveryAct/act";
 
 export function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function barcodeCell(value: string, barcodes: ActBarcodes): string {
+  const img = value ? barcodes[value] : undefined;
+  if (!img) return escapeHtml(value);
+  return `<img src="data:image/png;base64,${img.png}" alt="${escapeHtml(value)}" />`;
 }
 
 const STYLE = `
@@ -19,10 +26,11 @@ const STYLE = `
   .place { display: flex; justify-content: space-between; margin: 0 0 14px; }
   p { margin: 0 0 10px; text-align: justify; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 11pt; }
-  th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+  th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
   th { background: #f2f2f2; font-weight: bold; text-align: center; }
   td.n, td.q { text-align: center; white-space: nowrap; }
-  td.b { white-space: nowrap; }
+  td.b { white-space: nowrap; text-align: center; padding: 2px 4px; vertical-align: middle; }
+  td.b img { display: block; margin: 0 auto; width: ${PRINT_WIDTH_PX}px; height: auto; }
   tr { break-inside: avoid; }
   .signs { display: flex; justify-content: space-between; align-items: stretch; gap: 40px; margin-top: 28px; break-inside: avoid; }
   .sign { flex: 1; display: flex; flex-direction: column; }
@@ -32,10 +40,11 @@ const STYLE = `
   .sign > div:nth-last-child(2) { margin-bottom: 36px; }
 `;
 
-export function actToHtml(act: DeliveryAct): string {
+/** `barcodes`: the drawn barcode of each value (drawBarcodes); a value without one is printed as text. */
+export function actToHtml(act: DeliveryAct, barcodes: ActBarcodes = {}): string {
   const e = escapeHtml;
   const rows = act.rows
-    .map((r) => `<tr><td class="n">${r.no}</td><td class="b">${e(r.barcode)}</td><td>${e(r.name)}</td><td class="q">${e(r.unit)}</td><td class="q">${e(r.quantity)}</td></tr>`)
+    .map((r) => `<tr><td class="n">${r.no}</td><td class="b">${barcodeCell(r.barcode, barcodes)}</td><td>${e(r.name)}</td><td class="q">${e(r.unit)}</td><td class="q">${e(r.quantity)}</td></tr>`)
     .join("");
   const sign = (p: DeliveryAct["seller"]) =>
     `<div class="sign"><div class="role">"${e(p.role)}"</div><div>${e(p.name)}</div>${p.director ? `<div>${e(p.director)}</div>` : ""}<div class="line">(imza)</div></div>`;

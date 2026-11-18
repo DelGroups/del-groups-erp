@@ -13,6 +13,7 @@ import { loadDeliveryActAction } from "@/lib/actions/deliveryAct";
 import { actFileName, buildDeliveryAct } from "@/lib/deliveryAct/act";
 import { actToHtml } from "@/components/print/deliveryActHtml";
 import { buildDocx } from "@/lib/deliveryAct/docx";
+import { drawBarcodes } from "@/lib/deliveryAct/barcodes";
 
 /**
  * The delivery act (Təhvil-təslim aktı) of one sales invoice: the act date (the invoice date unless
@@ -47,7 +48,16 @@ export function DeliveryActDialog({ saleId, open, onOpenChange }: { saleId: stri
   }, [open, saleId, invoiceDate]);
 
   const act = useMemo(() => (q.data ? buildDeliveryAct({ ...q.data, actDate: actDate ?? q.data.sale.doc_date ?? "" }) : null), [q.data, actDate]);
-  const html = useMemo(() => (act ? actToHtml(act) : ""), [act]);
+  // The barcodes drawn once per invoice (EAN-13 or Code 128, as on the product card), for the page and the Word file.
+  const barcodeValues = useMemo(() => (q.data ? [...new Set(q.data.lines.map((l) => (l.barcode ?? "").trim()).filter(Boolean))].sort() : []), [q.data]);
+  const drawn = useQuery({
+    queryKey: ["delivery-act-barcodes", barcodeValues],
+    enabled: open && barcodeValues.length > 0,
+    staleTime: Infinity,
+    queryFn: () => drawBarcodes(barcodeValues),
+  });
+  const barcodes = useMemo(() => drawn.data ?? {}, [drawn.data]);
+  const html = useMemo(() => (act ? actToHtml(act, barcodes) : ""), [act, barcodes]);
 
   const print = () => {
     const win = frame.current?.contentWindow;
@@ -61,7 +71,7 @@ export function DeliveryActDialog({ saleId, open, onOpenChange }: { saleId: stri
     setWordBusy(true);
     setWordError(false);
     try {
-      const blob = await buildDocx(act);
+      const blob = await buildDocx(act, barcodes);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -92,10 +102,10 @@ export function DeliveryActDialog({ saleId, open, onOpenChange }: { saleId: stri
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t("deliveryAct.close")}
           </Button>
-          <Button variant="secondary" icon={FileText} onClick={() => void word()} loading={wordBusy} disabled={!act || wordBusy}>
+          <Button variant="secondary" icon={FileText} onClick={() => void word()} loading={wordBusy} disabled={!act || wordBusy || drawn.isFetching}>
             {t("deliveryAct.word")}
           </Button>
-          <Button variant="primary" icon={Printer} onClick={print} disabled={!act}>
+          <Button variant="primary" icon={Printer} onClick={print} disabled={!act || drawn.isFetching}>
             {t("deliveryAct.print")}
           </Button>
         </>

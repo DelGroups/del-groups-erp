@@ -7,9 +7,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import JSZip from "jszip";
 import { actFileName, azDate, BLANK, buildDeliveryAct, chooseTemplate, quoteCompany, yearSuffix } from "../src/lib/deliveryAct/act.ts";
-import { mapActSource } from "../src/lib/deliveryAct/source.ts";
+import { contractFromRow, mapActSource } from "../src/lib/deliveryAct/source.ts";
+import { barcodeFormat } from "../src/lib/deliveryAct/barcodes.ts";
 import { actToHtml } from "../src/components/print/deliveryActHtml.ts";
-import { DOCX_MIME, docxParts, documentXml } from "../src/lib/deliveryAct/docx.ts";
+import { BARCODE_WIDTH_EMU, barcodeMedia, DOCX_MIME, docxParts, documentXml } from "../src/lib/deliveryAct/docx.ts";
 import { isDeliveryActEnabled } from "../src/lib/features/deliveryAct.ts";
 import { EMPTY_COMPANY_PROFILE, profileFromRow, profileToRow } from "../src/lib/company/profile.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
@@ -111,12 +112,13 @@ test("a missing director prints a blank line to sign by hand, and says so", () =
 
 // ─── The simple act ─────────────────────────────────────────────────────────
 
-test("informal act: the customer's name only, no contract, 'Təhvil verən' / 'Təhvil alan'", () => {
+test("informal act: the customer's name only, no contract; the text says satıcı / alıcı, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
   const act = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
   assert.equal(act.template, "informal");
   assert.equal(act.contractHeading, null);
-  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (təhvil verən) ilə Günel Rzayeva (təhvil alan) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:');
-  assert.match(act.clauses[1], /^Təhvil alan /);
+  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar satıcı tərəfindən alıcıya təhvil verilmişdir:');
+  assert.match(act.clauses[1], /^Alıcı yuxarıda /);
+  assert.doesNotMatch(act.clauses.join(" "), /təhvil verən|təhvil alan/i, "Del: the text says seller and buyer, as in his sample");
   assert.deepEqual([act.seller.role, act.buyer.role, act.buyer.name, act.buyer.director], ["Təhvil verən", "Təhvil alan", "Günel Rzayeva", ""]);
   assert.deepEqual(act.warnings, [], "no contract or director warnings on the simple form");
   const walkIn = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false, customer_name: "Nağd alıcı" }, customer: null });
@@ -176,7 +178,8 @@ test("the printed page: A4, the whole act, every value escaped", () => {
 test("the Word file: valid parts, the same text, a real zip that opens", async () => {
   const act = buildDeliveryAct({ ...OFFICIAL, lines: [{ barcode: "1", name: "A & B <c>", unit: "ədəd", quantity: 3 }] });
   const parts = docxParts(act);
-  assert.deepEqual(Object.keys(parts).sort(), ["[Content_Types].xml", "_rels/.rels", "word/_rels/document.xml.rels", "word/document.xml", "word/styles.xml"]);
+  assert.deepEqual(parts.images, {}, "no barcode pictures without drawn barcodes");
+  assert.deepEqual(Object.keys(parts.xml).sort(), ["[Content_Types].xml", "_rels/.rels", "word/_rels/document.xml.rels", "word/document.xml", "word/styles.xml"]);
   const xml = documentXml(act);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8" standalone="yes"\?><w:document /);
   assert.match(xml, /Təhvil-təslim aktı № SS-2026-00123/);
@@ -185,7 +188,7 @@ test("the Word file: valid parts, the same text, a real zip that opens", async (
   assert.match(xml, /w:w="11906" w:h="16838"/, "A4");
   assert.equal(DOCX_MIME, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   const zip = new JSZip();
-  for (const [p, x] of Object.entries(parts)) zip.file(p, x);
+  for (const [p, x] of Object.entries(parts.xml)) zip.file(p, x);
   const bytes = await zip.generateAsync({ type: "uint8array" });
   const back = await JSZip.loadAsync(bytes);
   assert.equal(await back.file("word/document.xml").async("string"), xml);
@@ -252,4 +255,80 @@ test("texts in az / en / ru", () => {
     assert.ok(m.settings.directorName && m.settings.directorNameHint && m.customers.directorName);
   }
   assert.equal(azMessages.deliveryAct.action, "Təhvil-təslim aktı");
+});
+
+// ─── Follow-up (Del, 18.11): the contract's date, and real barcodes ─────────
+
+test("the contract's own date is printed; a contract saved without one uses the day it was entered", () => {
+  // A real contracts row as the screen saves it.
+  const row = { id: "k1", contract_number: "123", party_name: "BAKU BOOK CENTER MMC", contract_date: "2026-05-22", expiry_date: null, created_at: "2026-05-23T09:12:00+00:00", status: "active" };
+  const src = {
+    sale: { doc_no: "SS-2026-00123", invoice_number: null, doc_date: "2026-11-03", is_official: true, contract_id: "k1", customer_id: "c1", customer_name: "X" },
+    lines: [{ product_id: "p1", product_name: "Qələm", barcode: null, unit: "ədəd", unit_name: null, quantity: 1 }],
+    productBarcodes: [],
+    customer: { full_name: "X", company_name: "BAKU BOOK CENTER MMC", entity_type: "legal", director_name: "Rzayeva Günel Anar qızı" },
+    contract: contractFromRow(row),
+    company: { legalName: "ACME MMC", directorName: "Kamran Əliyev" },
+  };
+  const act = buildDeliveryAct({ ...mapActSource(src), actDate: "2026-11-03" });
+  assert.equal(act.contractHeading, "22 may 2026-cı il tarixli № 123 saylı Müqavilənin");
+  assert.match(act.clauses[0], /ondan ötrü ki, 22 may 2026-cı il tarixli № 123 saylı Müqaviləyə əsasən "ACME" MMC-nin/);
+  // An older contract without its own date.
+  const old = buildDeliveryAct({ ...mapActSource({ ...src, contract: contractFromRow({ ...row, contract_date: null }) }), actDate: "2026-11-03" });
+  assert.equal(old.contractHeading, "23 may 2026-cı il tarixli № 123 saylı Müqavilənin");
+  // Another install's column names.
+  assert.deepEqual(contractFromRow({ number: "7", date: "2025-02-01" }), { contract_number: "7", contract_date: "2025-02-01", created_at: null });
+  assert.match(read("src/lib/actions/deliveryAct.ts"), /from\("contracts"\)\.select\("\*"\)/);
+});
+
+test("barcode format: EAN-13 only with a valid check digit, otherwise Code 128", () => {
+  assert.equal(barcodeFormat("4006381333931"), "EAN13");
+  assert.equal(barcodeFormat("4006381333932"), "CODE128", "wrong check digit");
+  assert.equal(barcodeFormat("698552626564"), "CODE128", "12 digits");
+  assert.equal(barcodeFormat("ABC-123"), "CODE128");
+  const src = read("src/lib/deliveryAct/barcodes.ts");
+  assert.match(src, /import\("jsbarcode"\)/, "the library the product card uses; nothing over the network");
+  assert.match(src, /displayValue: true/, "the number under the bars");
+});
+
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+
+test("the printed page shows the barcode picture; rows without one stay empty", () => {
+  const act = buildDeliveryAct({ ...OFFICIAL, lines: [{ barcode: "4006381333931", name: "A", unit: "ədəd", quantity: 1 }, { barcode: null, name: "B", unit: "ədəd", quantity: 2 }, { barcode: "X-1", name: "C", unit: "ədəd", quantity: 3 }] });
+  const html = actToHtml(act, { "4006381333931": { png: PNG, width: 220, height: 90 } });
+  assert.match(html, /<td class="b"><img src="data:image\/png;base64,iVBOR[^"]*" alt="4006381333931" \/><\/td>/);
+  assert.match(html, /<td class="b"><\/td><td>B<\/td>/, "no barcode: empty cell");
+  assert.match(html, /<td class="b">X-1<\/td>/, "not drawn: the number as text");
+  assert.match(html, /td\.b img \{ display: block; margin: 0 auto; width: 132px; height: auto; \}/);
+});
+
+test("the Word file carries the same pictures: one per distinct barcode, linked and sized", async () => {
+  const act = buildDeliveryAct({ ...OFFICIAL, lines: [{ barcode: "4006381333931", name: "A", unit: "ədəd", quantity: 1 }, { barcode: "4006381333931", name: "A2", unit: "ədəd", quantity: 1 }, { barcode: null, name: "B", unit: "ədəd", quantity: 2 }] });
+  const barcodes = { "4006381333931": { png: PNG, width: 220, height: 90 } };
+  const media = barcodeMedia(act, barcodes);
+  assert.equal(media.length, 1);
+  assert.deepEqual([media[0].rId, media[0].path, media[0].cx, media[0].cy], ["rIdBc1", "media/barcode1.png", BARCODE_WIDTH_EMU, Math.round((BARCODE_WIDTH_EMU * 90) / 220)]);
+  const parts = docxParts(act, barcodes);
+  assert.deepEqual(parts.images, { "word/media/barcode1.png": PNG });
+  assert.match(parts.xml["[Content_Types].xml"], /<Default Extension="png" ContentType="image\/png"\/>/);
+  assert.match(parts.xml["word/_rels/document.xml.rels"], /Id="rIdBc1" Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/image" Target="media\/barcode1\.png"/);
+  const xml = parts.xml["word/document.xml"];
+  assert.equal((xml.match(/<a:blip r:embed="rIdBc1"\/>/g) ?? []).length, 2, "both rows show it");
+  assert.deepEqual([...xml.matchAll(/<wp:docPr id="(\d+)"/g)].map((m) => m[1]), ["1", "2"], "unique drawing ids");
+  assert.match(xml, /xmlns:wp="http:\/\/schemas\.openxmlformats\.org\/drawingml\/2006\/wordprocessingDrawing"/);
+  // A real zip with the picture, read back.
+  const zip = new JSZip();
+  for (const [p, x] of Object.entries(parts.xml)) zip.file(p, x);
+  for (const [p, b] of Object.entries(parts.images)) zip.file(p, b, { base64: true });
+  const back = await JSZip.loadAsync(await zip.generateAsync({ type: "uint8array" }));
+  const png = await back.file("word/media/barcode1.png").async("uint8array");
+  assert.deepEqual([...png.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], "PNG signature");
+});
+
+test("the dialog draws the barcodes once and waits for them before Print and Word", () => {
+  const dialog = read("src/components/deliveryAct/DeliveryActDialog.tsx");
+  assert.match(dialog, /queryFn: \(\) => drawBarcodes\(barcodeValues\)/);
+  assert.match(dialog, /actToHtml\(act, barcodes\)/);
+  assert.match(dialog, /buildDocx\(act, barcodes\)/);
+  assert.match(dialog, /disabled=\{!act \|\| drawn\.isFetching\}/);
 });
