@@ -10,7 +10,7 @@ import { actFileName, azDate, BLANK, buildDeliveryAct, chooseTemplate, quoteComp
 import { contractFromRow, mapActSource } from "../src/lib/deliveryAct/source.ts";
 import { barcodeFormat } from "../src/lib/deliveryAct/barcodes.ts";
 import { actToHtml } from "../src/components/print/deliveryActHtml.ts";
-import { BARCODE_WIDTH_EMU, barcodeMedia, DOCX_MIME, docxParts, documentXml } from "../src/lib/deliveryAct/docx.ts";
+import { BARCODE_WIDTH_EMU, barcodeMedia, COLS, DOCX_MIME, docxParts, documentXml } from "../src/lib/deliveryAct/docx.ts";
 import { isDeliveryActEnabled } from "../src/lib/features/deliveryAct.ts";
 import { EMPTY_COMPANY_PROFILE, profileFromRow, profileToRow } from "../src/lib/company/profile.ts";
 import { azMessages, enMessages, ruMessages } from "../src/i18n/messages/index.ts";
@@ -112,13 +112,14 @@ test("a missing director prints a blank line to sign by hand, and says so", () =
 
 // ─── The simple act ─────────────────────────────────────────────────────────
 
-test("informal act: the customer's name only, no contract; the text says satıcı / alıcı, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
+test("informal act: the customer's name only, no contract; (satıcı) / (alıcı) in the opening, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
   const act = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
   assert.equal(act.template, "informal");
   assert.equal(act.contractHeading, null);
-  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar satıcı tərəfindən alıcıya təhvil verilmişdir:');
-  assert.match(act.clauses[1], /^Alıcı yuxarıda /);
-  assert.doesNotMatch(act.clauses.join(" "), /təhvil verən|təhvil alan/i, "Del: the text says seller and buyer, as in his sample");
+  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:');
+  // Del (18.11): only the words in brackets at the top say satıcı / alıcı; the rest stays as it was.
+  assert.doesNotMatch(act.clauses[0], /(təhvil verən)|(təhvil alan)/);
+  assert.match(act.clauses[1], /^Təhvil alan yuxarıda /);
   assert.deepEqual([act.seller.role, act.buyer.role, act.buyer.name, act.buyer.director], ["Təhvil verən", "Təhvil alan", "Günel Rzayeva", ""]);
   assert.deepEqual(act.warnings, [], "no contract or director warnings on the simple form");
   const walkIn = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false, customer_name: "Nağd alıcı" }, customer: null });
@@ -281,14 +282,14 @@ test("the contract's own date is printed; a contract saved without one uses the 
   assert.match(read("src/lib/actions/deliveryAct.ts"), /from\("contracts"\)\.select\("\*"\)/);
 });
 
-test("barcode format: EAN-13 only with a valid check digit, otherwise Code 128", () => {
-  assert.equal(barcodeFormat("4006381333931"), "EAN13");
-  assert.equal(barcodeFormat("4006381333932"), "CODE128", "wrong check digit");
-  assert.equal(barcodeFormat("698552626564"), "CODE128", "12 digits");
-  assert.equal(barcodeFormat("ABC-123"), "CODE128");
+test("barcode type: Code 128 for every barcode, plain black on white, number under the bars", () => {
+  for (const v of ["4006381333931", "698552626564", "ABC-123", "1"]) assert.equal(barcodeFormat(v), "CODE128", v);
   const src = read("src/lib/deliveryAct/barcodes.ts");
+  assert.doesNotMatch(src, /"EAN13"/, "one type on every row (Del, 18.11)");
   assert.match(src, /import\("jsbarcode"\)/, "the library the product card uses; nothing over the network");
   assert.match(src, /displayValue: true/, "the number under the bars");
+  assert.match(src, /background: "#ffffff", lineColor: "#000000"/);
+  assert.match(src, /margin: 10,/, "a clean quiet zone around the bars");
 });
 
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
@@ -297,9 +298,22 @@ test("the printed page shows the barcode picture; rows without one stay empty", 
   const act = buildDeliveryAct({ ...OFFICIAL, lines: [{ barcode: "4006381333931", name: "A", unit: "ədəd", quantity: 1 }, { barcode: null, name: "B", unit: "ədəd", quantity: 2 }, { barcode: "X-1", name: "C", unit: "ədəd", quantity: 3 }] });
   const html = actToHtml(act, { "4006381333931": { png: PNG, width: 220, height: 90 } });
   assert.match(html, /<td class="b"><img src="data:image\/png;base64,iVBOR[^"]*" alt="4006381333931" \/><\/td>/);
-  assert.match(html, /<td class="b"><\/td><td>B<\/td>/, "no barcode: empty cell");
+  assert.match(html, /<td class="b"><\/td><td class="name">B<\/td>/, "no barcode: empty cell");
   assert.match(html, /<td class="b">X-1<\/td>/, "not drawn: the number as text");
-  assert.match(html, /td\.b img \{ display: block; margin: 0 auto; width: 132px; height: auto; \}/);
+});
+
+test("the barcode column is narrow (32 mm) and the product name gets the room, on paper and in Word", () => {
+  const html = actToHtml(buildDeliveryAct(OFFICIAL), {});
+  assert.match(html, /table-layout: fixed/);
+  assert.match(html, /col\.c-b \{ width: 32mm; \}/);
+  assert.match(html, /td\.b img \{ display: block; margin: 0 auto; width: 28mm; max-width: 100%; height: auto; \}/);
+  assert.match(html, /<colgroup><col class="c-n" \/><col class="c-b" \/><col \/><col class="c-u" \/><col class="c-q" \/><\/colgroup>/, "the name column takes the rest");
+  // Word: the same widths in the table grid, adding up to the A4 text width; the picture fits its cell.
+  assert.deepEqual(COLS, [510, 1814, 5194, 960, 1160]);
+  assert.equal(COLS.reduce((a, b) => a + b, 0), 9638);
+  assert.equal(BARCODE_WIDTH_EMU, 28 * 36_000);
+  assert.ok(BARCODE_WIDTH_EMU / 36_000 < (COLS[1] - 160) / 56.7, "picture narrower than the cell minus its margins");
+  assert.ok(COLS[2] > COLS[1] * 2.5, "the name column is the widest by far");
 });
 
 test("the Word file carries the same pictures: one per distinct barcode, linked and sized", async () => {

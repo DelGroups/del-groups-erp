@@ -1,7 +1,6 @@
 /**
- * Barcodes on the delivery act: each product's barcode drawn as a scannable image (EAN-13 when the value
- * is a valid 13-digit EAN, otherwise Code 128), with its number underneath, the same way the product
- * card draws it (JsBarcode). Drawn in the browser on a canvas as PNG, so the printed page and the Word
+ * Barcodes on the delivery act: each product's barcode drawn as a scannable Code 128 image with its
+ * number underneath, the way the product card and labels draw it (JsBarcode). Drawn in the browser on a canvas as PNG, so the printed page and the Word
  * file carry the same picture; nothing goes over the network. A value the library cannot draw stays as
  * plain text.
  */
@@ -15,18 +14,24 @@ export interface ActBarcode {
 
 export type ActBarcodes = Readonly<Record<string, ActBarcode>>;
 
-/** EAN-13 only when the 13th digit is the right check digit; anything else is Code 128. */
-export function barcodeFormat(value: string): "EAN13" | "CODE128" {
-  if (!/^\d{13}$/.test(value)) return "CODE128";
-  const digits = value.split("").map(Number);
-  const sum = digits.slice(0, 12).reduce((acc, d, i) => acc + d * (i % 2 ? 3 : 1), 0);
-  return (10 - (sum % 10)) % 10 === digits[12] ? "EAN13" : "CODE128";
+/**
+ * Code 128 for every barcode (Del, 18.11): one plain, standard look on every row, read by every scanner,
+ * and the default of the product labels. EAN-13 is not used: many codes have 12 digits, and mixing types
+ * gave rows different looks.
+ */
+export function barcodeFormat(_value: string): "CODE128" {
+  void _value;
+  return "CODE128";
 }
 
 /** Drawn at twice the printed size, so the bars stay sharp on paper. */
-export const BARCODE_OPTIONS = { width: 2, height: 56, fontSize: 20, margin: 4, textMargin: 2, background: "#ffffff", lineColor: "#000000", displayValue: true } as const;
-/** How wide the barcode is printed, in CSS pixels (the cell keeps rows compact). */
-export const PRINT_WIDTH_PX = 132;
+export const BARCODE_OPTIONS = { width: 2, height: 56, fontSize: 20, margin: 10, textMargin: 2, background: "#ffffff", lineColor: "#000000", displayValue: true } as const;
+/**
+ * The barcode column on paper (Del, 18.11: narrow): 32 mm wide, the picture 28 mm (with its quiet zone),
+ * so a 12-13 digit Code 128 stays scannable and the product name gets the room.
+ */
+export const BARCODE_COLUMN_MM = 32;
+export const BARCODE_PRINT_MM = 28;
 
 export async function drawBarcodes(values: readonly string[]): Promise<ActBarcodes> {
   if (typeof document === "undefined") return {};

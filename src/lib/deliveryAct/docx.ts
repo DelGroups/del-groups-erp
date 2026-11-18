@@ -34,10 +34,10 @@ function cell(text: string, width: number, opts: { bold?: boolean; align?: "left
   return cellWith(run(text, { bold: opts.bold, size: 22 }), width, { shade: opts.bold, align: opts.align });
 }
 
-/** Column widths in twips (A4 text width ≈ 9 638). */
-const COLS = [600, 2100, 4838, 1000, 1100];
-/** The barcode picture's printed width: 1.25 inch, inside the 2 100-twip column. */
-export const BARCODE_WIDTH_EMU = 1_143_000;
+/** Column widths in twips (A4 text width ≈ 9 638; 1 mm ≈ 56.7): №, barcode 32 mm, name (the rest), unit, quantity. */
+export const COLS = [510, 1814, 5194, 960, 1160];
+/** The barcode picture's printed width: 28 mm (1 mm = 36 000 EMU), inside the 32 mm column. */
+export const BARCODE_WIDTH_EMU = 28 * 36_000;
 const EMU_PER_INCH = 914_400;
 
 /** The barcode pictures of an act: one relationship per distinct value, in table order. */
