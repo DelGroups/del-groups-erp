@@ -7419,8 +7419,12 @@ export const azMessages = {
     print: "Çap / PDF",
     word: "Word faylı",
     close: "Bağla",
+    contractNumber: "Müqavilə nömrəsi",
+    contractDate: "Müqavilənin tarixi",
+    contractLinkedHint: "Fakturaya bağlı müqavilədən götürülüb; bu akt üçün dəyişə bilərsiniz.",
+    contractTypeHint: "Fakturaya müqavilə bağlanmayıb: çap üçün nömrəsini və tarixini yazın. Heç nə yadda saxlanmır.",
     warnings: {
-      no_contract: "Bu rəsmi faktura müqaviləyə bağlanmayıb: akt müqavilə sətri olmadan çap olunur.",
+      no_contract: "Bu rəsmi fakturanın müqaviləsi yoxdur: yuxarıda müqavilənin nömrəsini və tarixini yazın, yoxsa akt müqavilə sətri olmadan çap olunur.",
       no_seller_director: "Direktorumuzun adı boşdur (Ayarlar → Şirkət): əllə yazmaq üçün boş xətt çap olunur.",
       no_buyer_director: "Müştərinin direktoru boşdur (müştəri kartı): əllə yazmaq üçün boş xətt çap olunur.",
       no_lines: "Fakturada miqdarı olan sətir yoxdur.",

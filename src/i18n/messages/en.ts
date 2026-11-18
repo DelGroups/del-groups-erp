@@ -7420,8 +7420,12 @@ export const enMessages: Messages = {
     print: "Print / PDF",
     word: "Word file",
     close: "Close",
+    contractNumber: "Contract number",
+    contractDate: "Contract date",
+    contractLinkedHint: "From the contract linked to the invoice; you may change it for this act.",
+    contractTypeHint: "The invoice has no linked contract: type its number and date to print them. Nothing is saved.",
     warnings: {
-      no_contract: "This official invoice is not linked to a contract: the act is printed without the contract line.",
+      no_contract: "This official invoice has no contract: type the contract number and date above, otherwise the act is printed without the contract line.",
       no_seller_director: "Our director's name is empty (Settings → Company): a blank line is printed to sign by hand.",
       no_buyer_director: "The customer's director is empty (customer card): a blank line is printed to sign by hand.",
       no_lines: "The invoice has no lines with a quantity.",

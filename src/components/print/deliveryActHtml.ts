@@ -54,7 +54,7 @@ export function actToHtml(act: DeliveryAct, barcodes: ActBarcodes = {}): string 
 <html lang="az"><head><meta charset="utf-8"><title>${e(act.title)} № ${e(act.number)}</title><style>${STYLE}</style></head>
 <body>
 ${act.contractHeading ? `<p class="contract">${e(act.contractHeading)}</p>` : ""}
-<h1>${e(act.title)} № ${e(act.number)}</h1>
+<h1>${e(act.title)}</h1>
 <div class="place"><span>${e(act.city)}</span><span>${e(act.date)}</span></div>
 <p>1. ${e(act.clauses[0])}</p>
 <table><colgroup><col class="c-n" /><col class="c-b" /><col /><col class="c-u" /><col class="c-q" /></colgroup><thead><tr><th>№</th><th>Barkod</th><th>Malın adı</th><th>Vahid</th><th>Miqdarı</th></tr></thead><tbody>${rows}</tbody></table>
