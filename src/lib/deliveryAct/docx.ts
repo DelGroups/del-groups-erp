@@ -75,7 +75,7 @@ export function documentXml(act: DeliveryAct, barcodes: ActBarcodes = {}): strin
   const twoCols = (left: string, right: string, bold = false) => para(`${run(left, { bold })}<w:r><w:tab/></w:r>${run(right, { bold })}`, { tabs: '<w:tabs><w:tab w:val="left" w:pos="5300"/></w:tabs>', after: 40 });
   const body = [
     act.contractHeading ? para(run(act.contractHeading), { align: "center", after: 60 }) : "",
-    para(run(`${act.title} № ${act.number}`, { bold: true, size: 30 }), { align: "center", after: 200 }),
+    para(run(act.title, { bold: true, size: 30 }), { align: "center", after: 200 }),
     para(`${run(act.city)}<w:r><w:tab/></w:r>${run(act.date)}`, { tabs: rightTab, after: 200 }),
     para(run(`1. ${act.clauses[0]}`), { align: "both" }),
     table,

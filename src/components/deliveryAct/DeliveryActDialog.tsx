@@ -10,7 +10,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { dateFieldLabels } from "@/i18n/uiStandardLabels";
 import { dialogLabels } from "@/i18n/uiUnifiedLabels";
 import { loadDeliveryActAction } from "@/lib/actions/deliveryAct";
-import { actFileName, buildDeliveryAct } from "@/lib/deliveryAct/act";
+import { actContract, actFileName, buildDeliveryAct } from "@/lib/deliveryAct/act";
 import { actToHtml } from "@/components/print/deliveryActHtml";
 import { buildDocx } from "@/lib/deliveryAct/docx";
 import { drawBarcodes } from "@/lib/deliveryAct/barcodes";
@@ -39,16 +39,31 @@ export function DeliveryActDialog({ saleId, open, onOpenChange }: { saleId: stri
     },
   });
 
-  // Each time the dialog opens on an invoice, the act date starts as the invoice date.
+  // Each time the dialog opens on an invoice: the act date is the invoice date, and the contract's number and
+  // date come from the contract linked to the invoice (empty when none; the user may type them for this act).
   const invoiceDate = q.data?.sale.doc_date ?? null;
+  const linkedNo = q.data?.contract?.contract_number ?? "";
+  const linkedDate = q.data?.contract?.contract_date ?? null;
+  const [contractNo, setContractNo] = useState("");
+  const [contractDate, setContractDate] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
-    const timer = window.setTimeout(() => setActDate(invoiceDate), 0);
+    const timer = window.setTimeout(() => {
+      setActDate(invoiceDate);
+      setContractNo(linkedNo);
+      setContractDate(linkedDate);
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, [open, saleId, invoiceDate]);
+  }, [open, saleId, invoiceDate, linkedNo, linkedDate]);
 
-  const act = useMemo(() => (q.data ? buildDeliveryAct({ ...q.data, actDate: actDate ?? q.data.sale.doc_date ?? "" }) : null), [q.data, actDate]);
-  // The barcodes drawn once per invoice (EAN-13 or Code 128, as on the product card), for the page and the Word file.
+  const act = useMemo(
+    () =>
+      q.data
+        ? buildDeliveryAct({ ...q.data, contract: actContract(contractNo, contractDate), actDate: actDate ?? q.data.sale.doc_date ?? "" })
+        : null,
+    [q.data, actDate, contractNo, contractDate]
+  );
+  // The barcodes drawn once per invoice (Code 128, as on the product labels), for the page and the Word file.
   const barcodeValues = useMemo(() => (q.data ? [...new Set(q.data.lines.map((l) => (l.barcode ?? "").trim()).filter(Boolean))].sort() : []), [q.data]);
   const drawn = useQuery({
     queryKey: ["delivery-act-barcodes", barcodeValues],
@@ -122,9 +137,17 @@ export function DeliveryActDialog({ saleId, open, onOpenChange }: { saleId: stri
         </p>
       ) : (
         <div className="ds-delivery-act">
-          <Field label={t("deliveryAct.actDate")} hint={t("deliveryAct.actDateHint")}>
-            {({ id, describedBy }) => <DateField id={id} aria-describedby={describedBy} value={actDate} onChange={setActDate} locale={locale} labels={dateFieldLabels(t)} />}
-          </Field>
+          <div className="ds-delivery-act-fields">
+            <Field label={t("deliveryAct.actDate")} hint={t("deliveryAct.actDateHint")}>
+              {({ id, describedBy }) => <DateField id={id} aria-describedby={describedBy} value={actDate} onChange={setActDate} locale={locale} labels={dateFieldLabels(t)} />}
+            </Field>
+            <Field label={t("deliveryAct.contractNumber")} hint={t(linkedNo || linkedDate ? "deliveryAct.contractLinkedHint" : "deliveryAct.contractTypeHint")}>
+              {({ id, describedBy }) => <input id={id} aria-describedby={describedBy} className="ds-input w-full" value={contractNo} maxLength={60} onChange={(e) => setContractNo(e.target.value)} />}
+            </Field>
+            <Field label={t("deliveryAct.contractDate")}>
+              {({ id }) => <DateField id={id} value={contractDate} onChange={setContractDate} locale={locale} labels={dateFieldLabels(t)} />}
+            </Field>
+          </div>
           {act.warnings.length ? (
             <ul className="ds-delivery-act-warnings" aria-label={t("deliveryAct.warningsLabel")}>
               {act.warnings.map((w) => (
@@ -157,3 +180,4 @@ export function ScopedDeliveryActDialog(props: { saleId: string | null; open: bo
     </DesignScope>
   );
 }
+

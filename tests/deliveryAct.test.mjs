@@ -6,7 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import JSZip from "jszip";
-import { actFileName, azDate, BLANK, buildDeliveryAct, chooseTemplate, quoteCompany, yearSuffix } from "../src/lib/deliveryAct/act.ts";
+import { actContract, actFileName, azDate, BLANK, buildDeliveryAct, chooseTemplate, quoteCompany, yearSuffix } from "../src/lib/deliveryAct/act.ts";
 import { contractFromRow, mapActSource } from "../src/lib/deliveryAct/source.ts";
 import { barcodeFormat } from "../src/lib/deliveryAct/barcodes.ts";
 import { actToHtml } from "../src/components/print/deliveryActHtml.ts";
@@ -39,9 +39,9 @@ test("year suffixes follow the last spoken word of the year", () => {
 });
 
 test("dates read as in the sample: day, month in words, year with its suffix", () => {
-  assert.equal(azDate("2026-11-03"), "03 noyabr 2026-cı il");
-  assert.equal(azDate("2026-05-22"), "22 may 2026-cı il");
-  assert.equal(azDate("2023-01-09T10:00:00Z"), "09 yanvar 2023-cü il");
+  assert.equal(azDate("2026-11-03"), "03 Noy 2026-cı il");
+  assert.equal(azDate("2026-05-22"), "22 May 2026-cı il");
+  assert.equal(azDate("2023-01-09T10:00:00Z"), "09 Yan 2023-cü il");
   assert.equal(azDate(null), BLANK);
   assert.equal(azDate("2026-13-01"), BLANK);
 });
@@ -70,12 +70,12 @@ test("official act: the sample's text with the contract, both companies and dire
   const act = buildDeliveryAct(OFFICIAL);
   assert.equal(act.template, "official");
   assert.equal(act.number, "SS-2026-00123");
-  assert.equal(act.contractHeading, "22 may 2026-cı il tarixli № 15 saylı Müqavilənin");
-  assert.equal(act.title, "Təhvil-təslim aktı");
-  assert.deepEqual([act.city, act.date], ["Bakı şəhəri", "03 noyabr 2026-cı il"]);
+  assert.equal(act.contractHeading, "22 May 2026-cı il tarixli № 15 saylı Müqavilənin");
+  assert.equal(act.title, "Təhvil – təslim aktı");
+  assert.deepEqual([act.city, act.date], ["Bakı şəhəri", "03 Noy 2026-cı il"]);
   assert.equal(
     act.clauses[0],
-    '"ACME" MMC-nin direktoru Kamran Əliyev şəxsində (satıcı) bir tərəfdən, "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsində (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, 22 may 2026-cı il tarixli № 15 saylı Müqaviləyə əsasən "ACME" MMC-nin direktoru Kamran Əliyev tərəfindən "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsinə aşağıdakı mallar təhvil verilmişdir:'
+    '"ACME" MMC-nin direktoru Kamran Əliyev şəxsində (satıcı) bir tərəfdən "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsində (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, 22 May 2026-cı il tarixli № 15 saylı Müqaviləyə əsasən "ACME" MMC-nin direktoru Kamran Əliyev tərəfindən "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsinə aşağıdakı mallar təhvil verilmişdir:'
   );
   // The sample's typos are fixed: goods, not services; the buyer, not the customer; no "tərəfindən tərəfdən".
   assert.match(act.clauses[1], /^Alıcı .*mallarda heç bir qüsur/);
@@ -87,8 +87,8 @@ test("official act: the sample's text with the contract, both companies and dire
 });
 
 test("the act date can differ from the invoice date", () => {
-  assert.equal(buildDeliveryAct({ ...OFFICIAL, actDate: "2026-11-05" }).date, "05 noyabr 2026-cı il");
-  assert.equal(buildDeliveryAct({ ...OFFICIAL, actDate: "" }).date, "03 noyabr 2026-cı il", "empty → the invoice date");
+  assert.equal(buildDeliveryAct({ ...OFFICIAL, actDate: "2026-11-05" }).date, "05 Noy 2026-cı il");
+  assert.equal(buildDeliveryAct({ ...OFFICIAL, actDate: "" }).date, "03 Noy 2026-cı il", "empty → the invoice date");
 });
 
 test("official without a contract: no contract line, and a warning", () => {
@@ -107,16 +107,25 @@ test("a missing director prints a blank line to sign by hand, and says so", () =
   assert.equal(act.seller.director, "");
   assert.deepEqual(act.warnings, ["no_seller_director", "no_buyer_director"]);
   const noNumber = buildDeliveryAct({ ...OFFICIAL, contract: { contract_number: null, contract_date: "2026-05-22" } });
-  assert.equal(noNumber.contractHeading, `22 may 2026-cı il tarixli № ${BLANK} saylı Müqavilənin`);
+  assert.equal(noNumber.contractHeading, `22 May 2026-cı il tarixli № ${BLANK} saylı Müqavilənin`);
 });
 
 // ─── The simple act ─────────────────────────────────────────────────────────
 
 test("informal act: the customer's name only, no contract; (satıcı) / (alıcı) in the opening, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
-  const act = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
+  const act = buildDeliveryAct({ ...OFFICIAL, contract: null, sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
   assert.equal(act.template, "informal");
   assert.equal(act.contractHeading, null);
-  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:');
+  // Del (18.11): the same sentence as his sample, with the customer's name in place of the company.
+  assert.equal(
+    act.clauses[0],
+    '"ACME" MMC-nin direktoru Kamran Əliyev şəxsində (satıcı) bir tərəfdən Günel Rzayeva (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, "ACME" MMC-nin direktoru Kamran Əliyev tərəfindən Günel Rzayeva şəxsinə aşağıdakı mallar təhvil verilmişdir:'
+  );
+  // A contract typed in the dialog (or linked) prints on the simple form too: above the title and in the text.
+  const withContract = buildDeliveryAct({ ...OFFICIAL, contract: actContract("77", "2026-04-01"), sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
+  assert.equal(withContract.contractHeading, "01 Apr 2026-cı il tarixli № 77 saylı Müqavilənin");
+  assert.match(withContract.clauses[0], /ondan ötrü ki, 01 Apr 2026-cı il tarixli № 77 saylı Müqaviləyə əsasən "ACME" MMC-nin/);
+  assert.equal(actContract("  ", null), null, "nothing typed → no contract line");
   // Del (18.11): only the words in brackets at the top say satıcı / alıcı; the rest stays as it was.
   assert.doesNotMatch(act.clauses[0], /(təhvil verən)|(təhvil alan)/);
   assert.match(act.clauses[1], /^Təhvil alan yuxarıda /);
@@ -167,8 +176,8 @@ test("rows → act input: the invoice number, barcodes from the product card, th
 test("the printed page: A4, the whole act, every value escaped", () => {
   const html = actToHtml(buildDeliveryAct({ ...OFFICIAL, lines: [{ barcode: "<b>", name: "Qələm & <script>alert(1)</script>", unit: "ədəd", quantity: 1 }] }));
   assert.match(html, /@page \{ size: A4/);
-  assert.match(html, /<h1>Təhvil-təslim aktı № SS-2026-00123<\/h1>/);
-  assert.match(html, /22 may 2026-cı il tarixli № 15 saylı Müqavilənin/);
+  assert.match(html, /<h1>Təhvil – təslim aktı<\/h1>/);
+  assert.match(html, /22 May 2026-cı il tarixli № 15 saylı Müqavilənin/);
   assert.match(html, /<th>№<\/th><th>Barkod<\/th><th>Malın adı<\/th><th>Vahid<\/th><th>Miqdarı<\/th>/);
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /Qələm &amp; &lt;script&gt;/);
@@ -183,7 +192,7 @@ test("the Word file: valid parts, the same text, a real zip that opens", async (
   assert.deepEqual(Object.keys(parts.xml).sort(), ["[Content_Types].xml", "_rels/.rels", "word/_rels/document.xml.rels", "word/document.xml", "word/styles.xml"]);
   const xml = documentXml(act);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8" standalone="yes"\?><w:document /);
-  assert.match(xml, /Təhvil-təslim aktı № SS-2026-00123/);
+  assert.match(xml, /Təhvil – təslim aktı/);
   assert.match(xml, /A &amp; B &lt;c&gt;/);
   assert.match(xml, /<w:tblHeader\/>/);
   assert.match(xml, /w:w="11906" w:h="16838"/, "A4");
@@ -272,11 +281,11 @@ test("the contract's own date is printed; a contract saved without one uses the 
     company: { legalName: "ACME MMC", directorName: "Kamran Əliyev" },
   };
   const act = buildDeliveryAct({ ...mapActSource(src), actDate: "2026-11-03" });
-  assert.equal(act.contractHeading, "22 may 2026-cı il tarixli № 123 saylı Müqavilənin");
-  assert.match(act.clauses[0], /ondan ötrü ki, 22 may 2026-cı il tarixli № 123 saylı Müqaviləyə əsasən "ACME" MMC-nin/);
+  assert.equal(act.contractHeading, "22 May 2026-cı il tarixli № 123 saylı Müqavilənin");
+  assert.match(act.clauses[0], /ondan ötrü ki, 22 May 2026-cı il tarixli № 123 saylı Müqaviləyə əsasən "ACME" MMC-nin/);
   // An older contract without its own date.
   const old = buildDeliveryAct({ ...mapActSource({ ...src, contract: contractFromRow({ ...row, contract_date: null }) }), actDate: "2026-11-03" });
-  assert.equal(old.contractHeading, "23 may 2026-cı il tarixli № 123 saylı Müqavilənin");
+  assert.equal(old.contractHeading, "23 May 2026-cı il tarixli № 123 saylı Müqavilənin");
   // Another install's column names.
   assert.deepEqual(contractFromRow({ number: "7", date: "2025-02-01" }), { contract_number: "7", contract_date: "2025-02-01", created_at: null });
   assert.match(read("src/lib/actions/deliveryAct.ts"), /from\("contracts"\)\.select\("\*"\)/);
@@ -345,4 +354,41 @@ test("the dialog draws the barcodes once and waits for them before Print and Wor
   assert.match(dialog, /actToHtml\(act, barcodes\)/);
   assert.match(dialog, /buildDocx\(act, barcodes\)/);
   assert.match(dialog, /disabled=\{!act \|\| drawn\.isFetching\}/);
+});
+
+test("Del's sample, word for word: header above the title, the opening sentence, the dates' style", () => {
+  const act = buildDeliveryAct({
+    sale: { doc_no: "SS-2026-00123", doc_date: "2026-11-03", is_official: true, customer_name: "BAKU BOOK CENTER" },
+    customer: { full_name: "X", company_name: "BAKU BOOK CENTER MMC", entity_type: "legal", director_name: "Rzayeva Günel Anar qızı" },
+    contract: { contract_number: "123", contract_date: "2026-05-22" },
+    company: { legalName: "ACME MMC", directorName: "Kamran Əliyev" },
+    lines: [{ barcode: null, name: "A", unit: "ədəd", quantity: 1 }],
+    actDate: "2026-11-03",
+  });
+  // The sample (with its own company names and the contract filled in; its duplicated "tərəfdən" left out).
+  assert.equal(act.contractHeading, "22 May 2026-cı il tarixli № 123 saylı Müqavilənin");
+  assert.equal(act.title, "Təhvil – təslim aktı");
+  assert.deepEqual([act.city, act.date], ["Bakı şəhəri", "03 Noy 2026-cı il"]);
+  assert.equal(
+    act.clauses[0],
+    '"ACME" MMC-nin direktoru Kamran Əliyev şəxsində (satıcı) bir tərəfdən "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsində (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, 22 May 2026-cı il tarixli № 123 saylı Müqaviləyə əsasən "ACME" MMC-nin direktoru Kamran Əliyev tərəfindən "BAKU BOOK CENTER" MMC, direktoru Rzayeva Günel Anar qızı şəxsinə aşağıdakı mallar təhvil verilmişdir:'
+  );
+  // The page: the contract line first, then the title, then the city and date.
+  const html = actToHtml(act, {});
+  assert.ok(html.indexOf("Müqavilənin") < html.indexOf("<h1>Təhvil – təslim aktı</h1>"));
+  assert.ok(html.indexOf("<h1>") < html.indexOf("Bakı şəhəri"));
+  const xml = documentXml(act);
+  assert.ok(xml.indexOf("Müqavilənin") < xml.indexOf("Təhvil – təslim aktı"));
+});
+
+test("without a contract the header has only the title; the dialog lets the contract be typed for that act", () => {
+  const act = buildDeliveryAct({ ...OFFICIAL, contract: null });
+  assert.equal(act.contractHeading, null);
+  assert.doesNotMatch(actToHtml(act, {}), /Müqavilə/);
+  assert.deepEqual(act.warnings, ["no_contract"]);
+  const dialog = read("src/components/deliveryAct/DeliveryActDialog.tsx");
+  assert.match(dialog, /setContractNo\(linkedNo\);/, "prefilled from the linked contract");
+  assert.match(dialog, /contract: actContract\(contractNo, contractDate\)/);
+  assert.match(dialog, /deliveryAct\.contractTypeHint/);
+  for (const m of [azMessages, enMessages, ruMessages]) assert.ok(m.deliveryAct.contractNumber && m.deliveryAct.contractDate && m.deliveryAct.contractTypeHint);
 });

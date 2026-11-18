@@ -50,7 +50,8 @@ export interface DeliveryAct {
 
 /** A line to write by hand where a value is missing. */
 export const BLANK = "____________________";
-const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
+/** As in Del's sample ("22 May 2026-cı il", "03 Noy 2026-cı il"): the short month, capitalised. */
+const MONTHS = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
 const LEGAL_FORMS = ["MMC", "ASC", "QSC", "AÇQ", "QAPALI", "LLC", "LTD", "İB", "IB", "FƏRDİ"];
 
 /** The suffix of "2026-cı il": vowel harmony with the last spoken word of the number. */
@@ -64,7 +65,7 @@ export function yearSuffix(year: number): string {
   return "ci"; // min
 }
 
-/** "2026-11-03" → "03 noyabr 2026-cı il"; anything else → a blank line. */
+/** "2026-11-03" → "03 Noy 2026-cı il" (the sample's style); anything else → a blank line. */
 export function azDate(iso: string | null | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
   if (!m) return BLANK;
@@ -98,7 +99,7 @@ export function buildDeliveryAct(input: ActInput): DeliveryAct {
   const seller = quoteCompany(input.company.legalName);
   const sellerDirector = text(input.company.directorName);
   const contractNo = text(input.contract?.contract_number);
-  const hasContract = !!input.contract && (!!contractNo || !!input.contract.contract_date);
+  const hasContract = !!input.contract && (!!contractNo || !!text(input.contract.contract_date));
   const contractRef = hasContract ? `${azDate(input.contract?.contract_date)} tarixli № ${contractNo || BLANK} saylı Müqavilə` : null;
 
   const rows = input.lines
@@ -120,16 +121,19 @@ export function buildDeliveryAct(input: ActInput): DeliveryAct {
     const bd = buyerDirector || BLANK;
     const basis = contractRef ? `${contractRef}yə əsasən ` : "";
     clauses = [
-      `${seller}-nin direktoru ${sd} şəxsində (satıcı) bir tərəfdən, ${buyer}, direktoru ${bd} şəxsində (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, ${basis}${seller}-nin direktoru ${sd} tərəfindən ${buyer}, direktoru ${bd} şəxsinə aşağıdakı mallar təhvil verilmişdir:`,
+      `${seller}-nin direktoru ${sd} şəxsində (satıcı) bir tərəfdən ${buyer}, direktoru ${bd} şəxsində (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, ${basis}${seller}-nin direktoru ${sd} tərəfindən ${buyer}, direktoru ${bd} şəxsinə aşağıdakı mallar təhvil verilmişdir:`,
       "Alıcı yuxarıda qeyd olunan malları lazımi qaydada yoxlamış və yoxlama zamanı mallarda heç bir qüsur aşkar edilməmişdir.",
       "Tərəflərin bir-birinə qarşı qarşılıqlı tələbləri yoxdur. Aktın doğruluğunu imzalarımızla təsdiq edirik.",
     ];
     sellerParty = { role: "Satıcı", name: seller, director: sellerDirector ? `Direktor: ${sellerDirector}` : "" };
     buyerParty = { role: "Alıcı", name: buyer, director: buyerDirector ? `Direktor: ${buyerDirector}` : "" };
   } else {
+    // The same sentence as the official form (Del's sample), with the customer's name in place of the company.
     const buyerName = text(input.customer?.full_name) || text(input.sale.customer_name) || BLANK;
+    const sd = sellerDirector || BLANK;
+    const basis = contractRef ? `${contractRef}yə əsasən ` : "";
     clauses = [
-      `Bu akt ${seller} (satıcı) ilə ${buyerName} (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:`,
+      `${seller}-nin direktoru ${sd} şəxsində (satıcı) bir tərəfdən ${buyerName} (alıcı) digər tərəfdən bu aktı tərtib edirik ondan ötrü ki, ${basis}${seller}-nin direktoru ${sd} tərəfindən ${buyerName} şəxsinə aşağıdakı mallar təhvil verilmişdir:`,
       "Təhvil alan yuxarıda qeyd olunan malları lazımi qaydada yoxlamış və yoxlama zamanı mallarda heç bir qüsur aşkar edilməmişdir.",
       "Tərəflərin bir-birinə qarşı qarşılıqlı tələbləri yoxdur. Aktın doğruluğunu imzalarımızla təsdiq edirik.",
     ];
@@ -140,8 +144,9 @@ export function buildDeliveryAct(input: ActInput): DeliveryAct {
   return {
     template,
     number: text(input.sale.doc_no) || BLANK,
-    contractHeading: template === "official" && contractRef ? `${contractRef}nin` : null,
-    title: "Təhvil-təslim aktı",
+    // Above the title, as in the sample, whenever the contract is known (linked to the invoice or typed in the dialog).
+    contractHeading: contractRef ? `${contractRef}nin` : null,
+    title: "Təhvil – təslim aktı",
     city: "Bakı şəhəri",
     date: azDate(input.actDate || input.sale.doc_date),
     clauses,
@@ -156,4 +161,11 @@ export function buildDeliveryAct(input: ActInput): DeliveryAct {
 export function actFileName(act: Pick<DeliveryAct, "number">): string {
   const safe = act.number.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   return `Tehvil-teslim-akti${safe && !safe.startsWith("_") ? `-${safe}` : ""}`;
+}
+
+/** The contract on this act: what the dialog shows (linked or typed); nothing typed → no contract line. */
+export function actContract(number: string, date: string | null): { contract_number: string | null; contract_date: string | null } | null {
+  const n = number.trim();
+  const d = (date ?? "").trim();
+  return n || d ? { contract_number: n || null, contract_date: d || null } : null;
 }

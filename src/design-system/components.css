@@ -3024,3 +3024,9 @@ html:not([data-ui-standard]) [data-ds] .ds-input {
   border-radius: var(--ds-radius-md);
   background: #fff;
 }
+[data-ds] .ds-delivery-act-fields {
+  display: grid;
+  gap: var(--ds-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  align-items: start;
+}
