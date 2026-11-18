@@ -6,7 +6,8 @@ export interface ActSource {
   lines: Array<{ product_id: string | null; product_name: string | null; barcode: string | null; unit: string | null; unit_name: string | null; quantity: number | string | null }>;
   productBarcodes: Array<{ id: string; barcode: string | null }>;
   customer: { full_name: string | null; company_name: string | null; entity_type: string | null; director_name?: string | null } | null;
-  contract: { contract_number: string | null; contract_date: string | null } | null;
+  /** created_at: the date of a contract saved without its own date (older contracts). */
+  contract: { contract_number: string | null; contract_date: string | null; created_at?: string | null } | null;
   company: { legalName: string; directorName: string } | null;
 }
 
@@ -21,7 +22,10 @@ export function mapActSource(src: ActSource): Omit<ActInput, "actDate"> {
       customer_name: src.sale.customer_name,
     },
     customer: src.customer ? { full_name: src.customer.full_name, company_name: src.customer.company_name, entity_type: src.customer.entity_type, director_name: src.customer.director_name ?? null } : null,
-    contract: src.sale.contract_id ? src.contract : null,
+    contract:
+      src.sale.contract_id && src.contract
+        ? { contract_number: src.contract.contract_number, contract_date: (src.contract.contract_date || src.contract.created_at || "").slice(0, 10) || null }
+        : null,
     company: src.company ?? { legalName: "", directorName: "" },
     lines: src.lines.map((l) => ({
       barcode: l.barcode || (l.product_id ? productBarcode.get(l.product_id) ?? null : null),
@@ -29,5 +33,20 @@ export function mapActSource(src: ActSource): Omit<ActInput, "actDate"> {
       unit: l.unit || l.unit_name || null,
       quantity: Number(l.quantity) || 0,
     })),
+  };
+}
+
+const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/**
+ * A contracts row → its number and date. The date is the contract's own date (contract_date); an install
+ * whose contracts keep it under another name (date, start_date, signed_date) is read too, and a contract
+ * saved without any date falls back to the day it was entered.
+ */
+export function contractFromRow(row: Record<string, unknown>): NonNullable<ActSource["contract"]> {
+  return {
+    contract_number: str(row.contract_number) ?? str(row.number) ?? str(row.contract_no),
+    contract_date: str(row.contract_date) ?? str(row.date) ?? str(row.start_date) ?? str(row.signed_date),
+    created_at: str(row.created_at),
   };
 }

@@ -6,7 +6,7 @@
  * Official: the invoice is official and the customer is a company: seller and buyer companies with their
  * directors, and the contract number and date when a contract is linked (a warning when it is not).
  * Informal: an unofficial invoice or a private customer: the customer's name only, no contract line,
- * signatures "Təhvil verən" / "Təhvil alan". A missing director or contract value prints a blank line to
+ * text says satıcı / alıcı (as Del's sample) and the signatures "Təhvil verən" / "Təhvil alan". A missing director or contract value prints a blank line to
  * be written by hand. The document itself is in Azerbaijani (a legal paper); the screen around it is not.
  */
 
@@ -129,8 +129,8 @@ export function buildDeliveryAct(input: ActInput): DeliveryAct {
   } else {
     const buyerName = text(input.customer?.full_name) || text(input.sale.customer_name) || BLANK;
     clauses = [
-      `Bu akt ${seller} (təhvil verən) ilə ${buyerName} (təhvil alan) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:`,
-      "Təhvil alan yuxarıda qeyd olunan malları lazımi qaydada yoxlamış və yoxlama zamanı mallarda heç bir qüsur aşkar edilməmişdir.",
+      `Bu akt ${seller} (satıcı) ilə ${buyerName} (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar satıcı tərəfindən alıcıya təhvil verilmişdir:`,
+      "Alıcı yuxarıda qeyd olunan malları lazımi qaydada yoxlamış və yoxlama zamanı mallarda heç bir qüsur aşkar edilməmişdir.",
       "Tərəflərin bir-birinə qarşı qarşılıqlı tələbləri yoxdur. Aktın doğruluğunu imzalarımızla təsdiq edirik.",
     ];
     sellerParty = { role: "Təhvil verən", name: seller, director: sellerDirector ? `Direktor: ${sellerDirector}` : "" };
