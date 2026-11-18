@@ -112,13 +112,14 @@ test("a missing director prints a blank line to sign by hand, and says so", () =
 
 // ─── The simple act ─────────────────────────────────────────────────────────
 
-test("informal act: the customer's name only, no contract; the text says satıcı / alıcı, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
+test("informal act: the customer's name only, no contract; (satıcı) / (alıcı) in the opening, the signatures 'Təhvil verən' / 'Təhvil alan'", () => {
   const act = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false }, customer: { ...OFFICIAL.customer, entity_type: "physical" } });
   assert.equal(act.template, "informal");
   assert.equal(act.contractHeading, null);
-  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar satıcı tərəfindən alıcıya təhvil verilmişdir:');
-  assert.match(act.clauses[1], /^Alıcı yuxarıda /);
-  assert.doesNotMatch(act.clauses.join(" "), /təhvil verən|təhvil alan/i, "Del: the text says seller and buyer, as in his sample");
+  assert.equal(act.clauses[0], 'Bu akt "ACME" MMC (satıcı) ilə Günel Rzayeva (alıcı) arasında tərtib edilir ondan ötrü ki, aşağıdakı mallar təhvil verilmiş və təhvil alınmışdır:');
+  // Del (18.11): only the words in brackets at the top say satıcı / alıcı; the rest stays as it was.
+  assert.doesNotMatch(act.clauses[0], /(təhvil verən)|(təhvil alan)/);
+  assert.match(act.clauses[1], /^Təhvil alan yuxarıda /);
   assert.deepEqual([act.seller.role, act.buyer.role, act.buyer.name, act.buyer.director], ["Təhvil verən", "Təhvil alan", "Günel Rzayeva", ""]);
   assert.deepEqual(act.warnings, [], "no contract or director warnings on the simple form");
   const walkIn = buildDeliveryAct({ ...OFFICIAL, sale: { ...OFFICIAL.sale, is_official: false, customer_name: "Nağd alıcı" }, customer: null });
